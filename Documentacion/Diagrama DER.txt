@@ -1,0 +1,576 @@
+// ════════════════════════════════════════════════════════════
+// DER COMPLETO — Sistema de Gestión para Distribuidora
+// Grupo 1: Clientes, Autenticación, Catálogo, Listas de Precio
+// Grupo 2: Cobros, Caja, Conciliación, Rendiciones, Entregas, Facturación
+// Grupo 3: Productos, Stock, Proveedores, Compras, Pedidos
+// Grupo 4: Ventas, Saldos, Promociones
+// ════════════════════════════════════════════════════════════
+
+// ── GRUPO 1: Login / Clientes / Catálogo ─────────────────────
+
+Table LOGIN {
+  id_usuario   int    [pk, increment]
+  user         string [not null, unique]
+  password     string [not null]
+  rol          string [note: 'admin | vendedor | repartidor ']
+  estado       string [note: 'activo | bloqueado']
+}
+
+Table ZONA {
+  id_zona     int    [pk, increment]
+  nombre      string [not null]
+  descripcion string
+}
+
+Table CLIENTE {
+  id_cliente     int    [pk, increment]
+  nombre         string [not null]
+  razon_social   string
+  dni_cuit       string [unique]
+  email          string
+  telefono       string
+  direccion      string
+  localidad      string
+  id_zona        int    [ref: > ZONA.id_zona]
+  tipo_cliente   string [note: 'mayorista | minorista | consumidor_final']
+  condicion_iva  string
+  estado_cliente string [note: 'activo | inactivo']
+  historial      string
+  deleted_at     date
+}
+
+Table RECLAMO {
+  id_reclamo     int    [pk, increment]
+  id_cliente     int    [ref: > CLIENTE.id_cliente]
+  id_venta       int    [ref: > VENTA.id_venta]
+  id_entrega     int    [ref: > ENTREGA.id_entrega]
+  motivo         string
+  descripcion    string
+  estado_reclamo string [note: 'pendiente | resuelto | cerrado']
+  fecha_alta     date
+}
+
+Table CATALOGO {
+  id_catalogo   int    [pk, increment]
+  id_producto   int    [ref: > PRODUCTO.id_producto]
+  id_lista      int    [ref: > LISTA_PRECIO.id_lista]
+  url_imagen    string
+  precio_visible bool
+  estado        string [note: 'activo | inactivo']
+}
+
+Table CATALOGO_CLIENTE {
+  id_catalogo      int  [ref: > CATALOGO.id_catalogo]
+  id_cliente       int  [ref: > CLIENTE.id_cliente]
+  fecha_envio      date
+  id_usuario       int  [ref: > LOGIN.id_usuario]
+  indexes {
+    (id_catalogo, id_cliente) [pk]
+  }
+}
+
+Table CATALOGO_ZONA {
+  id_catalogo  int  [ref: > CATALOGO.id_catalogo]
+  id_zona      int  [ref: > ZONA.id_zona]
+  fecha_envio  date
+  indexes {
+    (id_catalogo, id_zona) [pk]
+  }
+}
+
+Table CATALOGO_PROMOCION {
+  id_catalogo  int [ref: > CATALOGO.id_catalogo]
+  id_promocion int [ref: > PROMOCION.id_promocion]
+  indexes {
+    (id_catalogo, id_promocion) [pk]
+  }
+}
+
+Table LISTA_PRECIO {
+  id_lista            int    [pk, increment]
+  nombre              string [not null, note: 'ej: Lista Mayorista, Lista Minorista']
+  descripcion         string
+  tipo_precio         string [note: 'precio_fijo | descuento_sobre_lista']
+  descuento_porcentaje decimal [note: 'usado cuando tipo_precio = descuento_sobre_lista']
+  estado              string [note: 'activa | inactiva']
+  fecha_creacion      date
+  id_usuario          int    [ref: > LOGIN.id_usuario]
+}
+
+Table LISTA_PRECIO_DETALLE {
+  id_detalle_lista    int     [pk, increment]
+  id_lista            int     [ref: > LISTA_PRECIO.id_lista]
+  id_producto         int     [ref: > PRODUCTO.id_producto]
+  precio              decimal
+  descuento_porcentaje decimal [note: 'override por producto si tipo = descuento_sobre_lista']
+  fecha_vigencia      date
+  indexes {
+    (id_lista, id_producto) [unique]
+  }
+}
+
+Table CLIENTE_LISTA_PRECIO {
+  id_cliente int [ref: > CLIENTE.id_cliente]
+  id_lista   int [ref: > LISTA_PRECIO.id_lista]
+  indexes {
+    (id_cliente, id_lista) [pk]
+  }
+}
+
+// ── GRUPO 2: Cobros / Caja / Conciliación / Rendiciones / Entregas / Facturación
+
+Table FACTURA {
+  id_factura        int     [pk, increment]
+  id_venta          int     [ref: > VENTA.id_venta]
+  id_cliente        int     [ref: > CLIENTE.id_cliente]
+  id_factura_origen int     [ref: > FACTURA.id_factura, note: 'null salvo para notas de credito']
+  numero_factura    string  [unique]
+  tipo              string  [note: 'factura | nota_credito']
+  tipo_comprobante  string  [note: 'A | B | C']
+  importe_total     decimal
+  estado            string  [note: 'emitida | cobrada | anulada']
+  fecha_emision     date
+  fecha_vencimiento date
+  id_usuario        int     [ref: > LOGIN.id_usuario]
+}
+
+Table COBRO {
+  id_cobro              int     [pk, increment]
+  id_cliente            int     [ref: > CLIENTE.id_cliente]
+  id_factura            int     [ref: > FACTURA.id_factura]
+  id_rendicion          int     [ref: > RENDICION.id_rendicion, note: 'null si no fue cobrado en reparto']
+  monto_pagado          decimal
+  saldo_pendiente       decimal
+  metodo_pago           string  [note: 'efectivo | transferencia | cheque | echeque']
+  estado_cobro          string  [note: 'pendiente_validacion | validado | rechazado']
+  numero_comprobante    string
+  razon_rechazo         string
+  id_usuario_creacion   int     [ref: > LOGIN.id_usuario]
+  id_usuario_validacion int     [ref: > LOGIN.id_usuario]
+  fecha_cobro           date
+  fecha_validacion      date
+}
+
+Table DETALLE_COBRO_CHEQUE {
+  id_detalle_cheque int    [pk, increment]
+  id_cobro          int    [ref: > COBRO.id_cobro]
+  numero_cheque     string
+  monto_cheque      decimal
+  es_cheque_tercero bool
+  nombre_tercero    string [note: 'null si es cheque propio del cliente']
+  fecha_vencimiento date
+}
+
+Table CAJA {
+  id_movimiento_caja int     [pk, increment]
+  fecha              date
+  tipo_movimiento    string  [note: 'ingreso | egreso']
+  monto              decimal
+  categoria          string
+  concepto           string
+  metodo_pago        string
+  saldo_actualizado  decimal
+  observaciones      string
+  id_usuario         int     [ref: > LOGIN.id_usuario]
+  fecha_modificacion date
+}
+
+Table CONCILIACION {
+  id_conciliacion    int     [pk, increment]
+  periodo_inicio     date
+  periodo_fin        date
+  diferencia         decimal
+  estado             string  [note: 'en_proceso | conciliada | cerrada']
+  fecha_conciliacion date
+  fecha_cierre       date
+  diferencia_final   decimal
+}
+
+Table DETALLE_CONCILIACION {
+  id_detalle_conc    int    [pk, increment]
+  id_conciliacion    int    [ref: > CONCILIACION.id_conciliacion]
+  id_movimiento      string
+  estado             string [note: 'conciliado | pendiente | discrepancia']
+  fecha_conciliacion date
+  id_usuario         int    [ref: > LOGIN.id_usuario]
+}
+
+Table RENDICION {
+  id_rendicion        int    [pk, increment]
+  id_repartidor       int    [ref: > LOGIN.id_usuario]
+  id_zona             int    [ref: > ZONA.id_zona]
+  fecha_rendicion     date
+  estado_rendicion    string [note: 'abierta | cerrada | revisada']
+  total_entregadas    int
+  total_sin_entregar  int
+  total_sin_cobrar    int
+  fecha_cierre        date
+  id_usuario_cierre   int    [ref: > LOGIN.id_usuario]
+  id_usuario_revision int    [ref: > LOGIN.id_usuario]
+  fecha_revision      date
+}
+
+Table DETALLE_RENDICION {
+  id_detalle_rend  int    [pk, increment]
+  id_rendicion     int    [ref: > RENDICION.id_rendicion]
+  id_entrega       int    [ref: > ENTREGA.id_entrega]
+  estado_factura   string [note: 'entregada | no_entregada | rechazada']
+  razon_no_entrega string
+  estado_cobro     string [note: 'cobrada | no_cobrada']
+  razon_no_cobro   string
+}
+
+Table ENTREGA {
+  id_entrega              int    [pk, increment]
+  numero_remito           string [unique]
+  id_venta                int    [ref: > VENTA.id_venta]
+  id_cliente              int    [ref: > CLIENTE.id_cliente]
+  id_repartidor           int    [ref: > LOGIN.id_usuario]
+  id_zona                 int    [ref: > ZONA.id_zona]
+  estado_entrega          string [note: 'pendiente | en_transito | entregada | no_entregada | rechazada']
+  direccion_entrega       string
+  fecha_creacion          date
+  fecha_entrega           date
+  hora_entrega            string
+  firma_cliente           string [note: 'base64 o URL']
+  razon_rechazo           string
+  observaciones           string
+  id_usuario_creacion     int    [ref: > LOGIN.id_usuario]
+  id_usuario_modificacion int    [ref: > LOGIN.id_usuario]
+}
+
+Table ENTREGA_PEDIDO {
+  id_entrega  int [ref: > ENTREGA.id_entrega]
+  id_producto int [ref: > PRODUCTO.id_producto]
+  cantidad    int
+  indexes {
+    (id_entrega, id_producto) [pk]
+  }
+}
+
+// ── GRUPO 3: Productos ────────────────────────────────────────
+
+Table CATEGORIA {
+  id_categoria       int    [pk, increment]
+  nombre             string [not null]
+  fecha_creacion     date
+  fecha_modificacion date
+}
+
+Table MARCA {
+  id_marca           int    [pk, increment]
+  nombre             string [not null]
+  fecha_creacion     date
+  fecha_modificacion date
+}
+
+Table PRODUCTO {
+  id_producto             int     [pk, increment]
+  codigo                  string  [not null, unique]
+  descripcion             string
+  precio_unitario         decimal [not null]
+  estado                  string  [note: 'activo | inactivo']
+  fecha_alta              date
+  fecha_modificacion      date
+  fecha_desactivacion     date
+  id_categoria            int     [ref: > CATEGORIA.id_categoria]
+  id_marca                int     [ref: > MARCA.id_marca]
+  id_usuario_carga        int     [ref: > LOGIN.id_usuario]
+  id_usuario_modificacion int     [ref: > LOGIN.id_usuario]
+}
+
+Table HISTORIAL_PRECIO {
+  id_historial       int     [pk, increment]
+  id_producto        int     [ref: > PRODUCTO.id_producto]
+  precio_anterior    decimal
+  precio_nuevo       decimal
+  porcentaje_aumento decimal
+  regla_redondeo     string
+  origen             string  [note: 'manual | aumento_masivo']
+  fecha_cambio       date
+  id_usuario         int     [ref: > LOGIN.id_usuario]
+}
+
+// ── GRUPO 3: Stock ────────────────────────────────────────────
+
+Table STOCK {
+  id_stock                int    [pk, increment]
+  id_producto             int    [ref: - PRODUCTO.id_producto]
+  stock_disponible        int    [not null]
+  stock_minimo            int
+  estado_alerta           string [note: 'normal | bajo | critico']
+  dias_alerta_vencimiento int
+}
+
+Table UNIDAD_MEDIDA {
+  id_unidad         int     [pk, increment]
+  id_producto       int     [ref: > PRODUCTO.id_producto]
+  nombre_unidad     string
+  equivalencia_base decimal
+  descripcion       string
+}
+
+Table MOVIMIENTO_STOCK {
+  id_movimiento int    [pk, increment]
+  id_producto   int    [ref: > PRODUCTO.id_producto]
+  id_unidad     int    [ref: > UNIDAD_MEDIDA.id_unidad]
+  tipo          string [note: 'ingreso | venta | devolucion | ajuste']
+  cantidad      int
+  fecha         date
+  motivo        string
+  id_usuario    int    [ref: > LOGIN.id_usuario]
+  id_venta      int    [ref: > VENTA.id_venta]
+  id_entrega    int    [ref: > ENTREGA.id_entrega]
+}
+
+Table LOTE {
+  id_lote           int    [pk, increment]
+  id_producto       int    [ref: > PRODUCTO.id_producto]
+  id_movimiento     int    [ref: > MOVIMIENTO_STOCK.id_movimiento]
+  id_unidad         int    [ref: > UNIDAD_MEDIDA.id_unidad]
+  nro_lote          string
+  fecha_vencimiento date
+  cantidad          int
+  estado            string [note: 'vigente | vencido | consumido']
+}
+
+Table UBICACION {
+  id_ubicacion   int    [pk, increment]
+  descripcion    string [note: 'estante / pasillo / gondola']
+  estado         string
+  fecha_creacion date
+}
+
+Table PRODUCTO_UBICACION {
+  id_producto      int  [ref: > PRODUCTO.id_producto]
+  id_ubicacion     int  [ref: > UBICACION.id_ubicacion]
+  fecha_asignacion date
+  id_usuario       int  [ref: > LOGIN.id_usuario]
+  indexes {
+    (id_producto, id_ubicacion) [pk]
+  }
+}
+
+Table SESION_CONTEO {
+  id_sesion         int    [pk, increment]
+  estado            string [note: 'en_proceso | finalizado']
+  fecha_conteo      date
+  observaciones     string
+  total_productos   int
+  total_diferencias int
+  id_usuario        int    [ref: > LOGIN.id_usuario]
+}
+
+Table DETALLE_CONTEO {
+  id_detalle_conteo int    [pk, increment]
+  id_sesion         int    [ref: > SESION_CONTEO.id_sesion]
+  id_producto       int    [ref: > PRODUCTO.id_producto]
+  cantidad_fisica   int
+  stock_sistema     int
+  diferencia        int
+  observaciones     string
+}
+
+// ── GRUPO 3: Proveedores ──────────────────────────────────────
+
+Table PROVEEDOR {
+  id_proveedor            int    [pk, increment]
+  razon_social            string [not null]
+  cuit                    string [unique]
+  telefono                string
+  correo                  string
+  estado                  string [note: 'activo | inactivo']
+  fecha_alta              date
+  fecha_modificacion      date
+  fecha_desactivacion     date
+  plazo_entrega_dias      int
+  id_usuario_carga        int    [ref: > LOGIN.id_usuario]
+  id_usuario_modificacion int    [ref: > LOGIN.id_usuario]
+}
+
+Table HISTORIAL_PLAZO_ENTREGA {
+  id_historial_plazo int  [pk, increment]
+  id_proveedor       int  [ref: > PROVEEDOR.id_proveedor]
+  plazo_anterior     int
+  plazo_nuevo        int
+  fecha_cambio       date
+  id_usuario         int  [ref: > LOGIN.id_usuario]
+}
+
+Table PRODUCTO_PROVEEDOR {
+  id_producto_proveedor  int     [pk, increment]
+  id_producto            int     [ref: > PRODUCTO.id_producto]
+  id_proveedor           int     [ref: > PROVEEDOR.id_proveedor]
+  es_proveedor_principal bool
+  precio_acordado        decimal
+  activo                 bool
+  fecha_asociacion       date
+  fecha_desasociacion    date
+  id_usuario             int     [ref: > LOGIN.id_usuario]
+  indexes {
+    (id_producto, id_proveedor) [unique]
+  }
+}
+
+Table HISTORIAL_PRECIO_PROVEEDOR {
+  id_historial_prov     int     [pk, increment]
+  id_producto_proveedor int     [ref: > PRODUCTO_PROVEEDOR.id_producto_proveedor]
+  id_proveedor          int     [ref: > PROVEEDOR.id_proveedor]
+  id_producto           int     [ref: > PRODUCTO.id_producto]
+  id_compra             int     [ref: > COMPRA.id_compra]
+  precio_anterior       decimal
+  precio_nuevo          decimal
+  fecha_actualizacion   date
+  id_usuario            int     [ref: > LOGIN.id_usuario]
+}
+
+// ── GRUPO 3: Compras ──────────────────────────────────────────
+
+Table COMPRA {
+  id_compra          int     [pk, increment]
+  numero_comprobante string
+  id_proveedor       int     [ref: > PROVEEDOR.id_proveedor]
+  id_orden           int     [ref: > ORDEN_COMPRA.id_orden]
+  importe_total      decimal
+  saldo_pendiente    decimal
+  estado             string  [note: 'pendiente | parcialmente_recibida | completada | cancelada']
+  fecha_compra       date
+  fecha_cancelacion  date
+  id_usuario         int     [ref: > LOGIN.id_usuario]
+}
+
+Table DETALLE_COMPRA {
+  id_detalle        int     [pk, increment]
+  id_compra         int     [ref: > COMPRA.id_compra]
+  id_producto       int     [ref: > PRODUCTO.id_producto]
+  id_unidad         int     [ref: > UNIDAD_MEDIDA.id_unidad]
+  cantidad          int
+  cantidad_recibida int
+  precio_unitario   decimal
+  subtotal          decimal
+}
+
+Table RECEPCION {
+  id_recepcion    int  [pk, increment]
+  id_compra       int  [ref: > COMPRA.id_compra]
+  id_proveedor    int  [ref: > PROVEEDOR.id_proveedor]
+  fecha_recepcion date
+  id_usuario      int  [ref: > LOGIN.id_usuario]
+}
+
+Table DETALLE_RECEPCION {
+  id_det_rec        int  [pk, increment]
+  id_recepcion      int  [ref: > RECEPCION.id_recepcion]
+  id_producto       int  [ref: > PRODUCTO.id_producto]
+  id_lote           int  [ref: > LOTE.id_lote]
+  id_unidad         int  [ref: > UNIDAD_MEDIDA.id_unidad]
+  cantidad_recibida int
+}
+
+Table PAGO_PROVEEDOR {
+  id_pago           int     [pk, increment]
+  id_compra         int     [ref: > COMPRA.id_compra]
+  metodo_pago       string  [note: 'efectivo | transferencia | cheque | tarjeta']
+  importe           decimal
+  estado_pago       string  [note: 'pendiente | pagado | parcial | vencido']
+  fecha_pago        date
+  fecha_vencimiento date
+  id_usuario        int     [ref: > LOGIN.id_usuario]
+}
+
+// ── GRUPO 3: Pedidos de Compra ────────────────────────────────
+
+Table ORDEN_COMPRA {
+  id_orden           int     [pk, increment]
+  numero_orden       string
+  id_proveedor       int     [ref: > PROVEEDOR.id_proveedor]
+  total_estimado     decimal
+  estado             string  [note: 'pendiente | enviada | recibida_parcialmente | completada | cancelada']
+  fecha_creacion     date
+  fecha_modificacion date
+  fecha_envio        date
+  fecha_cancelacion  date
+  id_usuario         int     [ref: > LOGIN.id_usuario]
+}
+
+Table DETALLE_ORDEN {
+  id_detalle_orden    int     [pk, increment]
+  id_orden            int     [ref: > ORDEN_COMPRA.id_orden]
+  id_producto         int     [ref: > PRODUCTO.id_producto]
+  id_unidad           int     [ref: > UNIDAD_MEDIDA.id_unidad]
+  cantidad_solicitada int
+  cantidad_sugerida   int
+  origen              string  [note: 'manual | sugerencia']
+  precio_estimado     decimal
+  subtotal            decimal
+}
+
+// ── GRUPO 4: Ventas / Saldos / Promociones ────────────────────
+
+Table VENTA {
+  id_venta             int     [pk, increment]
+  id_cliente           int     [ref: > CLIENTE.id_cliente]
+  id_zona              int     [ref: > ZONA.id_zona]
+  fecha_venta          date
+  total_venta          decimal
+  descuento_global     decimal [note: 'porcentaje de descuento aplicado al total de la venta']
+  estado_venta         string  [note: 'pendiente | confirmada | facturada | cancelada']
+  estado_facturacion   string  [note: 'sin_facturar | facturada']
+  id_usuario           int     [ref: > LOGIN.id_usuario]
+  fecha_creacion       date
+  fecha_actualizacion  date
+}
+
+Table ITEM_VENTA {
+  id_item         int     [pk, increment]
+  id_venta        int     [ref: > VENTA.id_venta]
+  id_producto     int     [ref: > PRODUCTO.id_producto]
+  id_promocion    int     [ref: > PROMOCION.id_promocion, note: 'null si no aplica promocion']
+  cantidad        int
+  precio_unitario decimal
+  descuento       decimal
+  subtotal        decimal
+}
+
+Table SALDO_CLIENTE {
+  id_saldo              int     [pk, increment]
+  id_cliente            int     [ref: - CLIENTE.id_cliente]
+  saldo_deudor          decimal
+  saldo_a_favor         decimal
+  limite_credito        decimal
+  estado_cuenta         string  [note: 'al_dia | moroso']
+  fecha_ultimo_movimiento date
+}
+
+Table MOVIMIENTO_SALDO {
+  id_mov_saldo     int     [pk, increment]
+  id_cliente       int     [ref: > CLIENTE.id_cliente]
+  id_venta         int     [ref: > VENTA.id_venta, note: 'null si el movimiento es un abono']
+  id_cobro         int     [ref: > COBRO.id_cobro, note: 'null si el movimiento es un cargo']
+  tipo_movimiento  string  [note: 'cargo | abono']
+  comprobante_ref  string
+  monto            decimal
+  saldo_resultante decimal
+  fecha            date
+}
+
+Table PROMOCION {
+  id_promocion   int     [pk, increment]
+  nombre         string
+  tipo_descuento string  [note: 'porcentaje | monto_fijo']
+  valor          decimal
+  vigencia_desde date
+  vigencia_hasta date
+  condiciones    string
+  estado         string  [note: 'activa | pausada | baja']
+}
+
+Table PROMOCION_CLIENTE {
+  id_promocion     int  [ref: > PROMOCION.id_promocion]
+  id_cliente       int  [ref: > CLIENTE.id_cliente]
+  fecha_asignacion date
+  id_usuario       int  [ref: > LOGIN.id_usuario]
+  indexes {
+    (id_promocion, id_cliente) [pk]
+  }
+}

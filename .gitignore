@@ -1,0 +1,21 @@
+# Respaldos antiguos / legado (no se suben al repo)
+backend_legacy/
+
+# Entornos y credenciales (refuerzo por seguridad)
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Logs diagnosticos
+gcm-diagnose.log
+*.log
+
+# Editor / IDE
+.vscode/
+.idea/
+
+# Sistema / temporales
+thumbs.db
+Desktop.ini

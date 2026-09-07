@@ -1,0 +1,256 @@
+================================================================================
+INFORME DE TRABAJO - SISTEMA ERP DISTRIBUIDORA (GRUPO 3)
+Módulo: Productos, Stock, Proveedores, Compras y Pedidos de Compra
+Fecha: 2026-08-31
+Tecnología: PHP 8.5 (API REST) + MySQL (XAMPP) + HTML5/CSS/JavaScript
+================================================================================
+
+1. RESUMEN EJECUTIVO DE LO REALIZADO
+--------------------------------------------------------------------------------
+En la jornada de trabajo se cumplieron los siguientes hitos principales:
+
+a) Diagnóstico y revisión integral de los archivos del repositorio (DER, script SQL,
+   historias de usuario en PDF, contratos de endpoints y prototipos visuales HTML).
+b) Configuración y arranque del motor MySQL en XAMPP.
+c) Ejecución del script DDL y verificación completa de la base de datos
+   'distribuidora_grupo3', compuesta por 23 tablas con claves primarias, foráneas,
+   restricciones de unicidad (UNIQUE) y chequeos (CHECK).
+d) Creación de la arquitectura Backend en PHP 8.5 orientada a objetos bajo el
+   patrón API REST JSON.
+e) Implementación integral de las 6 Historias de Usuario del MVP de Productos:
+   - P02: Administrar Categorías
+   - P03: Administrar Marcas
+   - P01: Registrar Productos
+   - P04: Modificar Productos (con auditoría automática de precios)
+   - P05: Buscar y Filtrar Productos
+   - P06: Desactivar / Reactivar Productos (borrado lógico)
+f) Conexión e interactividad dinámica de la interfaz web (Interfaz/productos.html)
+   mediante peticiones asíncronas (fetch API).
+g) Bitácora y seguimiento continuo de solicitudes en 'Registro_Prompts.txt'.
+
+
+2. ESTRUCTURA DE ARCHIVOS CREADOS Y MODIFICADOS
+--------------------------------------------------------------------------------
+Proyecto/
+├── BD/
+│   └── grupo3_create_database.sql       (Script DDL de creación de la base de datos)
+├── backend/
+│   ├── config/
+│   │   └── Database.php                 (Conexión PDO segura con UTF-8 mb4)
+│   ├── models/
+│   │   ├── Categoria.php                (Reglas de negocio e integridad para P02)
+│   │   ├── Marca.php                    (Reglas de negocio e integridad para P03)
+│   │   └── Producto.php                 (Lógica central para P01, P04, P05, P06 y P08)
+│   └── api/
+│       ├── categorias.php               (Endpoint REST: GET, POST, PUT, DELETE)
+│       ├── marcas.php                   (Endpoint REST: GET, POST, PUT, DELETE)
+│       └── productos.php                (Endpoint REST: GET, POST, PUT, PATCH, DELETE)
+├── Documentacion/
+│   ├── Diagrama DER.txt                 (Definición DBML completa del sistema)
+│   ├── Endpoints pedidos.xlsx           (Documentación de contratos de API)
+│   ├── Historias de Usuario.pdf         (Product Backlog y criterios de aceptación)
+│   ├── Informe_Trabajo.txt              (Este informe)
+│   └── Registro_Prompts.txt             (Bitácora cronológica de prompts y solicitudes)
+├── Interfaz/
+│   ├── index.html                       (Dashboard principal)
+│   ├── productos.html                   (Gestión de productos 100% conectada a la API)
+│   ├── stock.html                       (Vista de stock)
+│   ├── proveedores.html                 (Vista de proveedores)
+│   ├── compras.html                     (Vista de compras)
+│   └── pedido_compra.html               (Vista de órdenes de compra)
+└── Registro_Prompts.txt                 (Copia sincronizada en raíz)
+
+
+3. DETALLE DE HISTORIAS DE USUARIO Y CUMPLIMIENTO DE CRITERIOS
+--------------------------------------------------------------------------------
+• P02 - Administrar Categorías (3 SP):
+  - Permite crear categorías registrando 'fecha_creacion'.
+  - Permite modificar categorías registrando 'fecha_modificacion'.
+  - Regla de Integridad: Impide eliminar categorías que tengan productos asociados,
+    notificando la cantidad de productos vinculados.
+  - Valida que no se dupliquen nombres de categorías.
+
+• P03 - Administrar Marcas (3 SP):
+  - Permite crear marcas registrando 'fecha_creacion'.
+  - Permite modificar marcas registrando 'fecha_modificacion'.
+  - Regla de Integridad: Impide eliminar marcas que tengan productos asociados,
+    notificando la cantidad de productos vinculados.
+  - Valida que no se dupliquen nombres de marcas.
+
+• P01 - Registrar Productos (8 SP):
+  - Permite registrar código, descripción, categoría, marca, precio y stock.
+  - Valida que el código no esté duplicado en el sistema.
+  - Valida la existencia previa de la categoría y de la marca seleccionadas.
+  - Registra 'fecha_alta' e 'id_usuario_carga'.
+  - Inicializa de forma atómica el registro en la tabla STOCK (relación 1:1)
+    y el precio base en HISTORIAL_PRECIO.
+
+• P04 - Modificar Productos (5 SP):
+  - Permite actualizar los datos comerciales, descripción, categoría y marca.
+  - Valida que el código continúe siendo único en caso de modificación.
+  - Registra 'fecha_modificacion' e 'id_usuario_modificacion'.
+  - Auditoría de Precios: Si el precio unitario varía, calcula el porcentaje
+    de aumento o disminución y genera automáticamente un registro inmutable en
+    la tabla HISTORIAL_PRECIO con origen 'manual'.
+
+• P05 - Buscar Productos (3 SP):
+  - Búsqueda en tiempo real por código o texto en la descripción.
+  - Filtrado combinado por Categoría y por Marca (cargadas dinámicamente de la BD).
+  - Filtro por defecto en productos con estado 'activo' para agilizar las ventas.
+
+• P06 - Desactivar Productos (1 SP):
+  - Aplica borrado lógico cambiando el estado a 'inactivo' y fijando 'fecha_desactivacion'.
+  - Conserva todo el historial y stock del producto para no alterar operaciones pasadas.
+  - Impide que aparezca en consultas de venta activas, permitiendo su reactivación.
+
+
+4. ACLARACIONES TÉCNICAS Y DECISIONES DE DISEÑO EN EL CÓDIGO
+--------------------------------------------------------------------------------
+1) Tipado Estricto en PHP 8.5:
+   Cada archivo PHP comienza con 'declare(strict_types=1);' y utiliza tipos de datos
+   estrictos en propiedades, parámetros y valores de retorno (ej. int, string, ?array, bool).
+
+2) Seguridad y Consultas Preparadas (PDO):
+   Para neutralizar cualquier riesgo de inyección SQL, todas las consultas a la base
+   de datos se ejecutan a través de PDO Statements con parámetros enlazados ('bindParam'
+   o 'bindValue'). Se utilizaron identificadores únicos para cada parámetro dentro de
+   las consultas SQL complejas.
+
+3) Transacciones Atómicas (ACID):
+   En operaciones compuestas (como el alta de un producto que requiere insertar en
+   PRODUCTO, STOCK e HISTORIAL_PRECIO), se utiliza '$conn->beginTransaction()' junto con
+   '$conn->commit()' y captura de excepciones con '$conn->rollBack()'. Esto garantiza que
+   la base de datos jamás quede en un estado inconsistente.
+
+4) Arquitectura REST y Códigos de Respuesta HTTP:
+   Los controladores en 'backend/api/' responden en JSON ('application/json; charset=utf-8')
+   con códigos semánticos estándar:
+   - 200 OK: Consultas, modificaciones y desactivaciones exitosas.
+   - 201 Created: Creación exitosa de productos, categorías o marcas.
+   - 400 Bad Request: Errores de validación de negocio (código duplicado, campos faltantes).
+   - 404 Not Found: Recurso no encontrado.
+   - 405 Method Not Allowed: Método HTTP no admitido.
+   - 500 Internal Server Error: Fallos de conexión a la base de datos.
+
+5) Optimización Frontend (Debounce):
+   El buscador en vivo en 'productos.html' implementa un temporizador debounce de 350 ms.
+   Esto evita saturar el servidor con peticiones innecesarias mientras el usuario escribe.
+
+6) Experiencia de Usuario y Accesibilidad:
+   La interfaz cuenta con soporte de tema claro/oscuro persistente en 'localStorage',
+   diseño responsivo con barra lateral retráctil para móviles, modales interactivos y
+   sistema de alertas tipo toast flotantes.
+
+================================================================================
+SEGUNDA JORNADA: MÓDULO ÓRDENES DE COMPRA (PC01 - PC06)
+Fecha: 2026-09-03
+================================================================================
+
+7. RESUMEN EJECUTIVO DE LO REALIZADO HOY
+--------------------------------------------------------------------------------
+En esta jornada se implementó por completo el módulo de Órdenes de Compra,
+cubriendo las historias de usuario PC01 a PC06, tanto en el Backend (API REST
+Laravel) como en el Frontend (HTML/CSS/JS), siguiendo el patrón ya establecido
+en los módulos de Stock (S01-S08), Proveedores (PV01-PV05) y Compras (C01-C06).
+Además, se corrigió un defecto del Frontend (etiqueta </script> faltante) que
+impedía el funcionamiento del modo oscuro y de algunos botones.
+
+8. MÓDULO ÓRDENES DE COMPRA - BACKEND (LARAVEL)
+--------------------------------------------------------------------------------
+• Esquema: se reutilizaron las tablas ORDEN_COMPRA y DETALLE_ORDEN (ya existentes,
+  vacías) con los estados: pendiente, enviada, recibida_parcialmente, completada,
+  cancelada.
+
+• Modelos nuevos:
+  - OrdenCompra.php  -> representación de la tabla ORDEN_COMPRA (const ESTADOS).
+  - DetalleOrden.php -> representación de la tabla DETALLE_ORDEN (con relaciones).
+
+• OrdenCompraController.php (controlador API):
+  - PC01 (Generar Orden de Compra, 8 SP):
+    • Valida proveedor activo y productos/items.
+    • Genera número de orden único con formato OC-AAAA-nnnnnn (ej. OC-2026-014869).
+    • Calcula automáticamente el total_estimado a partir de los items.
+    • Registra fecha_creacion y deja el estado inicial en 'pendiente'.
+    • Asigna un ID único a cada orden.
+  - PC02 (Consultar Órdenes de Compra, 3 SP):
+    • Lista las órdenes con los criterios de búsqueda por proveedor, rango de
+      fechas (desde/hasta) y estado.
+    • Muestra número, proveedor, total estimado, estado y fecha de creación.
+  - PC03 (Consultar el Detalle de una Orden de Compra, 3 SP):
+    • Devuelve el detalle completo: proveedor, productos, cantidades, total
+      estimado, estado y fecha de creación.
+  - PC04 (Modificar una Orden de Compra Pendiente, 5 SP):
+    • Solo permite editar órdenes en estado 'pendiente'.
+    • Permite agregar/eliminar productos y modificar cantidades.
+    • Recalcula automáticamente el total_estimado.
+    • Registra fecha_modificacion.
+    • Impide la modificación una vez que la orden fue enviada (400).
+  - PC05 (Cancelar una Orden de Compra Pendiente, 1 SP):
+    • Solo permite cancelar órdenes 'pendiente'.
+    • Registra fecha_cancelacion y cambia el estado a 'cancelada'.
+    • Conserva el historial de la orden.
+  - PC06 (Visualizar el Estado de la Orden de Compra, 3 SP):
+    • Expone el estado actual y las fechas relacionadas (creación, envío,
+      cancelación, modificación).
+
+• Endpoint complementario:
+  - PATCH /api/ordenes-compra/{id}/enviar: marca fecha_envio y pasa a 'enviada'.
+    Es necesario porque PC04/PC05/PC06 distinguen entre orden pendiente vs enviada,
+    aunque 'enviar' no sea una historia propia del backlog.
+
+• Rutas registradas en routes/api.php:
+  - apiResource('ordenes-compra')
+  - PATCH ordenes-compra/{id}/cancelar
+  - PATCH ordenes-compra/{id}/enviar
+  - Se actualizó la lista de endpoints del root /api.
+
+9. MÓDULO ÓRDENES DE COMPRA - FRONTEND (Interfaz/pedido_compra.html)
+--------------------------------------------------------------------------------
+El archivo pedido_compra.html fue reescrito sobre la base de compras.html y
+sincronizado a backend/public/Interfaz/pedido_compra.html:
+• Sidebar: activa la opción 'Pedido de Compra' (Compras queda desactivada).
+• Breadcrumb: 'Gestión de Órdenes de Compra' (PC01 a PC06).
+• KPIs: total de órdenes, pendientes, enviadas y canceladas.
+• Tabla con filtros: búsqueda por número/proveedor, proveedor, rango de fechas y
+  estado (PC02 y PC06).
+• Modal de Alta/Edición (PC01/PC04): items dinámicos con cantidad solicitada y
+  precio estimado, total estimado automático.
+• Modal de Detalle (PC03/PC06): información del proveedor, productos, estados y
+  fechas, con botones Editar / Enviar / Cancelar según el estado.
+• Acciones de tabla: Ver (PC03), Editar (PC04), Enviar (complementaria) y Cancelar
+  (PC05), habilitadas/deshabilitadas según el estado de la orden.
+
+10. CORRECCIÓN DE DEFECTO EN EL FRONTEND
+--------------------------------------------------------------------------------
+Se detectó que el archivo pedido_compra.html carecía de la etiqueta </script> de
+cierre al final del documento. Como consecuencia, el navegador interpretaba el
+resto del HTML como parte del script, por lo que el JavaScript no se ejecutaba
+por completo y fallaban el modo oscuro y la respuesta de los botones.
+• Corrección: se agregó la etiqueta </script> antes de </body> y se sincronizó a
+  backend/public/Interfaz/pedido_compra.html.
+• Validación: sintaxis JS verificada con 'node --check' (0 errores) y la página
+  responde HTTP 200 con el cierre de script correcto.
+
+11. PRUEBAS REALIZADAS (BACKEND - end-to-end)
+--------------------------------------------------------------------------------
+• PC01 alta 201 -> orden 1 'OC-2026-014869', total_estimado 1342 automático,
+  estado 'pendiente'.
+• PC02 listado/filtros 200.
+• PC03 detalle 200 (productos BON-001 y LECHE-001).
+• PC04 editar pendiente 200 (recalculo total 1030, fecha_modificacion 2026-09-03).
+• Enviar pendiente 200 (estado 'enviada', fecha_envio registrada).
+• PC04/PC05 sobre orden enviada -> 400 (bloqueado).
+• PC05 cancelar pendiente 200 (fecha_cancelacion, estado 'cancelada').
+• PC06 visualización de estados ('enviada', 'cancelada').
+
+Verificación final: el servicio Laravel responde 200 en
+http://localhost:8000/Interfaz/pedido_compra.html
+
+12. BITÁCORA
+--------------------------------------------------------------------------------
+Todo lo trabajado en la jornada quedó registrado cronológicamente en el archivo
+'Registro_Prompts.txt' (Prompt #19), con copia sincronizada en la raíz del proyecto.
+
+================================================================================
+FIN DEL INFORME
+================================================================================

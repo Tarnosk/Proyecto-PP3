@@ -1,0 +1,1268 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Distribuidora ERP - Prototipo UX/UI</title>
+  <style>
+:root{
+      color-scheme: light;
+      --bg:#f6f8fb;
+      --panel:#ffffff;
+      --text:#0f172a;
+      --muted:#64748b;
+      --border:#e5e7eb;
+      --primary:#1d4ed8;
+      --primary-700:#1e40af;
+      --chip:#eef2ff;
+      --danger:#dc2626;
+      --success:#16a34a;
+      --warning:#f59e0b;
+      --shadow: 0 1px 2px rgba(0,0,0,.06);
+      --radius: 12px;
+      --radius-sm: 10px;
+      --focus: 0 0 0 3px rgba(29,78,216,.25);
+      --sidebar-w: 260px;
+      --topbar-h: 60px;
+      --font: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+    }
+
+:root[data-theme="dark"]{
+      color-scheme: dark;
+      --bg:#0a1220;
+      --panel:#0b1628;
+      --text:#e7eefc;
+      --muted:#9fb0cc;
+      --border:#243246;
+      --chip:#0b2557;
+      --shadow: 0 10px 30px rgba(0,0,0,.45);
+    }
+
+    :root[data-theme="dark"] body{ background:var(--bg); color:var(--text); }
+
+    :root[data-theme="dark"] aside,
+    :root[data-theme="dark"] header{
+      background:var(--panel);
+    }
+
+    :root[data-theme="dark"] .control,
+    :root[data-theme="dark"] .pill,
+    :root[data-theme="dark"] .notif,
+    :root[data-theme="dark"] .tag,
+    :root[data-theme="dark"] .kpi,
+    :root[data-theme="dark"] .btn{
+      background:#0f1b2e;
+      color:var(--text);
+    }
+
+    /* Asegurar que los contenedores de tablas no sean blancos en dark */
+    :root[data-theme="dark"] .card-b,
+    :root[data-theme="dark"] [style*="background:#fff"],
+    :root[data-theme="dark"] [style*="background:#ffffff"]{
+      background:transparent !important;
+    }
+
+    :root[data-theme="dark"] [style*="background:#fff"]{
+      border-color: var(--border) !important;
+    }
+
+    /* Evitar “override” por estilos inline en thead/tbody */
+    :root[data-theme="dark"] table[style*="background:#fff"],
+    :root[data-theme="dark"] table[style*="background:#ffffff"]{
+      background:transparent !important;
+    }
+
+    :root[data-theme="dark"] table,
+    :root[data-theme="dark"] thead,
+    :root[data-theme="dark"] tbody{
+      background:transparent;
+      color:var(--text);
+    }
+
+    :root[data-theme="dark"] thead th{
+      background:rgba(36,50,70,.65);
+      color:var(--muted);
+      border-bottom:1px solid var(--border);
+    }
+
+    :root[data-theme="dark"] tbody td{
+      color:var(--text);
+      border-bottom:1px solid var(--border);
+    }
+
+    :root[data-theme="dark"] tbody tr:last-child td{
+      border-bottom:none;
+    }
+
+    :root[data-theme="dark"] tbody tr{
+      background:transparent;
+      border-color:var(--border);
+    }
+
+    :root[data-theme="dark"] .global-search{
+      background:#0f1b2e;
+    }
+
+    :root[data-theme="dark"] .global-search input::placeholder{ color:#6e7f9a; }
+
+    :root[data-theme="dark"] tbody tr{ background:transparent; }
+
+    :root[data-theme="dark"] .help{ color:var(--muted); }
+
+    *{ box-sizing:border-box; }
+    html,body{ height:100%; }
+    body{
+      margin:0;
+      font-family:var(--font);
+      background:var(--bg);
+      color:var(--text);
+      line-height:1.35;
+    }
+
+    .app{
+      min-height:100vh;
+      display:grid;
+      grid-template-columns: var(--sidebar-w) 1fr;
+      grid-template-rows: var(--topbar-h) 1fr;
+      grid-template-areas:
+        "sidebar topbar"
+        "sidebar main";
+    }
+
+    /* Sidebar */
+    aside{
+      grid-area:sidebar;
+      background:#fff;
+      border-right:1px solid var(--border);
+      padding:16px 12px;
+      position:sticky;
+      top:0;
+      height:100vh;
+      overflow:auto;
+    }
+    .brand{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      padding:10px 10px;
+      margin-bottom:14px;
+    }
+    .logo{
+      width:36px;
+      height:36px;
+      border-radius:10px;
+      background:linear-gradient(135deg, var(--primary), #60a5fa);
+      box-shadow: var(--shadow);
+      position:relative;
+    }
+    .logo:after{
+      content:"";
+      position:absolute;
+      inset:9px;
+      border-radius:7px;
+      border:2px solid rgba(255,255,255,.85);
+    }
+    .brand h1{
+      font-size:14px;
+      margin:0;
+      letter-spacing:.2px;
+    }
+    .brand p{
+      margin:0;
+      font-size:12px;
+      color:var(--muted);
+    }
+
+    nav .section-title{
+      color:var(--muted);
+      font-size:12px;
+      padding:10px 10px 6px;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+    }
+
+    .nav-list{ list-style:none; padding:0; margin:0; }
+
+    .nav-item{
+      margin:4px 6px;
+    }
+    .nav-link{
+      width:100%;
+      display:flex;
+      align-items:center;
+      gap:10px;
+      padding:10px 10px;
+      border-radius:10px;
+      border:1px solid transparent;
+      background:transparent;
+      color:var(--text);
+      text-decoration:none;
+      cursor:default;
+      user-select:none;
+      font-weight:600;
+      font-size:13px;
+    }
+    .nav-link .icon{
+      width:26px; height:26px;
+      border-radius:9px;
+      background:var(--chip);
+      display:grid; place-items:center;
+      color:var(--primary);
+      font-size:13px;
+      border:1px solid rgba(29,78,216,.12);
+      flex:0 0 auto;
+    }
+    .nav-link.active{
+      background:rgba(29,78,216,.08);
+      border-color:rgba(29,78,216,.25);
+    }
+
+    /* Topbar */
+    header{
+      grid-area:topbar;
+      background:var(--panel);
+      border-bottom:1px solid var(--border);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      padding:0 16px;
+      gap:14px;
+      position:sticky;
+      top:0;
+      z-index:20;
+    }
+
+    .top-left{ display:flex; align-items:center; gap:14px; min-width:0; }
+
+    .hamburger{
+      display:none;
+      width:40px; height:40px;
+      border-radius:10px;
+      border:1px solid var(--border);
+      background:#fff;
+      cursor:pointer;
+      align-items:center;
+      justify-content:center;
+      gap:4px;
+      flex-direction:column;
+    }
+    .hamburger span{ width:18px; height:2px; background:var(--text); border-radius:2px; display:block; }
+
+    .page-breadcrumb{
+      display:flex;
+      flex-direction:column;
+      min-width:0;
+    }
+    .page-breadcrumb .title{
+      margin:0;
+      font-size:14px;
+      font-weight:800;
+      letter-spacing:.2px;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+    .page-breadcrumb .subtitle{
+      margin:0;
+      font-size:12px;
+      color:var(--muted);
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+
+    .global-search{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      padding:10px 12px;
+      border:1px solid var(--border);
+      border-radius:999px;
+      background: #fff;
+      min-width: 340px;
+      max-width: 520px;
+      flex:1;
+    }
+    .global-search .magnifier{
+      width:28px; height:28px;
+      border-radius:10px;
+      background:var(--chip);
+      display:grid; place-items:center;
+      color:var(--primary);
+      border:1px solid rgba(29,78,216,.12);
+      flex:0 0 auto;
+      font-weight:900;
+    }
+    .global-search input{
+      border:none;
+      outline:none;
+      width:100%;
+      font-size:14px;
+      background:transparent;
+      color:var(--text);
+    }
+    .global-search input::placeholder{ color:#94a3b8; }
+
+    .top-right{ display:flex; align-items:center; gap:10px; }
+
+    .pill{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      padding:8px 10px;
+      border-radius:999px;
+      border:1px solid var(--border);
+      background:#fff;
+      white-space:nowrap;
+    }
+    .avatar{
+      width:34px; height:34px;
+      border-radius:12px;
+      background:linear-gradient(135deg, #93c5fd, #2563eb);
+      border:1px solid rgba(37,99,235,.25);
+      box-shadow:var(--shadow);
+      display:grid; place-items:center;
+      color:#fff;
+      font-weight:900;
+    }
+    .pill .meta{ display:flex; flex-direction:column; line-height:1.1; }
+    .pill .meta .name{ font-size:13px; font-weight:800; }
+    .pill .meta .role{ font-size:12px; color:var(--muted); font-weight:700; }
+
+    .notif{
+      width:42px; height:42px;
+      border-radius:14px;
+      border:1px solid var(--border);
+      background:#fff;
+      position:relative;
+      display:grid; place-items:center;
+      cursor:default;
+    }
+    .notif .dot{
+      position:absolute;
+      top:9px; right:9px;
+      width:10px; height:10px;
+      border-radius:999px;
+      background:var(--danger);
+      border:2px solid var(--panel);
+    }
+
+    .content{
+      grid-area:main;
+      padding:18px;
+    }
+
+    .grid-2{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:14px;
+    }
+
+    .card{
+      background:var(--panel);
+      border:1px solid var(--border);
+      border-radius:var(--radius);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+    .card-h{
+      padding:14px 16px;
+      border-bottom:1px solid var(--border);
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:12px;
+    }
+    .card-h h2{
+      margin:0;
+      font-size:14px;
+      font-weight:900;
+      letter-spacing:.2px;
+    }
+    .card-h p{
+      margin:4px 0 0;
+      font-size:12px;
+      color:var(--muted);
+      font-weight:700;
+    }
+
+    .card-b{ padding:14px 16px 16px; }
+
+    .filters{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      flex-wrap:wrap;
+      margin-bottom:12px;
+    }
+
+    .field{
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+      min-width: 200px;
+    }
+    .field label{
+      font-size:12px;
+      color:var(--muted);
+      font-weight:800;
+    }
+    .control{
+      border:1px solid var(--border);
+      border-radius:12px;
+      padding:10px 12px;
+      font-size:14px;
+      background:#fff;
+      outline:none;
+    }
+    .control:focus{ box-shadow: var(--focus); border-color: rgba(29,78,216,.35); }
+
+    .btn-row{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+
+    .btn{
+      border:1px solid var(--border);
+      background:#fff;
+      border-radius:12px;
+      padding:10px 12px;
+      font-weight:900;
+      font-size:14px;
+      cursor:default;
+      color:var(--text);
+      display:inline-flex;
+      align-items:center;
+      gap:10px;
+      user-select:none;
+    }
+    .btn.primary{
+      background:rgba(29,78,216,.1);
+      border-color:rgba(29,78,216,.25);
+      color:var(--primary-700);
+    }
+    .btn.danger{
+      background:rgba(220,38,38,.07);
+      border-color:rgba(220,38,38,.2);
+      color:var(--danger);
+    }
+    .btn .mini-icon{
+      width:26px; height:26px;
+      border-radius:10px;
+      border:1px solid rgba(29,78,216,.18);
+      background:var(--chip);
+      display:grid; place-items:center;
+      font-weight:900;
+      color:var(--primary);
+    }
+
+    table{
+      width:100%;
+      border-collapse:separate;
+      border-spacing:0;
+      font-size:13px;
+    }
+    thead th{
+      text-align:left;
+      font-size:12px;
+      color:var(--muted);
+      font-weight:900;
+      padding:10px 12px;
+      border-bottom:1px solid var(--border);
+      background:#fafbff;
+      position:sticky;
+      top:0;
+      z-index:1;
+    }
+    tbody td{
+      padding:12px;
+      border-bottom:1px solid var(--border);
+      vertical-align:middle;
+      color:#0b1220;
+      font-weight:700;
+    }
+    tbody tr:last-child td{ border-bottom:none; }
+    .td-muted{ color:var(--muted); font-weight:800; }
+
+    .tag{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:6px 10px;
+      border-radius:999px;
+      border:1px solid var(--border);
+      background:#fff;
+      font-size:12px;
+      font-weight:900;
+      white-space:nowrap;
+    }
+    .tag .s{ width:8px; height:8px; border-radius:999px; background:var(--muted); }
+    .tag.active{ border-color:rgba(22,163,74,.25); background:rgba(22,163,74,.08); color:#065f46; }
+    .tag.active .s{ background:var(--success); }
+    .tag.inactive{ border-color:rgba(220,38,38,.25); background:rgba(220,38,38,.08); color:#7f1d1d; }
+    .tag.inactive .s{ background:var(--danger); }
+    .tag.crit{ border-color:rgba(245,158,11,.25); background:rgba(245,158,11,.09); color:#92400e; }
+    .tag.crit .s{ background:var(--warning); }
+
+    /* Form */
+    .form-grid{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:14px;
+    }
+    .form-grid .span-2{ grid-column: 1 / -1; }
+
+    .help{
+      margin-top:6px;
+      font-size:12px;
+      color:var(--muted);
+      font-weight:800;
+    }
+
+    .error-box{
+      border:1px solid rgba(220,38,38,.25);
+      background:rgba(220,38,38,.06);
+      color:#7f1d1d;
+      padding:10px 12px;
+      border-radius:12px;
+      font-weight:900;
+      font-size:12px;
+      margin-bottom:12px;
+      display:none;
+    }
+    .error-box.show{ display:block; }
+
+    .footer-actions{
+      margin-top:12px;
+      display:flex;
+      justify-content:flex-end;
+      gap:12px;
+      flex-wrap:wrap;
+    }
+
+    /* Responsive */
+    @media (max-width: 980px){
+      aside{ grid-area:sidebar; width:250px; }
+      .global-search{ min-width: 260px; }
+    }
+
+    @media (max-width: 740px){
+      /* Evitar scroll horizontal */
+      html, body{ overflow-x:hidden; }
+      .app{ width:100%; }
+
+      .content{ padding:12px; overflow-x:hidden; }
+
+      .kpis{ grid-template-columns: 1fr; gap:10px; }
+
+      .grid-2{ grid-template-columns: 1fr; }
+      .form-grid{ grid-template-columns: 1fr; }
+      .form-grid .span-2{ grid-column: auto; }
+
+      .app{
+        grid-template-columns: 1fr;
+        grid-template-areas:
+          "topbar"
+          "main";
+        grid-template-rows: var(--topbar-h) 1fr;
+      }
+      aside{
+        position:fixed;
+        left:0; top:0;
+        transform: translateX(-105%);
+        width:min(320px, 85vw);
+        height:100vh;
+        z-index:50;
+        transition: transform .2s ease;
+        box-shadow: 0 10px 40px rgba(0,0,0,.12);
+      }
+      aside.open{ transform: translateX(0); }
+
+      .hamburger{ display:flex; }
+
+      header{ padding:0 12px; }
+      .global-search{ display:none; }
+
+      .pill{ border:none; padding:0; }
+      .pill .meta .role{ display:none; }
+
+      thead{ display:none; }
+      table, tbody, tr, td{ display:block; width:100%; }
+      tbody td{
+        border-bottom:none;
+        display:flex;
+        justify-content:space-between;
+        gap:12px;
+        padding:10px 12px;
+      }
+      tbody tr{
+        border:1px solid var(--border);
+        border-radius:14px;
+        margin-bottom:10px;
+        background:#fff;
+        overflow:hidden;
+      }
+      tbody td::before{
+        content: attr(data-label);
+        color:var(--muted);
+        font-weight:900;
+      }
+    }
+
+
+    /* Utility */
+    .divider{ height:1px; background:var(--border); margin:12px 0; }
+    .kpis{ display:grid; grid-template-columns: repeat(4, 1fr); gap:12px; }
+    .kpi{
+      padding:14px 14px;
+      border-radius:var(--radius);
+      border:1px solid var(--border);
+      background:#fff;
+      box-shadow:var(--shadow);
+    }
+    .kpi .v{ font-size:18px; font-weight:1000; }
+    .kpi .l{ margin-top:6px; font-size:12px; color:var(--muted); font-weight:900; }
+    @media (max-width: 980px){ .kpis{ grid-template-columns: repeat(2,1fr);} }
+    @media (max-width: 740px){ .kpis{ grid-template-columns: 1fr;} }
+
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside id="sidebar">
+      <div class="brand">
+        <div class="logo" aria-hidden="true"></div>
+        <div>
+          <h1>Distribuidora ERP</h1>
+          <p>Prototipo visual</p>
+        </div>
+      </div>
+
+      <nav>
+        <div class="section-title">Navegación</div>
+        <ul class="nav-list">
+          <li class="nav-item"><a class="nav-link active" href="#dashboard" aria-current="page"><span class="icon">⌂</span>Dashboard</a></li>
+
+          <div class="section-title">Módulos</div>
+          <li class="nav-item"><a class="nav-link" href="productos.html"><span class="icon">▦</span>Productos</a></li>
+          <li class="nav-item"><a class="nav-link" href="stock.html"><span class="icon">◷</span>Stock</a></li>
+          <li class="nav-item"><a class="nav-link" href="proveedores.html"><span class="icon">◎</span>Proveedores</a></li>
+          <li class="nav-item"><a class="nav-link" href="compras.html"><span class="icon">↧</span>Compras</a></li>
+          <li class="nav-item"><a class="nav-link" href="pedido_compra.html"><span class="icon">≡</span>Pedido de Compra</a></li>
+
+        </ul>
+      </nav>
+
+      <div class="divider"></div>
+      <div class="help" style="padding:0 10px;">
+        Interfaz responsive: en celular el menú se oculta y se muestra con botón.
+      </div>
+    </aside>
+
+    <header>
+      <div class="top-left">
+        <button class="hamburger" id="hamburger" aria-label="Abrir menú">
+          <span></span><span></span><span></span>
+        </button>
+        <button class="btn" id="themeBtn" aria-label="Cambiar modo claro/oscuro" style="padding:10px 12px; font-weight:1000;" disabled>
+          <span class="mini-icon" aria-hidden="true" style="margin-right:0;">☾</span>
+          Modo
+        </button>
+        <div class="page-breadcrumb">
+          <p class="title" id="pageTitle">Dashboard</p>
+          <p class="subtitle">Sistema de gestión para distribuidora mayorista</p>
+        </div>
+      </div>
+
+      <div class="global-search" role="search" aria-label="Buscador global">
+        <div class="magnifier" aria-hidden="true">⌕</div>
+        <input type="text" placeholder="Buscar por código, descripción, proveedor…" disabled />
+      </div>
+
+      <div class="top-right">
+        <div class="notif" aria-label="Notificaciones (prototipo)" title="Notificaciones">
+          <span class="dot" aria-hidden="true"></span>
+          🔔
+        </div>
+        <div class="pill" aria-label="Usuario logueado">
+          <div class="avatar" aria-hidden="true">DT</div>
+          <div class="meta">
+            <div class="name">Dario T.</div>
+            <div class="role">Administrador</div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main class="content">
+      <!-- Dashboard -->
+      <section id="dashboard" class="card" style="margin-bottom:14px;">
+        <div class="card-h">
+          <div>
+            <h2>Dashboard principal</h2>
+            <p>Resumen rápido para toma de decisiones (solo UI).</p>
+          </div>
+          <div class="btn-row">
+            <div class="btn primary"><span class="mini-icon">＋</span>Acción</div>
+            <div class="btn"><span class="mini-icon">↻</span>Actualizar</div>
+          </div>
+        </div>
+        <div class="card-b">
+          <div class="kpis">
+            <div class="kpi"><div class="v">124</div><div class="l">Productos activos</div></div>
+            <div class="kpi"><div class="v">9</div><div class="l">Stock crítico</div></div>
+            <div class="kpi"><div class="v">3</div><div class="l">Compras pendientes</div></div>
+            <div class="kpi"><div class="v">1</div><div class="l">Órdenes de compra en revisión</div></div>
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="grid-2">
+            <div class="card" style="box-shadow:none;">
+              <div class="card-h"><div><h2>Alertas de stock</h2><p>Productos por debajo del mínimo.</p></div></div>
+              <div class="card-b" style="padding-top:10px;">
+                <div class="btn-row" style="margin-bottom:10px;">
+                  <span class="tag crit"><span class="s"></span>Crítico</span>
+                  <span class="tag active"><span class="s"></span>OK</span>
+                </div>
+                <table aria-label="Tabla alertas de stock">
+                  <thead>
+                    <tr>
+                      <th>Producto</th>
+                      <th>Categoría</th>
+                      <th>Stock</th>
+                      <th>Estado</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td data-label="Producto">A-1001</td>
+                      <td data-label="Categoría">Bebidas</td>
+                      <td data-label="Stock">2</td>
+                      <td data-label="Estado"><span class="tag crit"><span class="s"></span>Crítico</span></td>
+                    </tr>
+                    <tr>
+                      <td data-label="Producto">A-1044</td>
+                      <td data-label="Categoría">Lácteos</td>
+                      <td data-label="Stock">7</td>
+                      <td data-label="Estado"><span class="tag active"><span class="s"></span>OK</span></td>
+                    </tr>
+                    <tr>
+                      <td data-label="Producto">C-2200</td>
+                      <td data-label="Categoría">Almacén</td>
+                      <td data-label="Stock">1</td>
+                      <td data-label="Estado"><span class="tag inactive"><span class="s"></span>Sin stock</span></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="card" style="box-shadow:none;">
+              <div class="card-h"><div><h2>Próximos a vencer</h2><p>Lotes con vencimiento cercano.</p></div></div>
+              <div class="card-b" style="padding-top:10px;">
+                <table aria-label="Tabla próximos a vencer">
+                  <thead>
+                    <tr>
+                      <th>Producto</th>
+                      <th>Lote</th>
+                      <th>Vencimiento</th>
+                      <th>Acción</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td data-label="Producto">B-3301</td>
+                      <td data-label="Lote">L-9A21</td>
+                      <td data-label="Vencimiento">2026-07-02</td>
+                      <td data-label="Acción"><span class="btn primary" style="padding:8px 10px; font-size:13px;">Ver</span></td>
+                    </tr>
+                    <tr>
+                      <td data-label="Producto">F-1100</td>
+                      <td data-label="Lote">L-1C77</td>
+                      <td data-label="Vencimiento">2026-07-10</td>
+                      <td data-label="Acción"><span class="btn" style="padding:8px 10px; font-size:13px;">Detalle</span></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Modulos en páginas separadas: index.html queda solo como dashboard -->
+      <section id="productos" class="card" style="margin-bottom:14px; display:none;"></section>
+      <section id="stock" class="card" style="margin-bottom:14px; display:none;"></section>
+
+        <div class="card-h">
+          <div>
+            <h2>Gestión de Stock</h2>
+            <p>Consulta, movimientos y ajustes (solo UI).</p>
+          </div>
+          <div class="btn-row">
+            <div class="btn primary"><span class="mini-icon">＋</span>Registrar ingreso</div>
+            <div class="btn"><span class="mini-icon">≡</span>Historial</div>
+          </div>
+        </div>
+        <div class="card-b">
+          <div class="filters">
+            <div class="field" style="min-width:260px;">
+              <label>Buscar producto</label>
+              <input class="control" type="text" placeholder="Por nombre o código" disabled />
+            </div>
+            <div class="field">
+              <label>Filtro</label>
+              <select class="control" disabled>
+                <option>Stock disponible</option>
+              </select>
+            </div>
+            <div class="btn-row">
+              <div class="btn"><span class="mini-icon">⌁</span>Aplicar</div>
+            </div>
+          </div>
+
+          <div style="overflow:auto; border-radius: 10px; border:1px solid var(--border); background:#fff;">
+            <table aria-label="Tabla stock disponible" style="min-width: 720px;">
+              <thead>
+                <tr>
+                  <th>Código</th>
+                  <th>Descripción</th>
+                  <th>Unidad</th>
+                  <th>Stock</th>
+                  <th>Stock mínimo</th>
+                  <th>Nivel</th>
+                  <th>Ubicación</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td data-label="Código">A-1001</td>
+                  <td data-label="Descripción">Agua mineral 500ml</td>
+                  <td data-label="Unidad">Caja</td>
+                  <td data-label="Stock">2</td>
+                  <td data-label="Stock mínimo">5</td>
+                  <td data-label="Nivel"><span class="tag crit"><span class="s"></span>Crítico</span></td>
+                  <td data-label="Ubicación">Góndola B / Estante 3</td>
+                </tr>
+                <tr>
+                  <td data-label="Código">A-1044</td>
+                  <td data-label="Descripción">Leche descremada 1L</td>
+                  <td data-label="Unidad">Unidad</td>
+                  <td data-label="Stock">48</td>
+                  <td data-label="Stock mínimo">10</td>
+                  <td data-label="Nivel"><span class="tag active"><span class="s"></span>Suficiente</span></td>
+                  <td data-label="Ubicación">Pasillo A / Estante 1</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="grid-2">
+            <div class="card" style="box-shadow:none;">
+              <div class="card-h"><div><h2>Registro de ingreso</h2><p>Recepción de mercadería (demo).</p></div></div>
+              <div class="card-b">
+                <div class="form-grid">
+                  <div class="field">
+                    <label>Proveedor *</label>
+                    <select class="control" disabled><option>Prov. Sur</option></select>
+                  </div>
+                  <div class="field">
+                    <label>Fecha ingreso *</label>
+                    <input class="control" type="date" value="2026-06-20" disabled />
+                  </div>
+                  <div class="field span-2">
+                    <label>Productos recibidos (visual)</label>
+                    <div class="help">Tabla de ítems por producto, cantidad y precio de compra.</div>
+                  </div>
+                </div>
+                <div class="footer-actions">
+                  <div class="btn danger">Cancelar</div>
+                  <div class="btn primary">Guardar</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="card" style="box-shadow:none;">
+              <div class="card-h"><div><h2>Ajuste manual</h2><p>Rotura / pérdida / correcciones (demo).</p></div></div>
+              <div class="card-b">
+                <div class="form-grid">
+                  <div class="field"><label>Producto *</label><select class="control" disabled><option>A-1001</option></select></div>
+                  <div class="field"><label>Cantidad ( + / - ) *</label><input class="control" value="-2" disabled /></div>
+                  <div class="field span-2"><label>Motivo *</label><input class="control" value="Rotura" disabled /></div>
+                  <div class="field"><label>Fecha</label><input class="control" type="date" value="2026-06-21" disabled /></div>
+                  <div class="field"><label>Responsable</label><input class="control" value="DT" disabled /></div>
+                </div>
+                <div class="footer-actions">
+                  <div class="btn danger">Cancelar</div>
+                  <div class="btn primary">Guardar</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- Proveedores: en páginas separadas -->
+      <section id="proveedores" class="card" style="margin-bottom:14px; display:none;">
+
+        <div class="card-h">
+          <div>
+            <h2>Gestión de Proveedores</h2>
+            <p>Alta, edición y consulta (solo UI).</p>
+          </div>
+          <div class="btn-row">
+            <div class="btn primary"><span class="mini-icon">＋</span>Nuevo proveedor</div>
+            <div class="btn"><span class="mini-icon">⟲</span>Plazos</div>
+          </div>
+        </div>
+        <div class="card-b">
+          <div class="filters">
+            <div class="field" style="min-width:260px;">
+              <label>Buscar</label>
+              <input class="control" type="text" placeholder="Razón social o CUIT" disabled />
+            </div>
+            <div class="field"><label>Estado</label>
+              <select class="control" disabled>
+                <option>Activos</option>
+                <option>Inactivos</option>
+              </select>
+            </div>
+            <div class="btn-row"><div class="btn"><span class="mini-icon">⌁</span>Aplicar</div></div>
+          </div>
+
+          <div style="overflow:auto; border-radius: 10px; border:1px solid var(--border); background:#fff;">
+            <table aria-label="Listado de proveedores" style="min-width: 720px;">
+              <thead>
+                <tr>
+                  <th>Razón social</th>
+                  <th>CUIT</th>
+                  <th>Teléfono</th>
+                  <th>Correo</th>
+                  <th>Estado</th>
+                  <th>Fecha alta</th>
+                  <th>Plazo entrega</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td data-label="Razón social">Prov. Sur S.A.</td>
+                  <td data-label="CUIT">30-12345678-9</td>
+                  <td data-label="Teléfono">+54 11 5555-1234</td>
+                  <td data-label="Correo">compras@provsur.com</td>
+                  <td data-label="Estado"><span class="tag active"><span class="s"></span>Activo</span></td>
+                  <td data-label="Fecha alta">2026-02-10</td>
+                  <td data-label="Plazo entrega">3 días</td>
+                </tr>
+                <tr>
+                  <td data-label="Razón social">Coop Central</td>
+                  <td data-label="CUIT">30-98765432-1</td>
+                  <td data-label="Teléfono">+54 11 4444-3322</td>
+                  <td data-label="Correo">contacto@coopcentral.com</td>
+                  <td data-label="Estado"><span class="tag inactive"><span class="s"></span>Inactivo</span></td>
+                  <td data-label="Fecha alta">2026-01-03</td>
+                  <td data-label="Plazo entrega">—</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="grid-2">
+            <div class="card" style="box-shadow:none;">
+              <div class="card-h"><div><h2>Alta / Edición</h2><p>Datos y validaciones (demo).</p></div></div>
+              <div class="card-b">
+                <div class="form-grid">
+                  <div class="field span-2"><label>Razón social *</label><input class="control" value="Prov. Sur S.A." disabled /></div>
+                  <div class="field"><label>CUIT *</label><input class="control" value="30-12345678-9" disabled /></div>
+                  <div class="field"><label>Teléfono *</label><input class="control" value="+54 11 5555-1234" disabled /></div>
+                  <div class="field span-2"><label>Correo *</label><input class="control" value="compras@provsur.com" disabled /></div>
+                  <div class="field"><label>Estado</label><select class="control" disabled><option>Activo</option><option>Inactivo</option></select></div>
+                  <div class="field"><label>Plazo entrega (días)</label><input class="control" value="3" disabled /></div>
+                </div>
+                <div class="footer-actions">
+                  <div class="btn danger">Cancelar</div>
+                  <div class="btn primary">Guardar</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="card" style="box-shadow:none;">
+              <div class="card-h"><div><h2>Asociación con productos</h2><p>Proveedor principal (visual).</p></div></div>
+              <div class="card-b">
+                <div class="btn-row" style="margin-bottom:10px;">
+                  <div class="tag"><span class="s" style="background:var(--primary)"></span>Proveedor: Prov. Sur S.A.</div>
+                </div>
+                <div class="help">Lista de productos asociados, seleccionando uno como principal.</div>
+                <div class="divider"></div>
+                <div class="btn-row">
+                  <div class="btn primary"><span class="mini-icon">＋</span>Agregar productos</div>
+                  <div class="btn"><span class="mini-icon">↻</span>Historial precios</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- Compras: en páginas separadas -->
+      <section id="compras" class="card" style="margin-bottom:14px; display:none;">
+
+        <div class="card-h">
+          <div>
+            <h2>Gestión de Compras</h2>
+            <p>Registrar compras, recepciones y detalle (solo UI).</p>
+          </div>
+          <div class="btn-row">
+            <div class="btn primary"><span class="mini-icon">＋</span>Nueva compra</div>
+            <div class="btn"><span class="mini-icon">✓</span>Recepción</div>
+          </div>
+        </div>
+        <div class="card-b">
+          <div class="filters">
+            <div class="field" style="min-width:260px;"><label>Buscar por proveedor</label><input class="control" disabled /></div>
+            <div class="field"><label>Rango fechas</label><input class="control" type="date" disabled /></div>
+            <div class="btn-row"><div class="btn"><span class="mini-icon">⌁</span>Aplicar</div></div>
+          </div>
+
+          <div style="overflow:auto; border-radius: 10px; border:1px solid var(--border); background:#fff;">
+            <table aria-label="Listado de compras" style="min-width: 760px;">
+              <thead>
+                <tr>
+                  <th>Identificador</th>
+                  <th>Proveedor</th>
+                  <th>Fecha</th>
+                  <th>Estado</th>
+                  <th>Importe total</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td data-label="Identificador">C-0007</td>
+                  <td data-label="Proveedor">Prov. Sur S.A.</td>
+                  <td data-label="Fecha">2026-06-19</td>
+                  <td data-label="Estado"><span class="tag crit"><span class="s"></span>Pendiente</span></td>
+                  <td data-label="Importe total">$125.000</td>
+                  <td data-label="Acciones"><div class="btn-row"><div class="btn primary" style="padding:8px 10px; font-size:13px;">Detalle</div></div></td>
+                </tr>
+                <tr>
+                  <td data-label="Identificador">C-0012</td>
+                  <td data-label="Proveedor">Coop Central</td>
+                  <td data-label="Fecha">2026-06-12</td>
+                  <td data-label="Estado"><span class="tag active"><span class="s"></span>Parcial</span></td>
+                  <td data-label="Importe total">$66.500</td>
+                  <td data-label="Acciones"><div class="btn-row"><div class="btn" style="padding:8px 10px; font-size:13px;">Recepcionar</div></div></td>
+                </tr>
+                <tr>
+                  <td data-label="Identificador">C-0003</td>
+                  <td data-label="Proveedor">Prov. Sur S.A.</td>
+                  <td data-label="Fecha">2026-05-28</td>
+                  <td data-label="Estado"><span class="tag active"><span class="s"></span>Completada</span></td>
+                  <td data-label="Importe total">$210.000</td>
+                  <td data-label="Acciones"><div class="btn-row"><div class="btn" style="padding:8px 10px; font-size:13px;">Ver</div></div></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="grid-2">
+            <div class="card" style="box-shadow:none;">
+              <div class="card-h"><div><h2>Detalle de compra</h2><p>Productos incluidos y estado de recepción.</p></div></div>
+              <div class="card-b">
+                <div class="help" style="margin-bottom:12px;">Proveedor: Prov. Sur S.A. • Compra: C-0007</div>
+                <div class="help">Tabla de ítems por producto: cantidad, precio unitario, importe.</div>
+                <div class="divider"></div>
+                <div class="btn-row">
+                  <div class="btn primary"><span class="mini-icon">＋</span>Registrar recepción</div>
+                  <div class="btn"><span class="mini-icon">✎</span>Modificar (pendiente)</div>
+                  <div class="btn danger"><span class="mini-icon">⛔</span>Cancelar</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="card" style="box-shadow:none;">
+              <div class="card-h"><div><h2>Recepción parcial</h2><p>Registro por producto (demo).</p></div></div>
+              <div class="card-b">
+                <div class="form-grid">
+                  <div class="field"><label>Fecha recepción *</label><input class="control" type="date" value="2026-06-20" disabled /></div>
+                  <div class="field"><label>Compra *</label><input class="control" value="C-0007" disabled /></div>
+                  <div class="field span-2"><label>Ítems recibidos (visual)</label><div class="help">Cantidad recibida por producto (se valida contra comprada).</div></div>
+                </div>
+                <div class="footer-actions">
+                  <div class="btn danger">Cancelar</div>
+                  <div class="btn primary">Guardar</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- Pedido de compra: en páginas separadas -->
+      <section id="pedido-compra" class="card" style="margin-bottom:14px; display:none;">
+
+        <div class="card-h">
+          <div>
+            <h2>Gestión de Pedidos de Compra</h2>
+            <p>Generar órdenes y consultar estado (solo UI).</p>
+          </div>
+          <div class="btn-row">
+            <div class="btn primary"><span class="mini-icon">＋</span>Generar orden</div>
+            <div class="btn"><span class="mini-icon">≡</span>Emitidas</div>
+          </div>
+        </div>
+        <div class="card-b">
+          <div class="filters">
+            <div class="field" style="min-width:260px;"><label>Buscar por proveedor</label><input class="control" disabled /></div>
+            <div class="field"><label>Rango fechas</label><input class="control" type="date" disabled /></div>
+            <div class="btn-row"><div class="btn"><span class="mini-icon">⌁</span>Aplicar</div></div>
+          </div>
+
+          <div style="overflow:auto; border-radius: 10px; border:1px solid var(--border); background:#fff;">
+            <table aria-label="Listado de pedidos de compra" style="min-width: 760px;">
+              <thead>
+                <tr>
+                  <th>Identificador</th>
+                  <th>Proveedor</th>
+                  <th>Fecha emisión</th>
+                  <th>Estado</th>
+                  <th>Total estimado</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td data-label="Identificador">PC-1009</td>
+                  <td data-label="Proveedor">Prov. Sur S.A.</td>
+                  <td data-label="Fecha emisión">2026-06-18</td>
+                  <td data-label="Estado"><span class="tag crit"><span class="s"></span>Pendiente</span></td>
+                  <td data-label="Total estimado">$90.000</td>
+                  <td data-label="Acciones"><div class="btn-row"><div class="btn primary" style="padding:8px 10px; font-size:13px;">Detalle</div></div></td>
+                </tr>
+                <tr>
+                  <td data-label="Identificador">PC-1012</td>
+                  <td data-label="Proveedor">Coop Central</td>
+                  <td data-label="Fecha emisión">2026-06-10</td>
+                  <td data-label="Estado"><span class="tag active"><span class="s"></span>Enviada</span></td>
+                  <td data-label="Total estimado">$44.200</td>
+                  <td data-label="Acciones"><div class="btn-row"><div class="btn" style="padding:8px 10px; font-size:13px;">Ver</div></div></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="grid-2">
+            <div class="card" style="box-shadow:none;">
+              <div class="card-h"><div><h2>Generar orden</h2><p>Productos y cantidades solicitadas (demo).</p></div></div>
+              <div class="card-b">
+                <div class="form-grid">
+                  <div class="field"><label>Proveedor *</label><select class="control" disabled><option>Prov. Sur S.A.</option></select></div>
+                  <div class="field"><label>Fecha creación *</label><input class="control" type="date" value="2026-06-22" disabled /></div>
+                  <div class="field span-2"><label>Ítems (visual)</label><div class="help">Tabla: código, descripción, cantidad solicitada.</div></div>
+                  <div class="field"><label>Total estimado</label><input class="control" value="$90.000" disabled /></div>
+                  <div class="field"><label>ID orden</label><input class="control" value="PC-1009" disabled /></div>
+                </div>
+                <div class="footer-actions">
+                  <div class="btn danger">Cancelar</div>
+                  <div class="btn primary">Guardar</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="card" style="box-shadow:none;">
+              <div class="card-h"><div><h2>Sugerencias de reposición</h2><p>Basadas en stock bajo (visual).</p></div></div>
+              <div class="card-b">
+                <div class="btn-row" style="margin-bottom:12px;">
+                  <div class="btn primary" style="cursor:default;">Generar sugerencias</div>
+                </div>
+                <div class="help">Listado de productos sugeridos y cantidad recomendada.</div>
+                <div class="divider"></div>
+                <div class="btn-row">
+                  <div class="btn"><span class="mini-icon">✓</span>Seleccionar</div>
+                  <div class="btn primary"><span class="mini-icon">↧</span>Generar orden</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <section class="card" style="margin-bottom:30px;">
+        <div class="card-h">
+          <div>
+            <h2>Consistencia de UI</h2>
+            <p>Componentes comunes: tablas con filtros/orden/paginación y formularios con Guardar/Cancelar.</p>
+          </div>
+        </div>
+        <div class="card-b">
+          <div class="help">Este prototipo es exclusivamente visual. Los inputs y botones están deshabilitados o son decorativos.</div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <script>
+    // Tema: claro/oscuro (solo UI)
+    const themeBtn = document.getElementById('themeBtn');
+    const root = document.documentElement;
+    function applyTheme(theme){
+      root.dataset.theme = theme;
+      if (themeBtn){
+        themeBtn.disabled = false;
+        themeBtn.innerHTML = theme === 'dark'
+          ? '<span class="mini-icon" aria-hidden="true" style="margin-right:0;">☀</span>Modo'
+          : '<span class="mini-icon" aria-hidden="true" style="margin-right:0;">☾</span>Modo';
+        themeBtn.setAttribute('aria-label','Cambiar a modo '+ (theme === 'dark' ? 'claro' : 'oscuro'));
+      }
+    }
+
+    // Inicial: preferencia del sistema o default claro
+    const saved = localStorage.getItem('theme');
+    const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const initialTheme = saved ? saved : (prefersDark ? 'dark' : 'light');
+    if (initialTheme === 'dark') applyTheme('dark'); else applyTheme('light');
+
+    themeBtn?.addEventListener('click', () => {
+      const current = root.dataset.theme === 'dark' ? 'dark' : 'light';
+      const next = current === 'dark' ? 'light' : 'dark';
+      localStorage.setItem('theme', next);
+      applyTheme(next);
+    });
+
+    // Solo UI: abrir/cerrar menú lateral en celular
+    const sidebar = document.getElementById('sidebar');
+    const hamburger = document.getElementById('hamburger');
+
+    hamburger?.addEventListener('click', () => {
+      const isOpen = sidebar.classList.contains('open');
+      sidebar.classList.toggle('open', !isOpen);
+    });
+
+    // Cerrar sidebar al hacer click fuera (solo móvil)
+    document.addEventListener('click', (e) => {
+      if (!sidebar || !hamburger) return;
+      const mobile = window.matchMedia('(max-width: 740px)').matches;
+      if (!mobile) return;
+      const clickedInside = sidebar.contains(e.target) || hamburger.contains(e.target);
+      if (!clickedInside) sidebar.classList.remove('open');
+    });
+
+    // Solo dashboard en index.html (modulos en páginas separadas)
+    const titleEl = document.getElementById('pageTitle');
+    if (titleEl) titleEl.textContent = 'Dashboard';
+
+  </script>
+</body>
+</html>
+

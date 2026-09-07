@@ -1,0 +1,403 @@
+======================================================================
+REGISTRO DE PROMPTS - PROYECTO ERP DISTRIBUIDORA (GRUPO 3)
+======================================================================
+
+[Prompt #1]
+Fecha/Hora: 2026-08-31 16:28
+Prompt:
+"Revisa los archivos"
+Acción realizada:
+- Exploración de la estructura del proyecto (carpetas BD, Documentacion, Interfaz).
+- Análisis detallado del DER (Diagrama DER.txt) y del script SQL (grupo3_create_database.sql).
+- Revisión de las historias de usuario, endpoints y prototipos visuales HTML/CSS (index, productos, stock, proveedores, compras, pedido_compra).
+- Identificación de puntos de mejora y código residual.
+
+----------------------------------------------------------------------
+
+[Prompt #2]
+Fecha/Hora: 2026-08-31 16:39
+Prompt:
+"Crea la base de datos para el Grupo 3."
+Acción realizada:
+- Detección del entorno de base de datos local (MySQL en XAMPP).
+- Inicio del servicio MySQL.
+- Ejecución del script DDL grupo3_create_database.sql.
+- Creación y verificación de la base de datos 'distribuidora_grupo3' con sus 23 tablas, claves foráneas, restricciones de chequeo y unicidad.
+
+----------------------------------------------------------------------
+
+[Prompt #3]
+Fecha/Hora: 2026-08-31 16:44
+Prompt:
+"A medida que trabajamos, puedes hacer un txt añadiendo los prompts que estuvimos haciendo?"
+Acción realizada:
+- Creación del archivo 'Registro_Prompts.txt' para registrar cronológicamente todas las solicitudes y acciones realizadas a lo largo del proyecto.
+
+----------------------------------------------------------------------
+
+[Prompt #4]
+Fecha/Hora: 2026-08-31 16:49
+Prompt:
+"Realicemos las siguientes historias de usuario:
+P02 - Administrar Categorías
+P03 - Administrar Marcas
+P01 - Registrar Productos
+P04 - Modificar Productos
+P05 - Buscar Productos
+P06 - Desactivar Productos"
+Acción realizada:
+- Lectura y análisis de los criterios de aceptación y dependencias del Product Backlog (Historias de Usuario.pdf).
+- Definición de la arquitectura técnica (Backend PHP 8.x + MySQL + Frontend interactivo).
+- Elaboración del plan de implementación.
+
+----------------------------------------------------------------------
+
+[Prompt #5]
+Fecha/Hora: 2026-08-31 16:51
+Prompt:
+"Para este proyecto se debe utilizar PHP 8.5"
+Acción realizada:
+- Configuración y adopción de estándares modernos de PHP 8.x/8.5 (tipado estricto, PDO, arquitectura REST limpia en JSON).
+- Integración en el plan de implementación del backend.
+
+----------------------------------------------------------------------
+
+[Prompt #6]
+Fecha/Hora: 2026-08-31 16:55
+Prompt:
+"Se utilizara PHP 8.5 con una arquitectura API REST, la base de datos sera en Mysql utilizando Xampp por el momento."
+Acción realizada:
+- Aprobación de la arquitectura API REST en PHP 8.5 y MySQL en XAMPP.
+- Desarrollo de modelos (Categoria.php, Marca.php, Producto.php) y endpoints REST (categorias.php, marcas.php, productos.php).
+- Conexión interactiva del frontend (productos.html) con modales de gestión, validaciones, debounce y notificaciones.
+- Pruebas automatizadas y de integración exitosas.
+
+----------------------------------------------------------------------
+
+[Prompt #7]
+Fecha/Hora: 2026-08-31 17:22
+Prompt:
+"Bien, realiza un resumen de lo trabajado hoy. Explicando que realizaste y poniendo aclaraciones sobre el codigo."
+Acción realizada:
+- Elaboración del resumen y desglose detallado de la arquitectura, base de datos, backend PHP 8.5, frontend interactivo, cumplimiento de criterios de aceptación y aclaraciones técnicas sobre el código.
+
+----------------------------------------------------------------------
+
+[Prompt #8]
+Fecha/Hora: 2026-08-31 17:25
+Prompt:
+"Pon el informe en un txt y ponlo en la carpeta documentacion junto al registro de los prompts."
+Acción realizada:
+- Creación del archivo 'Documentacion/Informe_Trabajo.txt' con el informe completo y aclaraciones del código.
+- Ubicación y sincronización del archivo 'Documentacion/Registro_Prompts.txt' en la carpeta Documentacion.
+
+----------------------------------------------------------------------
+
+[Prompt #9]
+Fecha/Hora: 2026-09-03 15:56
+Prompt:
+"Para el proyecto habia que usar Laravel. Puedes adaptarlo?"
+Acción realizada:
+- Descarga e instalación de Composer para el entorno PHP.
+- Planificación de la migración y adaptación de la arquitectura del Backend a Laravel (Eloquent ORM, Controladores REST, Form Requests, API Routes y conexión a MySQL).
+- Elaboración del plan de implementación para la adaptación a Laravel.
+
+----------------------------------------------------------------------
+
+[Prompt #10]
+Fecha/Hora: 2026-09-03 16:08
+Prompt:
+"Apruebo"
+Acción realizada:
+- Aprobación del plan de implementación de Laravel.
+- Creación de la estructura del proyecto Laravel, configuración de conexión a base de datos MySQL en XAMPP.
+- Implementación de modelos Eloquent (Categoria, Marca, Producto, Stock, HistorialPrecio) y controladores de API REST para las historias de usuario P01 a P06.
+- Actualización de rutas API y conexión con el frontend.
+
+----------------------------------------------------------------------
+
+[Prompt #11]
+Fecha/Hora: 2026-09-03 17:03
+Prompt:
+"Lee los archivos."
+Acción realizada:
+- Relectura de DER, script SQL, informe, bitácora, modelos/controladores Laravel (P01–P06) y prototipos de Interfaz.
+- Confirmación del estado actual: backend Laravel conectado a MySQL `distribuidora_grupo3`; frontend de productos contra `/api`.
+
+----------------------------------------------------------------------
+
+[Prompt #12]
+Fecha/Hora: 2026-09-03 17:09
+Prompt:
+"Abro la interfaz en http://localhost:8000/api y me aparece 404 not found"
+Acción realizada:
+- Explicación: `/api` es el prefijo REST, no la UI. La interfaz está en `/Interfaz/index.html`.
+- Redirección de `/` al dashboard y de `GET /api` (navegador) hacia `/Interfaz/index.html`; JSON si el cliente pide application/json.
+
+----------------------------------------------------------------------
+
+[Prompt #13]
+Fecha/Hora: 2026-09-03 (sesión continua)
+Prompt:
+"Bien, ahora se continuara con el desarrollo de las siguientes historias de Usuario:
+S01 - Consulta de Stock Disponible (3 SP)
+S02 - Consulta de Disponibilidad para Ventas (3 SP)
+S03 - Registro de Ingreso de Mercadería (5 SP)
+S04 - Actualización Automática por Venta (5 SP)
+S05 - Registro de Devoluciones (5 SP)
+S06 - Ajustes Manuales de Inventario (5 SP)
+S07 - Alertas de Stock Mínimo (5 SP)
+S08 - Gestión de Unidades y Equivalencias (8 SP)"
+Acción realizada:
+- Lectura del PDF 'Historias de Usuario.pdf' (extracción de texto) para conocer los criterios de aceptación de cada historia del Módulo Stock.
+- Revisión del DER, script SQL y estado actual del backend Laravel.
+- Presentación del plan de implementación (Backend API REST + Frontend).
+- Alcance aprobado por el usuario: Backend + Frontend completos; para S04 se implementa un endpoint interno simple
+  POST /api/stock/ventas (recibe id_producto y cantidad, descuenta stock, impide negativo y registra movimiento tipo 'venta').
+- Confirmación de MySQL/XAMPP activo y base 'distribuidora_grupo3' con tablas STOCK, MOVIMIENTO_STOCK y UNIDAD_MEDIDA disponibles.
+======================================================================
+
+[Prompt #14]
+Fecha/Hora: 2026-09-03 (sesión continua)
+Prompt:
+"Continue if you have next steps, or stop and ask for clarification if you are unsure how to proceed."
+Acción realizada:
+- Verificación del servidor Laravel (localhost:8000) activo.
+- Health-check end-to-end de los endpoints del Módulo Stock S01-S08 (todos responden 200):
+  S01 GET /api/stock (4 productos), S02 GET /api/stock/6/disponibilidad (stock 30),
+  S07 GET /api/stock/alertas (0 en alerta), S08 GET /api/productos/6/unidades (2 unidades),
+  S08 GET /api/unidades/convertir (24 Unidad = 2 Caja), GET /api/proveedores (1),
+  S12 GET /api/stock/6/historial-movimientos (4 movimientos).
+- Frontend /Interfaz/stock.html servido correctamente (200).
+- Corrección en Interfaz/stock.html: se eliminó la referencia huérfana a 'btnAlertas' (botón inexistente
+  en el HTML) que habría roto la inicialización del JS; el modal de alertas se abre sólo desde la tabla vía abrirMinimoPara.
+- Verificación cruzada de IDs: 61 referencias getElementById del JS, todas presentes en el HTML (0 rotas).
+- DETECCIÓN Y CORRECCIÓN IMPORTANTE: el frontend completo (67473 bytes) se desarrolló en la carpeta
+  raíz Interfaz\stock.html, pero Laravel sirve desde backend\public\Interfaz\stock.html (que tenía una versión
+  antigua de 20925 bytes sin los modales S03-S08). Se copió la versión completa a backend\public\Interfaz\
+  para que /Interfaz/stock.html sirva el módulo completo (ahora 67293 bytes con modales y abrirMinimoPara).
+- Estado: Módulo Stock S01-S08 implementado en Backend (API REST) y Frontend completo y operativo.
+======================================================================
+[Prompt #15]
+Fecha/Hora: 2026-09-03 (sesión continua)
+Prompt:
+"Anotaciones: En el ingreso de registro de mercadería, no debería ser posible realizar un registro posterior a la fecha actual.
+La Devolución está agregando stock en vez de quitar."
+Acción realizada:
+- Aclaración del usuario: la devolución al depósito SÍ debe SUMAR stock (S05 "registrar devoluciones al depósito").
+  Se confirmó que el comportamiento actual (sumar) es correcto; no se realizaron cambios en devolución.
+- Corrección S03 (ingreso de mercadería): se prohibió registrar con fecha posterior a hoy.
+  - Backend: regla de validación 'fecha' => 'nullable|date|before_or_equal:today' en IngresoMercaderiaController
+    (message: 'La fecha del ingreso no puede ser posterior a la fecha actual.').
+  - Frontend: validación previa en el modal de ingreso (stock.html) que bloquea fechas futuras antes del envío.
+- Pruebas realizadas:
+  - Fecha futura (2027-01-01) => HTTP 400 con mensaje de error correcto.
+  - Fecha de hoy => HTTP 201 (ingreso válido; se revirtió con una venta para no alterar el stock de referencia, quedando producto 6 = 6).
+- Frontend sincronizado de Interfaz\stock.html a backend\public\Interfaz\stock.html.
+- Lint PHP: sin errores de sintaxis.
+======================================================================
+[Prompt #16]
+Fecha/Hora: 2026-09-03 (sesión continua)
+Prompt:
+"Bien, ahora podemos empezar la implementacion de las siguientes historias de usuario:
+PV01 - Registrar Proveedores (3 SP)
+PV02 - Consultar Información de Proveedores (3 SP)
+PV03 - Editar Información de Proveedores (3 SP)
+PV04 - Desactivar Proveedores (1 SP)
+PV05 - Asociar Productos a Proveedores (5 SP)"
+Acción realizada:
+- LECTURA de los criterios de aceptación de PV01-PV05 desde 'Historias de Usuario.pdf'.
+- Alcance aprobado por el usuario: Backend (API REST) + Frontend completos, siguiendo el patrón del módulo Stock.
+- Esquema: tablas PROVEEDOR y PRODUCTO_PROVEEDOR ya existían en la BD (DDL). PROVEEDOR ya tenía 1 fila de prueba.
+- Backend implementado:
+  - Nuevo modelo ProductoProveedor (='PRODUCTO_PROVEEDOR') con relaciones a producto/proveedor.
+  - Relaciones agregadas: Proveedor::productos() (HasMany a ProductoProveedor) y Producto::proveedores().
+  - ProveedorController reescrito completo:
+    PV01 store (valida duplicado de CUIT, registra fecha_alta e id_usuario_carga).
+    PV02 index (búsqueda por razón social o CUIT, filtro por estado) y show (detalle + productos asociados).
+    PV03 update (valida no-duplicado de CUIT excluyendo al propio, registra fecha_modificacion e id_usuario_modificacion).
+    PV04 desactivar/activar (borrado lógico, conserva historial, registra fecha_desactivacion; bloquea asociar a inactivos).
+    PV05 asociarProductos (multi-producto, reactiva asociaciones previas), definirPrincipal (quita principal a los demás)
+        y desasociarProducto (baja lógica).
+  - Rutas en api.php: apiResource proveedores + PATCH desactivar/activar + POST productos + POST principal + DELETE desasociar.
+    Se actualizó también la lista de endpoints del root /api.
+- Frontend Interfaz\proveedores.html reescrito completo (mismo layout/tema que stock.html): KPIs, tabla con
+  búsqueda/filtro, modal alta/edición, modal detalle con productos asociados, modal asociar productos, acciones
+  de desactivar/reactivar/definir principal/desasociar. Validación cruzada: 35 refs getElementById (0 rotas),
+  funciones onclick todas definidas.
+- Frontend sincronizado a backend\public\Interfaz\proveedores.html (se sirve en /Interfaz/proveedores.html, 200).
+- Pruebas end-to-end del backend (todas correctas):
+  PV01 alta 201 (proveedor 2), duplicado CUIT 400, PV02 show 200, PV03 edit 200, PV05 asociar 201 (3 productos),
+  definir principal 200, desasociar 200, PV04 desactivar 200 + bloqueo a inactivo 400, reactivar 200.
+- Lint PHP: sin errores en modelos, controlador y rutas.
+- Estado: Módulo Proveedores PV01-PV05 implementado en Backend y Frontend completo y operativo.
+======================================================================
+[Prompt #17]
+Fecha/Hora: 2026-09-03 (sesión continua)
+Prompt:
+"Anotaciones: el desactivar un proveedor no impide seleccionar proveedores inactivos para nuevas operaciones"
+Acción realizada:
+- Revisión del criterio PV04 ("Debe impedir seleccionar proveedores inactivos para nuevas operaciones").
+- Detección: el frontend de S03 (ingreso de mercadería) mostraba TODOS los proveedores en el select,
+  incluidos los inactivos, porque el ProveedorController::index ampliado (PV02) ya no filtraba por defecto.
+- Corrección Frontend (stock.html): el select de proveedor del ingreso ahora consulta
+  GET /api/proveedores?estado=activo, mostrando sólo proveedores activos.
+- Corrección Backend (IngresoMercaderiaController): se agregó la validación explícita de que el proveedor
+  del ingreso esté activo (PV04); si está inactivo responde 400:
+  'No se puede registrar un ingreso con un proveedor inactivo. (PV04)'.
+- Pruebas: ingreso con proveedor inactivo => 400 (bloqueado); filtro estado=activo devuelve sólo activos.
+- Nota: se detectaron proveedores de prueba extra (id 3 'S.A' y id 4 'PRUEBA') presentes en la BD, no creados
+  en esta sesión; no afectan la funcionalidad.
+- Lint PHP: sin errores. Frontend sincronizado a backend\public\Interfaz\stock.html.
+======================================================================
+[Prompt #18]
+Fecha/Hora: 2026-09-03 (sesión continua)
+Prompt:
+"Bien, ahora pasemos a la implementacion de las siguientes historias de usuario:
+C01 - Registrar Compras de Mercadería (8 SP)
+C02 - Consultar Compras Realizadas (3 SP)
+C03 - Consultar el Detalle de una Compra (3 SP)
+C04 - Modificar una Compra Pendiente (5 SP)
+C05 - Cancelar una Compra Pendiente (1 SP)
+C06 - Registrar Recepciones Parciales (8 SP)"
+Acción realizada:
+- LECTURA de criterios de aceptación C01-C06 desde 'Historias de Usuario.pdf'.
+- Alcance aprobado por el usuario: Backend (API REST Laravel) + Frontend completos, siguiendo el patrón de stock/proveedores.
+- Esquema: tablas COMPRA, DETALLE_COMPRA, RECEPCION, DETALLE_RECEPCION ya existían (vacías).
+- Backend implementado:
+  - Modelos nuevos: Compra, DetalleCompra, Recepcion, DetalleRecepcion (con relaciones).
+  - CompraController (C01-C05):
+    C01 store: valida proveedor activo, items (producto/cantidad/precio), calcula importe_total y saldo_pendiente,
+      genera numero_comprobante único (NCC-AAAA-nnnnnn), estado inicial 'pendiente'.
+    C02 index: listado con filtros por id_proveedor, rango de fechas (desde/hasta) y estado; muestra importe total y estado.
+    C03 show: detalle con proveedor, productos (cantidad, cantidad_recibida, pendiente, precio, subtotal),
+      totales y recepciones con detalle por producto.
+    C04 update: solo permite compras 'pendiente'; reemplaza items, recalcula importe_total y saldo_pendiente.
+    C05 cancelar: solo 'pendiente'; registra fecha_cancelacion y estado 'cancelada', conserva historial.
+  - RecepcionController (C06):
+    Valida compra no cancelada/completada, proveedor activo, cantidades que no excedan el pendiente,
+    productos que formen parte de la compra. Registra recepción + detalles, suma stock por producto como
+    ingreso (requisito C06/actualiza alerta vía StockService), registra MovimientoStock, actualiza
+    cantidad_recibida y recalcula estado (parcialmente_recibida/completada) y saldo_pendiente proporcional.
+    Implementación con transacción DB única (atomicidad total; probado: fallo revierte todo).
+  - Rutas api.php: apiResource compras + PATCH compras/{id}/cancelar + POST compras/{id}/recepciones.
+    Se actualizó la lista de endpoints del root /api.
+- Frontend Interfaz\compras.html reescrito completo (base del layout de proveedores/stock): KPIs (total,
+  pendientes, con recepciones, canceladas), tabla con filtros (búsqueda, proveedor, rango de fechas, estado),
+  modal alta/edición con items dinámicos y total automático (C01/C04), modal detalle con productos y
+  recepciones (C03), modal registro de recepción parcial (C06), acciones cancelar (C05). Validación cruzada:
+  41 refs getElementById (0 rotas), funciones onclick todas definidas.
+- Frontend sincronizado a backend\public\Interfaz\compras.html (se sirve en /Interfaz/compras.html, 200).
+- Pruebas end-to-end del backend (correctas):
+  C01 alta 201 (compra 1: 2000; compra 2; compra 3), importe automático OK.
+  C02 listado/filtros 200. C03 detalle 200 con recepciones.
+  C04 modificar pendiente 200 (recalculo 1150); modificar parcialmente_recibida 400.
+  C05 cancelar pendiente 200 (fecha_cancelacion); cancelar no-pendiente 400.
+  C06 recepción parcial 201 (stock +, estado parcialmente_recibida, saldo proporcional 600->300 al 40%);
+    completar 201 (estado completada, saldo 0); exceder pendiente 400; recibir de completada/cancelada 400;
+    producto ajeno a la compra 400 con atomicidad total (stock sin cambios, sin recepciones huérfanas).
+- Nota: se detectaron y dejaron compras de prueba (1 y 3 completadas, 2 cancelada) como datos de demostración.
+- Lint PHP: sin errores en modelos, controladores y rutas.
+- Estado: Módulo Compras C01-C06 implementado en Backend y Frontend completo y operativo.
+======================================================================
+
+[Prompt #19]
+Fecha/Hora: 2026-09-03 (sesión continua)
+Prompt:
+"Bien, ahora las siguientes historias de usuario del modulo Ordenes de Compra:
+PC01 - Generar Orden de Compra (8 SP)
+PC02 - Consultar Ordenes de Compra (3 SP)
+PC03 - Consultar el Detalle de una Orden de Compra (3 SP)
+PC04 - Modificar una Orden de Compra Pendiente (5 SP)
+PC05 - Cancelar una Orden de Compra Pendiente (1 SP)
+PC06 - Visualizar el Estado de la Orden de Compra (3 SP)"
+Accion realizada:
+- LECTURA de criterios de aceptacion PC01-PC06 desde 'Historias de Usuario.pdf' (seccion pc_section.txt).
+- Alcance aprobado por el usuario: Backend (API REST Laravel) + Frontend completos, siguiendo el patrón de compras/proveedores/stock.
+- Esquema: tablas ORDEN_COMPRA y DETALLE_ORDEN ya existian (vacíos); estados posibles: pendiente, enviada, recibida_parcialmente, completada, cancelada.
+- Backend implementado:
+  - Modelos nuevos: OrdenCompra (tabla ORDEN_COMPRA, const ESTADOS) y DetalleOrden (tabla DETALLE_ORDEN, con relaciones).
+  - OrdenCompraController:
+    PC01 store: valida proveedor activo e items, calcula total_estimado automatico, genera numero_orden unico (OC-AAAA-nnnnnn), fecha_creacion, estado 'pendiente'.
+    PC02 index: listado con filtros por id_proveedor, rango de fechas (desde/hasta) y estado; muestra proveedor, total estimado, estado y fecha de emision.
+    PC03 show: detalle con proveedor, productos (cantidad_solicitada, precio_estimado, subtotal) y fechas; sirve tambien a PC06 (muestra estado y fechas de envio/cancelacion/modificacion).
+    PC04 update: solo ordenes 'pendiente'; reemplaza items, recalcula total_estimado, registra fecha_modificacion y estado actualizado (PC04/PC05/PC06).
+    PC05 cancelar: solo 'pendiente'; registra fecha_cancelacion y estado 'cancelada', conserva historial.
+  - Endpoint complementario PATCH /api/ordenes-compra/{id}/enviar: marca fecha_envio y estado 'enviada'
+    (necesario porque PC04/PC05/PC06 distinguen orden pendiente vs enviada, aunque 'enviar' no es historia propia).
+  - Rutas api.php: apiResource ordenes-compra + PATCH {id}/cancelar + PATCH {id}/enviar. Se actualizó la lista de endpoints del root /api.
+- Frontend Interfaz\pedido_compra.html: reescrito sobre la base de compras.html (sidebar activo 'Pedido de Compra', breadcrumb, KPIs total/pendientes/enviadas/canceladas, tabla con filtros de búsqueda/proveedor/fechas/estado, modal alta/edición PC01/PC04 con items dinámicos y total estimado auto, modal detalle PC03/PC06 con botones editar/enviar/cancelar, acciones enviar y cancelar). Validacion cruzada: 35 refs getElementById (0 rotas), sin refs remanentes del modulo compras.
+- Frontend sincronizado a backend\public\Interfaz\pedido_compra.html (se sirve en /Interfaz/pedido_compra.html, HTTP 200).
+- Pruebas end-to-end del backend (correctas):
+  PC01 alta 201 (orden 1 'OC-2026-014869', total_estimado 1342 automatico, estado pendiente).
+  PC02 listado/filtros 200. PC03 detalle 200 (productos BON-001, LECHE-001).
+  PC04 editar pendiente 200 (recalculo 1030, fecha_modificacion 2026-09-03).
+  Enviar pendiente 200 (estado enviada, fecha_envio); editar/cancelar enviada 400 (bloqueado).
+  PC05 cancelar pendiente 200 (fecha_cancelacion, estado cancelada); PC06 estados listados (enviada, cancelada).
+- Nota: se detectaron medidas de encoding con PowerShell (BOM) en PHP y se corrigieron; backend devuelve UTF-8 correcto.
+- Lint PHP: sin errores en modelos, controlador y rutas.
+- Estado: Modulo Ordenes de Compra PC01-PC06 implementado en Backend y Frontend completo y operativo.
+======================================================================
+
+[Prompt #20]
+Fecha/Hora: 2026-09-03 (sesión continua)
+Prompt:
+"Se debate que arquitectura debe tener el proyecto... (estructura modular src/Modules + Core + Middlewares). Se debe hacer con Laravel si o si, sirve usar esa estructura o no?" -> "Hazlo"
+Acción realizada:
+- Debate de arquitectura: la propuesta modular se adaptó a Laravel. Se adopta el patrón 'monolito modular'
+  (Modules por dominio con Controllers/Models/Services) PERO sin reimplementar la infraestructura que ya
+  provee Laravel (Core/Router/Database/Auth/Response/Middlewares se mantienen como servicios del framework).
+- Reorganización del backend a estructura modular:
+  - app/Modules/Productos/       -> CategoriaController, MarcaController, ProductoController | Categoria, Marca, Producto, HistorialPrecio.
+  - app/Modules/Stock/           -> StockController, IngresoMercaderiaController, VentaStockController, DevolucionController, AjusteStockController, AlertaStockController, UnidadController | Stock, MovimientoStock, UnidadMedida | Services/StockService.
+  - app/Modules/Proveedores/     -> ProveedorController | Proveedor, ProductoProveedor.
+  - app/Modules/Compras/         -> CompraController, RecepcionController | Compra, DetalleCompra, Recepcion, DetalleRecepcion.
+  - app/Modules/PedidosDeCompra/ -> OrdenCompraController | OrdenCompra, DetalleOrden.
+- Namespaces actualizados: App\Modules\{Dominio}\Controllers|Models|Services.
+- Referencias cruzadas entre módulos resueltas con 'use' de la clase en su módulo (ej. Producto usa
+  App\Modules\Stock\Models\Stock y App\Modules\Proveedores\Models\ProductoProveedor).
+- Se conservaron en su lugar: App\Http\Controllers\Controller (base) y App\Models\User (auth del framework),
+  referenciado por config/auth.php y factories/seeders.
+- routes/api.php actualizado a los nuevos namespaces (mismos endpoints URL, no cambia la API pública).
+- composer.json: PSR-4 'App\\' => 'app/' ya cubre los nuevos módulos (sin cambios; classmap no era necesario).
+- Servidor reiniciado. Pruebas (correctas): GET /api (success, 34 endpoints), /api/categorias, /api/proveedores,
+  /api/stock, /api/compras, /api/ordenes-compra, /api/productos => 200 success; POST /api/ordenes-compra => 201
+  (orden OC-2026-015916 con total_estimado 80 automático: 2x10 + 3x20), detalle con proveedor integrado entre módulos.
+- Lint PHP: sin errores en todos los archivos de app/ y routes/.
+- Estado: backend reorganizado a arquitectura modular dentro de Laravel, operativo y verificado end-to-end.
+======================================================================
+
+[Prompt #21]
+Fecha/Hora: 2026-09-03 (sesion continua)
+Prompt:
+"Testea los MVP de las historias de usuario para revisar si esta todo correcto."
+Accion realizada:
+- Suite automatizada end-to-end (test_mvp.py) contra http://localhost:8000/api recorriendo TODAS las
+  historias MVP del Grupo 3: P01-P06 (+P08/P12), S01-S08 (+S12), PV01-PV05, C01-C06, PC01-PC06.
+- Primera corrida: 99/103. Se depuraron 3 fallos del propio harness (error de medicion de stock en C06.2,
+  umbral de movimientos en S12, espacio en URL sin encode en PV02.1) y se detecto 1 BUG REAL de backend.
+- BUG REAL corregido: StockService::registrarMovimiento ejecutaba 'update STOCK set id_unidad = ...' pero
+  la tabla STOCK NO tiene la columna id_unidad (1:1 con PRODUCTO). Cualquier ingreso/venta/devolucion/ajuste
+  que enviara id_unidad (integracion S08) devolvia SQLSTATE 42S22 'Unknown column id_unidad' (500->400).
+  Se elimino la asignacion erronea; la unidad queda registrada en MOVIMIENTO_STOCK.id_unidad (unico lugar correcto).
+  Archivo: backend/app/Modules/Stock/Services/StockService.php (~linea 122).
+- Segunda corrida post-fix (servidor reiniciado): 103/103 PRUEBAS PASARON.
+  Resumen por modulo: Productos P: 26 OK | Stock S: 28 OK | Proveedores PV: 17 OK | Compras C: 17 OK | Pedidos PC: 15 OK.
+- Cobertura validada:
+  * P01-P06: alta atomica producto+STOCK+HISTORIAL_PRECIO, codigo/categoria/marca validados, edicion con
+    historial de precio, busqueda y filtros, borrado logico con fecha y filtros de estado.
+  * S01-S08/S12: consulta stock, disponibilidad, ingreso, venta (impide stock negativo: 'Stock insuficiente'
+    con rollback), devolucion, ajuste con motivo, alertas automaticas (bajo/critico) + recalcular, unidades
+    y equivalencias, conversion (2 cajas = 24 unidades), historial de movimientos.
+  * PV01-PV05: alta con CUIT unico, busqueda, edicion sin duplicar CUIT, desactivacion logica que BLOQUEA
+    ingreso/compra/asociacion con proveedor inactivo, asociacion de productos, proveedor principal unico,
+    desasociacion logica.
+  * C01-C06: comprobante unico NCC- y total/saldo automaticos, filtros por estado/proveedor, detalle,
+    edicion solo pendiente, recepciones parciales con validacion del pendiente y recalculode saldo,
+    cancelacion solo pendiente (doble cancelacion bloqueada).
+  * PC01-PC06: numero unico OC-, total estimado, filtros, detalle, edicion solo pendiente, envio
+    (estado 'enviada' + fecha_envio), cancelacion solo pendiente, bloqueo de proveedor inactivo.
+- Estado: TODOS los MVP validados correctos tras el fix de StockService. Ajuste menor: remover la
+  columna id_unidad del UPDATE de STOCK (no existia en el esquema). Datos de prueba generados en la BD
+  de desarrollo (productos MVP-*, proveedor MVP, compras/ordenes de test).
+======================================================================

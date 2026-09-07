@@ -1,0 +1,113 @@
+================================================================================
+ANÁLISIS DE MVP, CONSIDERACIONES DE IMPLEMENTACIÓN Y TABLAS DE LA BASE DE DATOS
+Sistema ERP Distribuidora - Grupo 3
+Fecha: 2026-09-03
+================================================================================
+
+1. ESTADO DE LOS MVP DE LAS HISTORIAS DE USUARIO
+--------------------------------------------------------------------------------
+Todos los MVP de los 5 módulos están implementados en Backend (API REST
+Laravel) + Frontend (HTML/CSS/JS):
+
+  Módulo Productos      : P01 - P06  (✅ Todos)
+  Módulo Stock          : S01 - S08  (✅ Todos)
+  Módulo Proveedores    : PV01 - PV05 (✅ Todos)
+  Módulo Compras        : C01 - C06  (✅ Todos)
+  Módulo Pedido Compra  : PC01 - PC06 (✅ Todos)
+
+Adicionalmente se adelantaron historias etiquetadas como "Importante":
+  - P08  Consultar Historial de Precios         (ProductoController::historialPrecios)
+  - S12  Historial de Movimientos de Stock      (StockController::historial)
+
+Historias NO implementadas (quedan como "Importante" / "Futuro"):
+  - Productos        : P07 (Aumentos masivos)
+  - Stock            : S09, S10, S11, S13, S14, S15, S16
+  - Proveedores      : PV06, PV07, PV08
+  - Compras          : C07, C08, C09
+  - Pedido de Compra : PC07
+
+
+2. CONSIDERACIONES TOMADAS EN LA IMPLEMENTACIÓN
+--------------------------------------------------------------------------------
+En cada módulo se siguieron las mismas consideraciones (documentadas en
+Registro_Prompts.txt y verificables en el código):
+
+- Lectura previa de los criterios de aceptación de cada historia desde
+  'Historias de Usuario.pdf' antes de codificar.
+- Backend REST (Laravel) + Frontend completo, con el mismo patrón visual y
+  técnico para todos los módulos.
+- Validaciones de negocio:
+  * Evitar duplicados (código de producto, CUIT, número de comprobante,
+    número de orden).
+  * Validar existencia previa de categoría, marca, proveedor (y que estén
+    activos).
+  * Impedir ingresos/fechas posteriores a la fecha actual.
+  * Cantidades > 0 y stock nunca negativo.
+- Cálculo automático de totales (importe total de compra, total estimado de
+  la orden de compra).
+- Auditoría: registro de fechas de creación, modificación, desactivación y
+  cancelación, y del usuario responsable.
+- Borrado lógico para conservar el historial (desactivar productos y
+  proveedores; cancelar compras y órdenes).
+- Transacciones atómicas (ACID): el alta de producto inserta PRODUCTO + STOCK
+  + HISTORIAL_PRECIO juntos; la recepción de mercadería actualiza compra +
+  stock + movimiento en una única transacción (si algo falla, revierte todo).
+- Identificadores únicos generados automáticamente (NCC-AAAA-nnnnnn para
+  compras, OC-AAAA-nnnnnn para órdenes de compra).
+- Regla PV04 transversal: los proveedores inactivos no pueden seleccionarse
+  en nuevas operaciones (aplicada también al ingreso de mercadería S03).
+- Sincronización del frontend a backend/public/Interfaz/, porque Laravel
+  sirve los archivos desde esa carpeta.
+- Lint PHP sin errores y validación cruzada de IDs/funciones en cada entrega.
+
+
+3. TABLAS DE OTROS GRUPOS EN LA BASE DE DATOS
+--------------------------------------------------------------------------------
+El script DDL del Grupo 3 conservó algunas columnas que en el DER completo
+referencian entidades de otros grupos. Esas columnas se mantienen PERO sin
+restricción FOREIGN KEY (marcadas con el comentario "-- FK externa (Grupo X)"):
+
+  - id_usuario        → Grupo 1 (LOGIN)      en varias tablas.
+  - id_venta          → Grupo 4 (VENTA)      en MOVIMIENTO_STOCK.
+  - id_entrega        → Grupo 2 (ENTREGA)    en MOVIMIENTO_STOCK.
+
+No se crearon las tablas de otros grupos en esta base de datos. Se dejó la
+documentación de que, al integrar los 4 grupos, esas FK deberían agregarse
+mediante ALTER TABLE cuando existan las tablas referenciadas.
+
+La base de datos 'distribuidora_grupo3' contiene:
+  - Las 23 tablas del dominio del Grupo 3 (DDL).
+  - Las tablas internas del framework Laravel (cache, cache_locks, failed_jobs,
+    job_batches, jobs, migrations, password_reset_tokens, sessions, users).
+
+
+4. TABLAS USADAS / NO USADAS DE LA BASE DE DATOS
+--------------------------------------------------------------------------------
+TABLAS USADAS (15, con modelo y/o controlador, y con datos):
+  CATEGORIA, MARCA, PRODUCTO, HISTORIAL_PRECIO, UNIDAD_MEDIDA, STOCK,
+  MOVIMIENTO_STOCK, PROVEEDOR, PRODUCTO_PROVEEDOR, ORDEN_COMPRA,
+  DETALLE_ORDEN, COMPRA, DETALLE_COMPRA, RECEPCION, DETALLE_RECEPCION.
+
+TABLAS NO USADAS (8, vacías y sin funcionalidad implementada):
+
+  Tabla                        Historia asociada        Por qué no se usan
+  ---------------------------  -----------------------  ----------------------
+  UBICACION                    S14 ubicaciones          "Importante", no MVP
+  PRODUCTO_UBICACION           S14 ubicaciones          "Importante", no MVP
+  SESION_CONTEO                S13 conteo físico        "Importante", no MVP
+  DETALLE_CONTEO               S13 conteo físico        "Importante", no MVP
+  HISTORIAL_PLAZO_ENTREGA      PV07 plazos entrega      "Importante", no MVP
+  PAGO_PROVEEDOR               C08/C09 pagos y deudas   "Importante", no MVP
+  HISTORIAL_PRECIO_PROVEEDOR   PV06 precios históricos  "Importante", no MVP
+  LOTE                         S09 lotes/vencimiento    "Importante", no MVP
+
+Motivo general: las historias que sustentan estas tablas están etiquetadas
+como "Importante" (y algunas "Futuro") en el Product Backlog, fuera del MVP.
+El alcance acordado fue solo el MVP de cada módulo. Las tablas permanecen
+definidas en el DDL para cuando se implementen dichas historias. La tabla
+LOTE solo aparece como FK en DETALLE_RECEPCION (modelo) pero no tiene
+gestión propia (no se implementó S09).
+
+================================================================================
+FIN DEL ANÁLISIS
+================================================================================
