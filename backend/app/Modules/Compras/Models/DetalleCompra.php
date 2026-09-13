@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class DetalleCompra extends Model
 {
     protected $table = 'DETALLE_COMPRA';
-    protected $primaryKey = 'id_detalle';
+    protected $primaryKey = 'id_detalle_compra';
     public $timestamps = false;
 
     protected $fillable = [
@@ -24,7 +24,7 @@ class DetalleCompra extends Model
     ];
 
     protected $casts = [
-        'id_detalle' => 'integer',
+        'id_detalle_compra' => 'integer',
         'cantidad' => 'integer',
         'cantidad_recibida' => 'integer',
         'precio_unitario' => 'float',

@@ -74,7 +74,7 @@ Route::apiResource('categorias', CategoriaController::class);
 // Marcas (P03)
 Route::apiResource('marcas', MarcaController::class);
 
-// ── MÓDULO PROVEEDORES (PV01 a PV05) ───────────────────────────
+// ========== MÓDULO PROVEEDORES (PV01 a PV05) ==========
 // PV01/PV03 - Alta y edición (apiResource: index, store, show, update, destroy)
 // PV04 - Desactivar/reactivar (borrado lógico)
 Route::patch('proveedores/{proveedor}/desactivar', [ProveedorController::class, 'desactivar']);
@@ -85,7 +85,7 @@ Route::post('proveedores/productos/{id}/principal', [ProveedorController::class,
 Route::delete('proveedores/productos/{id}', [ProveedorController::class, 'desasociarProducto']);
 Route::apiResource('proveedores', ProveedorController::class);
 
-// ── MÓDULO COMPRAS (C01 a C06) ──────────────────────────────────
+// ========== MÓDULO COMPRAS (C01 a C06) ==========
 // C05 - Cancelar una compra pendiente
 Route::patch('compras/{compra}/cancelar', [CompraController::class, 'cancelar']);
 // C06 - Registrar recepciones parciales de una compra
@@ -93,7 +93,7 @@ Route::post('compras/{compra}/recepciones', [RecepcionController::class, 'store'
 // C01/C02/C03/C04 - Alta, listado, detalle y edición
 Route::apiResource('compras', CompraController::class);
 
-// ── MÓDULO ÓRDENES DE COMPRA (PC01 a PC06) ──────────────────────
+// ========== MÓDULO ÓRDENES DE COMPRA (PC01 a PC06) ==========
 // PC05 - Cancelar una orden pendiente
 Route::patch('ordenes-compra/{orden}/cancelar', [OrdenCompraController::class, 'cancelar']);
 // Complementaria: enviar una orden pendiente (habilita PC04/PC05/PC06)
@@ -107,7 +107,7 @@ Route::patch('productos/{id}/desactivar', [ProductoController::class, 'desactiva
 Route::patch('productos/{id}/activar', [ProductoController::class, 'activar']);
 Route::apiResource('productos', ProductoController::class);
 
-// ── MÓDULO STOCK (S01 a S08) ──────────────────────────────────
+// ========== MÓDULO STOCK (S01 a S08) ==========
 
 // S01 - Consulta de Stock Disponible
 Route::get('stock', [StockController::class, 'consultaGeneral']);
@@ -134,6 +134,9 @@ Route::post('stock/ajustes', [AjusteStockController::class, 'store']);
 Route::get('stock/alertas', [AlertaStockController::class, 'index']);
 Route::patch('stock/alertas/{id}/minimo', [AlertaStockController::class, 'configurarMinimo']);
 Route::post('stock/alertas/recalcular', [AlertaStockController::class, 'recalcular']);
+
+// S06 - Lotes próximos a vencer (dashboard)
+Route::get('stock/lotes-por-vencer', [StockController::class, 'lotesPorVencer']);
 
 // S08 - Gestión de unidades y equivalencias
 Route::get('unidades/convertir', [UnidadController::class, 'convertir']);

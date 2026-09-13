@@ -5,7 +5,6 @@ namespace App\Modules\Stock\Services;
 
 use App\Modules\Stock\Models\MovimientoStock;
 use App\Modules\Productos\Models\Producto;
-use App\Modules\Stock\Models\Stock;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
@@ -13,9 +12,10 @@ use RuntimeException;
 /**
  * Servicio central de lógica de stock (S01 a S08).
  *
- * Todas las operaciones que afectan la cantidad disponible se ejecutan en
- * transacciones ACID y registran un movimiento en MOVIMIENTO_STOCK. Cada
- * operación recalcula automáticamente el estado_alerta del producto (S07).
+ * En el esquema fusionado el stock disponible vive embebido en PRODUCTO.stock
+ * (OB3), de modo que las operaciones actualizan esa columna y registran cada
+ * cambio en MOVIMIENTO_STOCK dentro de una transacción ACID. El estado de
+ * alerta (S07) es un atributo derivado del producto (no se persiste).
  */
 class StockService
 {
@@ -25,44 +25,18 @@ class StockService
     public const TIPOS = ['ingreso', 'venta', 'devolucion', 'ajuste'];
 
     /**
-     * Devuelve el registro STOCK de un producto o lanza una excepción.
-     */
-    private function stockDe(Producto $producto): Stock
-    {
-        $stock = $producto->stock;
-        if (!$stock) {
-            throw new RuntimeException("El producto {$producto->codigo} no tiene registro de stock.");
-        }
-        return $stock;
-    }
-
-    /**
-     * Recalcula y persiste el estado_alerta según el stock y el mínimo (S07).
+     * Recalcula el estado de alerta derivado (S07).
      *
      * Reglas:
      *  - crítico: stock_disponible <= 0
      *  - bajo:    stock_disponible <= stock_minimo (y > 0)
      *  - normal:  stock_disponible > stock_minimo
+     *
+     * No persiste nada: el estado es accesible vía Producto::estado_alerta.
      */
-    public function recalcularAlerta(Stock $stock): Stock
+    public function recalcularAlerta(Producto $producto): Producto
     {
-        $disponible = (int) $stock->stock_disponible;
-        $minimo = (int) $stock->stock_minimo;
-
-        if ($disponible <= 0) {
-            $estado = 'critico';
-        } elseif ($disponible <= $minimo) {
-            $estado = 'bajo';
-        } else {
-            $estado = 'normal';
-        }
-
-        if ($stock->estado_alerta !== $estado) {
-            $stock->estado_alerta = $estado;
-            $stock->save();
-        }
-
-        return $stock;
+        return $producto;
     }
 
     /**
@@ -97,11 +71,11 @@ class StockService
 
         $fecha = Carbon::now()->toDateString();
 
-        // Transacción atómica: actualizar stock + registrar movimiento
+        // Transacción atómica: actualizar stock embebido + registrar movimiento
         DB::beginTransaction();
 
         try {
-            $stock = $this->stockDe($producto);
+            $disponible = $producto->stock_disponible;
 
             // Determinar delta aplicado al stock
             $delta = match ($tipo) {
@@ -109,22 +83,19 @@ class StockService
                 'venta', 'ajuste' => -$cantidad,
             };
 
-            $nuevoDisponible = (int) $stock->stock_disponible + $delta;
+            $nuevoDisponible = $disponible + $delta;
 
             // S04: impedir stock negativo en ventas. En ajustes negativos también se impide.
             if ($nuevoDisponible < 0) {
                 DB::rollBack();
                 throw new RuntimeException(
-                    "Stock insuficiente para {$producto->codigo}. Disponible: {$stock->stock_disponible}, solicitado: {$cantidad}."
+                    "Stock insuficiente para {$producto->codigo}. Disponible: {$disponible}, solicitado: {$cantidad}."
                 );
             }
 
-            $stock->stock_disponible = $nuevoDisponible;
-
-            // La unidad de medida se registra en MOVIMIENTO_STOCK.id_unidad;
-            // la tabla STOCK no posee columna de unidad (es 1:1 con PRODUCTO).
-            $stock->save();
-            $this->recalcularAlerta($stock);
+            $producto->stock = $nuevoDisponible;
+            $producto->save();
+            $this->recalcularAlerta($producto);
 
             MovimientoStock::create([
                 'id_producto' => $producto->id_producto,
@@ -151,7 +122,7 @@ class StockService
      */
     public function stockDisponibleDe(Producto $producto): int
     {
-        return (int) $this->stockDe($producto)->stock_disponible;
+        return $producto->stock_disponible;
     }
 
     /**

@@ -6,6 +6,7 @@ namespace App\Modules\Stock\Controllers;
 use App\Http\Controllers\Controller;
 use App\Modules\Productos\Models\Producto;
 use App\Modules\Stock\Services\StockService;
+use App\Support\UsuarioActual;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -28,7 +29,6 @@ class DevolucionController extends Controller
             'cantidad' => 'required|integer|min:1',
             'motivo' => 'required|string|max:255',
             'id_unidad' => 'nullable|integer|exists:UNIDAD_MEDIDA,id_unidad',
-            'id_usuario' => 'nullable|integer',
         ], [
             'id_producto.required' => 'Debe seleccionar el producto devuelto.',
             'cantidad.required' => 'Debe registrar la cantidad devuelta.',
@@ -53,7 +53,7 @@ class DevolucionController extends Controller
                 ], 404);
             }
 
-            $idUsuario = (int) $request->input('id_usuario', 1);
+            $idUsuario = UsuarioActual::id($request);
             $idUnidad = $request->has('id_unidad') ? (int) $request->input('id_unidad') : null;
 
             $this->stockService->registrarMovimiento(
@@ -66,7 +66,6 @@ class DevolucionController extends Controller
             );
 
             $producto->refresh();
-            $stock = $producto->stock;
 
             return response()->json([
                 'status' => 'success',
@@ -77,8 +76,8 @@ class DevolucionController extends Controller
                     'descripcion' => $producto->descripcion,
                     'cantidad_devuelta' => (int) $request->input('cantidad'),
                     'motivo' => trim($request->input('motivo')),
-                    'stock_disponible' => (int) $stock->stock_disponible,
-                    'estado_alerta' => $stock->estado_alerta,
+                    'stock_disponible' => $producto->stock_disponible,
+                    'estado_alerta' => $producto->estado_alerta,
                 ],
             ], 201);
         } catch (\Throwable $e) {

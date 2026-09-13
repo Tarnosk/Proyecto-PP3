@@ -12,6 +12,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use App\Support\UsuarioActual;
 
 /**
  * Módulo Proveedores.
@@ -34,7 +35,7 @@ class ProveedorController extends Controller
             'razon_social' => $p->razon_social,
             'cuit' => $p->cuit,
             'telefono' => $p->telefono,
-            'correo' => $p->correo,
+            'correo' => $p->email,
             'estado' => $p->estado,
             'fecha_alta' => $p->fecha_alta ? $p->fecha_alta->format('Y-m-d') : null,
             'fecha_modificacion' => $p->fecha_modificacion ? $p->fecha_modificacion->format('Y-m-d') : null,
@@ -126,8 +127,7 @@ class ProveedorController extends Controller
             'telefono' => 'nullable|string|max:30',
             'correo' => 'nullable|email|max:100',
             'plazo_entrega_dias' => 'nullable|integer|min:0',
-            'id_usuario' => 'nullable|integer',
-        ], [
+            ], [
             'razon_social.required' => 'La razón social es obligatoria.',
             'cuit.required' => 'El CUIT es obligatorio.',
             'cuit.unique' => "El CUIT ':input' ya se encuentra registrado.",
@@ -144,13 +144,13 @@ class ProveedorController extends Controller
 
         try {
             $now = Carbon::now()->toDateString();
-            $idUsuario = (int) $request->input('id_usuario', 1);
+            $idUsuario = UsuarioActual::id($request);
 
             $proveedor = Proveedor::create([
                 'razon_social' => trim($request->input('razon_social')),
                 'cuit' => trim($request->input('cuit')),
                 'telefono' => $request->input('telefono') ? trim($request->input('telefono')) : null,
-                'correo' => $request->input('correo') ? trim($request->input('correo')) : null,
+                'email' => $request->input('correo') ? trim($request->input('correo')) : null,
                 'estado' => 'activo',
                 'fecha_alta' => $now,
                 'fecha_modificacion' => $now,
@@ -193,8 +193,7 @@ class ProveedorController extends Controller
             'telefono' => 'nullable|string|max:30',
             'correo' => 'nullable|email|max:100',
             'plazo_entrega_dias' => 'nullable|integer|min:0',
-            'id_usuario' => 'nullable|integer',
-        ], [
+            ], [
             'razon_social.required' => 'La razón social es obligatoria.',
             'cuit.required' => 'El CUIT es obligatorio.',
             'cuit.unique' => "El CUIT ':input' ya está siendo utilizado por otro proveedor.",
@@ -211,13 +210,13 @@ class ProveedorController extends Controller
 
         try {
             $now = Carbon::now()->toDateString();
-            $idUsuario = (int) $request->input('id_usuario', 1);
+            $idUsuario = UsuarioActual::id($request);
 
             $proveedor->update([
                 'razon_social' => trim($request->input('razon_social')),
                 'cuit' => trim($request->input('cuit')),
                 'telefono' => $request->input('telefono') ? trim($request->input('telefono')) : null,
-                'correo' => $request->input('correo') ? trim($request->input('correo')) : null,
+                'email' => $request->input('correo') ? trim($request->input('correo')) : null,
                 'fecha_modificacion' => $now,
                 'id_usuario_modificacion' => $idUsuario,
             ]);
@@ -262,7 +261,7 @@ class ProveedorController extends Controller
         }
 
         $now = Carbon::now()->toDateString();
-        $idUsuario = (int) $request->input('id_usuario', 1);
+        $idUsuario = UsuarioActual::id($request);
 
         $proveedor->update([
             'estado' => 'inactivo',
@@ -293,7 +292,7 @@ class ProveedorController extends Controller
         }
 
         $now = Carbon::now()->toDateString();
-        $idUsuario = (int) $request->input('id_usuario', 1);
+        $idUsuario = UsuarioActual::id($request);
 
         $proveedor->update([
             'estado' => 'activo',
@@ -335,8 +334,7 @@ class ProveedorController extends Controller
             'id_productos' => 'required|array|min:1',
             'id_productos.*' => 'integer|exists:PRODUCTO,id_producto',
             'precio_acordado' => 'nullable|numeric|min:0',
-            'id_usuario' => 'nullable|integer',
-        ], [
+            ], [
             'id_productos.required' => 'Debe indicar al menos un producto.',
             'id_productos.*.exists' => 'Uno de los productos seleccionados no existe.',
             'precio_acordado.min' => 'El precio acordado no puede ser negativo.',
@@ -351,7 +349,7 @@ class ProveedorController extends Controller
 
         try {
             $now = Carbon::now()->toDateString();
-            $idUsuario = (int) $request->input('id_usuario', 1);
+            $idUsuario = UsuarioActual::id($request);
             $precioAcordado = $request->has('precio_acordado') ? (float) $request->input('precio_acordado') : null;
 
             $idsProductos = array_map('intval', $request->input('id_productos'));
@@ -425,7 +423,7 @@ class ProveedorController extends Controller
         }
 
         $now = Carbon::now()->toDateString();
-        $idUsuario = (int) $request->input('id_usuario', 1);
+        $idUsuario = UsuarioActual::id($request);
 
         DB::transaction(function () use ($relacion, $now, $idUsuario) {
             // Quitar principal a las demás asociaciones del producto
@@ -462,7 +460,7 @@ class ProveedorController extends Controller
         }
 
         $now = Carbon::now()->toDateString();
-        $idUsuario = (int) $request->input('id_usuario', 1);
+        $idUsuario = UsuarioActual::id($request);
 
         $relacion->update([
             'activo' => false,

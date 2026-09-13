@@ -13,12 +13,13 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use App\Support\UsuarioActual;
 
 /**
- * MÃ³dulo Ã“rdenes de Compra.
+ * Módulo Órdenes de Compra.
  *
- * PC01 - Generar Ã³rdenes de compra.
- * PC02 - Consultar Ã³rdenes de compra emitidas.
+ * PC01 - Generar órdenes de compra.
+ * PC02 - Consultar órdenes de compra emitidas.
  * PC03 - Consultar el detalle de una orden de compra.
  * PC04 - Editar una orden de compra.
  * PC05 - Cancelar una orden de compra.
@@ -47,39 +48,30 @@ class OrdenCompraController extends Controller
     }
 
     /**
-     * Valida los Ã­tems de una orden. Devuelve null si es vÃ¡lido o un array de error.
+     * Valida los ítems de una orden. Devuelve null si es válido o un array de error.
      */
     private function validarItems(array $items): ?array
     {
         foreach ($items as $item) {
             if (!isset($item['id_producto']) || (int) $item['id_producto'] <= 0) {
-                return ['status' => 'error', 'message' => 'Cada Ã­tem debe indicar un producto.', 'code' => 400];
+                return ['status' => 'error', 'message' => 'Cada ítem debe indicar un producto.', 'code' => 400];
             }
             $producto = Producto::find((int) $item['id_producto']);
             if (!$producto || $producto->estado !== 'activo') {
                 return [
                     'status' => 'error',
-                    'message' => "El producto con ID {$item['id_producto']} no existe o no estÃ¡ activo.",
+                    'message' => "El producto con ID {$item['id_producto']} no existe o no está activo.",
                     'code' => 400,
                 ];
             }
             if (!isset($item['cantidad_solicitada']) || (int) $item['cantidad_solicitada'] <= 0) {
-                return ['status' => 'error', 'message' => 'Cada Ã­tem debe indicar una cantidad solicitada mayor a cero.', 'code' => 400];
+                return ['status' => 'error', 'message' => 'Cada ítem debe indicar una cantidad solicitada mayor a cero.', 'code' => 400];
             }
             if (!isset($item['precio_estimado']) || (float) $item['precio_estimado'] < 0) {
-                return ['status' => 'error', 'message' => 'Cada Ã­tem debe indicar un precio estimado vÃ¡lido.', 'code' => 400];
+                return ['status' => 'error', 'message' => 'Cada ítem debe indicar un precio estimado válido.', 'code' => 400];
             }
         }
         return null;
-    }
-
-    /**
-     * Devuelve la unidad de medida del producto (desde su registro de stock, si existe).
-     */
-    private function unidadDe(Producto $producto): ?int
-    {
-        $stock = $producto->stock;
-        return $stock?->id_unidad;
     }
 
     /**
@@ -90,11 +82,10 @@ class OrdenCompraController extends Controller
         $validator = Validator::make($request->all(), [
             'id_proveedor' => 'required|integer',
             'fecha_creacion' => 'nullable|date|before_or_equal:today',
-            'id_usuario' => 'nullable|integer',
             'items' => 'required|array|min:1',
         ], [
             'id_proveedor.required' => 'Debe seleccionar un proveedor.',
-            'fecha_creacion.before_or_equal' => 'La fecha de creaciÃ³n no puede ser posterior a la fecha actual.',
+            'fecha_creacion.before_or_equal' => 'La fecha de creación no puede ser posterior a la fecha actual.',
             'items.required' => 'Debe agregar al menos un producto a la orden.',
             'items.min' => 'Debe agregar al menos un producto a la orden.',
         ]);
@@ -117,7 +108,7 @@ class OrdenCompraController extends Controller
             return response()->json(['status' => $error['status'], 'message' => $error['message']], $error['code']);
         }
 
-        $idUsuario = (int) $request->input('id_usuario', 1);
+        $idUsuario = UsuarioActual::id($request);
         $fecha = $request->input('fecha_creacion') ?? Carbon::now()->toDateString();
 
         try {
@@ -134,7 +125,7 @@ class OrdenCompraController extends Controller
 
                     $detalles[] = [
                         'id_producto' => (int) $item['id_producto'],
-                        'id_unidad' => $this->unidadDe($producto),
+                        'id_unidad' => null,
                         'cantidad_solicitada' => $cantidad,
                         'cantidad_sugerida' => isset($item['cantidad_sugerida']) ? (int) $item['cantidad_sugerida'] : $cantidad,
                         'origen' => $item['origen'] ?? 'manual',
@@ -175,7 +166,7 @@ class OrdenCompraController extends Controller
     }
 
     /**
-     * Genera un nÃºmero Ãºnico de orden (PC01): OC-AAAA-nnnnnn.
+     * Genera un número único de orden (PC01): OC-AAAA-nnnnnn.
      */
     private function generarNumero(): string
     {
@@ -187,7 +178,7 @@ class OrdenCompraController extends Controller
     }
 
     /**
-     * PC02 - Listar y filtrar Ã³rdenes por proveedor y rango de fechas.
+     * PC02 - Listar y filtrar órdenes por proveedor y rango de fechas.
      */
     public function index(Request $request): JsonResponse
     {
@@ -264,7 +255,7 @@ class OrdenCompraController extends Controller
         if ($orden->estado !== 'pendiente') {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Solo se pueden editar Ã³rdenes pendientes. Una vez enviada no puede modificarse. (PC04)',
+                'message' => 'Solo se pueden editar órdenes pendientes. Una vez enviada no puede modificarse. (PC04)',
             ], 400);
         }
 
@@ -301,7 +292,7 @@ class OrdenCompraController extends Controller
 
                     $nuevos[] = [
                         'id_producto' => (int) $item['id_producto'],
-                        'id_unidad' => $this->unidadDe($producto),
+                        'id_unidad' => null,
                         'cantidad_solicitada' => $cantidad,
                         'cantidad_sugerida' => isset($item['cantidad_sugerida']) ? (int) $item['cantidad_sugerida'] : $cantidad,
                         'origen' => $item['origen'] ?? 'manual',
@@ -350,7 +341,7 @@ class OrdenCompraController extends Controller
         if ($orden->estado !== 'pendiente') {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Solo se pueden cancelar Ã³rdenes pendientes. Una orden ya completada no puede cancelarse. (PC05)',
+                'message' => 'Solo se pueden cancelar órdenes pendientes. Una orden ya completada no puede cancelarse. (PC05)',
             ], 400);
         }
 
@@ -366,8 +357,8 @@ class OrdenCompraController extends Controller
     }
 
     /**
-     * AcciÃ³n complementaria: enviar una orden pendiente (necesaria para PC04/PC05/PC06).
-     * Marca la fecha de envÃ­o y pasa la orden a estado 'enviada'.
+     * Acción complementaria: enviar una orden pendiente (necesaria para PC04/PC05/PC06).
+     * Marca la fecha de envío y pasa la orden a estado 'enviada'.
      */
     public function enviar(Request $request, int $id): JsonResponse
     {
@@ -377,7 +368,7 @@ class OrdenCompraController extends Controller
         }
 
         if ($orden->estado !== 'pendiente') {
-            return response()->json(['status' => 'error', 'message' => 'Solo se pueden enviar Ã³rdenes pendientes.'], 400);
+            return response()->json(['status' => 'error', 'message' => 'Solo se pueden enviar órdenes pendientes.'], 400);
         }
 
         $fechaEnv = $request->input('fecha_envio') ?? Carbon::now()->toDateString();

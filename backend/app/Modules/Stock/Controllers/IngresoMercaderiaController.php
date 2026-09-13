@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Modules\Productos\Models\Producto;
 use App\Modules\Proveedores\Models\Proveedor;
 use App\Modules\Stock\Services\StockService;
+use App\Support\UsuarioActual;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -27,7 +28,6 @@ class IngresoMercaderiaController extends Controller
         $validator = Validator::make($request->all(), [
             'id_proveedor' => 'required|integer|exists:PROVEEDOR,id_proveedor',
             'fecha' => 'nullable|date|before_or_equal:today',
-            'id_usuario' => 'nullable|integer',
             'items' => 'required|array|min:1',
             'items.*.id_producto' => 'required|integer|exists:PRODUCTO,id_producto',
             'items.*.cantidad' => 'required|integer|min:1',
@@ -66,7 +66,7 @@ class IngresoMercaderiaController extends Controller
             ], 400);
         }
 
-        $idUsuario = (int) $request->input('id_usuario', 1);
+        $idUsuario = UsuarioActual::id($request);
         $fecha = $request->input('fecha');
 
         try {
@@ -96,7 +96,6 @@ class IngresoMercaderiaController extends Controller
                 );
 
                 $producto->refresh();
-                $stock = $producto->stock;
 
                 $registrados[] = [
                     'id_producto' => $producto->id_producto,
@@ -104,8 +103,8 @@ class IngresoMercaderiaController extends Controller
                     'descripcion' => $producto->descripcion,
                     'cantidad' => $cantidad,
                     'id_unidad' => $idUnidad,
-                    'stock_disponible' => (int) $stock->stock_disponible,
-                    'estado_alerta' => $stock->estado_alerta,
+                    'stock_disponible' => $producto->stock_disponible,
+                    'estado_alerta' => $producto->estado_alerta,
                 ];
             }
 

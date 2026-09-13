@@ -3,14 +3,12 @@ declare(strict_types=1);
 
 namespace App\Modules\Productos\Models;
 
-use App\Modules\Stock\Models\Stock;
 use App\Modules\Stock\Models\MovimientoStock;
 use App\Modules\Stock\Models\UnidadMedida;
 use App\Modules\Proveedores\Models\ProductoProveedor;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Builder;
 
 class Producto extends Model
@@ -19,10 +17,24 @@ class Producto extends Model
     protected $primaryKey = 'id_producto';
     public $timestamps = false;
 
+    protected $appends = [
+        'stock_disponible',
+        'estado_alerta',
+        'precio_unitario',
+        'precio_mayorista',
+        'precio_minorista',
+    ];
+
     protected $fillable = [
         'codigo',
+        'nombre',
         'descripcion',
-        'precio_unitario',
+        'precioMay',
+        'precioMin',
+        'imagen',
+        'stock',
+        'stock_minimo',
+        'dias_alerta_vencimiento',
         'estado',
         'fecha_alta',
         'fecha_modificacion',
@@ -35,7 +47,11 @@ class Producto extends Model
 
     protected $casts = [
         'id_producto' => 'integer',
-        'precio_unitario' => 'decimal:2',
+        'precioMay' => 'decimal:2',
+        'precioMin' => 'decimal:2',
+        'stock' => 'integer',
+        'stock_minimo' => 'integer',
+        'dias_alerta_vencimiento' => 'integer',
         'id_categoria' => 'integer',
         'id_marca' => 'integer',
         'id_usuario_carga' => 'integer',
@@ -55,9 +71,54 @@ class Producto extends Model
         return $this->belongsTo(Marca::class, 'id_marca', 'id_marca');
     }
 
-    public function stock(): HasOne
+    /**
+     * Stock disponible. En el esquema fusionado el stock vive embebido en
+     * PRODUCTO.stock (OB3), por lo que este atributo expone la columna directa.
+     */
+    public function getStockDisponibleAttribute(?int $value = null): int
     {
-        return $this->hasOne(Stock::class, 'id_producto', 'id_producto');
+        return (int) ($value ?? $this->stock);
+    }
+
+    public function getStockMinimoAttribute(?int $value = null): int
+    {
+        return (int) ($value ?? ($this->attributes['stock_minimo'] ?? 0));
+    }
+
+    /**
+     * Estado de alerta derivado (S07): crítico <= 0, bajo <= mínimo (> 0), normal.
+     * Ya no se persiste en una tabla STOCK separada.
+     */
+    public function getEstadoAlertaAttribute(): string
+    {
+        $disponible = $this->stock_disponible;
+        $minimo = $this->stock_minimo;
+
+        if ($disponible <= 0) {
+            return 'critico';
+        }
+        if ($disponible <= $minimo) {
+            return 'bajo';
+        }
+        return 'normal';
+    }
+
+    /**
+     * Precio unitario (alias de compatibilidad) = precio mayorista.
+     */
+    public function getPrecioUnitarioAttribute(): float
+    {
+        return (float) $this->precioMay;
+    }
+
+    public function getPrecioMayoristaAttribute(): float
+    {
+        return (float) $this->precioMay;
+    }
+
+    public function getPrecioMinoristaAttribute(): float
+    {
+        return (float) $this->precioMin;
     }
 
     public function historialPrecios(): HasMany

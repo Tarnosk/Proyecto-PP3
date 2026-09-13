@@ -5,7 +5,6 @@ namespace App\Modules\Productos\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Modules\Productos\Models\Producto;
-use App\Modules\Stock\Models\Stock;
 use App\Modules\Productos\Models\HistorialPrecio;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -13,6 +12,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Carbon\Carbon;
 use Exception;
+use App\Support\UsuarioActual;
 
 class ProductoController extends Controller
 {
@@ -29,7 +29,7 @@ class ProductoController extends Controller
             $estado = null;
         }
 
-        $productos = Producto::with(['categoria', 'marca', 'stock'])
+        $productos = Producto::with(['categoria', 'marca'])
             ->search($search)
             ->filterCategoria($categoriaId)
             ->filterMarca($marcaId)
@@ -41,7 +41,10 @@ class ProductoController extends Controller
                     'id_producto' => $p->id_producto,
                     'codigo' => $p->codigo,
                     'descripcion' => $p->descripcion,
+                    'nombre' => $p->nombre,
                     'precio_unitario' => (float) $p->precio_unitario,
+                    'precio_mayorista' => (float) $p->precio_mayorista,
+                    'precio_minorista' => (float) $p->precio_minorista,
                     'estado' => $p->estado,
                     'fecha_alta' => $p->fecha_alta ? $p->fecha_alta->format('Y-m-d') : null,
                     'fecha_modificacion' => $p->fecha_modificacion ? $p->fecha_modificacion->format('Y-m-d') : null,
@@ -50,9 +53,9 @@ class ProductoController extends Controller
                     'categoria_nombre' => $p->categoria ? $p->categoria->nombre : null,
                     'id_marca' => $p->id_marca,
                     'marca_nombre' => $p->marca ? $p->marca->nombre : null,
-                    'stock_disponible' => $p->stock ? $p->stock->stock_disponible : 0,
-                    'stock_minimo' => $p->stock ? $p->stock->stock_minimo : 0,
-                    'estado_alerta' => $p->stock ? $p->stock->estado_alerta : 'normal',
+                    'stock_disponible' => $p->stock_disponible,
+                    'stock_minimo' => $p->stock_minimo,
+                    'estado_alerta' => $p->estado_alerta,
                 ];
             });
 
@@ -69,8 +72,10 @@ class ProductoController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'codigo' => 'required|string|max:50|unique:PRODUCTO,codigo',
+            'nombre' => 'nullable|string|max:255',
             'descripcion' => 'required|string|max:255',
             'precio_unitario' => 'required|numeric|min:0',
+            'precio_minorista' => 'nullable|numeric|min:0',
             'id_categoria' => 'required|integer|exists:CATEGORIA,id_categoria',
             'id_marca' => 'required|integer|exists:MARCA,id_marca',
             'stock_disponible' => 'nullable|integer|min:0',
@@ -81,6 +86,7 @@ class ProductoController extends Controller
             'descripcion.required' => 'La descripción del producto es obligatoria.',
             'precio_unitario.required' => 'El precio unitario es obligatorio.',
             'precio_unitario.min' => 'El precio unitario no puede ser negativo.',
+            'precio_minorista.min' => 'El precio minorista no puede ser negativo.',
             'id_categoria.required' => 'Debe seleccionar una categoría.',
             'id_categoria.exists' => 'La categoría seleccionada no existe.',
             'id_marca.required' => 'Debe seleccionar una marca.',
@@ -98,15 +104,26 @@ class ProductoController extends Controller
             $now = Carbon::now()->toDateString();
             $stockInicial = (int) ($request->input('stock_disponible', 0));
             $stockMinimo = (int) ($request->input('stock_minimo', 5));
-            $idUsuario = (int) ($request->input('id_usuario', 1));
-            $precio = (float) $request->input('precio_unitario');
+            $idUsuario = UsuarioActual::id($request);
+            $precioMayorista = (float) $request->input('precio_unitario');
+            $precioMinorista = (float) ($request->input('precio_minorista', $precioMayorista));
+            $descripcion = trim($request->input('descripcion'));
+            $nombre = trim((string) $request->input('nombre')) !== ''
+                ? trim((string) $request->input('nombre'))
+                : $descripcion;
 
-            $producto = DB::transaction(function () use ($request, $now, $stockInicial, $stockMinimo, $idUsuario, $precio) {
-                // 1. Crear Producto (P01)
+            $producto = DB::transaction(function () use ($request, $now, $stockInicial, $stockMinimo, $idUsuario, $precioMayorista, $precioMinorista, $descripcion, $nombre) {
+                // 1. Crear Producto (P01). El stock queda embebido en PRODUCTO (OB3).
                 $prod = Producto::create([
                     'codigo' => trim($request->input('codigo')),
-                    'descripcion' => trim($request->input('descripcion')),
-                    'precio_unitario' => $precio,
+                    'nombre' => $nombre,
+                    'descripcion' => $descripcion,
+                    'precioMay' => $precioMayorista,
+                    'precioMin' => $precioMinorista,
+                    'imagen' => null,
+                    'stock' => $stockInicial,
+                    'stock_minimo' => $stockMinimo,
+                    'dias_alerta_vencimiento' => 30,
                     'estado' => 'activo',
                     'fecha_alta' => $now,
                     'fecha_modificacion' => $now,
@@ -116,28 +133,11 @@ class ProductoController extends Controller
                     'id_usuario_modificacion' => $idUsuario,
                 ]);
 
-                // 2. Determinar estado de alerta
-                $alerta = 'normal';
-                if ($stockInicial <= 0) {
-                    $alerta = 'critico';
-                } elseif ($stockInicial <= $stockMinimo) {
-                    $alerta = 'bajo';
-                }
-
-                // 3. Crear registro en tabla STOCK
-                Stock::create([
-                    'id_producto' => $prod->id_producto,
-                    'stock_disponible' => $stockInicial,
-                    'stock_minimo' => $stockMinimo,
-                    'estado_alerta' => $alerta,
-                    'dias_alerta_vencimiento' => 30,
-                ]);
-
-                // 4. Registrar precio inicial en HISTORIAL_PRECIO
+                // 2. Registrar precios iniciales en HISTORIAL_PRECIO (1 fila por tipo, OB1)
                 HistorialPrecio::create([
                     'id_producto' => $prod->id_producto,
-                    'precio_anterior' => $precio,
-                    'precio_nuevo' => $precio,
+                    'tipo_precio' => 'mayorista',
+                    'precio' => $precioMayorista,
                     'porcentaje_aumento' => 0.00,
                     'regla_redondeo' => 'sin_redondeo',
                     'origen' => 'manual',
@@ -145,7 +145,18 @@ class ProductoController extends Controller
                     'id_usuario' => $idUsuario,
                 ]);
 
-                return $prod->load(['categoria', 'marca', 'stock']);
+                HistorialPrecio::create([
+                    'id_producto' => $prod->id_producto,
+                    'tipo_precio' => 'minorista',
+                    'precio' => $precioMinorista,
+                    'porcentaje_aumento' => 0.00,
+                    'regla_redondeo' => 'sin_redondeo',
+                    'origen' => 'manual',
+                    'fecha_cambio' => $now,
+                    'id_usuario' => $idUsuario,
+                ]);
+
+                return $prod->load(['categoria', 'marca']);
             });
 
             return response()->json([
@@ -166,7 +177,7 @@ class ProductoController extends Controller
      */
     public function show(int $id): JsonResponse
     {
-        $producto = Producto::with(['categoria', 'marca', 'stock', 'historialPrecios'])->find($id);
+        $producto = Producto::with(['categoria', 'marca', 'historialPrecios'])->find($id);
 
         if (!$producto) {
             return response()->json([
@@ -181,7 +192,10 @@ class ProductoController extends Controller
                 'id_producto' => $producto->id_producto,
                 'codigo' => $producto->codigo,
                 'descripcion' => $producto->descripcion,
+                'nombre' => $producto->nombre,
                 'precio_unitario' => (float) $producto->precio_unitario,
+                'precio_mayorista' => (float) $producto->precio_mayorista,
+                'precio_minorista' => (float) $producto->precio_minorista,
                 'estado' => $producto->estado,
                 'fecha_alta' => $producto->fecha_alta ? $producto->fecha_alta->format('Y-m-d') : null,
                 'fecha_modificacion' => $producto->fecha_modificacion ? $producto->fecha_modificacion->format('Y-m-d') : null,
@@ -190,9 +204,9 @@ class ProductoController extends Controller
                 'categoria_nombre' => $producto->categoria ? $producto->categoria->nombre : null,
                 'id_marca' => $producto->id_marca,
                 'marca_nombre' => $producto->marca ? $producto->marca->nombre : null,
-                'stock_disponible' => $producto->stock ? $producto->stock->stock_disponible : 0,
-                'stock_minimo' => $producto->stock ? $producto->stock->stock_minimo : 0,
-                'estado_alerta' => $producto->stock ? $producto->stock->estado_alerta : 'normal',
+                'stock_disponible' => $producto->stock_disponible,
+                'stock_minimo' => $producto->stock_minimo,
+                'estado_alerta' => $producto->estado_alerta,
                 'historial_precios' => $producto->historialPrecios,
             ],
         ]);
@@ -203,7 +217,7 @@ class ProductoController extends Controller
      */
     public function update(Request $request, int $id): JsonResponse
     {
-        $producto = Producto::with('stock')->find($id);
+        $producto = Producto::find($id);
 
         if (!$producto) {
             return response()->json([
@@ -214,8 +228,10 @@ class ProductoController extends Controller
 
         $validator = Validator::make($request->all(), [
             'codigo' => "required|string|max:50|unique:PRODUCTO,codigo,{$id},id_producto",
+            'nombre' => 'nullable|string|max:255',
             'descripcion' => 'required|string|max:255',
             'precio_unitario' => 'required|numeric|min:0',
+            'precio_minorista' => 'nullable|numeric|min:0',
             'id_categoria' => 'required|integer|exists:CATEGORIA,id_categoria',
             'id_marca' => 'required|integer|exists:MARCA,id_marca',
             'stock_minimo' => 'nullable|integer|min:0',
@@ -225,6 +241,7 @@ class ProductoController extends Controller
             'descripcion.required' => 'La descripción del producto es obligatoria.',
             'precio_unitario.required' => 'El precio unitario es obligatorio.',
             'precio_unitario.min' => 'El precio unitario no puede ser negativo.',
+            'precio_minorista.min' => 'El precio minorista no puede ser negativo.',
             'id_categoria.required' => 'Debe seleccionar una categoría.',
             'id_categoria.exists' => 'La categoría seleccionada no existe.',
             'id_marca.required' => 'Debe seleccionar una marca.',
@@ -240,23 +257,48 @@ class ProductoController extends Controller
 
         try {
             $now = Carbon::now()->toDateString();
-            $idUsuario = (int) ($request->input('id_usuario', 1));
-            $nuevoPrecio = (float) $request->input('precio_unitario');
-            $precioAnterior = (float) $producto->precio_unitario;
+            $idUsuario = UsuarioActual::id($request);
+            $nuevoMayorista = (float) $request->input('precio_unitario');
+            $anteriorMayorista = (float) $producto->precioMay;
+            $nuevoMinorista = (float) ($request->input('precio_minorista', (float) $producto->precioMin));
+            $anteriorMinorista = (float) $producto->precioMin;
+            $descripcion = trim($request->input('descripcion'));
+            $nombre = trim((string) $request->input('nombre')) !== ''
+                ? trim((string) $request->input('nombre'))
+                : $descripcion;
 
-            DB::transaction(function () use ($producto, $request, $now, $idUsuario, $nuevoPrecio, $precioAnterior) {
-                // Si el precio cambió, registrar en HISTORIAL_PRECIO (P04)
-                if (abs($nuevoPrecio - $precioAnterior) >= 0.001) {
+            DB::transaction(function () use ($producto, $request, $now, $idUsuario, $nuevoMayorista, $anteriorMayorista, $nuevoMinorista, $anteriorMinorista, $descripcion, $nombre) {
+                // Si cambió el precio mayorista, se registra en HISTORIAL_PRECIO (P04)
+                if (abs($nuevoMayorista - $anteriorMayorista) >= 0.001) {
                     $porcentaje = 0.0;
-                    if ($precioAnterior > 0) {
-                        $porcentaje = (($nuevoPrecio - $precioAnterior) / $precioAnterior) * 100.0;
+                    if ($anteriorMayorista > 0) {
+                        $porcentaje = (($nuevoMayorista - $anteriorMayorista) / $anteriorMayorista) * 100.0;
                     }
 
                     HistorialPrecio::create([
                         'id_producto' => $producto->id_producto,
-                        'precio_anterior' => $precioAnterior,
-                        'precio_nuevo' => $nuevoPrecio,
+                        'tipo_precio' => 'mayorista',
+                        'precio' => $nuevoMayorista,
                         'porcentaje_aumento' => $porcentaje,
+                        'regla_redondeo' => 'manual',
+                        'origen' => 'manual',
+                        'fecha_cambio' => $now,
+                        'id_usuario' => $idUsuario,
+                    ]);
+                }
+
+                // Si cambió el precio minorista, se registra su propia entrada de historial
+                if (abs($nuevoMinorista - $anteriorMinorista) >= 0.001) {
+                    $porcentajeMin = 0.0;
+                    if ($anteriorMinorista > 0) {
+                        $porcentajeMin = (($nuevoMinorista - $anteriorMinorista) / $anteriorMinorista) * 100.0;
+                    }
+
+                    HistorialPrecio::create([
+                        'id_producto' => $producto->id_producto,
+                        'tipo_precio' => 'minorista',
+                        'precio' => $nuevoMinorista,
+                        'porcentaje_aumento' => $porcentajeMin,
                         'regla_redondeo' => 'manual',
                         'origen' => 'manual',
                         'fecha_cambio' => $now,
@@ -267,8 +309,10 @@ class ProductoController extends Controller
                 // Actualizar producto
                 $producto->update([
                     'codigo' => trim($request->input('codigo')),
-                    'descripcion' => trim($request->input('descripcion')),
-                    'precio_unitario' => $nuevoPrecio,
+                    'nombre' => $nombre,
+                    'descripcion' => $descripcion,
+                    'precioMay' => $nuevoMayorista,
+                    'precioMin' => $nuevoMinorista,
                     'id_categoria' => (int) $request->input('id_categoria'),
                     'id_marca' => (int) $request->input('id_marca'),
                     'fecha_modificacion' => $now,
@@ -276,17 +320,16 @@ class ProductoController extends Controller
                 ]);
 
                 // Actualizar stock mínimo si se envió
-                if ($request->has('stock_minimo') && $producto->stock) {
-                    $producto->stock->update([
-                        'stock_minimo' => (int) $request->input('stock_minimo'),
-                    ]);
+                if ($request->has('stock_minimo')) {
+                    $producto->stock_minimo = (int) $request->input('stock_minimo');
+                    $producto->save();
                 }
             });
 
             return response()->json([
                 'status' => 'success',
                 'message' => 'Producto modificado exitosamente.',
-                'data' => $producto->fresh(['categoria', 'marca', 'stock']),
+                'data' => $producto->fresh(['categoria', 'marca']),
             ]);
         } catch (Exception $e) {
             return response()->json([
@@ -311,7 +354,7 @@ class ProductoController extends Controller
         }
 
         $now = Carbon::now()->toDateString();
-        $idUsuario = (int) ($request->input('id_usuario', 1));
+        $idUsuario = UsuarioActual::id($request);
 
         $producto->update([
             'estado' => 'inactivo',
@@ -342,7 +385,7 @@ class ProductoController extends Controller
         }
 
         $now = Carbon::now()->toDateString();
-        $idUsuario = (int) ($request->input('id_usuario', 1));
+        $idUsuario = UsuarioActual::id($request);
 
         $producto->update([
             'estado' => 'activo',

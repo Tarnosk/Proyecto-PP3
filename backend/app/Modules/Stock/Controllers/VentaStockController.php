@@ -6,6 +6,7 @@ namespace App\Modules\Stock\Controllers;
 use App\Http\Controllers\Controller;
 use App\Modules\Productos\Models\Producto;
 use App\Modules\Stock\Services\StockService;
+use App\Support\UsuarioActual;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -30,7 +31,6 @@ class VentaStockController extends Controller
             'cantidad' => 'required|integer|min:1',
             'id_unidad' => 'nullable|integer|exists:UNIDAD_MEDIDA,id_unidad',
             'id_venta' => 'nullable|integer',
-            'id_usuario' => 'nullable|integer',
             'motivo' => 'nullable|string|max:255',
         ], [
             'id_producto.required' => 'Debe indicar el producto vendido.',
@@ -55,7 +55,7 @@ class VentaStockController extends Controller
                 ], 400);
             }
 
-            $idUsuario = (int) $request->input('id_usuario', 1);
+            $idUsuario = UsuarioActual::id($request);
             $idUnidad = $request->has('id_unidad') ? (int) $request->input('id_unidad') : null;
             $idVenta = $request->has('id_venta') ? (int) $request->input('id_venta') : null;
             $motivo = $request->input('motivo') ?? 'Venta registrada (S04)';
@@ -71,7 +71,6 @@ class VentaStockController extends Controller
             );
 
             $producto->refresh();
-            $stock = $producto->stock;
 
             return response()->json([
                 'status' => 'success',
@@ -81,8 +80,8 @@ class VentaStockController extends Controller
                     'codigo' => $producto->codigo,
                     'descripcion' => $producto->descripcion,
                     'cantidad_vendida' => (int) $request->input('cantidad'),
-                    'stock_disponible' => (int) $stock->stock_disponible,
-                    'estado_alerta' => $stock->estado_alerta,
+                    'stock_disponible' => $producto->stock_disponible,
+                    'estado_alerta' => $producto->estado_alerta,
                 ],
             ]);
         } catch (\Throwable $e) {

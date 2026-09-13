@@ -14,8 +14,8 @@ class HistorialPrecio extends Model
 
     protected $fillable = [
         'id_producto',
-        'precio_anterior',
-        'precio_nuevo',
+        'tipo_precio',
+        'precio',
         'porcentaje_aumento',
         'regla_redondeo',
         'origen',
@@ -26,8 +26,8 @@ class HistorialPrecio extends Model
     protected $casts = [
         'id_historial' => 'integer',
         'id_producto' => 'integer',
-        'precio_anterior' => 'decimal:2',
-        'precio_nuevo' => 'decimal:2',
+        'tipo_precio' => 'string',
+        'precio' => 'decimal:2',
         'porcentaje_aumento' => 'decimal:2',
         'fecha_cambio' => 'date:Y-m-d',
         'id_usuario' => 'integer',

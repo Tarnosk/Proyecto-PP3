@@ -16,7 +16,7 @@ class Proveedor extends Model
         'razon_social',
         'cuit',
         'telefono',
-        'correo',
+        'email',
         'estado',
         'fecha_alta',
         'fecha_modificacion',

@@ -765,22 +765,12 @@
                       <th>Producto</th>
                       <th>Lote</th>
                       <th>Vencimiento</th>
-                      <th>Acción</th>
+                      <th>Días restantes</th>
+                      <th>Estado</th>
                     </tr>
                   </thead>
-                  <tbody>
-                    <tr>
-                      <td data-label="Producto">B-3301</td>
-                      <td data-label="Lote">L-9A21</td>
-                      <td data-label="Vencimiento">2026-07-02</td>
-                      <td data-label="Acción"><span class="btn primary" style="padding:8px 10px; font-size:13px;">Ver</span></td>
-                    </tr>
-                    <tr>
-                      <td data-label="Producto">F-1100</td>
-                      <td data-label="Lote">L-1C77</td>
-                      <td data-label="Vencimiento">2026-07-10</td>
-                      <td data-label="Acción"><span class="btn" style="padding:8px 10px; font-size:13px;">Detalle</span></td>
-                    </tr>
+                  <tbody id="tbodyVencer">
+                    <tr><td data-label="Producto" colspan="5" style="text-align:center; color:var(--muted);">Cargando lotes…</td></tr>
                   </tbody>
                 </table>
               </div>
@@ -1263,6 +1253,52 @@
     if (titleEl) titleEl.textContent = 'Dashboard';
 
   </script>
+
+  <script>
+    // S06 - Próximos a vencer: carga los lotes reales desde el backend (misma convención API_BASE de las demás páginas).
+    (function () {
+      const API_BASE = (window.location.port === '8000') ? '/api' : 'http://localhost:8000/api';
+      const tbodyVenc = document.getElementById('tbodyVencer');
+      if (!tbodyVenc) return;
+
+      async function cargarLotesVencer() {
+        try {
+          const res = await fetch(`${API_BASE}/stock/lotes-por-vencer`, { headers: { 'Accept': 'application/json' } });
+          const json = await res.json();
+          if (!res.ok || json.status !== 'success') {
+            tbodyVenc.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--muted);">No se pudieron cargar los lotes.</td></tr>';
+            return;
+          }
+          const lotes = json.data || [];
+          if (lotes.length === 0) {
+            tbodyVenc.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--muted);">Sin lotes próximos a vencer.</td></tr>';
+            return;
+          }
+          tbodyVenc.innerHTML = lotes.map(function (l) {
+            const dias = (typeof l.dias_para_vencer === 'number') ? l.dias_para_vencer : l.dias;
+            const urgente = dias <= 15;
+            return `
+              <tr>
+                <td data-label="Producto">${esc(l.descripcion_producto || l.descripcion || '')}</td>
+                <td data-label="Lote">${esc(l.nro_lote || '')}</td>
+                <td data-label="Vencimiento">${esc(l.fecha_vencimiento || l.fecha_vencimiento_lote || '')}</td>
+                <td data-label="Días restantes">
+                  <span class="${urgente ? 'tag crit' : 'tag active'}" style="padding:4px 10px; font-size:12px;">${dias} día${dias === 1 ? '' : 's'}</span>
+                </td>
+                <td data-label="Estado"><span class="${urgente ? 'tag crit' : 'tag active'}"><span class="s"></span>${urgente ? 'Urgente' : 'Vigente'}</span></td>
+              </tr>`;
+          }).join('');
+        } catch (e) {
+          tbodyVenc.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--muted);">Error al consultar vencimientos.</td></tr>';
+        }
+      }
+      function esc(s) {
+        return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+      }
+      cargarLotesVencer();
+    })();
+  </script>
+
 </body>
 </html>
 

@@ -14,6 +14,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use App\Support\UsuarioActual;
 
 /**
  * Módulo Compras.
@@ -81,7 +82,6 @@ class CompraController extends Controller
         $validator = Validator::make($request->all(), [
             'id_proveedor' => 'required|integer',
             'fecha_compra' => 'nullable|date|before_or_equal:today',
-            'id_usuario' => 'nullable|integer',
             'items' => 'required|array|min:1',
         ], [
             'id_proveedor.required' => 'Debe seleccionar un proveedor.',
@@ -109,7 +109,7 @@ class CompraController extends Controller
             return response()->json(['status' => $error['status'], 'message' => $error['message']], $error['code']);
         }
 
-        $idUsuario = (int) $request->input('id_usuario', 1);
+        $idUsuario = UsuarioActual::id($request);
         $fecha = $request->input('fecha_compra') ?? Carbon::now()->toDateString();
 
         try {
@@ -229,7 +229,7 @@ class CompraController extends Controller
 
         $detalles = $compra->detalles->map(function (DetalleCompra $d) {
             return [
-                'id_detalle' => $d->id_detalle,
+                'id_detalle' => $d->id_detalle_compra,
                 'id_producto' => $d->id_producto,
                 'codigo' => $d->producto?->codigo,
                 'descripcion' => $d->producto?->descripcion,
@@ -303,7 +303,7 @@ class CompraController extends Controller
             return response()->json(['status' => $error['status'], 'message' => $error['message']], $error['code']);
         }
 
-        $idUsuario = (int) $request->input('id_usuario', $compra->id_usuario ?? 1);
+        $idUsuario = UsuarioActual::id($request);
 
         try {
             $compra = DB::transaction(function () use ($compra, $items, $idUsuario, $request) {

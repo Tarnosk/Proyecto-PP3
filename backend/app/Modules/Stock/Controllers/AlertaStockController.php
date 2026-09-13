@@ -5,7 +5,6 @@ namespace App\Modules\Stock\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Modules\Productos\Models\Producto;
-use App\Modules\Stock\Models\Stock;
 use App\Modules\Stock\Services\StockService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -19,30 +18,23 @@ class AlertaStockController extends Controller
 
     /**
      * S07 - Listar productos que requieren atención según su estado de alerta.
-     * Filtra por 'bajo' o 'critico' (por defecto ambos).
+     * El estado de alerta es derivado (Producto->estado_alerta); filtra por
+     * 'bajo' o 'critico' (por defecto ambos).
      */
     public function index(Request $request): JsonResponse
     {
         $filtro = $request->input('nivel'); // bajo | critico | nada
 
-        $query = Producto::with(['stock', 'categoria', 'marca'])
+        $productos = Producto::with(['categoria', 'marca'])
             ->where('estado', 'activo')
-            ->whereHas('stock');
-
-        if ($filtro && in_array($filtro, ['bajo', 'critico'], true)) {
-            $query->whereHas('stock', function ($q) use ($filtro) {
-                $q->where('estado_alerta', $filtro);
-            });
-        } else {
-            // Ambos estados de alerta (bajo y crítico)
-            $query->whereHas('stock', function ($q) {
-                $q->whereIn('estado_alerta', ['bajo', 'critico']);
-            });
-        }
-
-        $alertas = $query->orderBy('descripcion', 'asc')
+            ->orderBy('descripcion', 'asc')
             ->get()
-            ->filter(fn (Producto $p) => $p->stock !== null)
+            ->filter(function (Producto $p) use ($filtro) {
+                if ($filtro && in_array($filtro, ['bajo', 'critico'], true)) {
+                    return $p->estado_alerta === $filtro;
+                }
+                return in_array($p->estado_alerta, ['bajo', 'critico'], true);
+            })
             ->values()
             ->map(function (Producto $p) {
                 return [
@@ -53,15 +45,15 @@ class AlertaStockController extends Controller
                     'categoria_nombre' => $p->categoria ? $p->categoria->nombre : null,
                     'id_marca' => $p->id_marca,
                     'marca_nombre' => $p->marca ? $p->marca->nombre : null,
-                    'stock_disponible' => (int) $p->stock->stock_disponible,
-                    'stock_minimo' => (int) $p->stock->stock_minimo,
-                    'estado_alerta' => $p->stock->estado_alerta,
+                    'stock_disponible' => $p->stock_disponible,
+                    'stock_minimo' => $p->stock_minimo,
+                    'estado_alerta' => $p->estado_alerta,
                 ];
             });
 
         return response()->json([
             'status' => 'success',
-            'data' => $alertas,
+            'data' => $productos,
         ]);
     }
 
@@ -84,7 +76,7 @@ class AlertaStockController extends Controller
             ], 400);
         }
 
-        $producto = Producto::with('stock')->find($id);
+        $producto = Producto::find($id);
 
         if (!$producto) {
             return response()->json([
@@ -93,17 +85,10 @@ class AlertaStockController extends Controller
             ], 404);
         }
 
-        if (!$producto->stock) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'El producto no posee registro de stock.',
-            ], 400);
-        }
+        $producto->stock_minimo = (int) $request->input('stock_minimo');
+        $producto->save();
 
-        $producto->stock->stock_minimo = (int) $request->input('stock_minimo');
-        $producto->stock->save();
-
-        $this->stockService->recalcularAlerta($producto->stock);
+        $this->stockService->recalcularAlerta($producto);
         $producto->refresh();
 
         return response()->json([
@@ -113,22 +98,23 @@ class AlertaStockController extends Controller
                 'id_producto' => $producto->id_producto,
                 'codigo' => $producto->codigo,
                 'descripcion' => $producto->descripcion,
-                'stock_disponible' => (int) $producto->stock->stock_disponible,
-                'stock_minimo' => (int) $producto->stock->stock_minimo,
-                'estado_alerta' => $producto->stock->estado_alerta,
+                'stock_disponible' => $producto->stock_disponible,
+                'stock_minimo' => $producto->stock_minimo,
+                'estado_alerta' => $producto->estado_alerta,
             ],
         ]);
     }
 
     /**
      * S07 - Recalcular todos los estados de alerta del stock (útil tras cargas masivas).
+     * El estado es derivado, por lo que basta con recorrer los productos activos.
      */
     public function recalcular(Request $request): JsonResponse
     {
         $contador = 0;
-        Stock::chunk(200, function ($stocks) use (&$contador) {
-            foreach ($stocks as $stock) {
-                $this->stockService->recalcularAlerta($stock);
+        Producto::chunk(200, function ($productos) use (&$contador) {
+            foreach ($productos as $producto) {
+                $this->stockService->recalcularAlerta($producto);
                 $contador++;
             }
         });

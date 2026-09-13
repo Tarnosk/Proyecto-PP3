@@ -7,10 +7,10 @@ use App\Http\Controllers\Controller;
 use App\Modules\Compras\Models\Compra;
 use App\Modules\Compras\Models\DetalleCompra;
 use App\Modules\Compras\Models\DetalleRecepcion;
-use App\Modules\Stock\Models\MovimientoStock;
 use App\Modules\Productos\Models\Producto;
 use App\Modules\Compras\Models\Recepcion;
 use App\Modules\Stock\Services\StockService;
+use App\Support\UsuarioActual;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -54,7 +54,6 @@ class RecepcionController extends Controller
 
         $validator = Validator::make($request->all(), [
             'fecha_recepcion' => 'nullable|date|before_or_equal:today',
-            'id_usuario' => 'nullable|integer',
             'items' => 'required|array|min:1',
         ], [
             'fecha_recepcion.before_or_equal' => 'La fecha de recepción no puede ser posterior a la fecha actual.',
@@ -87,7 +86,7 @@ class RecepcionController extends Controller
         // Mapear los detalles de la compra por producto.
         $detalles = $compra->detalles->keyBy('id_producto');
 
-        $idUsuario = (int) $request->input('id_usuario', 1);
+        $idUsuario = UsuarioActual::id($request);
         $fecha = $request->input('fecha_recepcion') ?? Carbon::now()->toDateString();
 
         try {
@@ -134,7 +133,7 @@ class RecepcionController extends Controller
                     $detalle->save();
 
                     // Sumar al stock como ingreso (C06 depende de S03).
-                    $this->sumarStock($producto, $cantidadRecibida, $idUsuario);
+                    $this->sumarStock($producto, $cantidadRecibida, $idUsuario, $detalle->id_unidad);
 
                     $recibidos[] = [
                         'id_producto' => $producto->id_producto,
@@ -193,26 +192,15 @@ class RecepcionController extends Controller
      * Suma stock de un producto como ingreso (S03) y recalcula su alerta.
      * Se ejecuta dentro de la transacción de la recepción (C06).
      */
-    private function sumarStock(Producto $producto, int $cantidad, int $idUsuario): void
+    private function sumarStock(Producto $producto, int $cantidad, int $idUsuario, ?int $idUnidad = null): void
     {
-        $stock = $producto->stock;
-        if (!$stock) {
-            throw new RuntimeException("El producto {$producto->codigo} no tiene registro de stock.");
-        }
-
-        $stock->stock_disponible = (int) $stock->stock_disponible + $cantidad;
-        $stock->save();
-
-        $this->stockService->recalcularAlerta($stock);
-
-        MovimientoStock::create([
-            'id_producto' => $producto->id_producto,
-            'id_unidad' => $stock->id_unidad,
-            'tipo' => 'ingreso',
-            'cantidad' => $cantidad,
-            'fecha' => Carbon::now()->toDateString(),
-            'motivo' => 'Recepción de compra (C06)',
-            'id_usuario' => $idUsuario,
-        ]);
+        $this->stockService->registrarMovimiento(
+            $producto,
+            'ingreso',
+            $cantidad,
+            'Recepción de compra (C06)',
+            $idUsuario,
+            $idUnidad
+        );
     }
 }
