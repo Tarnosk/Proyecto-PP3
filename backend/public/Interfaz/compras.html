@@ -282,6 +282,11 @@
           <li class="nav-item"><a class="nav-link" href="proveedores.html"><span class="icon">◎</span>Proveedores</a></li>
           <li class="nav-item"><a class="nav-link active" href="compras.html"><span class="icon">↧</span>Compras</a></li>
           <li class="nav-item"><a class="nav-link" href="pedido_compra.html"><span class="icon">≡</span>Pedido de Compra</a></li>
+
+          <div class="section-title">Reposición</div>
+          <li class="nav-item"><a class="nav-link" href="/vencimientos"><span class="icon">◷</span>Vencimientos</a></li>
+          <li class="nav-item"><a class="nav-link" href="/sugerencias-reposicion"><span class="icon">▤</span>Sugerencias de Reposición</a></li>
+          <li class="nav-item"><a class="nav-link" href="/dashboard-reposicion"><span class="icon">▩</span>Dashboard Reposición</a></li>
         </ul>
       </nav>
       <div class="divider"></div>
@@ -464,6 +469,7 @@
           <h4 style="margin:0; font-size:14px;">Recepciones (C06)</h4>
           <div class="btn-row">
             <button class="btn primary" id="btnRegistrarRecepcion"><span class="mini-icon">＋</span> Registrar recepción</button>
+            <button class="btn primary" id="btnRegistrarPago"><span class="mini-icon">＄</span> Registrar pago</button>
             <button class="btn" id="btnEditarCompra">✎ Modificar</button>
             <button class="btn danger" id="btnCancelarCompra">Cancelar compra</button>
           </div>
@@ -472,6 +478,17 @@
           <table aria-label="Historial de recepciones" style="min-width:560px;">
             <thead><tr><th>N° Recepción</th><th>Fecha</th><th>Productos</th><th>Total recibido</th></tr></thead>
             <tbody id="tbodyRecepciones"></tbody>
+          </table>
+        </div>
+        <div class="divider"></div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:8px;">
+          <h4 style="margin:0; font-size:14px;">Pagos (C08)</h4>
+          <span class="help" id="detallePagosResumen"></span>
+        </div>
+        <div style="overflow:auto; border:1px solid var(--border); border-radius:10px; max-height:150px;">
+          <table aria-label="Pagos de la compra" style="min-width:420px;">
+            <thead><tr><th>Método</th><th>Cant. de pagos</th><th>Importe</th></tr></thead>
+            <tbody id="tbodyDetallePagos"></tbody>
           </table>
         </div>
       </div>
@@ -510,6 +527,55 @@
     </div>
   </div>
 
+  <!-- MODAL: Registrar Pago (C08) -->
+  <div class="modal-backdrop" id="modalPago">
+    <div class="modal-content" style="max-width:720px;">
+      <div class="modal-header">
+        <h3>Registrar Pago (C08)</h3>
+        <button class="modal-close" onclick="closeModal('modalPago')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="error-box" id="errorBoxPago"></div>
+        <div class="help" id="pagoInfo" style="margin-bottom:10px;"></div>
+        <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px;">
+          <div class="field">
+            <label for="pagoMetodo">Método de pago</label>
+            <select class="control" id="pagoMetodo">
+              <option value="efectivo">Efectivo</option>
+              <option value="transferencia">Transferencia</option>
+              <option value="cheque">Cheque</option>
+              <option value="echeq">eCheq</option>
+              <option value="tarjeta">Tarjeta</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="pagoImporte">Importe</label>
+            <input class="control" type="number" min="0.01" step="0.01" id="pagoImporte" placeholder="Ej: 1500.00" />
+          </div>
+          <div class="field">
+            <label for="pagoFecha">Fecha de pago</label>
+            <input class="control" type="date" id="pagoFecha" />
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:8px;">
+          <h4 style="margin:0; font-size:14px;">Pagos registrados</h4>
+          <span class="help" id="pagoResumenTxt"></span>
+        </div>
+        <div style="overflow:auto; border:1px solid var(--border); border-radius:10px; max-height:200px;">
+          <table aria-label="Pagos de la compra" style="min-width:520px;">
+            <thead><tr><th>Método</th><th>Cant. de pagos</th><th>Importe</th></tr></thead>
+            <tbody id="tbodyPagos"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn" onclick="closeModal('modalPago')">Cerrar</button>
+        <button class="btn primary-solid" id="btnGuardarPago">Registrar pago</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Toast Container -->
   <div class="toast-container" id="toastContainer"></div>
 
@@ -523,6 +589,9 @@
     let compraEnEdicion = null;      // compra en edición (C04)
     let itemsCompra = [];            // items del modal alta/edición
     let recepcionActual = null;      // datos del detalle para la recepción
+    let pagoCompraActual = null;   // id de compra del modal de pagos (C08)
+    let pagosCompletosActual = false;  // la compra del modal ya esta saldada (C08)
+    let METODOS_PAGO = { efectivo:'Efectivo', transferencia:'Transferencia', cheque:'Cheque', echeq:'eCheq', tarjeta:'Tarjeta' };
 
     function showToast(message, type = 'info') {
       const container = document.getElementById('toastContainer');
@@ -534,6 +603,9 @@
     }
 
     function openModal(id){ document.getElementById(id).classList.add('open'); }
+
+    /** numero_comprobante es opcional: si no hay, se muestra el interno. */
+    function comprobanteDe(c){ return (c && (c.numero_comprobante || c.numero_compra)) || '—'; }
     function closeModal(id){
       document.getElementById(id).classList.remove('open');
       const errorBox = document.querySelector(`#${id} .error-box`);
@@ -662,6 +734,7 @@
               <button class="btn" style="padding:6px 9px; font-size:12px;" onclick="verDetalle(${c.id_compra})" title="Ver detalle (C03)">👁️ Ver</button>
               <button class="btn primary" style="padding:6px 9px; font-size:12px;" onclick="abrirEdicion(${c.id_compra})" title="Modificar pendiente (C04)" ${c.estado !== 'pendiente' ? 'disabled' : ''}>✎ Editar</button>
               <button class="btn primary-solid" style="padding:6px 9px; font-size:12px;" onclick="abrirRecepcionDesdeTabla(${c.id_compra})" title="Registrar recepción (C06)" ${c.estado === 'cancelada' || c.estado === 'completada' ? 'disabled' : ''}>↧ Recepción</button>
+              <button class="btn primary-solid" style="padding:6px 9px; font-size:12px;" onclick="abrirPagosDesdeTabla(${c.id_compra})" title="Registrar pago (C08)" ${c.estado === 'cancelada' ? 'disabled' : ''}>＄ Pago</button>
               <button class="btn danger" style="padding:6px 9px; font-size:12px;" onclick="cancelarCompraDesdeTabla(${c.id_compra})" title="Cancelar (C05)" ${c.estado !== 'pendiente' ? 'disabled' : ''}>Cancelar</button>
             </div>
           </td>
@@ -842,11 +915,11 @@
 
         const d = json.data;
         const c = d.compra;
-        titulo.textContent = `Detalle de Compra - ${c.numero_comprobante}`;
+        titulo.textContent = `Detalle de Compra - ${comprobanteDe(c)}`;
 
         info.innerHTML = `
           <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:12px; font-size:13px;">
-            <div><span style="color:var(--muted); font-size:11px; font-weight:800;">N° COMPROBANTE:</span><br><strong style="font-size:14px;">${c.numero_comprobante}</strong></div>
+            <div><span style="color:var(--muted); font-size:11px; font-weight:800;">N° COMPROBANTE:</span><br><strong style="font-size:14px;">${comprobanteDe(c)}</strong></div>
             <div><span style="color:var(--muted); font-size:11px; font-weight:800;">PROVEEDOR:</span><br>${c.proveedor || '—'}</div>
             <div><span style="color:var(--muted); font-size:11px; font-weight:800;">FECHA:</span><br>${c.fecha_compra || '—'}</div>
             <div><span style="color:var(--muted); font-size:11px; font-weight:800;">IMPORTE TOTAL:</span><br><strong>$${Number(c.importe_total).toFixed(2)}</strong></div>
@@ -856,12 +929,15 @@
 
         renderDetalleProductos(d.detalles || []);
         renderRecepciones(d.recepciones || []);
+        renderDetallePagos(d.pagos || null);
 
         // Botones del detalle según estado (C04 requieren pendiente, C05 pendiente, C06 no cancelada/completada)
         const cancelada = c.estado === 'cancelada';
         document.getElementById('btnCancelarCompra').disabled = c.estado !== 'pendiente';
         document.getElementById('btnEditarCompra').disabled = c.estado !== 'pendiente';
         document.getElementById('btnRegistrarRecepcion').disabled = (cancelada || c.estado === 'completada');
+        // C08: no se pagan compras canceladas ni compras ya abonadas por completo.
+        document.getElementById('btnRegistrarPago').disabled = (cancelada || (d.pagos && d.pagos.completos));
       } catch (err){
         info.innerHTML = '<div class="error-box show">Error de conexión con el servidor.</div>';
       }
@@ -883,6 +959,28 @@
           <td data-label="Subtotal">$${Number(dt.subtotal).toFixed(2)}</td>
         </tr>
       `).join('');
+    }
+
+    /** Resumen de pagos dentro del modal de detalle (C08). */
+    function renderDetallePagos(pagos){
+      const tbody = document.getElementById('tbodyDetallePagos');
+      const resumen = document.getElementById('detallePagosResumen');
+      if (!pagos){
+        tbody.innerHTML = `<tr><td colspan="3" style="text-align:center; padding:16px; color:var(--muted);">Sin pagos.</td></tr>`;
+        resumen.textContent = '';
+        return;
+      }
+      resumen.textContent = `Pagado $${Number(pagos.total_pagado).toFixed(2)} · saldo $${Number(pagos.saldo_a_pagar).toFixed(2)}`;
+      if (!pagos.por_metodo || pagos.por_metodo.length === 0){
+        tbody.innerHTML = `<tr><td colspan="3" style="text-align:center; padding:16px; color:var(--muted);">Todavía no hay pagos.</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = pagos.por_metodo.map(m => `
+        <tr>
+          <td data-label="Método">${METODOS_PAGO[m.metodo_pago] || m.metodo_pago}</td>
+          <td data-label="Cantidad">${m.cantidad_pagos}</td>
+          <td data-label="Importe"><strong>$${Number(m.total).toFixed(2)}</strong></td>
+        </tr>`).join('');
     }
 
     function renderRecepciones(recepciones){
@@ -1015,7 +1113,7 @@
       const c = comprasCache.find(x => x.id_compra == idCompra);
       if (!c){ showToast('Compra no encontrada.', 'error'); return; }
       if (c.estado !== 'pendiente'){ showToast('Solo se pueden cancelar compras pendientes. (C05)', 'error'); return; }
-      if (!confirm(`¿Cancelar la compra ${c.numero_comprobante} de ${c.proveedor || ''}? Se conservará su historial.`)) return;
+      if (!confirm(`¿Cancelar la compra ${comprobanteDe(c)} de ${c.proveedor || ''}? Se conservará su historial.`)) return;
       try {
         const res = await fetch(`${API_BASE}/compras/${idCompra}/cancelar`, {
           method: 'PATCH',
@@ -1032,6 +1130,113 @@
         }
       } catch (err){ showToast('Error de conexión.', 'error'); }
     }
+
+    // ==========================================
+    // C08: Registrar múltiples métodos de pago
+    // ==========================================
+
+    async function cargarPagos(idCompra){
+      const tbody = document.getElementById('tbodyPagos');
+      const info  = document.getElementById('pagoInfo');
+      const resumenTxt = document.getElementById('pagoResumenTxt');
+      try {
+        const res = await fetch(`${API_BASE}/compras/${idCompra}/pagos/resumen`, { headers:{'Accept':'application/json'} });
+        const json = await res.json();
+        if (json.status !== 'success'){
+          info.innerHTML = `<div class="error-box show">${json.message || 'Error al cargar los pagos'}</div>`;
+          return;
+        }
+
+        const d = json.data;
+        pagoCompraActual = idCompra;
+        pagosCompletosActual = d.pagos_completos === true;
+        const btnPago = document.getElementById('btnGuardarPago');
+        if (btnPago) btnPago.disabled = pagosCompletosActual;
+        document.getElementById('pagoImporte').max = d.saldo_a_pagar;
+        document.getElementById('pagoImporte').value = d.saldo_a_pagar > 0 ? d.saldo_a_pagar : '';
+
+        info.innerHTML = `
+          <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:12px; font-size:13px;">
+            <div><span style="color:var(--muted); font-size:11px; font-weight:800;">IMPORTE TOTAL:</span><br><strong>$${Number(d.importe_total).toFixed(2)}</strong></div>
+            <div><span style="color:var(--muted); font-size:11px; font-weight:800;">TOTAL PAGADO:</span><br><strong style="color:var(--success);">$${Number(d.total_pagado).toFixed(2)}</strong></div>
+            <div><span style="color:var(--muted); font-size:11px; font-weight:800;">SALDO A PAGAR:</span><br><strong style="color:var(--danger);">$${Number(d.saldo_a_pagar).toFixed(2)}</strong></div>
+          </div>`;
+
+        resumenTxt.textContent = d.pagos_completos
+          ? 'Compra abonada por completo'
+          : `${d.cantidad_pagos} pago(s) registrado(s)`;
+
+        if (!d.por_metodo || d.por_metodo.length === 0){
+          tbody.innerHTML = `<tr><td colspan="3" style="text-align:center; padding:16px; color:var(--muted);">Todavía no hay pagos.</td></tr>`;
+          return;
+        }
+
+        tbody.innerHTML = d.por_metodo.map(m => `
+          <tr>
+            <td data-label="Método">${METODOS_PAGO[m.metodo_pago] || m.metodo_pago}</td>
+            <td data-label="Cantidad">${m.cantidad_pagos}</td>
+            <td data-label="Importe"><strong>$${Number(m.total).toFixed(2)}</strong></td>
+          </tr>`).join('');
+      } catch (err){
+        info.innerHTML = '<div class="error-box show">Error de conexión con el servidor.</div>';
+      }
+    }
+
+    async function abrirPagosDesdeTabla(idCompra){ abrirPagos(idCompra); }
+
+    async function abrirPagos(idCompra){
+      const c = comprasCache.find(x => x.id_compra == idCompra);
+      if (c && c.estado === 'cancelada'){
+        showToast('No se pueden registrar pagos en una compra cancelada.', 'error');
+        return;
+      }
+      document.getElementById('errorBoxPago').classList.remove('show');
+      document.getElementById('errorBoxPago').textContent = '';
+      document.getElementById('pagoFecha').value = new Date().toISOString().slice(0,10);
+      document.getElementById('pagoMetodo').value = 'efectivo';
+      pagoCompraActual = idCompra;
+      openModal('modalPago');
+      await cargarPagos(idCompra);
+    }
+
+    document.getElementById('btnGuardarPago').addEventListener('click', async () => {
+      const errorBox = document.getElementById('errorBoxPago');
+      const mostrarError = (msg) => { errorBox.textContent = msg; errorBox.classList.add('show'); };
+
+      if (pagoCompraActual == null){ mostrarError('No hay una compra seleccionada.'); return; }
+
+      const importe = parseFloat(document.getElementById('pagoImporte').value);
+      if (!Number.isFinite(importe) || importe <= 0){ mostrarError('Ingresá un importe mayor a cero.'); return; }
+
+      const btn = document.getElementById('btnGuardarPago');
+      btn.disabled = true;
+      try {
+        const res = await fetch(`${API_BASE}/compras/${pagoCompraActual}/pagos`, {
+          method: 'POST',
+          headers: { 'Content-Type':'application/json', 'Accept':'application/json' },
+          body: JSON.stringify({
+            metodo_pago: document.getElementById('pagoMetodo').value,
+            importe: importe,
+            fecha_pago: document.getElementById('pagoFecha').value || null,
+            id_usuario: 1
+          })
+        });
+        const json = await res.json();
+        if (json.status === 'success'){
+          errorBox.classList.remove('show');
+          showToast(json.message, 'success');
+          await cargarPagos(pagoCompraActual);
+          if (compraActual != null && compraActual === pagoCompraActual) verDetalle(compraActual);
+          loadCompras();
+        } else {
+          mostrarError(json.message || 'Error al registrar el pago.');
+        }
+      } catch (err){
+        mostrarError('Error de conexión con el servidor.');
+      } finally {
+        btn.disabled = pagosCompletosActual;
+      }
+    });
 
     // ==========================================
     // FILTROS
@@ -1061,6 +1266,10 @@
     });
 
     // Inicialización
+    document.getElementById('btnRegistrarPago').addEventListener('click', () => {
+      if (compraActual != null) abrirPagos(compraActual);
+    });
+
     window.addEventListener('DOMContentLoaded', async () => {
       await loadProveedores();
       await loadProductos();

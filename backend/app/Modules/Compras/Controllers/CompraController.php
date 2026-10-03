@@ -8,6 +8,7 @@ use App\Modules\Compras\Models\Compra;
 use App\Modules\Compras\Models\DetalleCompra;
 use App\Modules\Productos\Models\Producto;
 use App\Modules\Proveedores\Models\Proveedor;
+use App\Modules\Stock\Models\UnidadMedida;
 use App\Modules\Compras\Models\Recepcion;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
@@ -34,6 +35,7 @@ class CompraController extends Controller
     {
         return [
             'id_compra' => $c->id_compra,
+            'numero_compra' => $c->numero_compra,
             'numero_comprobante' => $c->numero_comprobante,
             'id_proveedor' => $c->id_proveedor,
             'proveedor' => $c->proveedor?->razon_social,
@@ -41,6 +43,7 @@ class CompraController extends Controller
             'saldo_pendiente' => (float) $c->saldo_pendiente,
             'estado' => $c->estado,
             'fecha_compra' => $c->fecha_compra ? $c->fecha_compra->format('Y-m-d') : null,
+            'fecha_vencimiento' => $c->fecha_vencimiento ? $c->fecha_vencimiento->format('Y-m-d') : null,
             'fecha_cancelacion' => $c->fecha_cancelacion ? $c->fecha_cancelacion->format('Y-m-d') : null,
             'total_productos' => $c->detalles()->sum('cantidad'),
         ];
@@ -82,10 +85,12 @@ class CompraController extends Controller
         $validator = Validator::make($request->all(), [
             'id_proveedor' => 'required|integer',
             'fecha_compra' => 'nullable|date|before_or_equal:today',
+            'numero_comprobante' => 'nullable|string|max:50',
             'items' => 'required|array|min:1',
         ], [
             'id_proveedor.required' => 'Debe seleccionar un proveedor.',
             'fecha_compra.before_or_equal' => 'La fecha de la compra no puede ser posterior a la fecha actual.',
+            'numero_comprobante.max' => 'El número de comprobante no puede superar los 50 caracteres.',
             'items.required' => 'Debe agregar al menos un producto a la compra.',
             'items.min' => 'Debe agregar al menos un producto a la compra.',
         ]);
@@ -124,7 +129,7 @@ class CompraController extends Controller
                     $importeTotal += $subtotal;
                     $detalles[] = [
                         'id_producto' => (int) $item['id_producto'],
-                        'id_unidad' => isset($item['id_unidad']) ? (int) $item['id_unidad'] : null,
+                        'id_unidad' => $this->unidadDelItem($item),
                         'cantidad' => $cantidad,
                         'precio_unitario' => $precio,
                         'subtotal' => $subtotal,
@@ -134,7 +139,8 @@ class CompraController extends Controller
                 $importeTotal = round($importeTotal, 2);
 
                 $compra = Compra::create([
-                    'numero_comprobante' => $this->generarComprobante(),
+                    'numero_compra' => $this->generarComprobante(),
+                    'numero_comprobante' => $request->input('numero_comprobante') ?: null,
                     'id_proveedor' => $proveedor->id_proveedor,
                     'importe_total' => $importeTotal,
                     'saldo_pendiente' => $importeTotal,
@@ -172,13 +178,33 @@ class CompraController extends Controller
     }
 
     /**
+     * DETALLE_COMPRA.id_unidad es NOT NULL en el esquema fusionado. Cuando el item
+     * no indica unidad se usa la unidad base del producto, que es la que asume
+     * cantidad y precio_unitario.
+     */
+    private function unidadDelItem(array $item): int
+    {
+        $idUnidad = isset($item['id_unidad']) ? (int) $item['id_unidad'] : 0;
+
+        if ($idUnidad > 0) {
+            return $idUnidad;
+        }
+
+        $idProducto = (int) ($item['id_producto'] ?? 0);
+        $base = $idProducto > 0
+            ? UnidadMedida::where('id_producto', $idProducto)->where('es_base', 1)->value('id_unidad')
+            : null;
+
+        return (int) ($base ?? UnidadMedida::where('es_base', 1)->orderBy('id_unidad')->value('id_unidad'));
+    }
+
+    /**
      * Genera un identificador único de comprobante (C01): NCC-AAAA-000000.
      */
-    private function generarComprobante(): string
-    {
+    private function generarComprobante(): string    {
         do {
             $numero = 'NCC-' . Carbon::now()->format('Y') . '-' . str_pad((string) random_int(1, 999999), 6, '0', STR_PAD_LEFT);
-        } while (Compra::where('numero_comprobante', $numero)->exists());
+        } while (Compra::where('numero_compra', $numero)->exists());
 
         return $numero;
     }
@@ -261,10 +287,98 @@ class CompraController extends Controller
                 'compra' => $this->formato($compra),
                 'total_comprado' => (int) $totalComprado,
                 'total_recibido' => (int) $totalRecibido,
+                'total_pendiente' => max(0, (int) $totalComprado - (int) $totalRecibido),
+                'pagos' => $this->datosPagos($compra),
                 'detalles' => $detalles,
                 'recepciones' => $recepciones,
             ],
         ], 200);
+    }
+
+    /**
+     * C07 - Visualizar el estado de una compra.
+     *
+     * Endpoint dedicado: devuelve el estado y el avance en unidades y en dinero,
+     * sin el detalle completo de items y recepciones que trae show().
+     *
+     * Ojo con los dos saldos: saldo_pendiente es el importe de mercadería todavía
+     * no recibida (lo calcula RecepcionController, C06), mientras saldo_a_pagar es
+     * la deuda real = importe_total - total_pagado (C08).
+     */
+    public function estado(int $id): JsonResponse
+    {
+        $compra = Compra::with(['proveedor'])->find($id);
+        if (!$compra) {
+            return response()->json(['status' => 'error', 'message' => 'La compra no existe.'], 404);
+        }
+
+        $comprado = (int) $compra->detalles()->sum('cantidad');
+        $recibido = (int) $compra->detalles()->sum('cantidad_recibida');
+        $pendiente = max(0, $comprado - $recibido);
+        $pagos = $this->datosPagos($compra);
+
+        $porProducto = $compra->detalles()
+            ->with('producto:id_producto,codigo,descripcion')
+            ->get()
+            ->map(fn (DetalleCompra $d) => [
+                'id_producto' => $d->id_producto,
+                'codigo' => $d->producto?->codigo,
+                'descripcion' => $d->producto?->descripcion,
+                'comprado' => (int) $d->cantidad,
+                'recibido' => (int) $d->cantidad_recibida,
+                'pendiente' => max(0, (int) $d->cantidad - (int) $d->cantidad_recibida),
+            ]);
+
+        return response()->json([
+            'status' => 'success',
+            'data' => [
+                'id_compra' => $compra->id_compra,
+                'numero_compra' => $compra->numero_compra,
+                'numero_comprobante' => $compra->numero_comprobante,
+                'proveedor' => $compra->proveedor?->razon_social,
+                'estado' => $compra->estado,
+                'unidades' => [
+                    'compradas' => $comprado,
+                    'recibidas' => $recibido,
+                    'pendientes' => $pendiente,
+                    'porcentaje_recibido' => $comprado > 0 ? round($recibido * 100 / $comprado, 2) : 0.0,
+                ],
+                'importes' => [
+                    'importe_total' => round((float) $compra->importe_total, 2),
+                    // Mercadería aún no recibida (C06)
+                    'saldo_pendiente' => round((float) $compra->saldo_pendiente, 2),
+                    // Deuda real por pagos (C08)
+                    'total_pagado' => $pagos['total_pagado'],
+                    'saldo_a_pagar' => $pagos['saldo_a_pagar'],
+                ],
+                'pagos' => $pagos,
+                'por_producto' => $porProducto,
+            ],
+        ], 200);
+    }
+
+    /** Datos de pago de la compra (C08), reutilizados por show() y estado(). */
+    private function datosPagos(Compra $compra): array
+    {
+        $totalPagado = $compra->totalPagado();
+        $importeTotal = round((float) $compra->importe_total, 2);
+
+        return [
+            'cantidad' => $compra->pagos()->count(),
+            'total_pagado' => $totalPagado,
+            'saldo_a_pagar' => max(0.0, round($importeTotal - $totalPagado, 2)),
+            'completos' => $importeTotal - $totalPagado <= 0,
+            'por_metodo' => $compra->pagos()
+                ->selectRaw('metodo_pago, count(*) as cantidad_pagos, sum(importe) as total')
+                ->groupBy('metodo_pago')
+                ->orderBy('metodo_pago')
+                ->get()
+                ->map(fn ($r) => [
+                    'metodo_pago' => $r->metodo_pago,
+                    'cantidad_pagos' => (int) $r->cantidad_pagos,
+                    'total' => round((float) $r->total, 2),
+                ]),
+        ];
     }
 
     /**
@@ -286,9 +400,11 @@ class CompraController extends Controller
 
         $validator = Validator::make($request->all(), [
             'fecha_compra' => 'nullable|date|before_or_equal:today',
+            'numero_comprobante' => 'nullable|string|max:50',
             'items' => 'required|array|min:1',
         ], [
             'fecha_compra.before_or_equal' => 'La fecha de la compra no puede ser posterior a la fecha actual.',
+            'numero_comprobante.max' => 'El número de comprobante no puede superar los 50 caracteres.',
             'items.required' => 'Debe agregar al menos un producto a la compra.',
             'items.min' => 'Debe agregar al menos un producto a la compra.',
         ]);
@@ -317,7 +433,7 @@ class CompraController extends Controller
                     $importeTotal += $subtotal;
                     $nuevos[] = [
                         'id_producto' => (int) $item['id_producto'],
-                        'id_unidad' => isset($item['id_unidad']) ? (int) $item['id_unidad'] : null,
+                        'id_unidad' => $this->unidadDelItem($item),
                         'cantidad' => $cantidad,
                         'precio_unitario' => $precio,
                         'subtotal' => $subtotal,
@@ -342,6 +458,9 @@ class CompraController extends Controller
 
                 if ($request->filled('fecha_compra')) {
                     $compra->fecha_compra = $request->input('fecha_compra');
+                }
+                if ($request->has('numero_comprobante')) {
+                    $compra->numero_comprobante = $request->input('numero_comprobante') ?: null;
                 }
                 $compra->importe_total = $importeTotal;
                 $compra->saldo_pendiente = $importeTotal;

@@ -41,4 +41,21 @@ class Proveedor extends Model
     {
         return $this->hasMany(ProductoProveedor::class, 'id_proveedor', 'id_proveedor');
     }
+
+    /**
+     * Historial de plazos de entrega (PV07). El valor vigente sigue estando en
+     * la propia fila; esto es solo el rastro de cambios.
+     */
+    public function historialPlazos(): HasMany
+    {
+        return $this->hasMany(HistorialPlazoProveedor::class, 'id_proveedor', 'id_proveedor')
+            ->orderByDesc('fecha_cambio')
+            ->orderByDesc('id_historial_plazo');
+    }
+
+    /** Último plazo registrado en el historial (el vigente debería coincidir). */
+    public function ultimoPlazoRegistrado(): ?HistorialPlazoProveedor
+    {
+        return $this->historialPlazos()->first();
+    }
 }

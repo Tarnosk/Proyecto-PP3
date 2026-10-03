@@ -133,7 +133,7 @@ class RecepcionController extends Controller
                     $detalle->save();
 
                     // Sumar al stock como ingreso (C06 depende de S03).
-                    $this->sumarStock($producto, $cantidadRecibida, $idUsuario, $detalle->id_unidad);
+                    $this->sumarStock($producto, $cantidadRecibida, $idUsuario, $detalle->id_unidad, $recepcion->id_recepcion);
 
                     $recibidos[] = [
                         'id_producto' => $producto->id_producto,
@@ -192,7 +192,7 @@ class RecepcionController extends Controller
      * Suma stock de un producto como ingreso (S03) y recalcula su alerta.
      * Se ejecuta dentro de la transacción de la recepción (C06).
      */
-    private function sumarStock(Producto $producto, int $cantidad, int $idUsuario, ?int $idUnidad = null): void
+    private function sumarStock(Producto $producto, int $cantidad, int $idUsuario, ?int $idUnidad = null, ?int $idRecepcion = null): void
     {
         $this->stockService->registrarMovimiento(
             $producto,
@@ -200,7 +200,9 @@ class RecepcionController extends Controller
             $cantidad,
             'Recepción de compra (C06)',
             $idUsuario,
-            $idUnidad
+            $idUnidad,
+            null,
+            $idRecepcion
         );
     }
 }

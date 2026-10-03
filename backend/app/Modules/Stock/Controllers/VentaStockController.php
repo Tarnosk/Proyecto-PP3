@@ -30,12 +30,19 @@ class VentaStockController extends Controller
             'id_producto' => 'required|integer|exists:PRODUCTO,id_producto',
             'cantidad' => 'required|integer|min:1',
             'id_unidad' => 'nullable|integer|exists:UNIDAD_MEDIDA,id_unidad',
-            'id_venta' => 'nullable|integer',
+            'id_venta' => 'nullable|integer|exists:VENTA,id_venta',
             'motivo' => 'nullable|string|max:255',
         ], [
             'id_producto.required' => 'Debe indicar el producto vendido.',
+            'id_producto.integer' => 'El producto vendido debe ser un identificador numérico.',
+            'id_producto.exists' => 'El producto vendido no existe.',
             'cantidad.required' => 'Debe indicar la cantidad vendida.',
+            'cantidad.integer' => 'La cantidad vendida debe ser un número entero.',
             'cantidad.min' => 'La cantidad vendida debe ser mayor a cero.',
+            'id_unidad.integer' => 'La unidad de medida debe ser un identificador numérico.',
+            'id_unidad.exists' => 'La unidad de medida indicada no existe.',
+            'id_venta.integer' => 'El identificador de la venta debe ser numérico.',
+            'id_venta.exists' => 'La venta indicada no existe.',
         ]);
 
         if ($validator->fails()) {

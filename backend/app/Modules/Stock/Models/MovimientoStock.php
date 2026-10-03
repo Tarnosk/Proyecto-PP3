@@ -18,11 +18,15 @@ class MovimientoStock extends Model
         'id_unidad',
         'tipo',
         'cantidad',
+        'cantidad_base',
         'fecha',
         'motivo',
         'id_usuario',
         'id_venta',
         'id_entrega',
+        'id_lote',
+        'id_recepcion',
+        'id_sesion_conteo',
     ];
 
     protected $casts = [
@@ -30,10 +34,14 @@ class MovimientoStock extends Model
         'id_producto' => 'integer',
         'id_unidad' => 'integer',
         'cantidad' => 'integer',
+        'cantidad_base' => 'integer',
         'fecha' => 'date:Y-m-d',
         'id_usuario' => 'integer',
         'id_venta' => 'integer',
         'id_entrega' => 'integer',
+        'id_lote' => 'integer',
+        'id_recepcion' => 'integer',
+        'id_sesion_conteo' => 'integer',
     ];
 
     public function producto(): BelongsTo
@@ -44,5 +52,10 @@ class MovimientoStock extends Model
     public function unidad(): BelongsTo
     {
         return $this->belongsTo(UnidadMedida::class, 'id_unidad', 'id_unidad');
+    }
+
+    public function lote(): BelongsTo
+    {
+        return $this->belongsTo(Lote::class, 'id_lote', 'id_lote');
     }
 }

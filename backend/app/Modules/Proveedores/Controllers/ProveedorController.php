@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Modules\Productos\Models\Producto;
 use App\Modules\Proveedores\Models\ProductoProveedor;
 use App\Modules\Proveedores\Models\Proveedor;
+use App\Modules\Proveedores\Services\PlazoEntregaService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -22,9 +23,14 @@ use App\Support\UsuarioActual;
  * PV03 - Editar información de proveedores.
  * PV04 - Desactivar proveedores.
  * PV05 - Asociar productos a proveedores.
+ * PV07 - Registrar plazos de entrega (el historial lo lleva PlazoEntregaService).
  */
 class ProveedorController extends Controller
 {
+    public function __construct(private PlazoEntregaService $plazos)
+    {
+    }
+
     /**
      * Formato de salida de un proveedor.
      */
@@ -107,7 +113,7 @@ class ProveedorController extends Controller
                             'codigo' => $pp->producto?->codigo,
                             'descripcion' => $pp->producto?->descripcion,
                             'es_proveedor_principal' => (bool) $pp->es_proveedor_principal,
-                            'precio_acordado' => $pp->precio_acordado !== null ? (float) $pp->precio_acordado : null,
+'precio_acordado' => $pp->precio_acordado !== null ? (float) $pp->precio_acordado : null,
                             'fecha_asociacion' => $pp->fecha_asociacion ? $pp->fecha_asociacion->format('Y-m-d') : null,
                         ];
                     }),
@@ -158,6 +164,13 @@ class ProveedorController extends Controller
                 'id_usuario_carga' => $idUsuario,
                 'id_usuario_modificacion' => $idUsuario,
             ]);
+
+            // PV07: deja el primer renglón del historial de plazos (anterior = null).
+            $this->plazos->registrarAlta(
+                $proveedor,
+                $request->filled('plazo_entrega_dias') ? (int) $request->input('plazo_entrega_dias') : null,
+                $idUsuario
+            );
 
             return response()->json([
                 'status' => 'success',
@@ -222,7 +235,12 @@ class ProveedorController extends Controller
             ]);
 
             if ($request->filled('plazo_entrega_dias')) {
-                $proveedor->update(['plazo_entrega_dias' => (int) $request->input('plazo_entrega_dias')]);
+                // PV07: el cambio de plazo pasa por el service para quedar en el historial.
+                $this->plazos->cambiarPlazo(
+                    $proveedor,
+                    (int) $request->input('plazo_entrega_dias'),
+                    $idUsuario
+                );
             }
 
             return response()->json([

@@ -8,6 +8,7 @@ use App\Modules\PedidosDeCompra\Models\DetalleOrden;
 use App\Modules\PedidosDeCompra\Models\OrdenCompra;
 use App\Modules\Productos\Models\Producto;
 use App\Modules\Proveedores\Models\Proveedor;
+use App\Modules\Stock\Models\UnidadMedida;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -40,6 +41,7 @@ class OrdenCompraController extends Controller
             'total_estimado' => (float) $o->total_estimado,
             'estado' => $o->estado,
             'fecha_creacion' => $o->fecha_creacion ? $o->fecha_creacion->format('Y-m-d') : null,
+            'fecha_entrega_estimada' => $o->fecha_entrega_estimada ? $o->fecha_entrega_estimada->format('Y-m-d') : null,
             'fecha_modificacion' => $o->fecha_modificacion ? $o->fecha_modificacion->format('Y-m-d') : null,
             'fecha_envio' => $o->fecha_envio ? $o->fecha_envio->format('Y-m-d') : null,
             'fecha_cancelacion' => $o->fecha_cancelacion ? $o->fecha_cancelacion->format('Y-m-d') : null,
@@ -75,6 +77,26 @@ class OrdenCompraController extends Controller
     }
 
     /**
+     * DETALLE_ORDEN.id_unidad es NOT NULL en el esquema fusionado. Cuando el item
+     * no indica unidad se usa la unidad base del producto, que es la que asume
+     * precio_estimado y cantidad_solicitada.
+     */
+    private function unidadDelItem(array $item, ?Producto $producto): int
+    {
+        $idUnidad = isset($item['id_unidad']) ? (int) $item['id_unidad'] : 0;
+
+        if ($idUnidad > 0) {
+            return $idUnidad;
+        }
+
+        $base = $producto
+            ? UnidadMedida::where('id_producto', $producto->id_producto)->where('es_base', 1)->value('id_unidad')
+            : null;
+
+        return (int) ($base ?? UnidadMedida::where('es_base', 1)->orderBy('id_unidad')->value('id_unidad'));
+    }
+
+    /**
      * PC01 - Generar una orden de compra.
      */
     public function store(Request $request): JsonResponse
@@ -82,10 +104,12 @@ class OrdenCompraController extends Controller
         $validator = Validator::make($request->all(), [
             'id_proveedor' => 'required|integer',
             'fecha_creacion' => 'nullable|date|before_or_equal:today',
+            'fecha_entrega_estimada' => 'nullable|date|after_or_equal:fecha_creacion',
             'items' => 'required|array|min:1',
         ], [
             'id_proveedor.required' => 'Debe seleccionar un proveedor.',
             'fecha_creacion.before_or_equal' => 'La fecha de creación no puede ser posterior a la fecha actual.',
+            'fecha_entrega_estimada.after_or_equal' => 'La fecha de entrega estimada no puede ser anterior a la fecha de creación.',
             'items.required' => 'Debe agregar al menos un producto a la orden.',
             'items.min' => 'Debe agregar al menos un producto a la orden.',
         ]);
@@ -125,7 +149,7 @@ class OrdenCompraController extends Controller
 
                     $detalles[] = [
                         'id_producto' => (int) $item['id_producto'],
-                        'id_unidad' => null,
+                        'id_unidad' => $this->unidadDelItem($item, $producto),
                         'cantidad_solicitada' => $cantidad,
                         'cantidad_sugerida' => isset($item['cantidad_sugerida']) ? (int) $item['cantidad_sugerida'] : $cantidad,
                         'origen' => $item['origen'] ?? 'manual',
@@ -142,6 +166,7 @@ class OrdenCompraController extends Controller
                     'total_estimado' => $totalEstimado,
                     'estado' => 'pendiente',
                     'fecha_creacion' => $fecha,
+                    'fecha_entrega_estimada' => $request->input('fecha_entrega_estimada') ?: null,
                     'id_usuario' => $idUsuario,
                 ]);
 
@@ -261,9 +286,11 @@ class OrdenCompraController extends Controller
 
         $validator = Validator::make($request->all(), [
             'fecha_creacion' => 'nullable|date|before_or_equal:today',
+            'fecha_entrega_estimada' => 'nullable|date|after_or_equal:fecha_creacion',
             'items' => 'required|array|min:1',
         ], [
             'fecha_creacion.before_or_equal' => 'La fecha no puede ser posterior a la fecha actual.',
+            'fecha_entrega_estimada.after_or_equal' => 'La fecha de entrega estimada no puede ser anterior a la fecha de creación.',
             'items.required' => 'Debe agregar al menos un producto a la orden.',
             'items.min' => 'Debe agregar al menos un producto a la orden.',
         ]);
@@ -292,7 +319,7 @@ class OrdenCompraController extends Controller
 
                     $nuevos[] = [
                         'id_producto' => (int) $item['id_producto'],
-                        'id_unidad' => null,
+                        'id_unidad' => $this->unidadDelItem($item, $producto),
                         'cantidad_solicitada' => $cantidad,
                         'cantidad_sugerida' => isset($item['cantidad_sugerida']) ? (int) $item['cantidad_sugerida'] : $cantidad,
                         'origen' => $item['origen'] ?? 'manual',
@@ -309,6 +336,8 @@ class OrdenCompraController extends Controller
                 }
 
                 $orden->total_estimado = $totalEstimado;
+                $orden->fecha_creacion = $request->input('fecha_creacion') ?: $orden->fecha_creacion;
+                $orden->fecha_entrega_estimada = $request->input('fecha_entrega_estimada') ?: null;
                 $orden->fecha_modificacion = Carbon::now()->toDateString();
                 $orden->save();
 
@@ -341,7 +370,7 @@ class OrdenCompraController extends Controller
         if ($orden->estado !== 'pendiente') {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Solo se pueden cancelar órdenes pendientes. Una orden ya completada no puede cancelarse. (PC05)',
+                'message' => 'Solo se pueden cancelar órdenes pendientes. Una orden enviada o completada no puede cancelarse. (PC05)',
             ], 400);
         }
 

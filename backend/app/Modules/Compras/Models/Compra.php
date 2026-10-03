@@ -15,6 +15,7 @@ class Compra extends Model
     public $timestamps = false;
 
     protected $fillable = [
+        'numero_compra',
         'numero_comprobante',
         'id_proveedor',
         'id_orden',
@@ -22,8 +23,11 @@ class Compra extends Model
         'saldo_pendiente',
         'estado',
         'fecha_compra',
+        'fecha_vencimiento',
         'fecha_cancelacion',
+        'fecha_modificacion',
         'id_usuario',
+        'id_usuario_modificacion',
     ];
 
     protected $casts = [
@@ -31,6 +35,7 @@ class Compra extends Model
         'importe_total' => 'float',
         'saldo_pendiente' => 'float',
         'fecha_compra' => 'date:Y-m-d',
+        'fecha_vencimiento' => 'date:Y-m-d',
         'fecha_cancelacion' => 'date:Y-m-d',
     ];
 
@@ -52,5 +57,25 @@ class Compra extends Model
     public function recepciones(): HasMany
     {
         return $this->hasMany(Recepcion::class, 'id_compra', 'id_compra');
+    }
+
+    /**
+     * Pagos registrados contra la compra (C08). N pagos por compra.
+     */
+    public function pagos(): HasMany
+    {
+        return $this->hasMany(PagoProveedor::class, 'id_compra', 'id_compra')
+            ->orderBy('fecha_pago', 'asc')
+            ->orderBy('id_pago', 'asc');
+    }
+
+    public function totalPagado(): float
+    {
+        return round((float) $this->pagos()->sum('importe'), 2);
+    }
+
+    public function saldoFinal(): float
+    {
+        return round((float) $this->importe_total - $this->totalPagado(), 2);
     }
 }

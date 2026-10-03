@@ -11,6 +11,23 @@ backend_legacy/
 # Logs diagnosticos
 gcm-diagnose.log
 *.log
+*.log.err
+
+# Dependencias de terceros (nunca en el repo)
+vendor/
+node_modules/
+.phpunit.result.cache
+
+# Respaldos y material de trabajo que no va al repo
+BD_legacy/
+ERP-Juan23-feature-g3-*/vendor/
+Contexto G2/
+Revision/
+BD/archivo/
+Interfaz/server.log.err
+backend/server.log.err
+entrevista_extraida.txt
+historias_usuario_extraidas.txt
 
 # Editor / IDE
 .vscode/

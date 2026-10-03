@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App\Modules\Stock\Services;
 
 use App\Modules\Stock\Models\MovimientoStock;
+use App\Modules\Stock\Models\UnidadMedida;
 use App\Modules\Productos\Models\Producto;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -57,8 +58,9 @@ class StockService
         string $motivo,
         int $idUsuario,
         ?int $idUnidad = null,
-        ?int $idVenta = null
-    ): void {
+        ?int $idVenta = null,
+        ?int $idRecepcion = null
+    ): MovimientoStock {
         if (!in_array($tipo, self::TIPOS, true)) {
             throw new RuntimeException("Tipo de movimiento inválido: {$tipo}");
         }
@@ -77,10 +79,15 @@ class StockService
         try {
             $disponible = $producto->stock_disponible;
 
+            // PRODUCTO.stock se mantiene en unidades base (OB3), por lo que el delta
+            // se aplica sobre la cantidad convertida y no sobre la cantidad cruda:
+            // vender 3 cajas de 12 unidades resta 36, no 3.
+            $cantidadBase = self::cantidadEnUnidadBase($cantidad, $idUnidad);
+
             // Determinar delta aplicado al stock
             $delta = match ($tipo) {
-                'ingreso', 'devolucion' => $cantidad,
-                'venta', 'ajuste' => -$cantidad,
+                'ingreso', 'devolucion' => $cantidadBase,
+                'venta', 'ajuste' => -$cantidadBase,
             };
 
             $nuevoDisponible = $disponible + $delta;
@@ -89,7 +96,7 @@ class StockService
             if ($nuevoDisponible < 0) {
                 DB::rollBack();
                 throw new RuntimeException(
-                    "Stock insuficiente para {$producto->codigo}. Disponible: {$disponible}, solicitado: {$cantidad}."
+                    "Stock insuficiente para {$producto->codigo}. Disponible: {$disponible}, solicitado: {$cantidadBase}."
                 );
             }
 
@@ -97,24 +104,46 @@ class StockService
             $producto->save();
             $this->recalcularAlerta($producto);
 
-            MovimientoStock::create([
+            $movimiento = MovimientoStock::create([
                 'id_producto' => $producto->id_producto,
                 'id_unidad' => $idUnidad,
                 'tipo' => $tipo,
                 'cantidad' => $cantidad,
+                'cantidad_base' => $cantidadBase,
                 'fecha' => $fecha,
                 'motivo' => $motivo,
                 'id_usuario' => $idUsuario,
                 'id_venta' => $idVenta,
+                'id_recepcion' => $idRecepcion,
             ]);
 
             DB::commit();
+
+            return $movimiento;
         } catch (\Throwable $e) {
             if (DB::transactionLevel() > 0) {
                 DB::rollBack();
             }
             throw $e;
         }
+    }
+
+    /**
+     * Expresa una cantidad en la unidad base del producto.
+     *
+     * MOVIMIENTO_STOCK guarda la cantidad tal como la政党 el usuario y, en
+     * cantidad_base, la misma cantidad normalizada a la unidad base: sin eso la
+     * traza de auditoría queda inutilizable para razonar sobre stock.
+     */
+    public static function cantidadEnUnidadBase(int $cantidad, ?int $idUnidad): int
+    {
+        if ($idUnidad === null) {
+            return $cantidad;
+        }
+
+        $equivalencia = UnidadMedida::where('id_unidad', $idUnidad)->value('equivalencia_base');
+
+        return (int) round($cantidad * ($equivalencia !== null ? (float) $equivalencia : 1.0));
     }
 
     /**

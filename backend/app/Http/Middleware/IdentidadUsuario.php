@@ -19,7 +19,7 @@ use App\Support\UsuarioActual;
  * (guard 'proyecto' o el guard por defecto).
  *
  * Mientras G1 no integre el login no hay identidad marcada y
- * UsuarioActual cae al fallback admin (id=1): placeholder explícito.
+ * UsuarioActual cae al fallback de usuario administrativo activo.
  */
 class IdentidadUsuario
 {

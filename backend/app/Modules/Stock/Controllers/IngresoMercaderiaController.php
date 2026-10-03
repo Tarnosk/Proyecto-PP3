@@ -6,10 +6,12 @@ namespace App\Modules\Stock\Controllers;
 use App\Http\Controllers\Controller;
 use App\Modules\Productos\Models\Producto;
 use App\Modules\Proveedores\Models\Proveedor;
+use App\Modules\Stock\Models\Lote;
 use App\Modules\Stock\Services\StockService;
 use App\Support\UsuarioActual;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 
 class IngresoMercaderiaController extends Controller
@@ -33,6 +35,8 @@ class IngresoMercaderiaController extends Controller
             'items.*.cantidad' => 'required|integer|min:1',
             'items.*.id_unidad' => 'nullable|integer|exists:UNIDAD_MEDIDA,id_unidad',
             'items.*.motivo' => 'nullable|string|max:255',
+            'items.*.nro_lote' => 'nullable|string|max:100',
+            'items.*.fecha_vencimiento' => 'nullable|date',
         ], [
             'id_proveedor.required' => 'Debe seleccionar un proveedor.',
             'id_proveedor.exists' => 'El proveedor seleccionado no existe.',
@@ -42,6 +46,8 @@ class IngresoMercaderiaController extends Controller
             'items.*.id_producto.exists' => 'Uno de los productos seleccionados no existe.',
             'items.*.cantidad.required' => 'Cada ítem debe indicar la cantidad ingresada.',
             'items.*.cantidad.min' => 'La cantidad ingresada debe ser mayor a cero.',
+            'items.*.nro_lote.max' => 'El número de lote no puede superar los 100 caracteres.',
+            'items.*.fecha_vencimiento.date' => 'La fecha de vencimiento del lote debe ser una fecha válida.',
         ]);
 
         if ($validator->fails()) {
@@ -86,14 +92,55 @@ class IngresoMercaderiaController extends Controller
                     ], 400);
                 }
 
-                $this->stockService->registrarMovimiento(
+                // S09: si el item trae lote, el movimiento y el LOTE se registran
+                // en la misma transaccion (se anida como savepoint).
+                $nroLote = isset($item['nro_lote']) ? trim((string) $item['nro_lote']) : null;
+                $vence = $item['fecha_vencimiento'] ?? null;
+
+                $resultado = DB::transaction(function () use (
                     $producto,
-                    'ingreso',
                     $cantidad,
                     $motivo,
                     $idUsuario,
-                    $idUnidad
-                );
+                    $idUnidad,
+                    $nroLote,
+                    $vence
+                ) {
+                    $movimiento = $this->stockService->registrarMovimiento(
+                        $producto,
+                        'ingreso',
+                        $cantidad,
+                        $motivo,
+                        $idUsuario,
+                        $idUnidad
+                    );
+
+                    $loteId = null;
+                    if ($nroLote !== null && $nroLote !== '' && $vence !== null) {
+                        if (Lote::where('id_producto', $producto->id_producto)
+                            ->where('nro_lote', $nroLote)
+                            ->exists()
+                        ) {
+                            throw new \RuntimeException(
+                                "El lote '{$nroLote}' ya está registrado para el producto {$producto->codigo}."
+                            );
+                        }
+
+                        $cantidadBase = StockService::cantidadEnUnidadBase($cantidad, $idUnidad);
+                        $lote = Lote::create([
+                            'id_producto' => $producto->id_producto,
+                            'nro_lote' => $nroLote,
+                            'cantidad_inicial' => $cantidadBase,
+                            'cantidad_actual' => $cantidadBase,
+                            'fecha_vencimiento' => $vence,
+                        ]);
+
+                        $movimiento->update(['id_lote' => $lote->id_lote]);
+                        $loteId = $lote->id_lote;
+                    }
+
+                    return $loteId;
+                });
 
                 $producto->refresh();
 
@@ -103,6 +150,9 @@ class IngresoMercaderiaController extends Controller
                     'descripcion' => $producto->descripcion,
                     'cantidad' => $cantidad,
                     'id_unidad' => $idUnidad,
+                    'id_lote' => $resultado,
+                    'nro_lote' => $nroLote,
+                    'fecha_vencimiento' => $vence,
                     'stock_disponible' => $producto->stock_disponible,
                     'estado_alerta' => $producto->estado_alerta,
                 ];

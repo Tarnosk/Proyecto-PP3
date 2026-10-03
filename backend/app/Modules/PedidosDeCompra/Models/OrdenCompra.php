@@ -22,6 +22,7 @@ class OrdenCompra extends Model
         'fecha_creacion',
         'fecha_modificacion',
         'fecha_envio',
+        'fecha_entrega_estimada',
         'fecha_cancelacion',
         'id_usuario',
     ];
@@ -32,6 +33,7 @@ class OrdenCompra extends Model
         'fecha_creacion' => 'date:Y-m-d',
         'fecha_modificacion' => 'date:Y-m-d',
         'fecha_envio' => 'date:Y-m-d',
+        'fecha_entrega_estimada' => 'date:Y-m-d',
         'fecha_cancelacion' => 'date:Y-m-d',
     ];
 

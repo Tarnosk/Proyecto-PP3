@@ -5,6 +5,7 @@ namespace App\Modules\Stock\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Modules\Productos\Models\Producto;
+use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -121,6 +122,7 @@ class StockController extends Controller
                 'id_producto' => $m->id_producto,
                 'tipo' => $m->tipo,
                 'cantidad' => $m->cantidad,
+                'cantidad_base' => $m->cantidad_base,
                 'fecha' => $m->fecha ? $m->fecha->format('Y-m-d') : null,
                 'motivo' => $m->motivo,
                 'id_usuario' => $m->id_usuario,
@@ -185,35 +187,44 @@ class StockController extends Controller
 
         $lotes = DB::table('lote as l')
             ->join('producto as p', 'p.id_producto', '=', 'l.id_producto')
-            ->leftJoin('unidad_medida as u', 'u.id_unidad', '=', 'l.id_unidad')
-            ->where('l.estado', 'vigente')
+            ->leftJoin('unidad_medida as u', function ($join) use ($hoy) {
+                $join->on('u.id_producto', '=', 'l.id_producto')->where('u.es_base', 1);
+            })
+            ->where('p.estado', 'activo')
+            ->where('l.cantidad_actual', '>', 0)
             ->whereBetween('l.fecha_vencimiento', [$hoy, $hasta])
             ->select(
                 'l.id_lote',
                 'l.nro_lote',
                 'l.fecha_vencimiento',
-                'l.cantidad',
-                'l.estado',
+                'l.cantidad_inicial',
+                'l.cantidad_actual',
                 'p.id_producto',
                 'p.codigo',
+                'p.nombre',
                 'p.descripcion',
-                'u.id_unidad',
                 'u.nombre_unidad'
             )
             ->orderBy('l.fecha_vencimiento', 'asc')
             ->get()
-            ->map(function ($lote) {
+            ->map(function ($lote) use ($hoy) {
+                $estado = ((string) $lote->fecha_vencimiento < $hoy)
+                    ? 'vencido'
+                    : (((int) $lote->cantidad_actual === 0) ? 'consumido' : 'vigente');
+
                 return [
                     'id_lote' => (int) $lote->id_lote,
                     'nro_lote' => (string) $lote->nro_lote,
                     'id_producto' => (int) $lote->id_producto,
                     'codigo_producto' => (string) $lote->codigo,
-                    'descripcion_producto' => (string) $lote->descripcion,
+                    'descripcion_producto' => (string) ($lote->nombre ?: $lote->descripcion),
                     'fecha_vencimiento' => (string) $lote->fecha_vencimiento,
-                    'cantidad' => (int) $lote->cantidad,
+                    'cantidad' => (int) $lote->cantidad_actual,
+                    'cantidad_inicial' => (int) $lote->cantidad_inicial,
                     'unidades' => (string) ($lote->nombre_unidad ?? ''),
-                    'dias_para_vencer' => (int) now()->diffInDays($lote->fecha_vencimiento, false),
-                    'estado' => (string) $lote->estado,
+                    'dias_para_vencer' => (int) Carbon::parse($hoy)
+                        ->diffInDays(Carbon::parse((string) $lote->fecha_vencimiento), false),
+                    'estado' => $estado,
                 ];
             });
 

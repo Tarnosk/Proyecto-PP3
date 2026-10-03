@@ -427,7 +427,7 @@
         </div>
         <div style="max-height:280px; overflow-y:auto; border:1px solid var(--border); border-radius:10px;">
           <table class="items-table" aria-label="Productos de la orden">
-            <thead><tr><th style="width:36%;">Producto</th><th>Cant. solicitada</th><th>Precio estimado</th><th>Subtotal</th><th></th></tr></thead>
+            <thead><tr><th style="width:36%;">Producto</th><th>Cant. solicitada</th><th>Precio unitario</th><th>Subtotal</th><th></th></tr></thead>
             <tbody id="tbodyItems"></tbody>
           </table>
         </div>
@@ -603,6 +603,12 @@ const API_BASE = (window.location.port === '8000') ? '/api' : 'http://localhost:
       } catch (err){ console.error('Productos:', err); }
     }
 
+    function precioUnitarioProducto(idProducto){
+      const p = productosCache.find(x => x.id_producto == idProducto);
+      return (p && p.precio_unitario !== null && p.precio_unitario !== undefined)
+        ? Number(p.precio_unitario) : '';
+    }
+
     function renderTablaOrdenes(items){
       const tbody = document.getElementById('tbodyOrdenes');
       const txt = document.getElementById('txtResumenConteo');
@@ -656,7 +662,6 @@ const API_BASE = (window.location.port === '8000') ? '/api' : 'http://localhost:
       }
       let total = 0;
       tbody.innerHTML = itemsOrden.map((it, i) => {
-        const prod = productosCache.find(p => p.id_producto == it.id_producto);
         const cant = parseInt(it.cantidad_solicitada, 10) || 0;
         const prec = parseFloat(it.precio_estimado) || 0;
         const sub = cant * prec;
@@ -684,7 +689,13 @@ const API_BASE = (window.location.port === '8000') ? '/api' : 'http://localhost:
     }
 
     function itemCambio(i, campo, valor){
-      if (itemsOrden[i]){ itemsOrden[i][campo] = valor; }
+      if (!itemsOrden[i]) return;
+      itemsOrden[i][campo] = valor;
+      // Al elegir producto se precarga su precio unitario, que queda editable:
+      // es un punto de partida, no un dato fijo.
+      if (campo === 'id_producto'){
+        itemsOrden[i].precio_estimado = precioUnitarioProducto(valor);
+      }
       renderItems();
     }
 
@@ -704,7 +715,8 @@ const API_BASE = (window.location.port === '8000') ? '/api' : 'http://localhost:
       openModal('modalOrden');
     });
 
-    document.getElementById('btnAgregarItem').addEventListener('click', () => { agregarItem(); });
+document.getElementById('btnAgregarItem').addEventListener('click', () => { agregarItem(); });
+
 
     async function abrirEdicion(idOrden){
       const o = ordenesCache.find(x => x.id_orden == idOrden);

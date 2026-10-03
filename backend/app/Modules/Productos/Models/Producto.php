@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Productos\Models;
 
+use App\Modules\Stock\Models\Lote;
 use App\Modules\Stock\Models\MovimientoStock;
 use App\Modules\Stock\Models\UnidadMedida;
 use App\Modules\Proveedores\Models\ProductoProveedor;
@@ -23,14 +24,15 @@ class Producto extends Model
         'precio_unitario',
         'precio_mayorista',
         'precio_minorista',
+        'precioMay',
+        'precioMin',
     ];
 
     protected $fillable = [
         'codigo',
         'nombre',
         'descripcion',
-        'precioMay',
-        'precioMin',
+        'precio_unitario',
         'imagen',
         'stock',
         'stock_minimo',
@@ -47,8 +49,7 @@ class Producto extends Model
 
     protected $casts = [
         'id_producto' => 'integer',
-        'precioMay' => 'decimal:2',
-        'precioMin' => 'decimal:2',
+        'precio_unitario' => 'decimal:2',
         'stock' => 'integer',
         'stock_minimo' => 'integer',
         'dias_alerta_vencimiento' => 'integer',
@@ -104,21 +105,31 @@ class Producto extends Model
     }
 
     /**
-     * Precio unitario (alias de compatibilidad) = precio mayorista.
+     * Precio unitario de catalogo base.
      */
     public function getPrecioUnitarioAttribute(): float
     {
-        return (float) $this->precioMay;
+        return (float) ($this->attributes['precio_unitario'] ?? 0.0);
     }
 
     public function getPrecioMayoristaAttribute(): float
     {
-        return (float) $this->precioMay;
+        return (float) ($this->attributes['precio_unitario'] ?? 0.0);
     }
 
     public function getPrecioMinoristaAttribute(): float
     {
-        return (float) $this->precioMin;
+        return (float) ($this->attributes['precio_unitario'] ?? 0.0);
+    }
+
+    public function getPrecioMayAttribute(): float
+    {
+        return (float) ($this->attributes['precio_unitario'] ?? 0.0);
+    }
+
+    public function getPrecioMinAttribute(): float
+    {
+        return (float) ($this->attributes['precio_unitario'] ?? 0.0);
     }
 
     public function historialPrecios(): HasMany
@@ -150,6 +161,14 @@ class Producto extends Model
     public function proveedores(): HasMany
     {
         return $this->hasMany(ProductoProveedor::class, 'id_producto', 'id_producto');
+    }
+
+    /**
+     * Lotes y vencimientos del producto (S09)
+     */
+    public function lotes(): HasMany
+    {
+        return $this->hasMany(Lote::class, 'id_producto', 'id_producto');
     }
 
     /**
