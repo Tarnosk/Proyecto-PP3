@@ -6,9 +6,13 @@
 SET NAMES utf8mb4;
 USE distribuidorapyb;
 
--- Limpieza en orden de dependencia (hijas -> padres). Sin esto el re-ejecucion
+-- Limpieza en orden de dependencia (hijas -> padres). Sin esto la re-ejecucion
 -- choca con las FK: detalle_compra/detalle_orden_compra/detalle_recepcion referencian
 -- producto, unidad_medida, compra y orden_compra.
+-- sugerencia_compra e historial_plazo_proveedor llegan por migracion (000001 y
+-- 000004) y ambos referencian proveedor, por lo que se borran primero.
+DELETE FROM sugerencia_compra;
+DELETE FROM historial_plazo_proveedor;
 DELETE FROM pago_proveedor;
 DELETE FROM detalle_recepcion;
 DELETE FROM recepcion;
@@ -130,6 +134,15 @@ INSERT INTO detalle_orden (id_orden,id_producto,id_unidad,cantidad_solicitada,ca
  (@o1,(SELECT id_producto FROM producto WHERE codigo='B-3301'),(SELECT id_unidad FROM unidad_medida WHERE nombre_unidad='Caja x12' LIMIT 1),30,30,'manual',1180.00,35400.00),
  (@o2,(SELECT id_producto FROM producto WHERE codigo='L-9A21'),(SELECT id_unidad FROM unidad_medida WHERE nombre_unidad='Unidad suelta' LIMIT 1),10,10,'sugerencia',760.00,7600.00);
 
+-- SUGERENCIA_COMPRA (PC07 / S11). Una queda 'procesada' y enlazada a @o2 via
+-- id_orden_compra para que se vea la trazabilidad sugerencia -> orden.
+INSERT INTO sugerencia_compra (id_producto,id_proveedor,cantidad_sugerida,cantidad_minima,cantidad_maxima,precio_unitario,costo_total,velocidad_venta_diaria,plazo_entrega_dias,fecha_reorden,estado,id_orden_compra,motivo_generacion,observaciones,motivo_rechazo,fecha_generacion,fecha_resolucion,id_usuario_resolucion) VALUES
+  ((SELECT id_producto FROM producto WHERE codigo='L-9A21'),@p2,92,40,120,760.00,69920.00,3.5000,5,DATE_ADD(CURDATE(),INTERVAL -2 DAY),'procesada',@o2,'bajo_stock','Stock por debajo del minimo, se ordeno al proveedor',NULL,NOW(),NOW(),@idusu),
+  ((SELECT id_producto FROM producto WHERE codigo='L-9A22'),@p2,40,25,60,1020.00,40800.00,1.2000,5,DATE_ADD(CURDATE(),INTERVAL 3 DAY),'pendiente',NULL,'proximo_vencer','Lote LOTE-2026-002 vence en 12 dias',NULL,NOW(),NULL,NULL),
+  ((SELECT id_producto FROM producto WHERE codigo='C-2200'),@p3,97,15,150,2650.00,257050.00,0.8000,10,DATE_ADD(CURDATE(),INTERVAL 1 DAY),'pendiente',NULL,'bajo_stock','Stock 3 contra minimo 15',NULL,NOW(),NULL,NULL),
+  ((SELECT id_producto FROM producto WHERE codigo='B-3301'),@p1,6,10,40,1180.00,7080.00,2.0000,7,DATE_ADD(CURDATE(),INTERVAL 5 DAY),'pendiente',NULL,'proximo_vencer','Lote LOTE-2026-003 vence en 25 dias',NULL,NOW(),NULL,NULL),
+  ((SELECT id_producto FROM producto WHERE codigo='L-9A21'),@p2,8,40,120,760.00,6080.00,3.5000,5,DATE_ADD(CURDATE(),INTERVAL -1 DAY),'rechazada',NULL,'proximo_vencer','Lote proximo a vencer','Precio de lista mayor al acordado con el proveedor',NOW(),NOW(),@idusu);
+
 -- COMPRA / DETALLE_COMPRA (numero_compra NOT NULL, estado ENUM, fecha_vencimiento nueva)
 INSERT INTO compra (numero_compra,numero_comprobante,id_proveedor,id_orden,importe_total,saldo_pendiente,estado,fecha_compra,fecha_vencimiento,id_usuario) VALUES
  ('NCC-2026-000001','0001-00000045',@p1,@o1,35400.00,35400.00,'pendiente',CURDATE(),DATE_ADD(CURDATE(),INTERVAL 30 DAY),@idusu),
@@ -173,5 +186,6 @@ SELECT (SELECT COUNT(*) FROM producto) AS productos,
        (SELECT COUNT(*) FROM movimiento_stock) AS movimientos,
        (SELECT COUNT(*) FROM proveedor) AS proveedores,
        (SELECT COUNT(*) FROM orden_compra) AS ordenes,
+       (SELECT COUNT(*) FROM sugerencia_compra) AS sugerencias,
        (SELECT COUNT(*) FROM compra) AS compras,
        (SELECT COUNT(*) FROM recepcion) AS recepciones;
