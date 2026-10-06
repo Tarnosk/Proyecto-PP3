@@ -28,8 +28,18 @@ class StockController extends Controller
             $term = trim($search);
             $query->where(function ($q) use ($term) {
                 $q->where('codigo', 'LIKE', "%{$term}%")
-                  ->orWhere('descripcion', 'LIKE', "%{$term}%");
+                  ->orWhere('descripcion', 'LIKE', "%{$term}%")
+                  ->orWhere('nombre', 'LIKE', "%{$term}%");
             });
+        }
+
+        $stockMin = $request->input('stock_min');
+        $stockMax = $request->input('stock_max');
+        if ($stockMin !== null && $stockMin !== '') {
+            $query->where('stock', '>=', (int) $stockMin);
+        }
+        if ($stockMax !== null && $stockMax !== '') {
+            $query->where('stock', '<=', (int) $stockMax);
         }
 
         $productos = $query->orderBy('descripcion', 'asc')

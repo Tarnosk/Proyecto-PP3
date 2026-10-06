@@ -59,7 +59,8 @@ class StockService
         int $idUsuario,
         ?int $idUnidad = null,
         ?int $idVenta = null,
-        ?int $idRecepcion = null
+        ?int $idRecepcion = null,
+        \Carbon\Carbon|string|null $fechaPersonalizada = null
     ): MovimientoStock {
         if (!in_array($tipo, self::TIPOS, true)) {
             throw new RuntimeException("Tipo de movimiento inválido: {$tipo}");
@@ -71,7 +72,9 @@ class StockService
             throw new RuntimeException('Debe indicar un motivo para el ajuste.');
         }
 
-        $fecha = Carbon::now()->toDateString();
+        $fecha = $fechaPersonalizada instanceof Carbon
+            ? $fechaPersonalizada->toDateString()
+            : ($fechaPersonalizada ?? Carbon::now()->toDateString());
 
         // Transacción atómica: actualizar stock embebido + registrar movimiento
         DB::beginTransaction();

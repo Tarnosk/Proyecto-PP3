@@ -1,0 +1,1022 @@
+=====================================================================
+CONSIDERACIONES SOBRE CUMPLIMIENTO DE CRITERIOS - MODULO PEDIDOS DE COMPRA (PC01-PC07)
+=====================================================================
+
+Fecha de revision: Oct 04 2026
+Fuente de criterios: C:\Users\dario\Desktop\Proyecto\Documentacion\historias_extract.txt
+                    (lineas 498-582; texto extraido de "Historias de Usuario.pdf")
+Backend revisado:   C:\Users\dario\Desktop\Proyecto\backend\app\Modules\PedidosDeCompra
+                    Controllers/ OrdenCompraController.php (414 lineas)
+                               SugerenciasReposicionController.php (105 lineas)
+                               DashboardReposicionController.php (dashboard, no PC01-PC07)
+                    Services/    GeneradorSugerenciasReposicionService.php (413 lineas)
+                               DashboardReposicionService.php (dashboard, no PC01-PC07)
+                    Models/      OrdenCompra.php (54), DetalleOrden.php (44),
+                               SugerenciaCompra.php (73)
+                    Repositories/SugerenciaCompraRepository.php (143 lineas)
+Rutas:              C:\Users\dario\Desktop\Proyecto\backend\routes\api.php
+                    (lineas 68-73 inventario; 119-125 bloque ORDENES COMPRA;
+                     182-191 bloque PC07; 193-198 dashboard reposicion)
+                    C:\Users\dario\Desktop\Proyecto\backend\routes\web.php:9-10
+Migraciones BD:     C:\Users\dario\Desktop\Proyecto\backend\database\migrations
+                    2026_10_01_000001_create_sugerencia_compra_table.php
+                    2026_10_02_000001_add_motivo_rechazo_to_sugerencia_compra_table.php
+                    2026_10_03_000003_add_id_orden_compra_to_sugerencia_compra_table.php
+Esquema BD:         C:\Users\dario\Desktop\Proyecto\BD\esquema_base_DistribuidoraPyB.sql
+                    ORDEN_COMPRA (329-343), DETALLE_ORDEN (345-357),
+                    COMPRA.id_orden (364), FKs (717-725)
+Semilla:            C:\Users\dario\Desktop\Proyecto\BD\semilla_demo_actualizada.sql:126-144
+Interfaz PC01-PC06: C:\Users\dario\Desktop\Proyecto\backend\public\Interfaz\pedido_compra.html
+                    (958 lineas - COPIA VIGENTE, la que se sirve)
+Interfaz en raiz:   C:\Users\dario\Desktop\Proyecto\Interfaz\pedido_compra.html
+                    (857 lineas - COPIA DESACTUALIZADA, sin precarga de precio)
+Interfaz PC07:      C:\Users\dario\Desktop\Proyecto\backend\resources\views\sugerencias-reposicion.blade.php (168)
+                    C:\Users\dario\Desktop\Proyecto\backend\public\js\sugerencias-reposicion.js (413)
+Soporte transversal:C:\Users\dario\Desktop\Proyecto\backend\app\Support\UsuarioActual.php
+Dependencias:      C:\Users\dario\Desktop\Proyecto\backend\app\Modules\Productos\Models\Producto.php
+                    C:\Users\dario\Desktop\Proyecto\backend\app\Modules\Stock\Controllers\AlertaStockController.php (S07)
+                    C:\Users\dario\Desktop\Proyecto\backend\config\reposicion.php
+
+Verificacion ejecutada: ademas de la lectura de codigo se ejercito la API en vivo
+                    (http://localhost:8000, PHP 8.x artisan serve + MySQL distribuidorapyb)
+                    con 12 llamadas: alta PC01, edicion PC04, envio, los dos bloqueos
+                    PC04/PC05, detalle PC03, 4 filtros PC02, cancelacion PC05 y
+                    generar-orden PC07 (mas el rechazo de la repetition). Los datos
+                    de prueba se eliminaron al terminar: ORDEN_COMPRA y DETALLE_ORDEN
+                    quedaron en 0 filas, que es su estado original, y la sugerencia
+                    61 fue restituida a 'pendiente'.
+
+Volumen evaluado:  7 historias de usuario / 38 criterios de aceptacion / 31 SP.
+Criterios Si: 35 (92,1%) | Parcial: 3 (7,9%) | No: 0 (0,0%)
+
+
+1. RESUMEN POR HISTORIA DE USUARIO
+----------------------------------------------------------------------
+
+HU    Nombre                                  Complej.  Criterios  Cumple
+PC01  Generar Ordenes de Compra                8 SP       6          Si (6/6)        MVP
+PC02  Consultar Ordenes de Compra Emitidas     3 SP       5          Si (5/5)        MVP
+PC03  Consultar el Detalle de una Orden        3 SP       6          Si (6/6)        MVP
+PC04  Editar una Orden de Compra               5 SP       6          Si (6/6)        MVP
+PC05  Cancelar una Orden de Compra             1 SP       5          Si (5/5)        MVP
+PC06  Visualizar el Estado de una Orden        3 SP       5          Parcial (3/5)   MVP
+PC07  Generar Sugerencias de Reposicion        8 SP       5          Parcial (4/5)   Importante
+
+Suma Story Points del modulo: 31 SP (coincide con el backlog, historias_extract.txt:21).
+- MVP (PC01-PC06):        23 SP -> 33 criterios: 31 Si,  2 Parcial, 0 No  (93,9% / 6,1% / 0%)
+- Importantes (PC07):      8 SP ->  5 criterios:  4 Si,  1 Parcial, 0 No  (80,0% / 20,0% / 0%)
+
+Nota de ubicacion en el PDF: PC01-PC06 estan bajo el encabezado "MVP"
+(historias_extract.txt:500) y PC07 queda despues del encabezado "Importante"
+(:568), separado por un "Importante:" sin contenido. El tratamiento es el mismo
+que en el resto de los archivos consideraciones_*.txt: se evaluan las siete.
+
+Lectura rapida: el modulo esta completo y operativo de punta a punta. Las seis
+historias del MVP se cumplen de forma literal en las tres capas (backend, esquema
+e interfaz), y la practica totalidad del contrato se comprobo en vivo, no solo por
+lectura: el alta calcula el total y el numero de orden, la edicion reclasifica el
+total y sella fecha_modificacion, el envio bloquea la edicion y la cancelacion, la
+cancelacion conserva el renglon y sella fecha_cancelacion, y el camino de PC07
+genera una orden real enlazada a la sugerencia con el proveedor que el generador
+asigno. No hay ningun criterio No.
+
+Los tres Parcial se concentran en un solo defecto de fondo y en una decision de
+alcance:
+  - PC06.4 y PC06.5 (recibida parcialmente / completada): los dos estados existen
+    en el ENUM, en el modelo, en el filtro y en la etiqueta de la UI, pero NINGUN
+    camino de codigo los escribe. La recepcion de mercaderia (C06) reclasifica
+    COMPRA.estado y nunca propaga a ORDEN_COMPRA.estado, de modo que son
+    inalcanzables desde el propio sistema. Se cumple la visualizacion del estado
+    (PC06.1), no la identificacion de esos dos estados (ver P-2).
+  - PC07.3 (seleccionar los productos sugeridos): las casillas existen y alimentan
+    el "procesar lote", pero la seleccion no conduce a generar ordenes. La
+    generacion es 1 sugerencia -> 1 orden de un solo renglon, sin camino para
+    consolidar la seleccion en una sola orden (ver P-6).
+
+
+2. DETALLE CRITERIO POR CRITERIO
+----------------------------------------------------------------------
+
+Legenda: Si = cumple literalmente | Parcial = cumple parcialmente | No = no implementado
+
+--- PC01 - Generar Ordenes de Compra (8 SP) - MVP --------------------------
+1.1 Debe permitir seleccionar un proveedor ............................... Si
+    Evidencia: OrdenCompraController.php:105 -> 'id_proveedor' =>
+               'required|integer' con mensaje dedicado en :110. Existencia
+               verificada en :121-124 (Proveedor::find -> 404). Estado activo
+               exigido en :125-127 ("No se puede crear una orden con un proveedor
+               inactivo. (PV04)"), lo que extiende PV04.4 a la orden.
+               POST /api/ordenes-compra (routes/api.php:70 y :125 apiResource).
+               UI: <select id="ordenProveedor"> (pedido_compra.html:416) poblado
+               en :587-588 con GET /api/proveedores?estado=activo, es decir solo
+               proveedores activos.
+    Justificacion: el proveedor es obligatorio, se valida existencia y estado en
+    el servidor, y el selector de la UI no ofrece inactivos: las dos capas
+    coinciden con el criterio.
+    Verificacion en vivo: POST con id_proveedor=69 -> 201.
+
+1.2 Debe permitir agregar uno o varios productos a la orden .............. Si
+    Evidencia: OrdenCompraController.php:108 -> 'items' =>
+               'required|array|min:1' con dos mensajes (:113, :114), lo que
+               admite N productos sin limite superior. El bucle de :143-159
+               construye un renglon por item y :173-175 los persiste.
+               UI: boton #btnAgregarItem (pedido_compra.html:426, handler en :718)
+               que agrega filas a #tbodyItems (:431) y boton de quitar por fila
+               (:680 -> quitarItem() en :702-705).
+    Justificacion: "uno o varios" se cumple literalmente: min:1 impide el cero y
+    la estructura de array admite cualquier cantidad.
+    Verificacion en vivo: alta con 2 productos distintos -> 201.
+    Observacion (defecto real): dos renglones con el MISMO producto producen
+    HTTP 500, no un 400 de validacion. Verificado en vivo con L-9A21 repetido:
+      500 Duplicate entry '166-169-368' for key 'uq_detalle_orden_prod_unidad'
+    La causa es que validarItems() (:55-77) no deduplica ni rechaza, mientras
+    que DETALLE_ORDEN tiene UNIQUE (id_orden, id_producto, id_unidad)
+    (esquema_base:355) y unidadDelItem() (:84-97) asigna a las dos lineas la
+    misma unidad base del producto. Es alcanzable desde la UI, que permite
+    elegir el mismo producto en dos filas. Detalle en P-1.
+
+1.3 Debe permitir registrar cantidades solicitadas por producto .......... Si
+    Evidencia: OrdenCompraController.php:69-71 valida
+               cantidad_solicitada > 0 por item; :144 la normaliza a int y :153
+               la persiste. DetalleOrden.cantidad_solicitada INT NOT NULL
+               (esquema_base:350) con cast a integer (DetalleOrden.php:29).
+               UI: <input type="number" min="1" class="item-cant">
+               (pedido_compra.html:677) que escribe en itemsOrden via
+               itemCambio() (:691-700).
+    Justificacion: la cantidad se registra por producto, con validacion de
+    positividad en servidor y en cliente.
+
+1.4 Debe calcular automaticamente el total estimado de la orden ......... Si
+    Evidencia: OrdenCompraController.php:146 -> $subtotal =
+               round($cantidad * $precio, 2) por renglon; :147 lo acumula;
+               :161 redondea el total a dos decimales y :166 lo persiste en
+               ORDEN_COMPRA.total_estimado (DECIMAL(12,2), esquema_base:333).
+               El total nunca lo ingresa el cliente: el body solo trae items.
+               El mismo calculo se repite en update() (:316-317, :331, :338).
+               UI: #ordenResumen muestra "Total estimado: $X" en vivo
+               (pedido_compra.html:660 y :683), recalculado en cada
+               oninput de cantidad o precio.
+    Justificacion: el total es derivado, redondeado y guardado en la misma
+    transaccion que los renglones (:139-178).
+    Verificacion en vivo: 10 x 760 + 4 x 1020 = 11680, informado por la API.
+    Observacion: el precio que precarga la UI es el de catalogo de venta, no el
+    acordado con el proveedor (ver P-3); el total se calcula correctamente pero
+    nace sobre un precio que hay que corregir a mano.
+
+1.5 Debe generar un identificador unico para la orden .................. Si
+    Evidencia: OrdenCompraController.php:196-203 generarNumero() construye
+               'OC-AAAA-nnnnnn' con random_int(1,999999) dentro de un do-while
+               que consulta OrdenCompra::where('numero_orden',...)->exists()
+               (:200), y se usa en :164. El esquema cierra la carrera de
+               concurrencia: numero_orden VARCHAR(30) NOT NULL UNIQUE
+               (esquema_base:331). El generador de PC07 replica el mismo formato
+               (GeneradorSugerenciasReposicionService.php:354-361), de modo que
+               el identificador es unico en todo el dominio de ordenes.
+    Justificacion: la unicidad esta garantizada en dos niveles (aplicacion y
+    base) y el formato (15 caracteres) cabe en el VARCHAR(30).
+    Verificacion en vivo: OC-2026-049095, OC-2026-370055 y OC-2026-426907
+    generados en tres llamadas distintas sin colision.
+    Observacion: el do-while es un check-then-insert; bajo concurrencia alta dos
+    peticiones podrian pasar el exists() y la segunda terminaria en 500 por el
+    UNIQUE, en lugar de reintentar (ver P-8).
+
+1.6 Debe registrar la fecha de creacion .................................. Si
+    Evidencia: OrdenCompraController.php:106 -> 'fecha_creacion' =>
+               'nullable|date|before_or_equal:today' (mensaje en :111), default
+               en :136 (Carbon::now()->toDateString()) y persistencia en :168.
+               Columna ORDEN_COMPRA.fecha_creacion DATE NOT NULL
+               (esquema_base:335) con cast 'date:Y-m-d' (OrdenCompra.php:33).
+               UI: <input type="date" id="ordenFecha"> (pedido_compra.html:420)
+               que se inicializa con la fecha del dia (:711).
+    Justificacion: la fecha es parte del contrato de alta, se valida como fecha,
+    no admite futuro y se persiste siempre (con default si se omite).
+    Verificacion en vivo: fecha_creacion = 2026-10-04 en las tres ordenes de
+    prueba.
+
+--- PC02 - Consultar Ordenes de Compra Emitidas (3 SP) - MVP --------------
+2.1 Debe listar las ordenes de compra registradas ....................... Si
+    Evidencia: OrdenCompraController.php:208-233 index() con GET /api/ordenes-compra
+               (routes/api.php:68 y :125). Orden determinista en :227
+               (fecha_creacion DESC, id_orden DESC). Carga el proveedor con
+               with('proveedor') (:210). Proyecta cada fila con formato()
+               (:34-50), que incluye numero_orden, proveedor, total_estimado,
+               estado, fechas y total_productos.
+               UI: tabla #tablaOrdenes (pedido_compra.html:378-394) renderizada
+               en renderTablaOrdenes (:612-639) y KPIs en :641-650.
+    Justificacion: el listado devuelve todas las ordenes con los datos que el
+    criterio enumera y la UI las tabulariza.
+    Observacion: index() no pagina (->get() sin limite, :227); no hay ?page ni
+    ?per_page en OrdenCompraController, a diferencia de PC07 que si pagina
+    (SugerenciaCompraRepository::obtenerConFiltros, :95-98). Es la unica
+    palanca de escalabilidad del modulo (ver P-7).
+
+2.2 Debe permitir buscar ordenes por proveedor .......................... Si
+    Evidencia: OrdenCompraController.php:212-214 -> if ($request->filled(
+               'id_proveedor')) where('id_proveedor', ...). UI: <select
+               id="filterProveedor"> (pedido_compra.html:348) que dispara
+               loadOrdenes() al cambiar (:930), y ademas un campo de texto
+               "Buscar por N de orden o proveedor (PC02)" (:344) que filtra el
+               arreglo ya descargado en el cliente (:563-569).
+    Justificacion: el filtro por proveedor existe en la API y esta expuesto en la
+    UI en dos formas (desplegable y texto). El criterio no exige busqueda textual.
+    Observacion: el campo de texto NO delega al servidor. Es consistente con el
+    mismo patron de C02.2 (consideraciones_compras.txt, 2.2), pero aqui es mas
+    sensible porque,combined con la falta de paginacion, un proveedor pedido por
+    nombre solo se encuentra si esta en el arreglo completo que ya se descargo.
+
+2.3 Debe permitir filtrar ordenes por rango de fechas ..................... Si
+    Evidencia: OrdenCompraController.php:215-217 -> ?desde con
+               whereDate('fecha_creacion','>=',...) y :218-220 -> ?hasta con
+               whereDate('fecha_creacion','<=',...). Los dos extremos se aplican
+               de forma independiente y con whereDate, con lo que no arrastran
+               componente horario. UI: #filterDesde / #filterHasta
+               (pedido_compra.html:353-359) enviados en :551-552, con boton
+               "Filtrar" (:372) y "Limpiar" (:373).
+    Justificacion: el rango de fechas es un filtro de servidor, no de cliente.
+
+2.4 Debe mostrar el estado actual de cada orden .......................... Si
+    Evidencia: OrdenCompraController.php:42 -> 'estado' => $o->estado en
+               formato(), que index() aplica a cada fila (:231). Filtro por
+               estado en :222-225, validado contra OrdenCompra::ESTADOS
+               (OrdenCompra.php:43) para que un valor inventado no rompa la
+               consulta. UI: columna "Estado" con tag coloreado
+               (pedido_compra.html:627) y ETIQUETAS_ESTADO (:530-536); selector
+               #filterEstado (:362-369) con las cinco opciones.
+    Verificacion en vivo: ?estado=enviada -> 200 con la orden enviada;
+    ?estado=inventado -> 200 con el listado completo (filtro ignorado, no error).
+    Justificacion: el estado se muestra y tambien es filtrable, lo que excede el
+    criterio.
+
+2.5 Debe mostrar la fecha de emision ..................................... Si
+    Evidencia: OrdenCompraController.php:43 -> 'fecha_creacion' =>
+               $o->fecha_creacion->format('Y-m-d') en formato(), presente en
+               cada fila del listado. UI: columna "Fecha creacion"
+               (pedido_compra.html:383) renderizada en :625.
+               Ademas la fecha de envio viaja por el mismo formato()
+               (:46 -> 'fecha_envio') y se muestra como tarjeta "ENVIO" en el
+               modal de detalle (:825).
+    Justificacion: el listado muestra la fecha de emision de cada orden, que en
+    este dominio es la fecha de creacion del registro (la unica que existe al
+    emitir; fecha_envio se sella despues, en la accion complementaria de enviar).
+    Observacion: la columna del listado se rotula "Fecha creacion" y no "Fecha de
+    emision", y fecha_envio solo es visible en el detalle (PC03). Si un evaluador
+    busca "fecha de emision" en la tabla, no la encuentra por nombre. Es una
+    cuestion de rotulo, no de dato.
+
+--- PC03 - Consultar el Detalle de una Orden de Compra (3 SP) - MVP ------
+3.1 Debe permitir seleccionar una orden registrada ....................... Si
+    Evidencia: OrdenCompraController.php:238-268 show(int $id) con GET
+               /api/ordenes-compra/{id} (routes/api.php:69 y :125); 404
+               explicito si no existe (:241-243). UI: boton "Ver" por fila
+               (pedido_compra.html:631, title "Ver detalle (PC03)") ->
+               verDetalle() (:799-840), que ademas abre el modal antes de
+               resolver la peticion (:806) para que el modal aparezca de inmediato.
+    Justificacion: la orden se selecciona por id desde el listado y el backend
+    responde 404 de forma explicita.
+    Verificacion en vivo: GET /api/ordenes-compra/167 -> 200 con orden y detalle.
+
+3.2 Debe mostrar el proveedor asociado ................................... Si
+    Evidencia: OrdenCompraController.php:40 -> 'proveedor' => $o->proveedor?-
+               >razon_social, con with('proveedor') en :240. UI: tarjeta
+               "PROVEEDOR" en el modal (pedido_compra.html:821) y columna
+               Proveedor en el listado (:624).
+    Justificacion: la razon social del proveedor viaja en el detalle, no solo el id.
+
+3.3 Debe mostrar los productos incluidos ............................... Si
+    Evidencia: OrdenCompraController.php:245-256 mapea cada DETALLE_ORDEN a
+               id_producto, codigo, descripcion (via with('detalles.producto')
+               en :240), cantidad_solicitada, precio_estimado, subtotal y origen.
+               UI: tabla #tbodyDetalle (pedido_compra.html:460) renderizada en
+               renderDetalleProductos (:842-856) con descripcion y codigo (:850).
+    Justificacion: la linea de detalle identifica el producto por codigo y
+    descripcion, no solo por id.
+    Verificacion en vivo: L-9A21 / "Tetrapak 1000ml".
+
+3.4 Debe mostrar las cantidades solicitadas .............................. Si
+    Evidencia: OrdenCompraController.php:251 -> 'cantidad_solicitada' =>
+               (int) $d->cantidad_solicitada; ademas :258 -> 'total_solicitado'
+               con la suma de todos los renglones y :48 -> 'total_productos' en
+               el listado. UI: columna "Cant. solicitada" (pedido_compra.html:851).
+    Justificacion: la cantidad se expone por producto y tambien agregada.
+    Observacion (menor): el campo del listado se llama total_productos pero es la
+    suma de UNIDADES, y la columna del listado se rotula "Productos"
+    (pedido_compra.html:386), lo que sugiere un conteo deitems distintos. No es
+    un criterio de PC02 ni de PC03 (ver P-9).
+
+3.5 Debe mostrar el estado actual de la orden ............................ Si
+    Evidencia: OrdenCompraController.php:42 (via formato(), incluido en 'orden'
+               por :263) y :266 el arreglo de detalles; UI: tarjeta "ESTADO" con
+               el tag coloreado (pedido_compra.html:824).
+    Justificacion: el estado es visible en el detalle y en el listado.
+
+3.6 Debe mostrar la fecha de creacion .................................... Si
+    Evidencia: OrdenCompraController.php:43 -> 'fecha_creacion' con formato
+               'Y-m-d'; UI: tarjeta "CREACION" (pedido_compra.html:822).
+    Justificacion: la fecha de creacion se muestra con formato de fecha, no como
+    marca de tiempo.
+    El mismo modal muestra ademas ENVIO (:825), CANCELACION (:826) y
+    MODIFICACION (:827), que exceden el criterio.
+
+--- PC04 - Editar una Orden de Compra (5 SP) - MVP ------------------------
+4.1 Debe permitir modificar ordenes en estado pendiente .................. Si
+    Evidencia: OrdenCompraController.php:273-358 update(); la guarda de estado
+               esta en :280-285 ("Solo se pueden editar ordenes pendientes. Una
+               vez enviada no puede modificarse. (PC04)" -> 400). PATCH
+               /api/ordenes-compra/{id} (routes/api.php:71 y :125). UI: boton
+               "Editar" por fila deshabilitado si estado !== 'pendiente'
+               (pedido_compra.html:632), con doble guarda en el cliente
+               (:724) y en el modal (:834).
+    Justificacion: la edicion existe y esta condicionada al estado pendiente en
+    servidor y en UI, por comparacion contra el unico estado editable.
+    Verificacion en vivo: PATCH de una orden pendiente -> 200; PATCH de la misma
+    orden ya enviada -> 400 con el mensaje de PC04.
+
+4.2 Debe permitir agregar productos ...................................... Si
+    Evidencia: OrdenCompraController.php:290 exige 'items' => 'required|array|
+               min:1' y :313-329 reconstruye el conjunto completo de renglones
+               a partir del array recibido. UI: agregarItem() (:686-689) agrega
+               filas sobre el arreglo itemsOrden, que se carga desde el detalle
+               en :737-741.
+    Justificacion: agregar productos es exactamente lo que hace el patron de
+    "sustitucion del conjunto de renglones" combinado con el boton de alta de
+    lineas.
+    Observacion: hereda el defecto P-1 (producto repetido -> 500), porque la
+    reconstruccion inserta uno por uno sin deduplicar.
+
+4.3 Debe permitir eliminar productos ..................................... Si
+    Evidencia: OrdenCompraController.php:333 -> $orden->detalles()->delete()
+               seguido de la reinsercion (:334-336): eliminar un producto es
+               omitirlo del array 'items'. UI: boton de quitar por fila
+               (pedido_compra.html:680) -> quitarItem() (:702-705).
+    Justificacion: la UI permite quitar lineas y el backend acepta el conjunto
+    resultante, que es la forma natural de eliminar un producto de la orden.
+    Verificacion en vivo: edicion que deja un solo renglon de los dos iniciales
+    -> el detalle paso de 2 lineas a 1.
+    Observacion (riesgo de dato): el borrado es fisico y en bloque. Es coherente
+    con 4.5 (solo ordenes pendientes, sin recepciones asociadas) y con el
+    ON DELETE CASCADE del esquema (esquema_base:720), pero cualquier referencia
+    futura a un id_detalle_orden historico se pierde en cada edicion. Mismo
+    matiz que se registro para C04.2 en consideraciones_compras.txt.
+
+4.4 Debe permitir modificar cantidades solicitadas ....................... Si
+    Evidencia: OrdenCompraController.php:314 normaliza la cantidad del body y
+               :322 la persiste; :69-71 la valida (> 0). UI: input .item-cant
+               (pedido_compra.html:677) con oninput -> itemCambio() (:691-700).
+    Justificacion: la cantidad es editable renglon por renglon, con validacion
+    en servidor.
+
+4.5 Debe impedir modificaciones una vez enviada la orden .................. Si
+    Evidencia: OrdenCompraController.php:280-285 -> if ($orden->estado !==
+               'pendiente') return 400. La comparacion es por desigualdad
+               contra 'pendiente', de modo que bloquea enviada, recibida_
+               parcialmente, completada y cancelada con una sola condicion, y no
+               puede quedar desactualizada si se agrega un estado al ENUM.
+               Verificacion adicional en la UI: :632 y :834 deshabilitan el
+               boton, y :724 vuelve a rechazar en el cliente.
+    Verificacion en vivo: PATCH sobre la orden enviada -> 400.
+    Justificacion: el bloqueo existe en la capa que importa (el servidor) y la UI
+    lo anticipa, con lo que el usuario no ve un boton activo que va a fallar.
+
+4.6 Debe registrar la fecha de modificacion .............................. Si
+    Evidencia: OrdenCompraController.php:341 -> $orden->fecha_modificacion =
+               Carbon::now()->toDateString() dentro de la transaccion (:309-345).
+               Columna ORDEN_COMPRA.fecha_modificacion DATE NULL
+               (esquema_base:336) con cast (OrdenCompra.php:34), devuelta en
+               formato() (:45). UI: tarjeta "MODIFICACION"
+               (pedido_compra.html:827) y mensaje informativo en el modal de
+               edicion (:736).
+    Verificacion en vivo: fecha_modificacion = 2026-10-04 tras el PATCH.
+    Observacion (menor): se sella con fecha, sin hora, igual que el resto de las
+    fechas del dominio (C01.5, C06.3). Si se necesitaran dos ediciones el mismo
+    dia no se podrian ordenar; el esquema es DATE y no DATEETIME, con lo que la
+    limitacion es del modelo de datos y no de la implementacion.
+
+--- PC05 - Cancelar una Orden de Compra (1 SP) - MVP ----------------------
+5.1 Debe permitir cancelar ordenes pendientes ............................. Si
+    Evidencia: OrdenCompraController.php:363-386 cancelar() con PATCH
+               /api/ordenes-compra/{id}/cancelar (routes/api.php:72 y :121).
+               UI: boton "Cancelar" por fila (pedido_compra.html:634) y en el
+               modal de detalle (:468), ambos con confirmacion
+               (:907: "Se conservara su historial").
+    Verificacion en vivo: PATCH /api/ordenes-compra/168/cancelar -> 200.
+    Justificacion: la cancelacion es una operacion de primera clase, con
+    confirmacion explicita en la UI.
+
+5.2 Debe registrar la fecha de cancelacion .............................. Si
+    Evidencia: OrdenCompraController.php:378 -> $orden->fecha_cancelacion =
+               Carbon::now()->toDateString(). Columna en ORDEN_COMPRA
+               (esquema_base:339) con cast (OrdenCompra.php:37), devuelta en
+               formato() (:47). UI: tarjeta "CANCELACION"
+               (pedido_compra.html:826) y KPI "Canceladas" (:325, contada en
+               :645).
+    Verificacion en vivo: fecha_cancelacion = 2026-10-04.
+    Justificacion: la fecha queda persistida, se expone y es agregable.
+
+5.3 Debe conservar el historial de la orden ............................... Si
+    Evidencia: OrdenCompraController.php:377-379 solo muta estado y fecha; no hay
+               ninguna sentencia de borrado en el metodo. El DELETE no esta
+               expuesto: routes/api.php:125 ->
+               apiResource('ordenes-compra', ...)->except(['destroy']) y el
+               comentario de :124 lo explicita ("la orden se cancela (PC05), no
+               se borra"). Los DETALLE_ORDEN permanecen
+               (ON DELETE CASCADE en esquema_base:720, que solo se activaria
+               desde un borrado de la cabecera, imposible por la ruta).
+               Ademas PC07 cierra el circulo de trazabilidad con
+               SUGERENCIA_COMPRA.id_orden_compra
+               (GeneradorSugerenciasReposicionService.php:329-330).
+    Justificacion: el criterio se cumple por ausencia de via de borrado, que es
+    la forma mas fuerte de cumplirlo.
+    Observacion: "historial" aqui significa que el registro y sus renglones
+    sobreviven. No existe bitacora de cambios (quien edito que, :314-329
+    reconstruye los renglones sin version), que es una lectura mas exigente del
+    termino pero que ninguna otra historia del modulo exige tampoco (mismo matiz
+    en C04.2 y C05.3).
+
+5.4 Debe impedir cancelar ordenes ya completadas ......................... Si
+    Evidencia: OrdenCompraController.php:370-375 -> if ($orden->estado !==
+               'pendiente') return 400 ("Solo se pueden cancelar ordenes
+               pendientes. Una orden enviada o completada no puede cancelarse.
+               (PC05)"). Misma guarda por indireccion que 4.5, que cubre
+               completada y los demas estados del ENUM. UI: :634 y :906
+               deshabilitan el boton fuera de 'pendiente'.
+    Verificacion en vivo: PATCH /api/ordenes-compra/167/cancelar sobre la orden
+    enviada -> 400.
+    Justificacion: el estado completado queda cubierto por la misma condicion
+    que impide editar, lo que evita el error tipico de olvidar un estado nuevo.
+    Observacion: la guarda es correcta pero hoy es prophylacticamente
+    suficiente: ningun camino de codigo puede llevar una orden a 'completada'
+    (ver P-2), de modo que esta rama no es alcanzable con datos del propio
+    sistema.
+
+5.5 Debe actualizar el estado a "cancelada" .............................. Si
+    Evidencia: OrdenCompraController.php:377 -> $orden->estado = 'cancelada'.
+               El valor es una etiqueta del ENUM estado de ORDEN_COMPRA
+               (esquema_base:334) y el primero de los cinco estados de
+               OrdenCompra::ESTADOS (OrdenCompra.php:43), con la misma cadena en
+               las tres capas. UI: etiqueta "Cancelada"
+               (pedido_compra.html:535) con tag propio.
+    Justificacion: el estado resultante es exactamente el rotulo del criterio, en
+    espanol y sin tildes, y es el que la UI etiqueta como tal.
+
+--- PC06 - Visualizar el Estado de una Orden de Compra (3 SP) - MVP -------
+6.1 Debe mostrar el estado actual de cada orden ......................... Si
+    Evidencia: OrdenCompraController.php:42 -> 'estado' en formato(), que
+               index() aplica a cada fila (:231) y show() incluye en 'orden'
+               (:263). Filtro por estado validado contra ESTADOS (:222-225).
+               UI: columna "Estado" con tag por clase (:627), tarjeta "ESTADO"
+               en el detalle (:824) y cuatro KPIs que agregan por estado
+               (:641-650). No hay endpoint dedicado /estado como en C07
+               (consideraciones_compras.txt, 7.1), pero el dato viaja en cada
+               fila y en el detalle, que es lo que pide el criterio.
+    Justificacion: el estado es observable tanto en la vista de conjunto como
+    en el detalle, con etiqueta y color.
+
+6.2 Debe identificar ordenes pendientes ................................. Si
+    Evidencia: 'pendiente' es el DEFAULT del ENUM estado (esquema_base:334), el
+               primero de OrdenCompra::ESTADOS (OrdenCompra.php:43) y el estado
+               que asignan tanto store() (:167) como
+               generarOrdenDesdeSugerencia() de PC07
+               (GeneradorSugerenciasReposicionService.php:303). Identificable
+               por ?estado=pendiente (:222-225), por el KPI "Pendientes"
+               (pedido_compra.html:323, contada en :643) y por la opcion del
+               filtro (:364).
+    Verificacion en vivo: las tres ordenes creadas en la prueba nacieron
+    'pendiente'.
+    Justificacion: el estado por defecto del dominio es exactamente el primero
+    del criterio, con lo que el caso normal del flujo lo produce sin intervencion.
+
+6.3 Debe identificar ordenes enviadas .................................... Si
+    Evidencia: la accion complementaria enviar() (OrdenCompraController.php:
+               392-413) es la unica que escribe 'enviada' (:404) y sella
+               fecha_envio (:405), con PATCH /api/ordenes-compra/{id}/enviar
+               (routes/api.php:73 y :123) y con su propio boton en la UI
+               (pedido_compra.html:633 fila y :467 modal). La orden queda
+               identificable por ?estado=enviada (:222-225), por la etiqueta
+               "Enviada" (:532) y por la tarjeta "ENVIO" con su fecha (:825).
+               El comentario de :389 explica por que la accion existe aunque no
+               sea historia propia: es la que habilita 4.5 y 5.4.
+    Verificacion en vivo: PATCH /enviar -> 200 con estado 'enviada' y
+    fecha_envio = 2026-10-04; las dos operaciones bloqueadas sobre esa misma orden
+    devolvieron 400.
+    Justificacion: el estado enviada tiene un unico productor, con fecha propia y
+    con las tres capas alineadas.
+
+6.4 Debe identificar ordenes recibidas parcialmente ...................... Parcial
+    Evidencia (a favor): 'recibida_parcialmente' es una etiqueta del ENUM estado
+               de ORDEN_COMPRA (esquema_base:334) y el cuarto valor de
+               OrdenCompra::ESTADOS (OrdenCompra.php:43). La API lo acepta como
+               filtro (:222-225). La UI lo rotula "Recibida parcial"
+               (pedido_compra.html:533) y lo ofrece en #filterEstado (:366).
+    Evidencia (en contra): NINGUN camino de codigo escribe ese estado. Una
+               busqueda de 'recibida_parcialmente' en
+               C:\Users\dario\Desktop\Proyecto\backend\app devuelve 3
+               coincidencias y las tres son de lectura: OrdenCompra.php:43 (la
+               constante), OrdenCompraController.php:283 (dentro del mensaje de
+               error de 4.5) y el propio ENUM del esquema. El unico productor de
+               recepciones del sistema es RecepcionController.php:156, que
+               asigna $compra->estado = 'completada' / 'parcialmente_recibida'
+               sobre COMPRA, y no sobre ORDEN_COMPRA. No hay ninguna escritura
+               de ORDEN_COMPRA.estado desde el modulo Compras: la unica
+               referencia cruzada es la FK COMPRA.id_orden
+               (esquema_base:364 y :725, ON DELETE SET NULL), que hoy no se usa
+               para propagar estado. La semilla tampoco crea ninguno
+               (BD\semilla_demo_actualizada.sql:127-130: solo 'enviada' y
+               'pendiente').
+               Verificacion en vivo: ORDEN_COMPRA tenia 0 filas y las 3 ordenes
+               de prueba quedaron en 'enviada', 'cancelada' y 'pendiente';
+               ningun filtro por 'recibida_parcialmente' puede devolver algo.
+    Justificacion: el criterio pide IDENTIFICAR ordenes en ese estado, y para
+    identificarlas hace falta que existan. Aqui existe la etiqueta, el filtro y la
+    constante, pero el estado es inalcanzable desde el propio sistema: la
+    recepcion de mercaderia (C06) actualiza la compra, no la orden que la origino.
+    El filtro y la etiqueta son capacidad declarada, no capacidad observable.
+    Nota sobre la UI: el KPI "Enviadas" fusiona 'enviada' con
+    'recibida_parcialmente' (pedido_compra.html:644), lo que ademas contradice
+    visualmente la distincion que este criterio pide. El detalle y el filtro si
+    las distinguen; el KPI no.
+
+6.5 Debe identificar ordenes completadas ................................. Parcial
+    Evidencia (a favor): identica a 6.4. 'completada' en el ENUM
+               (esquema_base:334), en OrdenCompra::ESTADOS (OrdenCompra.php:43),
+               aceptado como filtro (:222-225) y rotulado "Completada"
+               (pedido_compra.html:534) con su opcion en el desplegable (:367).
+    Evidencia (en contra): tampoco hay escritor. RecepcionController.php:156
+               calcula $todasCompletas y escribe COMPRA.estado = 'completada'
+               (:47 impide receptors sobre una compra completada), nunca
+               ORDEN_COMPRA.estado. La orden no tiene ninguna relacion de
+               dependencia ni de lectura con la recepcion: no se importa COMPRA,
+               no se lee COMPRA.id_orden, no hay un unico SELECT sobre COMPRA en
+               todo el modulo PedidosDeCompra.
+    Justificacion: por la misma razon que 6.4. Los dos Parcial del modulo tienen
+    una sola causa: falta el efecto que convierte la recepcion de mercaderia
+    (C06) en el avance de la orden que la genero. Es un hueco de un enlace, no
+    de dos historias.
+
+--- PC07 - Generar Sugerencias de Reposicion (8 SP) - Importante ---------
+7.1 Debe identificar productos con stock igual o inferior al minimo
+    configurado ........................................................ Si
+    Evidencia: GeneradorSugerenciasReposicionService.php:70-71 lee
+               $producto->stock_disponible y $producto->stock_minimo, y :78-80
+               -> if ($stock <= $minimo) genera el motivo 'bajo_stock'. El
+               minimo es el MISMO que usa S07: Producto.php:84-87 expone
+               stock_minimo y AlertaStockController.php:88 lo escribe desde
+               PATCH /api/stock/alertas/{id}/minimo (routes/api.php:160), con
+               validacion 'required|integer|min:0' (:66). La misma comparacion
+               <=Ordered da el estado_alerta 'bajo' en Producto.php:101, de
+               modo que sugerencia y alerta de stock no pueden discrepar.
+               POST /api/sugerencias-reposicion/generar (routes/api.php:185),
+               boton "Generar Sugerencias" en sugerencias-reposicion.blade.php:12.
+    Verificacion en vivo: GET /api/stock devuelve un solo producto con
+    stock_disponible <= stock_minimo (L-9A21: 8 <= 40, estado_alerta 'bajo') y
+    ese producto tiene una sugerencia pendiente con motivo_generacion
+    'bajo_stock' y observaciones "Stock por debajo del minimo permitido".
+    Justificacion: la identificacion usa el "<=" literal del criterio sobre el
+    minimo configurado, y no un umbral propio del servicio.
+    Observacion: la sugerencia se persiste en SUGERENCIA_COMPRA y es idempotente
+    por producto y motivo (GeneradorSugerenciasReposicionService.php:47-49 con
+    SugerenciaCompraRepository::existePendiente, :17-23), con lo que pulsar dos
+    veces "Generar" no duplica la sugerencia pendiente. El criterio se cumple
+    aunque el calculo ademas incorpore dos motivos extra (proximo_vencer y
+    agotamiento_inmediato, :84-98), que exceden lo pedido pero no lo contradicen.
+
+7.2 Debe sugerir cantidades de reposicion para cada producto ............. Si
+    Evidencia: GeneradorSugerenciasReposicionService.php:114 ->
+               $cantidad = calcularCantidadOptima($stock, $maximo, $velocidad,
+               $plazo), implementada en :136-141 como
+               (maximo - stock) + (velocidad * plazo), con piso del 50% del
+               maximo (max(..., ceil($maximo * 0.5))). Se persiste en
+               SUGERENCIA_COMPRA.cantidad_sugerida (:119), con
+               cantidad_minima y cantidad_maxima como contexto (:120-121).
+               Los parametros estan en config/reposicion.php (stock_maximo_
+               default 100, ventana_ventas_dias 30, dias_agotamiento_alerta 7),
+               no hardcodeados. La velocidad de venta se mide sobre
+               MOVIMIENTO_STOCK tipo 'venta' en unidades base
+               (:143-156), que es lo correcto frente a PRODUCTO.stock.
+               UI: columna "Cantidad" (sugerencias-reposicion.blade.php:106) y
+               tarjeta KPI "Cantidad Total" (:39).
+    Verificacion en vivo: L-9A21 -> cantidad_sugerida 92 = (100 - 8) + (0 x 5),
+            que es exactamente la formula con velocidad de venta 0.
+    Justificacion: la cantidad es un dato calculado y persistido, con los
+    parametros de la politica de reposicion externalizados a configuracion.
+
+7.3 Debe permitir seleccionar los productos sugeridos ..................... Parcial
+    Evidencia (a favor): la UI tiene casilla por fila
+               (sugerencias-reposicion.js:58, class check-sugerencia), casilla
+               maestra con seleccionar todo (blade.php:103 ->
+               toggleTodas(), js:89-94), contador de seleccionadas
+               (blade.php:16 -> actualizarContadorSeleccionadas(), js:100-104)
+               y boton "Procesar Seleccionadas" (blade.php:15) que se habilita
+               solo con al menos una marcada (js:103). La lectura literal del
+               criterio ("permitir seleccionar") se cumple con holgura.
+    Evidencia (en contra): la seleccion no conduce a ningun resultado de compra.
+               La unica accion que consume los ids seleccionados es
+               procesarLoteSeleccionadas() (js:106-133), que llama
+               POST /api/sugerencias-reposicion/procesar-lote
+               (routes/api.php:187 ->
+               SugerenciasReposicionController::procesarLote, :63-75 ->
+               GeneradorSugerenciasReposicionService::procesarMultiples, :206-215)
+               y lo unico que hace es SugerenciaCompraRepository::resolver(...)
+               con estado 'procesada' (:52-67): marca la sugerencia como
+               RESUELTA sin crear ninguna orden. Peor: al quedar 'procesada',
+               generarOrdenDesdeSugerencia() la rechaza (:240-242 y :292-294),
+               de modo que marcar y luego querer comprar es un camino cerrado.
+               La generacion de orden es 1:1 y de un solo renglon
+               (GeneradorSugerenciasReposicionService.php:232-351: una
+               SugerenciaCompra -> una ORDEN_COMPRA con un unico DetalleOrden
+               en :311-320), y la UI solo ofrece ese boton por fila
+               (js:74) o en el modal (blade.php:154). No existe ninguna forma de
+               llevar N sugerencias seleccionadas a una o varias ordenes.
+    Justificacion: el criterio se lee en el contexto de la historia, cuyo objeto
+    es "generar sugerencias de ordenes de compra a partir de productos con stock
+    bajo para agilizar la reposicion". Seleccionar tiene que ser el paso previo
+    a decidir que se compra. Hoy la seleccion cumple una funcion de gestion de
+    bandeja (procesar / rechazar) y no de preparacion de la orden, y ademas
+    compite con ella. Es el unico Parcial que no es un defecto sino un recorte de
+    alcance, y el mas barato de cerrar.
+
+7.4 Debe permitir generar una orden de compra a partir de la sugerencia ... Si
+    Evidencia: GeneradorSugerenciasReposicionService.php:232-351
+               generarOrdenDesdeSugerencia(), expuesto por POST
+               /api/sugerencias-reposicion/{id}/generar-orden (routes/api.php:
+               190 -> SugerenciasReposicionController::generarOrden, :81-88) y
+               con dos disparadores en la UI: boton por fila
+               (sugerencias-reposicion.js:74) y boton del modal
+               (blade.php:154). Valida proveedor activo (:254-256, aplicando
+               PV04), producto activo (:262-264, aplicando PV05), cantidad > 0
+               (:266-269) y sugerencia pendiente sin orden previa (:240-245).
+               Todo dentro de una transaccion (:281-333) con doble validacion
+               bajo SELECT ... FOR UPDATE (:288-297,
+               SugerenciaCompraRepository::obtenerPorIdBloqueado, :38-43), que
+               serializa dos peticiones concurrentes sobre la misma sugerencia.
+               Reutiliza el contrato de PC01: misma ORDEN_COMPRA y mismo
+               DETALLE_ORDEN con origen = 'sugerencia' (:317).
+    Verificacion en vivo: POST /api/sugerencias-reposicion/61/generar-orden ->
+               201 con OC-2026-426907, total 69920 = 92 x 760; la repeticion ->
+               400 "La sugerencia ya fue procesada".
+    Justificacion: la generacion existe, es atomica, es idempotente frente a
+    repeticiones y concurrencia, y produce una orden indistinguible de una creada
+    a mano, que entra por los mismos listados y validaciones de PC01-PC05.
+
+7.5 Debe permitir asociar la orden al proveedor correspondiente ............ Si
+    Evidencia: la asociacion la hace el generador, no el usuario: el proveedor
+               se elige en obtenerMejorProveedor()
+               (GeneradorSugerenciasReposicionService.php:167-178), que sobre
+               PRODUCTO_PROVEEDOR activo y con proveedor activo ordena por
+               precio_acordado NULL al final, luego por precio y luego por
+               es_proveedor_principal, y se graba en
+               SUGERENCIA_COMPRA.id_proveedor (:118). La orden se crea con ese
+               mismo proveedor (:301), y se vuelve a validar que siga activo
+               (:254-256). La UI no pide proveedor: confirma cual va a ser
+               (sugerencias-reposicion.js:277-283, "Proveedor: Lacteos
+               Patagonia SA") y muestra el resultado (:306).
+               El comentario de :219-223 justifica la decision de que el
+               proveedor no sea elegible.
+    Verificacion en vivo: la orden generada apunto a id_proveedor 69, el mismo
+    de la sugerencia.
+    Justificacion: "el proveedor correspondiente" es precisamente el activo de
+    mejor precio con el que se genero la sugerencia, y la orden hereda esa
+    asociacion sin intervencion del usuario, que es lo que el criterio pide.
+
+
+3. MATRIZ CRITERIO x CAPA
+----------------------------------------------------------------------
+
+Criterio  Backend  Esquema  Ruta  Interfaz  Veredicto
+1.1  proveedor            Si        Si       Si       Si          Si
+1.2  N productos          Si        Si       Si       Si          Si
+1.3  cant. solicitada     Si        Si       Si       Si          Si
+1.4  total estimado       Si        Si       Si       Si          Si
+1.5  id unico orden       Si        Si       Si       Si          Si
+1.6  fecha creacion       Si        Si       Si       Si          Si
+2.1  listar ordenes       Si        n/a      Si       Si          Si
+2.2  buscar proveedor     Si        n/a      Si       Si          Si
+2.3  rango de fechas      Si        n/a      Si       Si          Si
+2.4  estado orden         Si        Si       Si       Si          Si
+2.5  fecha emision        Si        Si       Si       Si          Si
+3.1  seleccionar orden    Si        n/a      Si       Si          Si
+3.2  proveedor            Si        Si       Si       Si          Si
+3.3  productos            Si        Si       Si       Si          Si
+3.4  cant. solicitadas    Si        Si       Si       Si          Si
+3.5  estado orden         Si        Si       Si       Si          Si
+3.6  fecha creacion       Si        Si       Si       Si          Si
+4.1  editar pendiente     Si        n/a      Si       Si          Si
+4.2  agregar productos    Si        Si       Si       Si          Si
+4.3  eliminar productos   Si        Si       Si       Si          Si
+4.4  modif. cantidades    Si        Si       Si       Si          Si
+4.5  bloquear enviada    Si        Si       Si       Si          Si
+4.6  fecha modificacion   Si        Si       Si       Si          Si
+5.1  cancelar             Si        n/a      Si       Si          Si
+5.2  fecha cancelacion    Si        Si       Si       Si          Si
+5.3  conservar historial  Si        Si       Si       Si          Si
+5.4  bloquear completada  Si        Parcial  Si       Si          Si
+5.5  estado cancelada     Si        Si       Si       Si          Si
+6.1  estado actual        Si        Si       Si       Si          Si
+6.2  identificar pend.    Si        Si       Si       Si          Si
+6.3  identificar enviada  Si        Si       Si       Si          Si
+6.4  identificar parcial  Si        Parcial  Si       Parcial     Parcial
+6.5  identificar compl.   Si        Parcial  Si       Parcial     Parcial
+7.1  stock <= minimo      Si        Si       Si       Si          Si
+7.2  cant. sugerida       Si        Si       Si       Si          Si
+7.3  seleccionar sug.     Parcial   Si       Parcial  Parcial     Parcial
+7.4  generar orden        Si        Si       Si       Si          Si
+7.5  asociar proveedor    Si        Si       Si       Si          Si
+
+Leyenda de la columna Esquema: Si = la columna o el ENUM existe y se usa;
+Parcial = el valor esta declarado en el ENUM y en el modelo pero ningun camino de
+codigo lo escribe, de modo que la fila es observable en la interfaz pero no
+alcanzable en los datos; n/a = el criterio no exige persistencia.
+Leyenda de la columna Interfaz: Parcial = existe la etiqueta o el filtro pero la
+funcion pedida no esta conectada (7.3), o la distincion existe en el detalle y el
+filtro pero se pierde en un KPI (6.4).
+
+
+4. OBSERVACIONES Y DEFECTOS DETECTADOS (no son criterios, pero afectan la
+   evaluacion)
+----------------------------------------------------------------------
+
+P-1 [ALTA] Producto repetido en la misma orden -> HTTP 500 con el SQL crudo
+    expuesto al cliente. Repercute en PC01.2 y PC04.2.
+    OrdenCompraController::validarItems() (:55-77) valida cada item por separado
+    y no deduplica ni rechaza duplicados por (id_producto, unidad), mientras que
+    DETALLE_ORDEN tiene UNIQUE (id_orden, id_producto, id_unidad)
+    (esquema_base:355) y unidadDelItem() (:84-97) resuelve la misma unidad base
+    para las dos lineas. Comprobado en vivo:
+      POST /api/ordenes-compra con L-9A21 en dos renglones
+      -> 500 {"message":"Error al generar la orden: SQLSTATE[23000]: Integrity
+         constraint violation: 1062 Duplicate entry '166-169-368' for key
+         'uq_detalle_orden_prod_unidad' ... (Connection: mysql, Host: 127.0.0.1,
+         Port: 3306, Database: distribuidorapyb, SQL: insert into `DETALLE_ORDEN`
+         ...)"}
+    Dos consecuencias:
+      a) Funcional: la UI permite elegir el mismo producto en dos filas
+         (pedido_compra.html:672-675), con lo que un caso de uso legitimo
+         (3 cajas + 20 unidades del mismo articulo, o dos precios distintos)
+         es inalcanzable y devuelve 500.
+      b) Seguridad / calidad de respuesta: el catch generico (:185-190 y
+         :352-357) concatena $e->getMessage() en la respuesta, lo que filtra al
+         cliente SQL, nombre de tabla, clave de indice, host, puerto y nombre de
+         base de datos. Es el mismo patron que ya se vio en
+         ProveedorController.php:423, con lo que es una regla del proyecto y no
+         un descuido puntual.
+    La transaccion revierte correctamente (se verifico: ORDEN_COMPRA quedo en 0
+    filas tras el error), con lo que el problema es de superficie, no de datos.
+
+P-2 [ALTA] Los estados 'recibida_parcialmente' y 'completada' de ORDEN_COMPRA
+    son inalcanzables. Es la causa unica de los dos Parcial 6.4 y 6.5.
+    RecepcionController.php:156 reclasifica COMPRA.estado, y
+    RecepcionController.php:47 solo lee COMPRA.estado. Ningun archivo de
+    App\Modules\PedidosDeCompra importa App\Modules\Compras ni escribe
+    ORDEN_COMPRA.estado fuera de store(), update(), enviar() y cancelar().
+    El enlace existe en el esquema y no se usa: COMPRA.id_orden es nullable con
+    FK ON DELETE SET NULL (esquema_base:364 y :725) y la semilla lo puebla
+    (semilla_demo_actualizada.sql:148-149, COMPRA @o1 y @o2), de modo que el dato
+    para derivar el estado de la orden ya esta disponible. Efecto secundario en
+    la UI: el KPI "Enviadas" fusiona 'enviada' con 'recibida_parcialmente'
+    (pedido_compra.html:644), contradiciendo visualmente la distincion que PC06
+    exige; el detalle (:824) y el filtro (:366) si las distinguen.
+
+P-3 [ALTA] El precio que precarga la UI es el de catalogo de venta, no el
+    acordado con el proveedor. Degrada la precision de PC01.4 en la practica.
+    pedido_compra.html:606-610 -> precioUnitarioProducto() lee
+    productosCache[].precio_unitario, y :696-698 lo escribe en el item al elegir
+    el producto. Ese es el precio de venta del catalogo, no el de compra.
+    Comprobado en vivo: L-9A21 tiene precio_unitario 950 en PRODUCTO y
+    precio_acordado 760 en PRODUCTO_PROVEEDOR, un 25% de diferencia. Como el
+    total estimado se calcula sobre ese valor (1.4) y la UI lo muestra como
+    "Precio unitario" ya diligenciado (:430, :678), el total de la orden nace
+    inflado y el usuario tiene que corregirlo a mano en cada linea. El dato
+    correcto ya esta disponible y servido: GET /api/proveedores/{id} devuelve
+    productos_asociados con precio_acordado
+    (ProveedorController.php:106 y :116). Es la misma fuente que usa PC07
+    (GeneradorSugerenciasReposicionService.php:110), de modo que el modulo
+    tiene hoy dos criterios de precio distintos para el mismo producto.
+
+P-4 [MEDIA] Los 7 endpoints de PC07 no estan en el inventario de la API.
+    routes/api.php:32-74 declara el catalogo de endpoints que devuelve GET /api, y
+    lista los 6 de ordenes de compra (:68-73) pero ninguno de los 7 de
+    sugerencias-reposicion (:184-190) ni de dashboard-reposicion (:194-197). Las
+    rutas existen y funcionan; lo que falta es la documentacion en el lugar donde
+    el proyecto ya documenta el contrato. Un revisor queuse el inventario como
+    indice concluira que PC07 no esta expuesto.
+
+P-5 [MEDIA] Dos copias divergentes de pedido_compra.html.
+    backend\public\Interfaz\pedido_compra.html (958 lineas, la que se sirve) vs
+    Interfaz\pedido_compra.html (857 lineas). Diferencia verificada con
+    git diff --no-index: 16 inserciones y 4 eliminaciones, todas en la direccion
+    de la copia servida, y todas con la misma tematica: la copia de la raiz no
+    tiene precioUnitarioProducto() (:606-610), no precarga el precio al elegir
+    producto (:691-698) y rotula la columna "Precio estimado" en vez de
+    "Precio unitario" (:430). Si alguien revisa o sirve la copia de la raiz,
+    concluira que el precio no se precarga. Es el mismo desdoblamiento ya
+    detectado en compras.html y proveedores.html (consideraciones_compras.txt,
+    P-4; consideraciones_proveedores.txt, P-10) y afecta a los cinco HTML de
+    Interfaz\.
+
+P-6 [MEDIA] La seleccion multiple de PC07 no conduce a generar ordenes, y
+   |Procesar lote| deja la sugerencia en un estado que ya no permite generarla.
+    Detallado en 7.3. El efecto practico es que el unico control de lote de la
+    UI es contraproducente para el flujo de compra: procesar las 5 sugerencias
+    pendientes que hoy hay en la base las deja todas en 'procesada' sin orden y
+    sin vuelta atras (GeneradorSugerenciasReposicionService.php:240-242).
+
+P-7 [MEDIA] Los filtros de la UI de sugerencias no se envian a la API.
+    sugerencias-reposicion.js:9-23 (cargarSugerencias) construye la URL con
+    ?pagina= exclusively; nunca lee #filtro-motivo ni #filtro-estado, y
+    limpiarFiltros() (:409-413) solo resetea los valores y recarga sin aplicarlos.
+    El backend si los soporta: SugerenciaCompraRepository::obtenerConFiltros
+    (:85-99) filtra por motivo_generacion y por estado, y
+    SugerenciasReposicionController::listar (:32-35) los recibe con
+    $request->only(['motivo','estado']). La UI ofrece tres motivos y tres
+    estados (blade.php:71-85) y ninguno llega al servidor, de modo que el listado
+    es siempre el de pendientes en su pagina actual. Afecta a 7.1 en la practica:
+     no se puede filtrar por "Stock Bajo" para revision directa de los productos con
+    stock igual o inferior al minimo.
+
+P-8 [MEDIA] generarNumero() es un check-then-insert sin proteccion de
+    concurrencia.
+    OrdenCompraController.php:196-203 y
+    GeneradorSugerenciasReposicionService.php:354-361: random_int(1,999999) con
+    do-while sobre exists(). Con el UNIQUE del esquema (esquema_base:331) la
+    colision se traduce en 500 en lugar de reintento. El contraste es util: la
+    seccion critica de PC07 si esta protegida con SELECT ... FOR UPDATE
+    (GeneradorSugerenciasReposicionService.php:288), de modo que el modulo ya
+    conoce la tecnica y no la aplico en PC01. El rango de 999999 es amplio para
+    el volumen esperado, con lo que la probabilidad es baja; se reporta por
+    robustez y no como riesgo operativo inmediato.
+
+P-9 [BAJA] Rotulos y nombres que no corresponden al dato.
+    a) formato() expone 'total_productos' como la suma de unidades
+       (OrdenCompraController.php:48) y la columna del listado se titula
+       "Productos" (pedido_compra.html:386, :628): sugiere un conteo de items
+       distintos.
+    b) El producto se identifica por 'descripcion' en PC03
+       (OrdenCompraController.php:250, "Tetrapak 1000ml") y por 'nombre' en PC07
+       (GeneradorSugerenciasReposicionService.php:391, "Leche Entera 1L"); para el
+       mismo L-9A21 las dos interfaces muestran textos distintos.
+    c) La columna "Fecha creacion" del listado (2.5) no es "Fecha de emision",
+       rotulo con el que aparece el criterio.
+
+P-10 [BAJA] La respuesta de generarOrdenDesdeSugerencia no formatea la fecha de
+    entrega estimada. GeneradorSugerenciasReposicionService.php:348 la devuelve
+    como Carbon crudo; en vivo se recibio "2026-10-09T00:00:00.000000Z" mientras
+    que el resto del modulo devuelve 'Y-m-d' de forma consistente
+    (OrdenCompraController::formato(), :43-47). El cliente no la usa hoy
+    (sugerencias-reposicion.js:304-309), con lo que es solo una inconsistencia
+    del contrato publicado.
+
+P-11 [BAJA] Sin pruebas automatizadas del modulo.
+    C:\Users\dario\Desktop\Proyecto\backend\tests contiene unicamente
+    TestCase.php, Feature\ExampleTest.php y Unit\ExampleTest.php (los tres por
+    defecto de Laravel). No hay ninguna prueba de las rutas ordenes-compra ni de
+    sugerencias-reposicion, ni de los casos que esta revision si comprobo en vivo
+    (bloqueo de edicion tras envio, conservacion de renglones al cancelar,
+    idempotencia de generar-orden). Los 12 chequeos de esta revision son
+    reproducibles pero manuales.
+
+P-12 [BAJA] PC07 escribe SUGERENCIA_COMPRA.id_orden_compra por update() y no por
+    el modelo. id_orden_compra esta en $casts (SugerenciaCompra.php:45) pero no
+    en $fillable (:21-39), con lo que GeneradorSugerenciasReposicionService.php:
+    329-330 lo escribe con SugerenciaCompra::where(...)->update(). Es coherente
+    con la migracion 2026_10_03_000003_add_id_orden_compra y funciona, pero el
+    salto entre modelo y update masivo es el unico del modulo; conviene que la
+    excepcion sea explicita en el modelo en vez de quedar solo en el servicio.
+
+
+5. ACCIONES PARA CUMPLIR ESTRICTAMENTE
+----------------------------------------------------------------------
+
+A-1 [PRIORIDAD ALTA, ~60 lineas] Cerrar PC06.4 y PC06.5 (2 Parcial -> Si)
+    Es el unico deficit real de cumplimiento del modulo y las dos historias se
+    cierran con un solo efecto. La informacion necesaria ya existe:
+    COMPRA.id_orden (esquema_base:364) esta poblado por la semilla
+    (semilla_demo_actualizada.sql:148-149).
+    a) En RecepcionController::store(), dentro de la transaccion que ya existe
+       (:93-160), tras asignar $compra->estado (:156), agregar la propagacion:
+         if ($compra->id_orden !== null) {
+             $orden = OrdenCompra::find($compra->id_orden);
+             if ($orden && in_array($orden->estado, ['enviada'], true)) {
+                 $orden->estado = $todasCompletas ? 'completada'
+                                                 : 'recibida_parcialmente';
+                 $orden->save();
+             }
+         }
+       La guarda in_array(['enviada']) evita rebajar una orden ya cancelada y
+       respeta que solo una orden enviada puede recibir mercaderia.
+    b) Decidir si la unidad de estado correcta es COMPRA.estado o el agregado de
+       las RECEPCION de esa compra. La segunda es la fiel (una orden con dos
+       recepciones parciales al 50% esta totalmente recibida), y se calcula con
+       la misma suma de DETALLE_COMPRA.cantidad / cantidad_recibida que ya
+       existe en :148-156.
+    c) En la UI, separar el KPI: hoy pedido_compra.html:644 suma 'enviada' y
+       'recibida_parcialmente' en "Enviadas". Con A-1(a) ese agrupamiento pasa a
+       ser visiblemente incorrecto, asi que conviene hacerlo en el mismo cambio.
+    d) Anadir al menos una orden en estado 'completada' y otra en
+       'recibida_parcialmente' a la semilla, para que el filtro y el KPI
+       tengan datos que mostrar en una demostracion.
+
+A-2 [PRIORIDAD ALTA, ~25 lineas] Corregir P-1: deduplicar items y dejar de
+    filtrar el SQL al cliente. Recupera PC01.2 y PC04.2 para el caso de multi
+    unidad y cierra la fuga de informacion.
+    a) En OrdenCompraController::validarItems() (:55-77), accumulating por
+       (id_producto, id_unidad) resuelto con la misma logica de
+       unidadDelItem() (:84-97) y rechazando el duplicado con un 400 explicito:
+         "El producto X ya fue agregado a la orden. Ajuste la cantidad en la
+          linea existente."
+       Si la regla de dominio fuera permitir el mismo producto en dos unidades,
+       la validacion debe exigir que las unidades sean distintas, que es lo que
+       el UNIQUE del esquema (esquema_base:355) realmente admite.
+    b) En el catch de store() (:185-190) y update() (:352-357), sustituir
+       $e->getMessage() por un mensaje estable
+       ("No se pudo guardar la orden. Intente nuevamente.") y registrar el
+       detalle real en el log (Log::error($e)). Revisar el mismo patron en
+       ProveedorController.php:423 y en Compras, donde el mismo patron se repite.
+    c) Con (a), el UNIQUE del esquema pasa a ser la red de seguridad y no la
+       primera linea de defensa, que es la situacion correcta.
+
+A-3 [PRIORIDAD ALTA, ~40 lineas] Precargar el precio acordado con el proveedor
+    (P-3), no el de catalogo.
+    a) Al cargar la UI, pedir GET /api/proveedores/{id} por cada proveedor activo
+       (ProveedorController.php:92-127 ya devuelve productos_asociados con
+       precio_acordado en :116) y armar un indice
+       producto_id -> { precio_acordado, es_proveedor_principal }.
+    b) En pedido_compra.html:606-610, cambiar la firma de
+       precioUnitarioProducto(idProducto) a
+       precioUnitarioProducto(idProducto, idProveedor) y resolver primero la
+       asociacion del proveedor elegido en el modal, con tres niveles de
+       fallback: precio_acordado de la asociacion activa, precio del proveedor
+       principal del producto, y precio_unitario de PRODUCTO como ultimo
+       recurso. El precio sigue siendo editable (:678).
+    c) Ojo con el orden de operaciones: hoy el select de proveedor es el primer
+       campo del formulario (pedido_compra.html:415-417) y los items se crean
+       despues, con lo que el indice ya esta disponible al abrir el modal.
+    Impacto: los totales de PC01.4 y PC04.4 pasan a ser los reales y se elimina
+    la correccion manual que hoy es necesaria en cada linea.
+
+A-4 [PRIORIDAD MEDIA, ~50 lineas] Cerrar PC07.3 (1 Parcial -> Si)
+    Es un recorte de alcance, no un defecto, y hay que decidir si se cierra por
+    ruta rapida o por ruta util.
+    Ruta rapida (~10 lineas): today el unico uso de la casilla es "procesar
+    lote". Anadir un boton "Generar ordenes de las seleccionadas" que itere
+    POST /api/sugerencias-reposicion/{id}/generar-orden por cada id marcado y
+    reporte cuantos salieron y cuantos fallaron, reutilizando el patron de
+    procesarLoteSeleccionadas() (sugerencias-reposicion.js:106-133). Requiere
+    revisar de paso la semantica de /procesar-lote: marcar como 'procesada' una
+    sugerencia que todavia no se compro cierra la puerta de
+    generarOrdenDesdeSugerencia (:240-242), que es un estado que el propio naming
+    hace ambiguo ("procesada" sin orden asociada).
+    Ruta util (~50 lineas, recomendada): POST /api/sugerencias-reposicion/
+    generar-orden-lote que reciba {ids:[...]} y cree UNA orden consolidada
+    agrupando las sugerencias por proveedor (obligatorio, porque
+    ORDEN_COMPRA tiene una sola id_proveedor, esquema_base:332) e instanciando un
+    DetalleOrden por sugerencia con origen = 'sugerencia', que ya es un valor
+    valido del ENUM (esquema_base:352) y ya se escribe desde PC07
+    (GeneradorSugerenciasReposicionService.php:317). Reutilizar
+    GeneradorSugerenciasReposicionService::generarOrdenDesdeSugerencia()
+    reutilizando el nucleo de la escritura (validaciones :240-269, unidad base :276-279,
+    lock :288-297) evita duplicar la logica que ya esta probada.
+    En ambos casos, mover el contador de seleccionadas y la tabla fuera del
+    modal, porque hoy verDetalle() (sugerencias-reposicion.js:135-169) vuelve a
+    pedir el listado completo y reconstruir el DOM, lo que descarta las casillas
+    marcadas.
+
+A-5 [PRIORIDAD MEDIA, ~20 lineas] Cerrar P-4 y P-5 (documentacion y duplicados)
+    a) Anadir al inventario de GET /api (routes/api.php:32-74) las 7 rutas de
+       sugerencias-reposicion y las 4 de dashboard-reposicion, con su comentario
+       de historia, igual que ya se hace con compras (:58-67) y ordenes
+       (:68-73). Es la correccion mas barata del listado y la que mas impacto
+       tiene en una evaluacion.
+    b) Resolver la duplicacion de Interfaz\ contra backend\public\Interfaz\ en
+       todo el proyecto, no solo en este modulo: hoy conviven 5 HTML en cada
+       lugar (compras, index, pedido_compra, productos, proveedores, stock) y las
+       copias de la raiz van atras (16 lineas en pedido_compra.html). Opcion
+       simple: borrar la copia de la raiz y dejar un unico origen bajo
+       backend\public\Interfaz\, que es la que sirve artisan serve y la que
+       documenta routes/api.php:31. Si se necesitan ambas por el uso directo de
+       archivos, la copia de la raiz deberia generarse por copia en el despliegue
+       y no editarse a mano.
+
+A-6 [PRIORIDAD BAJA, ~30 lineas] Higiene de contrato y de UI
+    a) P-7: pasar los filtros a la API. En sugerencias-reposicion.js:9-23,
+       anadir los parametros desde #filtro-motivo y #filtro-estado (que el
+       backend ya acepta), y llamar cargarSugerencias() en el onchange de ambos
+       selectores, de modo que limpiarFiltros() (:409-413) aplique en vez de
+       resetear.
+    b) P-9a: renombrar 'total_productos' a 'total_unidades' en formato()
+       (OrdenCompraController.php:48) y el titulo de la columna
+       (pedido_compra.html:386), o calcular items distintos con
+       $o->detalles->count().
+    c) P-10: formatear fecha_entrega_estimada en la respuesta de
+       generarOrdenDesdeSugerencia (GeneradorSugerenciasReposicionService.php:
+       348) con ->format('Y-m-d'), igual que el resto del modulo.
+    d) P-9b: unificar el campo con que se identifica un producto entre PC03
+       ('descripcion') y PC07 ('nombre'), o exponer ambos en los dos lugares.
+    e) P-11: convertir en pruebas automaticas los 12 chequeos de esta revision.
+       Son casos cortos y deterministas (no requieren ni lote ni vencimiento):
+       alta de 2 productos con total esperado, edicion que recalcula el total y
+       sella fecha_modificacion, 400 al editar y al cancelar una orden enviada,
+        cancelacion que conserva el renglon y sella fecha_cancelacion, y
+       generar-orden de PC07 con su 400 en la repeticion. Con eso los dos Parcial
+       de A-1 y el defecto de A-2 quedan cubiertos por regresion.
+    f) 2.5: renombrar la columna del listado a "Fecha emision" o anotar en el
+       inventario de la API que fecha_creacion es la fecha de emision de la
+       orden, para que el criterio se pueda leer sin ambiguedad.

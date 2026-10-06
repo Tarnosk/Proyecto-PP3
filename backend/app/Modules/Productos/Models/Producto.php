@@ -172,7 +172,7 @@ class Producto extends Model
     }
 
     /**
-     * Scope para búsqueda flexible por código o descripción (P05)
+     * Scope para bǧsqueda flexible por c��digo, nombre o descripci��n (P05)
      */
     public function scopeSearch(Builder $query, ?string $term): Builder
     {
@@ -180,6 +180,7 @@ class Producto extends Model
             $term = trim($term);
             return $query->where(function (Builder $q) use ($term) {
                 $q->where('codigo', 'LIKE', "%{$term}%")
+                  ->orWhere('nombre', 'LIKE', "%{$term}%")
                   ->orWhere('descripcion', 'LIKE', "%{$term}%");
             });
         }

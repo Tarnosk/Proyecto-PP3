@@ -1,0 +1,674 @@
+CONSIDERACIONES SOBRE CUMPLIMIENTO DE CRITERIOS - MÓDULO STOCK (S01-S16)
+=======================================================================
+
+Fecha de revisión: Oct 03 2026
+Fuente de criterios: C:\Users\dario\Desktop\Proyecto\Documentacion\historias_extract.txt
+                    (texto extraído de "Historias de Usuario.pdf", páginas 5 a 9)
+Backend revisado:   C:\Users\dario\Desktop\Proyecto\backend\app\Modules\Stock
+                    (Controllers / Services / Models / Repositories)
+Rutas:              C:\Users\dario\Desktop\Proyecto\backend\routes\api.php (líneas 135-180)
+Interfaz servida:   C:\Users\dario\Desktop\Proyecto\backend\public\Interfaz\stock.html
+Interfaz en raíz:   C:\Users\dario\Desktop\Proyecto\Interfaz\stock.html   (copia desactualizada)
+Vistas S10/S11:     C:\Users\dario\Desktop\Proyecto\backend\resources\views\vencimientos.blade.php
+                    C:\Users\dario\Desktop\Proyecto\backend\public\js\vencimientos.js
+Esquema BD:         C:\Users\dario\Desktop\Proyecto\BD\esquema_base_DistribuidoraPyB.sql
+
+Volumen evaluado: 16 historias de usuario / 74 criterios de aceptación.
+Criterios Sí: 51 (68,9%) | Parcial: 10 (13,5%) | No: 13 (17,6%)
+
+
+1. RESUMEN POR HISTORIA DE USUARIO
+------------------------------------------------------------------
+
+HU    Nombre                                   Complej.  Criterios  Cumple
+S01   Consulta de Stock Disponible              3 SP       4          Parcial (3/4)
+S02   Consulta de Disponibilidad para Ventas    3 SP       4          Parcial (2/4)
+S03   Registro de Ingreso de Mercadería         5 SP       5          Parcial (4/5)
+S04   Actualización Automática por Venta        5 SP       4          Parcial (3/4)
+S05   Registro de Devoluciones                  5 SP       5          Sí (5/5)
+S06   Ajustes Manuales de Inventario            5 SP       5          Sí (5/5)
+S07   Alertas de Stock Mínimo                   5 SP       4          Sí (4/4)
+S08   Gestión de Unidades y Equivalencias       8 SP       5          Parcial (3/5)
+S09   Gestión de Lotes y Vencimientos           8 SP       5          Sí (5/5)
+S10   Alerta de Productos Próximos a Vencer     5 SP       4          Parcial (2/4)
+S11   Consultar Productos Próximos a Vencer     3 SP       4          Sí (4/4)
+S12   Historial de Movimientos de Stock         8 SP       6          Parcial (5/6)
+S13   Conteo Físico de Inventario               8 SP       5          No (0/5)
+S14   Gestión de Ubicaciones de Almacenamiento  5 SP       5          No (0/5)
+S15   Filtrado por Nivel de Stock               3 SP       4          No (0/4)
+S16   Indicador Visual de Nivel de Stock        3 SP       5          Sí (5/5)  [Futuro]
+
+Suma Story Points del módulo: 82 SP (coincide con el backlog del PDF).
+- MVP + Importantes (S01-S15): 79 SP -> 5 HUs íntegras, 7 parciales, 3 sin implementar.
+- Futuro (S16): 3 SP -> implementado al 100%.
+
+
+2. DETALLE CRITERIO POR CRITERIO
+------------------------------------------------------------------
+
+Legenda: Sí = cumple literalmente | Parcial = cumple parcialmente | No = no implementado
+
+--- S01 - Consulta de Stock Disponible (3 SP) ------------------------------
+1.1 Debe permitir consultar el stock actual de cada producto .......... Sí
+    Evidencia: StockController.php:19 consultaGeneral() -> GET /api/stock
+               (routes/api.php:138). Lista todos los PRODUCTO con estado='activo'.
+    Justificación: el endpoint devuelve el conjunto completo con stock_disponible y stock_minimo.
+
+1.2 Debe mostrar la cantidad disponible por producto ................... Sí
+    Evidencia: StockController.php:157 'stock_disponible' => $p->stock_disponible;
+               accessor en Producto.php:79-82; render en stock.html:919 y KPIs en :936-938.
+    Justificación: la cantidad en unidad base se expone y se muestra en tabla y KPIs.
+
+1.3 Debe permitir buscar productos por nombre o código ................. Parcial
+    Evidencia: StockController.php:29-32 -> $q->where('codigo','LIKE',...)->orWhere('descripcion','LIKE',...)
+               Etiqueta de UI: stock.html:357 "Buscar por Código o Nombre (S01)".
+    Justificación: la búsqueda no incluye la columna `nombre` de PRODUCTO, que es la que
+               representa el "nombre" del producto (misma brecha que P05.2 en consideraciones_productos.txt).
+               El placeholder de la UI promete un alcance que el backend no cumple.
+
+1.4 Debe mostrar únicamente información actualizada ..................... Sí
+    Evidencia: no hay caché en StockService.php ni en StockController.php;
+               el stock se lee de PRODUCTO.stock dentro de la misma transacción
+               que lo actualiza (StockService.php:77-120).
+    Justificación: cada lectura refleja el último movimiento; no existe capa de cacheo ni
+               desnormalización desactualizada.
+
+--- S02 - Consulta de Disponibilidad para Ventas (3 SP) -------------------
+2.1 Debe permitir consultar el stock disponible de un producto .......... Sí
+    Evidencia: StockController.php:56 disponibilidadParaVenta() -> GET /api/stock/{id}/disponibilidad
+               (routes/api.php:141); UI en stock.html:1697-1713.
+    Justificación: devuelve stock_disponible, stock_minimo, estado_alerta y precios.
+
+2.2 Debe permitir buscar productos por nombre o código ................. Parcial
+    Evidencia: el endpoint de disponibilidad sólo acepta id (StockController.php:56);
+               la búsqueda existe en el endpoint de lista (StockController.php:27-33) y en la
+               misma pantalla (stock.html:357 y :1271).
+    Justificación: desde la perspectiva del vendedor la búsqueda está disponible en pantalla,
+               pero no en el recurso de disponibilidad; y arrastra la misma limitación del
+               criterio 1.3 (no busca por `nombre`).
+
+2.3 Debe mostrar la cantidad disponible para la venta .................. Sí
+    Evidencia: StockController.php:97 'stock_disponible'; por unidad en :77-86
+               (disponible_en_unidad); UI en stock.html:1703 y :1709.
+    Justificación: muestra el saldo en unidad base y el equivalente en cada unidad configurada.
+
+2.4 Debe reflejar los cambios de stock actualizados .................... Sí
+    Evidencia: StockService.php:93-104 actualiza PRODUCTO.stock en la transacción;
+               stock.html recarga la tabla tras cada operación (:1141, :1192, :1251, :1302, :1785).
+    Justificación: no hay dato cacheado ni snapshot; la vista se refresca tras cada movimiento.
+
+--- S03 - Registro de Ingreso de Mercadería (5 SP) -----------------------
+3.1 Debe permitir seleccionar un proveedor ............................. Sí
+    Evidencia: IngresoMercaderiaController.php:31 (exists:PROVEEDOR) y :68-73 (bloquea inactivos, PV04);
+               UI: select #ingProveedor en stock.html:568, poblado en :700-711.
+    Justificación: selección obligatoria, validada contra existencia y estado activo.
+
+3.2 Debe permitir registrar los productos recibidos ..................... Sí
+    Evidencia: IngresoMercaderiaController.php:33-34 'items' => required|array|min:1 con id_producto;
+               UI: tabla #tbodyItemsIngreso (stock.html:425-426) con agregar/quitar ítems.
+    Justificación: se admiten N productos por ingreso.
+
+3.3 Debe permitir registrar las cantidades ingresadas .................... Sí
+    Evidencia: IngresoMercaderiaController.php:35 'cantidad' => required|integer|min:1;
+               UI: #ingProductoCant y edición en línea (stock.html:1300).
+    Justificación: cantidad obligatoria y positiva por ítem.
+
+3.4 Debe actualizar automáticamente el stock ............................ Sí
+    Evidencia: IngresoMercaderiaController.php:109-116 llama a StockService::registrarMovimiento('ingreso');
+               StockService.php:88-104 aplica el delta y guarda PRODUCTO.stock.
+    Justificación: el incremento es una consecuencia de la operación, sin paso manual adicional.
+
+3.5 Debe registrar la fecha del ingreso ............................... Parcial
+    Evidencia: IngresoMercaderiaController.php:32 valida 'fecha'; :76 la lee; :166 la devuelve en la
+               respuesta. PERO StockService.php:74 usa $fecha = Carbon::now()->toDateString()
+               y no recibe el parámetro fecha (firma en StockService.php:54-63).
+    Justificación: la fecha elegida por el usuario se valida y se ecoa, pero NO se persiste:
+               el movimiento queda fechado el día de la ejecución. No se pueden registrar
+               ingresos con fecha retroactiva (requisito habitual de depósito).
+
+--- S04 - Actualización Automática por Venta (5 SP) ----------------------
+4.1 Debe descontar automáticamente las unidades vendidas ................ Sí
+    Evidencia: VentaStockController.php:70-78 -> StockService.php:88-91 ('venta' => -cantidadBase);
+               POST /api/stock/ventas (routes/api.php:150).
+    Justificación: el descuento se calcula y aplica en la misma transacción del movimiento.
+
+4.2 Debe actualizar el stock inmediatamente después de confirmar la venta .. Parcial
+    Evidencia: VentaStockController.php:21-24 (comentario: "el Grupo 4 lo invocará al facturar una venta");
+               no existe módulo de Ventas en backend/app/Modules; en la UI el descuento se dispara
+               con un prompt() manual: stock.html:1738-1752 (botón "Registrar Venta (S04)").
+    Justificación: el stock se actualiza en el instante en que se invoca el endpoint, pero no hay
+               enganche automático a la confirmación de la venta: la atomicidad depende de que el
+               módulo de ventas llame al endpoint. Hoy es una acción manual del operador.
+
+4.3 Debe impedir que el stock resulte negativo ......................... Sí
+    Evidencia: StockService.php:96-101 (rollback + RuntimeException "Stock insuficiente");
+               además CHECK chk_producto_stock_no_negativo en
+               BD\esquema_base_DistribuidoraPyB.sql (CREATE TABLE PRODUCTO).
+    Justificación: doble barrera (aplicación y base de datos).
+
+4.4 Debe registrar el movimiento correspondiente ......................... Sí
+    Evidencia: StockService.php:107-118 crea MOVIMIENTO_STOCK con tipo='venta', cantidad, cantidad_base,
+               fecha, motivo, id_usuario e id_venta (VentaStockController.php:67, :77).
+    Justificación: kardex completo y trazable, con vínculo opcional a la venta.
+
+--- S05 - Registro de Devoluciones (5 SP) -------------------------------
+5.1 Debe permitir seleccionar el producto devuelto ...................... Sí
+    Evidencia: DevolucionController.php:28 (exists:PRODUCTO); UI: select #devProducto (stock.html:609).
+    Justificación: selección validada contra el catálogo.
+
+5.2 Debe permitir registrar la cantidad devuelta ....................... Sí
+    Evidencia: DevolucionController.php:29-30 (required|integer|min:1); UI #devCantidad (stock.html:614).
+    Justificación: cantidad positiva obligatoria.
+
+5.3 Debe permitir indicar el motivo de la devolución ................... Sí
+    Evidencia: DevolucionController.php:30 'motivo' => required|string|max:255;
+               UI #devMotivo con validación en cliente (stock.html:1416).
+    Justificación: el motivo es obligatorio y se persiste en MOVIMIENTO_STOCK.motivo.
+
+5.4 Debe actualizar automáticamente el stock ............................ Sí
+    Evidencia: DevolucionController.php:59-66 -> StockService.php:89 ('devolucion' => +cantidadBase).
+    Justificación: la reposición es automática y atómica.
+
+5.5 Debe registrar la fecha de la devolución ........................... Sí
+    Evidencia: StockService.php:74 + :112 (MOVIMIENTO_STOCK.fecha = hoy).
+    Justificación: la fecha de registro queda persistida (con la misma limitación de S03.5:
+               no se admite fecha de devolución retroactiva).
+
+--- S06 - Ajustes Manuales de Inventario (5 SP) -------------------------
+6.1 Debe permitir seleccionar un producto .............................. Sí
+    Evidencia: AjusteStockController.php:29 (exists:PRODUCTO); UI #ajuProducto (stock.html:643).
+    Justificación: selección validada.
+
+6.2 Debe permitir aumentar o disminuir el stock ........................ Sí
+    Evidencia: AjusteStockController.php:31 'tipo' => required|in:aumentar,disminuir; :67 mapea
+               aumentar -> 'ingreso' y disminuir -> 'ajuste'; UI #ajuTipo (stock.html:649).
+    Justificación: ambos sentidos operados. Ver observación O-3: el incremento queda tipificado
+               como 'ingreso', lo que degrada el criterio 12.4.
+
+6.3 Debe requerir un motivo para el ajuste ............................. Sí
+    Evidencia: AjusteStockController.php:32 (required) y StockService.php:70-72 (validación en servicio);
+               UI lo exige antes de enviar (stock.html:1443).
+    Justificación: doble validación (HTTP + dominio), mensaje de error explícito.
+
+6.4 Debe registrar la cantidad ajustada ............................... Sí
+    Evidencia: StockService.php:111-112 ('cantidad' y 'cantidad_base'); respuesta en
+               AjusteStockController.php:89.
+    Justificación: se guarda la cantidad tal como la ingresó el operador y su equivalente en
+    unidad base.
+
+6.5 Debe registrar fecha y responsable del ajuste ...................... Sí
+    Evidencia: StockService.php:74 (fecha) y :115 (id_usuario) resuelta por
+               app\Support\UsuarioActual.php:34-51; UI stock.html:1709.
+    Justificación: la identidad no se toma del body (que el cliente envía hardcodeado como
+               id_usuario:1), sino del contexto de auditoría.
+
+--- S07 - Alertas de Stock Mínimo (5 SP) --------------------------------
+7.1 Debe permitir definir un stock mínimo por producto ................. Sí
+    Evidencia: AlertaStockController.php:63-106 configurarMinimo() -> PATCH /api/stock/alertas/{id}/minimo
+               (routes/api.php:160); además ProductoController.php:288-290; UI modal #modalAlertas
+               (stock.html:674-700) con botón "Min." por fila (stock.html:923).
+    Justificación: configuración individual y validada (integer|min:0).
+
+7.2 Debe generar una alerta cuando el stock alcance o quede por debajo del mínimo ... Sí
+    Evidencia: Producto.php:93-105 getEstadoAlertaAttribute(): 'critico' si <=0,
+               'bajo' si <= stock_minimo, 'normal' si >; StockService.php:38-41 recalcularAlerta().
+    Justificación: la condición del criterio (<= mínimo) coincide exactamente con la implementada.
+
+7.3 Debe mostrar los productos con stock crítico ....................... Sí
+    Evidencia: AlertaStockController.php:24-58 index() -> GET /api/stock/alertas
+               (filtro ?nivel=bajo|critico); KPIs en stock.html:329-331 y :936-944;
+               etiqueta de nivel por fila en stock.html:921.
+    Justificación: listado dedicado de productos en alerta, con contador en el dashboard.
+
+7.4 Debe actualizar las alertas automáticamente ante cambios de stock .. Sí
+    Evidencia: al ser un atributo derivado (Producto.php:93-105), se recalcula en cada lectura;
+               AlertaStockController.php:112-127 expone POST /api/stock/alertas/recalcular.
+    Justificación: no hay estado de alerta persistido que pueda quedar desactualizado.
+
+--- S08 - Gestión de Unidades y Equivalencias (8 SP) --------------------
+8.1 Debe permitir registrar múltiples unidades de medida para un producto ... Sí
+    Evidencia: UnidadController.php:60-119 store() -> POST /api/productos/{id}/unidades
+               (routes/api.php:172); UI modal #modalUnidades (stock.html:703-742) con alta y baja.
+    Justificación: multiples unidades por producto, con unicidad por nombre
+               (UnidadController.php:90-99) y UNIQUE en BD (uq_unidad_producto_nombre).
+
+8.2 Debe permitir definir equivalencias entre unidades ................. Sí
+    Evidencia: campo equivalencia_base (UnidadController.php:73, :104); UnidadMedida.php:17-28;
+               UNIDAD_MEDIDA.equivalencia_base en esquema_base_DistribuidoraPyB.sql.
+    Justificación: la equivalencia se define y persiste por unidad.
+
+8.3 Debe permitir utilizar cualquiera de las unidades configuradas en operaciones de stock ... Parcial
+    Evidencia: id_unidad se acepta en IngresoMercaderiaController.php:36, VentaStockController.php:32
+               y DevolucionController.php:31; NO se acepta en AjusteStockController.php:28-32.
+               La UI no ofrece selector de unidad en los formularios de ingreso, devolución ni ajuste.
+    Justificación: 3 de 4 operaciones de stock aceptan la unidad configurada. El ajuste manual
+               (S06) queda fuera, lo que impide registrar una merma en cajas/pallets.
+
+8.4 Debe convertir automáticamente las cantidades según las equivalencias ... Sí
+    Evidencia: StockService.php:85 (cantidadEnUnidadBase) y :138-147 (multiplica por equivalencia_base);
+               conversión entre unidades en StockService.php:163-169 y UnidadController.php:224-271.
+    Justificación: la conversión a unidad base es automática en todo movimiento; existe además
+               un endpoint de conversión libre entre dos unidades del mismo producto.
+
+8.5 Debe validar que las equivalencias sean consistentes ............... Parcial
+    Evidencia: UnidadController.php:73 y :141 sólo validan equivalencia_base > 0;
+               :90-99 y :155-168 validan duplicidad de NOMBRE, no de equivalencia.
+               StockService.php:144-146 busca UnidadMedida por id_unidad sin verificar que pertenezca
+               al producto del movimiento.
+    Justificación: no hay validación cruzada entre unidades (p. ej. que 1 pallet = 12 cajas y no 14),
+               ni control de equivalencias duplicadas, ni verificación de pertenencia de la unidad
+               al producto. Un id_unidad de otro producto pasa la validación HTTP y distorsiona el stock.
+
+--- S09 - Gestión de Lotes y Vencimientos (8 SP) ------------------------
+9.1 Debe permitir registrar el número de lote de los productos ingresados ... Sí
+    Evidencia: LoteController.php:75-196 store() -> POST /api/stock/lotes (routes/api.php:165);
+               IngresoMercaderiaController.php:97 y :119-140 (lote por ítem del ingreso);
+               UI: modal "Registrar Lote (S09)" en stock.html:473-522 y columnas de lote en el
+               ítem de ingreso (stock.html:1298-1299, payload en :1342-1343).
+    Justificación: doble vía de alta (lote standalone con opción de sumar al stock, o lote por ítem
+               dentro del ingreso), con control de duplicados por producto
+               (LoteController.php:123-128 e IngresoMercaderiaController.php:120-127).
+
+9.2 Debe permitir registrar la fecha de vencimiento ................... Sí
+    Evidencia: LoteController.php:80 (required|date); IngresoMercaderiaController.php:39;
+               UI input type=date (stock.html:493, :1299).
+    Justificación: vencimiento obligatorio y validado.
+
+9.3 Debe asociar cada lote al producto correspondiente ................ Sí
+    Evidencia: LOTE.id_producto NOT NULL con FK fk_lote_producto y UNIQUE uq_lote_producto_nro
+               (esquema_base_DistribuidoraPyB.sql); Lote.php:44-47 relación producto().
+    Justificación: asociación 1..n con integridad referencial y unicidad por producto.
+
+9.4 Debe conservar el historial de lotes ingresados .................... Sí
+    Evidencia: las filas de LOTE no se eliminan en ningún flujo (no hay DELETE en LoteController);
+               LoteController.php:26-70 index() con orden por vencimiento e id_lote.
+    Justificación: historial acumulativo; el estado vigente/vencido/consumido es derivado
+               (Lote.php:77-84), no destructivo.
+
+9.5 Debe permitir consultar los lotes registrados de un producto .... Sí
+    Evidencia: LoteController.php:220-253 lotesPorProducto() -> GET /api/stock/productos/{id}/lotes
+               (routes/api.php:167); UI modal "Lotes del producto" (stock.html:538-557).
+    Justificación: consulta dédiée por producto con totales, en API y en UI.
+    Observación: ver O-1 (cantidad_actual del lote nunca se decrementa).
+
+--- S10 - Alerta de Productos Próximos a Vencer (5 SP) -----------------
+10.1 Debe identificar productos próximos a vencer según una cantidad configurable de días ... Sí
+    Evidencia: LoteController.php:258-277 porVencer(?dias) -> GET /api/stock/lotes-por-vencer
+               (routes/api.php:168); ConsultaVencimientosController.php:23-41 (?dias, 1..365);
+               umbrales globales en config\reposicion.php:9-13 (critico_dias=7, proximo_dias=30);
+               selector de rango en la UI (vencimientos.blade.php:171-177).
+    Justificación: el plazo es configurable por request y por configuración global.
+    Nota: la columna PRODUCTO.dias_alerta_vencimiento existe (Producto.php:39) pero se fija en 30
+               al crear el producto (ProductoController.php:124) y no hay endpoint ni UI para
+               ajustarla; el criterio no exige per-producto, por eso se evalúa como Sí.
+
+10.2 Debe generar alertas automáticamente ............................ Parcial
+    Evidencia: ConsultaVencimientosService.php:70-85 obtenerAlertas() -> GET /api/vencimientos/alertas
+               (routes/api.php:178); consumido por public\js\vencimientos.js:198-211
+               (cargarAlertas) desde la vista /vencimientos (routes\web.php:8).
+    Justificación: las alertas se calculan bajo demanda al abrir/recargar la pantalla. No hay
+               scheduler, cola de Laravel ni notificación por correo: si nadie consulta el endpoint,
+               no existe "generación automática". La tarjeta del dashboard (index.html:765-782) es
+               de sólo lectura y no dispara aviso.
+
+10.3 Debe mostrar el producto, lote y fecha de vencimiento ........... Sí
+    Evidencia: LoteController.php:282-308 formatearLote() devuelve codigo_producto,
+               descripcion_producto, nro_lote y fecha_vencimiento; UI en stock.html:1019-1024 y en
+               index.html:765-782; vista vencimientos.blade.php:95-105.
+    Justificación: producto, lote y vencimiento están presentes en las tres superficies.
+
+10.4 Debe actualizar las alertas cuando cambie el estado del stock ... Parcial
+    Evidencia: LoteVencimientoRepository.php:21-27 filtra por cantidad_actual > 0 en cada consulta,
+               por lo que el set de alertas se recalcula; PERO cantidad_actual sólo se escribe al
+               crear el lote (IngresoMercaderiaController.php:134 y LoteController.php:159/:173) y
+               nunca se actualiza en ventas, devoluciones ni ajustes (StockService.php:107-118
+               no toca LOTE).
+    Justificación: a nivel producto el estado_alerta sí se actualiza (derivado), pero a nivel lote
+               la alerta no cambia nunca: un lote totalmente vendido sigue figurando "vigente" con
+               su cantidad inicial. Ver O-1.
+
+--- S11 - Consultar Productos Próximos a Vencer (3 SP) -----------------
+11.1 Debe listar los productos próximos a vencer ...................... Sí
+    Evidencia: ConsultaVencimientosController.php:23-41 -> GET /api/vencimientos/proximos;
+               LoteVencimientoRepository.php:59-90 (paginado, 15 por página);
+               UI /vencimientos (routes\web.php:8).
+    Justificación: listado paginado de lotes vigentes que vencen dentro del rango, con resumen.
+
+11.2 Debe mostrar lote y fecha de vencimiento ......................... Sí
+    Evidencia: ConsultaVencimientosService.php:113-138 formatearLote() ->
+               'lote' => ['numero','cantidad'] y 'vencimiento' => ['fecha','dias_restantes','estado','urgencia'];
+               render en public\js\vencimientos.js:213-240.
+    Justificación: lote, cantidad, fecha, días restantes, estado y urgencia.
+
+11.3 Debe permitir ordenar por fecha de vencimiento ................... Sí
+    Evidencia: ConsultaVencimientosController.php:30-31 valida orden/direccion;
+               LoteVencimientoRepository.php:52-57 lista blanca de columnas y :75-77 ORDER BY;
+               UI: encabezados con data-orden (vencimientos.blade.php:100-104) y lógica de alternancia
+               en public\js\vencimientos.js:118-144 (con aria-sort).
+    Justificación: orden seguro (whitelist, sin interpolar el input) y control visual con flecha
+               y accesibilidad básica.
+
+11.4 Debe permitir buscar o filtrar productos de la lista ............ Sí
+    Evidencia: filtro ?producto= (ConsultaVencimientosController.php:28 ->
+               LoteVencimientoRepository.php:29-42, que busca por nombre, descripcion y codigo),
+               ?dias=, ?pagina=; UI: modal de filtros (vencimientos.blade.php:169-182) y buscador
+               inline (vencimientos.js:32-45).
+    Justificación: búsqueda por texto + filtro por rango de días + paginación.
+
+--- S12 - Historial de Movimientos de Stock (8 SP) ----------------------
+12.1 Debe mostrar ingresos de mercadería .............................. Sí
+    Evidencia: StockService.php:26 (TIPOS incluye 'ingreso'); StockController.php:108-142 historial()
+               -> GET /api/stock/{id}/historial-movimientos (routes/api.php:144).
+    Justificación: los ingresos quedan en el kardex con cantidad, unidad y motivo.
+
+12.2 Debe mostrar ventas registradas ................................... Sí
+    Evidencia: tipo 'venta' (StockService.php:26, :90); VentaStockController.php:70-78.
+    Justificación: las ventas se listan con fecha, cantidad y referencia id_venta.
+
+12.3 Debe mostrar devoluciones ......................................... Sí
+    Evidencia: tipo 'devolucion' (StockService.php:26, :89); DevolucionController.php:59-66.
+    Justificación: las devoluciones quedan registradas con su motivo.
+
+12.4 Debe mostrar ajustes manuales .................................... Parcial
+    Evidencia: StockService.php:26 y :90 contemplan 'ajuste'; pero AjusteStockController.php:63-67
+               traduce tipo='aumentar' a movimiento tipo='ingreso'.
+    Justificación: sólo los ajustes con signo negativo aparecen como "Ajuste". Un ajuste manual
+               por rotura ampliada/corrección positiva queda clasificado como ingreso de mercadería
+               en el historial, con lo que el criterio se cumple a medias.
+
+12.5 Debe indicar fecha, tipo de movimiento y cantidad afectada ...... Sí
+    Evidencia: StockController.php:119-131 devuelve tipo, cantidad, cantidad_base, fecha, motivo,
+               unidad e id_usuario; tabla en stock.html:1712-1720.
+    Justificación: la información es completa; el motivo y la unidad son un bonus.
+
+12.6 Debe permitir consultar el historial de un producto específico ... Sí
+    Evidencia: GET /api/stock/{id}/historial-movimientos + modal "Detalle y Movimientos"
+               (stock.html:744-...) disparado por el botón "Detalle" (stock.html:922).
+    Justificación: consulta individual con la disponibilidad (S02) en el mismo modal.
+
+--- S13 - Conteo Físico de Inventario (8 SP) ---------------------------
+13.1 Debe permitir registrar la cantidad física contada de un producto ... No
+13.2 Debe comparar automáticamente la cantidad física con el stock registrado ... No
+13.3 Debe mostrar las diferencias detectadas ........................... No
+13.4 Debe generar un resumen de las inconsistencias encontradas ......... No
+13.5 Debe permitir registrar observaciones del conteo ................... No
+    Evidencia: no existe ConteoController / ConteoService / modelos SESION_CONTEO o DETALLE_CONTEO
+               en backend\app\Modules\Stock ( Controllers: AjusteStock, AlertaStock,
+               ConsultaVencimientos, Devolucion, IngresoMercaderia, Lote, Stock, Unidad, VentaStock);
+               no hay rutas de conteo en routes\api.php; no hay UI en
+               backend\public\Interfaz\stock.html.
+               SÍ existe soporte de base de datos: SESION_CONTEO y DETALLE_CONTEO en
+               BD\esquema_base_DistribuidoraPyB.sql (con cantidad_fisica, stock_sistema, diferencia,
+               observaciones, uq_conteo_sesion_prod) y la FK MOVIMIENTO_STOCK.id_sesion_conteo
+               (expuesta en MovimientoStock.php:29 y :44).
+    Justificación: la historia está completa en el modelo de datos pero sin implementar en
+               Controllers/Services/Interfaces. Es la brecha de mayor impacto: 8 SP y 5 criterios.
+
+
+--- S14 - Gestión de Ubicaciones de Almacenamiento (5 SP) --------------
+14.1 Debe permitir registrar ubicaciones físicas ........................ No
+14.2 Debe permitir asociar una ubicación a cada producto ............... No
+14.3 Debe permitir modificar la ubicación asignada ..................... No
+14.4 Debe mostrar la ubicación al consultar un producto ................ No
+14.5 Debe impedir asignar ubicaciones inexistentes ..................... No
+    Evidencia: no hay UbicacionController/Service/Model en backend\app\Modules\Stock; ninguna ruta
+               en routes\api.php; ningún control en stock.html. La búsqueda de "ubicacion" en
+               backend\app sólo devuelve ConsultaVencimientosService.php:136, que asigna
+               'ubicacion' => null de forma explícita. Existen las tablas UBICACION y
+               PRODUCTO_UBICACION en el esquema (con FK y estado activo/inactivo), pero sin capa
+de aplicación. La UI de vencimientos.js ya contempla la columna de ubicación, lo que
+evidencia que se esperaba el módulo.
+
+
+--- S15 - Filtrado por Nivel de Stock (3 SP) ---------------------------
+15.1 Debe permitir filtrar productos por cantidad mínima disponible .... No
+15.2 Debe permitir filtrar productos por cantidad máxima disponible .... No
+15.3 Debe mostrar únicamente los productos que cumplan el criterio seleccionado ... No
+15.4 Debe actualizar los resultados según los cambios de stock ........ Parcial
+    Evidencia: StockController.php:21-49 sólo procesa 'search' y 'estado' (normal|bajo|critico);
+               no hay parámetros de cantidad mínima/máxima en el endpoint GET /api/stock ni en
+               ProductoController. La UI sólo ofrece un select de "Nivel de stock"
+               (stock.html:361, :357-363) que envía ?estado= (stock.html:852).
+    Justificación: el filtro existente es por estado derivado (crítico/bajo/normal), que es otra
+               historia (S07/S16); no implementa el rango de cantidades que pide S15. La etiqueta
+               "Nivel de stock (S01/S07/S15)" en stock.html:361 es engañosa: anuncia una cobertura
+               que el código no tiene. El criterio 15.4 se cumple sólo a medias porque la tabla se
+               recarga tras cada movimiento, pero no hay tal criterio de filtrado que actualizar.
+
+
+--- S16 - Indicador Visual de Nivel de Stock (3 SP) [FUTURO] ---------
+16.1 Debe mostrar un indicador visual asociado al nivel de stock .... Sí
+    Evidencia: NIVEL_TAG (stock.html:784-789) genera la etiqueta; se pinta en la columna "Nivel"
+               (stock.html:921) y en el modal de detalle (stock.html:1705); CSS de los tres
+               estados en stock.html:197-204.
+    Justificación: indicador visible por producto.
+
+16.2 Debe diferenciar al menos tres estados: suficiente, bajo y crítico . Sí
+    Evidencia: normal (verde), bajo (ámbar) y critico (rojo) - stock.html:784-789 y :197-204.
+    Justificación: tres estados diferenciados también por color y por texto (accesible).
+
+16.3 Debe actualizar el indicador automáticamente cuando cambie el stock ... Sí
+    Evidencia: estado_alerta se recalcula en el servidor (Producto.php:93-105) y la tabla se
+               recarga tras cada operación (stock.html:1141, :1192, :1251, :1302, :1785).
+    Justificación: sin estado de alerta persistido, no hay desincronización posible.
+
+16.4 Debe mostrarse junto a la información de disponibilidad del producto ... Sí
+    Evidencia: bloque "STOCK DISPONIBLE (S02)" / "NIVEL:" contiguos en stock.html:1703-1705.
+    Justificación: el indicador acompaña al dato de disponibilidad en el mismo panel.
+
+16.5 Debe utilizar los niveles mínimos configurados para determinar el estado ... Sí
+    Evidencia: Producto.php:93-105 compara contra stock_minimo, que se configura en
+               AlertaStockController.php:88.
+    Justificación: el indicador reutiliza el mínimo de S07, sin umbrales duplicados.
+
+
+3. BRECHAS PUNTUALES (priorizadas por impacto)
+-------------------------------------------------------------------
+
+O-1 [ALTA] LOTE.cantidad_actual nunca se actualiza
+  - Ubicación: StockService.php:107-118 (crea el movimiento pero no toca LOTE);
+    IngresoMercaderiaController.php:134; LoteController.php:159 y :173
+  - Actual: la cantidad del lote se escribe una única vez, al crearlo. Las ventas, devoluciones
+    y ajustes no lo decrementan, y `asociar_ingreso` de LoteController.php:145-167 sólo suma.
+  - Impacto: rompe S10.4 y la trazabilidad de S09. Un lote agotado sigue figurando "vigente" con
+    su cantidad inicial, y los reportes de riesgo (LoteVencimientoRepository.php:115 y :133)
+    cuentan unidades que ya no existen en el depósito.
+  - Acción: descontar por lote (FIFO o por id_lote del movimiento) dentro de la misma transacción
+    de registrarMovimiento(), y recalcular el estado 'consumido' del lote.
+
+O-2 [ALTA] S13 (Conteo Físico) y S14 (Ubicaciones) sin implementación de aplicación
+  - Ubicación: ausencia total en backend\app\Modules\Stock y routes\api.php
+  - Impacto: 13 criterios (13 SP) en cero. El esquema ya tiene SESION_CONTEO, DETALLE_CONTEO,
+    UBICACION y PRODUCTO_UBICACION, de modo que la brecha es de capa, no de diseño.
+  - Acción: implementar ConteoController (sesión + detalle + resumen + regularización vía ajuste)
+    y UbicacionController (CRUD de UBICACION + asociación/desasignación en PRODUCTO_UBICACION),
+    exponiendo la ubicación en StockController::disponibilidadParaVenta().
+
+O-3 [ALTA] S15 (Filtrado por cantidad) inexistente
+  - Ubicación: StockController.php:21-49; stock.html:355-363 y :852
+  - Actual: sólo ?search y ?estado (normal|bajo|critico).
+  - Impacto: 4 criterios (3 SP). La etiqueta de UI "(S01/S07/S15)" anuncia una cobertura inexistente.
+  - Acción: aceptar ?stock_min= y ?stock_max= (con whereBetween sobre PRODUCTO.stock), agregar los
+    dos campos al bloque .filters de stock.html y corregir la etiqueta.
+
+O-4 [MEDIA] El ajuste manual por incremento se tipifica como 'ingreso'
+  - Ubicación: AjusteStockController.php:63-67
+  - Actual: 'aumentar' -> registrarMovimiento(..., 'ingreso', ...) con motivo prefijado
+    "Ajuste manual (+)".
+  - Impacto: S12.4 parcial; el kardex no permite distinguir una corrección de depósito de una
+    recepción de mercadería, justo lo contrario de lo que pide el criterio "ajustes manuales".
+  - Acción: agregar el signo al tipo de movimiento (columna `delta`/`signo` en MOVIMIENTO_STOCK,
+    que el CHECK de tipo no admite) o mantener el tipo 'ajuste' y derivar el signo de
+    cantidad_base, restando en el cálculo del delta.
+
+O-5 [MEDIA] La fecha de ingreso/devolución/ajuste no es la elegida por el usuario
+  - Ubicación: StockService.php:54-63 (firma sin parámetro de fecha) y :74
+  - Actual: $fecha = Carbon::now()->toDateString() siempre; IngresoMercaderiaController.php:32
+    valida 'fecha' y :166 la devuelve, pero nunca la persiste.
+  - Impacto: S03.5 parcial; se pierden ingresos con fecha retroactiva (habitual en depósito).
+  - Acción: agregar ?DateTime $fecha = null a registrarMovimiento() y propagarla desde
+    IngresoMercaderiaController, DevolucionController y AjusteStockController.
+
+O-6 [MEDIA] Validaciones de equivalencias y de pertenencia de unidad (S08.5)
+  - Ubicación: UnidadController.php:73, :141, :155-168; StockService.php:144-146
+  - Actual: sólo equivalencia_base > 0 y nombre único; la búsqueda de UnidadMedida por
+    id_unidad no filtra por id_producto.
+  - Impacto: S08.5 parcial y S08.3 parcial; un id_unidad ajeno al producto altera el stock.
+  - Acción: validar equivalencias duplicadas y coherentes entre unidades (p. ej. que la razón
+    entre subunits sea entera), y resolver UnidadMedida con where('id_unidad',...)->where('id_producto',...).
+
+O-7 [MEDIA] El ajuste manual no acepta unidad de medida (S08.3)
+  - Ubicación: AjusteStockController.php:28-32 (falta items.* / id_unidad)
+  - Acción: agregar 'id_unidad' => nullable|exists y propagarlo a registrarMovimiento (ya acepta el
+    parámetro $idUnidad en StockService.php:60).
+
+O-8 [BAJA] La búsqueda de stock no cubre la columna `nombre`
+  - Ubicación: StockController.php:29-32 (y Producto::scopeSearch, Producto.php:177-187)
+  - Impacto: S01.3 y S02.2 parciales; la UI rotula el campo "Código o Nombre".
+  - Acción: agregar orWhere('nombre','LIKE',...) en ambas consultas. Es la misma brecha ya
+    registrada como P05.2 en consideraciones_productos.txt.
+
+O-9 [BAJA] Alertas de vencimiento bajo demanda, sin automatización
+  - Ubicación: ConsultaVencimientosService.php:70-85; routes\api.php:178
+  - Impacto: S10.2 parcial. No hay scheduler (routes\console.php vacío) ni cola.
+  - Acción: registrar un comando programado (Schedule::job) o un job encolado que Marque los
+    lotes críticos y dispare la notificación, y reflejar el resultado en el badge de notificaciones
+    del header (stock.html:317).
+
+O-10 [BAJA] Dos copias divergentes de la Interfaz
+  - Ubicación: C:\Users\dario\Desktop\Proyecto\Interfaz\stock.html (1291 líneas, SIN S09)
+                vs C:\Users\dario\Desktop\Proyecto\backend\public\Interfaz\stock.html (1800 líneas, CON S09)
+    El mismo desfasaje existe en productos.html, proveedores.html, compras.html y
+    pedido_compra.html (hashes distintos); sólo index.html coincide.
+  - Impacto: si se revisa o se demonstra la copia de la raíz, S09 y parte de S03 aparecen
+    como no implementados. Es también un riesgo de corrección sobre el archivo equivocado.
+  - Acción: dejar una sola fuente de verdad (public/Interfaz) o un paso de copia en el build,
+    y eliminar el árbol duplicado de la raíz.
+
+O-11 [BAJA] días_alerta_vencimiento por producto no es configurable
+  - Ubicación: ProductoController.php:124 (fija 30); Producto.php:39 (columna existente)
+  - Impacto: el umbral por producto que el esquema contempla no se puede ajustar; hoy manda el
+    global de config\reposicion.php:9-13.
+  - Acción: exponer PATCH /api/stock/alertas/{id}/umbral-vencimiento y un campo en el modal de
+    alertas, reutilizando el criterio ya resuelto en la rama Gomis-Calvo
+    (ERP-Juan23-feature-g3-Gomis-Calvo\...\AlertaVencimientoController.php:143-185).
+
+O-12 [BAJA] Código muerto y nomenclatura engañosa
+  - Ubicación: StockController.php:179-235 lotesPorVencer() no está enrutada (el comentario de
+                routes\api.php:163 la declara reemplazada); StockService.php:38-41
+                recalcularAlerta() no persiste nada y AlertaStockController.php:112-127
+                recalcular() itera sin efecto; StockService.php:152-155 stockDisponibleDe()
+                no tiene consumidores.
+  - Acción: eliminar el método muerto o enrutarlo; documentar que "recalcular" es una no-op
+    (o convertirlo en un job real de recálculo si se decide persistir el estado de alerta).
+
+O-13 [POR VERIFICAR] Riesgo de resolución de parámetros en el apiResource de unidades
+  - Ubicación: routes\api.php:172 Route::apiResource('productos/{id}/unidades', UnidadController::class)
+                vs. firmas UnidadController::update(Request, int $id, int $idUnidad) (:126) y
+                destroy(int $id, int $idUnidad) (:191)
+  - Riesgo: apiResource genera un único parámetro wildcard para el recurso, con nombre derivado de
+    'productos/{id}/unidades'; si no coincide con el nombre del parámetro del método, Laravel no
+    puede inyectar $idUnidad y la llamada falla. La UI depende de DELETE
+    /api/productos/{id}/unidades/{idUnidad} (stock.html:1138-1141 en la copia de raíz).
+  - Acción: reemplazar por rutas explícitas
+    (Route::put/Route::delete('productos/{id}/unidades/{idUnidad}', ...)) y verificar en el
+    navegador la edición y el borrado de unidades. No se pudo ejecutar `php artisan route:list`
+    en este entorno (PHP no instalado).
+
+
+4. MATRIZ DE RUTAS DEL MÓDULO STOCK (routes\api.php:135-180)
+------------------------------------------------------------------
+
+GET    /api/stock                                   S01, S15(parte), S16   StockController@consultaGeneral
+GET    /api/stock/{id}/disponibilidad               S02, S08              StockController@disponibilidadParaVenta
+GET    /api/stock/{id}/historial-movimientos        S12                   StockController@historial
+POST   /api/stock/ingresos                          S03, S09              IngresoMercaderiaController@store
+POST   /api/stock/ventas                            S04                   VentaStockController@store
+POST   /api/stock/devoluciones                      S05                   DevolucionController@store
+POST   /api/stock/ajustes                           S06                   AjusteStockController@store
+GET    /api/stock/alertas                           S07                   AlertaStockController@index
+PATCH  /api/stock/alertas/{id}/minimo               S07                   AlertaStockController@configurarMinimo
+POST   /api/stock/alertas/recalcular                S07 (no-op)           AlertaStockController@recalcular
+GET    /api/stock/lotes                             S09, S11              LoteController@index
+POST   /api/stock/lotes                             S09                   LoteController@store
+GET    /api/stock/lotes/{id}                        S09                   LoteController@show
+GET    /api/stock/productos/{id}/lotes              S09                   LoteController@lotesPorProducto
+GET    /api/stock/lotes-por-vencer                  S10, S11              LoteController@porVencer
+GET    /api/productos/{id}/unidades                 S08                   UnidadController@index
+POST   /api/productos/{id}/unidades                 S08                   UnidadController@store
+PUT    /api/productos/{id}/unidades/{id_unidad}     S08                   UnidadController@update  (ver O-13)
+DELETE /api/productos/{id}/unidades/{id_unidad}     S08                   UnidadController@destroy (ver O-13)
+GET    /api/unidades/convertir                      S08                   UnidadController@convertir
+GET    /api/vencimientos/proximos                   S11                   ConsultaVencimientosController@proximosAVencer
+GET    /api/vencimientos/por-criticidad             S10                   ConsultaVencimientosController@porCriticidad
+GET    /api/vencimientos/alertas                    S10                   ConsultaVencimientosController@alertas
+GET    /api/vencimientos/reporte                    S10                   ConsultaVencimientosController@reporte
+(sin rutas)                                          S13, S14, S15        —
+
+Vistas: GET /vencimientos (routes\web.php:8) -> resources\views\vencimientos.blade.php +
+        public\js\vencimientos.js (orden, filtros, alertas, export CSV)
+
+
+5. CONCLUSIONES
+-------------------------------------------------------------------
+
+1) Cumplimiento global: 51 de 74 criterios en forma literal (68,9%), 10 parciales (13,5%) y
+   13 no cumplidos (17,6%). Por historia: 6 de 16 íntegras (S05, S06, S07, S09, S11 y S16),
+   7 parciales (S01, S02, S03, S04, S08, S10, S12) y 3 sin implementar (S13, S14, S15).
+
+2) El núcleo transaccional del módulo es sólido: StockService::registrarMovimiento()
+   (StockService.php:54-129) aplica el delta en unidad base dentro de una transacción, valida el
+   motivo en los ajustes, bloquea el stock negativo y escribe el kardex. Sobre esa base, S05, S06,
+   S07, S09 y S11 quedan plenamente cubiertas, incluida la conversión de unidades (S08.4) y la
+   whitelist de ordenamiento de S11.3, que son los criterios de mayor riesgo técnico del módulo.
+
+3) Los "Sí" de S16 (Indicador visual, 3 SP) están fuera del alcance comprometido: la historia
+   está marcada como "Futuro" en el PDF (página 9), por lo que el saldo real del MVP
+   (S01-S15) es de 5 HUs íntegras sobre 15, con 69 criterios: 46 Sí, 10 Parcial y 13 No
+   (66,7% / 14,5% / 18,8%). Conteo verificado sobre el archivo: 51 Sí + 10 Parcial + 13 No = 74.
+
+4) Brecha estructural principal: S13 y S14 no tienen Controllers, Services, Models ni rutas,
+   aunque el esquema ya incluye SESION_CONTEO, DETALLE_CONTEO, UBICACION y PRODUCTO_UBICACION
+   (con sus FK y sus campos cantidad_fisica / stock_sistema / diferencia / observaciones). Son
+   13 criterios y 13 SP sin una sola línea de aplicación. La prioridad es alta porque el modelo
+   de datos ya está pagado y no requiere migración.
+
+5) Brecha funcional principal: S15 no tiene filtro por cantidad mínima/máxima en ninguna capa;
+   el único filtro de stock disponible es por estado derivado. Además, la etiqueta
+   "Nivel de stock (S01/S07/S15)" de stock.html:361 promete una cobertura que no existe, lo que
+   puede inducir a error en la defensa del trabajo.
+
+6) Defecto de datos con impacto en S09/S10: LOTE.cantidad_actual se escribe sólo al crear el lote
+   y nunca se actualiza. Mientras no se corrija, el stock por lote no es confiable y las alertas
+   de vencimiento no reflejan el estado real del inventario, lo que contradice el criterio
+   S10.4 y el propósito de trazabilidad de S09.
+
+7) Tres desviaciones de tipificación del kardex que afectan a S12: (a) los ajustes manuales por
+   incremento se registran como 'ingreso' (S12.4 parcial); (b) los movimientos no llevan la
+   fecha elegida por el usuario sino la de ejecución (S03.5 parcial); (c) el historial no expone
+   el signo del delta, sólo la cantidad y el tipo, por lo que un 'ingreso' y una devolución son
+   indistinguibles a simple vista (aunque sí por el motivo).
+
+8) Riesgo de inconsistencia del repositorio: Interfaz\stock.html y
+   backend\public\Interfaz\stock.html son copias divergentes (1291 vs 1800 líneas; la segunda
+   tiene la sección S09 y los campos de lote en el ingreso). productos.html, proveedores.html,
+   compras.html y pedido_compra.html también difieren; sólo index.html es idéntico en ambos
+   árboles. Cualquier corrección sobre el archivo equivocado no se verá reflejada en la
+   aplicación servida.
+
+9) Acciones de menor esfuerzo para maximizar el cumplimiento literal:
+   - O-3: agregar ?stock_min/?stock_max (≈ 15 líneas en StockController + 2 campos en la UI)
+     → +3 criterios.
+   - O-8: sumar 'nombre' a la búsqueda de stock y productos (≈ 2 líneas)
+     → +2 criterios (S01.3, S02.2 de S02).
+   - O-4 y O-5: derivar el signo del delta en lugar de reutilizar 'ingreso', y propagar la fecha
+     del request (≈ 10 líneas en total)
+     → +2 criterios (S12.4, S03.5).
+   Con estos cuatro cambios, el módulo pasa de 50 a 57 criterios en forma literal
+   (65/74 = 87,8%) sin tocar S13/S14.
+
+10) Cumplimiento de dependencias declaradas en el backlog: S03 depende de P01 y PV01 (ambas
+    cumplidas: existe:PRODUCTO y existe:PROVEEDOR con bloqueo de inactivos, IngresoMercaderia
+    Controller.php:31 y :68-73); S13 y S15 dependen de S01 (cumplida); S16 depende de S02 y S07
+    (ambas cumplidas). No hay dependencias rotas, sólo historias ausentes.
+=======================================================================

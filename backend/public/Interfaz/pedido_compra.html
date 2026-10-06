@@ -202,9 +202,35 @@
     .tag.info .s{ background:var(--primary); }
     .tag.principal{ border-color:rgba(245,158,11,.25); background:rgba(245,158,11,.09); color:#92400e; }
     .tag.principal .s{ background:var(--warning); }
+    .tag.pendiente{ border-color:rgba(245,158,11,.3); background:rgba(245,158,11,.1); color:#92400e; }
+    .tag.pendiente .s{ background:var(--warning); }
+    .tag.enviada{ border-color:rgba(29,78,216,.3); background:rgba(29,78,216,.1); color:var(--primary); }
+    .tag.enviada .s{ background:var(--primary); }
+    .tag.recibida_parcialmente{ border-color:rgba(217,119,6,.3); background:rgba(217,119,6,.1); color:#b45309; }
+    .tag.recibida_parcialmente .s{ background:#d97706; }
+    .tag.completada{ border-color:rgba(22,163,74,.3); background:rgba(22,163,74,.1); color:#065f46; }
+    .tag.completada .s{ background:var(--success); }
+    .tag.cancelada{ border-color:rgba(220,38,38,.3); background:rgba(220,38,38,.1); color:#7f1d1d; }
+    .tag.cancelada .s{ background:var(--danger); }
 
-    .kpis{ display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:14px; margin-bottom:14px; }
-    .kpi{ background:var(--panel); border:1px solid var(--border); border-radius:var(--radius); padding:14px 16px; box-shadow:var(--shadow); }
+    .state-timeline{ display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:16px; padding:12px 14px; background:var(--chip); border:1px solid var(--border); border-radius:12px; gap:8px; overflow-x:auto; }
+    .timeline-step{ display:flex; flex-direction:column; align-items:center; flex:1; min-width:80px; position:relative; text-align:center; }
+    .timeline-step:not(:last-child)::after{ content:''; position:absolute; top:12px; left:50%; width:100%; height:2px; background:var(--border); z-index:0; }
+    .timeline-step.completed:not(:last-child)::after{ background:var(--success); }
+    .timeline-step.active:not(:last-child)::after{ background:var(--primary); }
+    .timeline-circle{ width:26px; height:26px; border-radius:50%; background:#fff; border:2px solid var(--border); display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:900; z-index:1; color:var(--muted); margin-bottom:4px; }
+    .timeline-step.completed .timeline-circle{ background:var(--success); border-color:var(--success); color:#fff; }
+    .timeline-step.active .timeline-circle{ background:var(--primary); border-color:var(--primary); color:#fff; box-shadow:0 0 0 3px rgba(29,78,216,.2); }
+    .timeline-step.warning .timeline-circle{ background:#d97706; border-color:#d97706; color:#fff; }
+    .timeline-label{ font-size:11px; font-weight:800; color:var(--muted); }
+    .timeline-step.completed .timeline-label{ color:var(--success); font-weight:900; }
+    .timeline-step.active .timeline-label{ color:var(--primary); font-weight:900; }
+    .timeline-step.warning .timeline-label{ color:#b45309; font-weight:900; }
+    .timeline-date{ font-size:10px; color:var(--muted); margin-top:2px; }
+
+    .kpis{ display:grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap:12px; margin-bottom:14px; }
+    .kpi{ background:var(--panel); border:1px solid var(--border); border-radius:var(--radius); padding:14px 16px; box-shadow:var(--shadow); cursor:pointer; transition:transform .12s, box-shadow .12s; }
+    .kpi:hover{ transform:translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,.08); }
     .kpi .kpi-label{ font-size:12px; color:var(--muted); font-weight:800; }
     .kpi .kpi-value{ font-size:26px; font-weight:900; margin-top:4px; line-height:1; }
     .kpi .kpi-sub{ font-size:12px; color:var(--muted); margin-top:4px; font-weight:600; }
@@ -317,12 +343,14 @@
     </header>
 
     <main class="content">
-      <!-- KPIs -->
+      <!-- KPIs (PC06) -->
       <div class="kpis" id="kpis">
-        <div class="kpi"><div class="kpi-label">Total órdenes</div><div class="kpi-value" id="kpiTotal">-</div><div class="kpi-sub">Emitidas</div></div>
-        <div class="kpi"><div class="kpi-label" style="color:var(--warning);">Pendientes</div><div class="kpi-value" id="kpiPendientes">-</div><div class="kpi-sub">Sin enviar</div></div>
-        <div class="kpi"><div class="kpi-label" style="color:var(--primary);">Enviadas</div><div class="kpi-value" id="kpiEnviadas">-</div><div class="kpi-sub">Enviadas al proveedor</div></div>
-        <div class="kpi"><div class="kpi-label" style="color:var(--danger);">Canceladas</div><div class="kpi-value" id="kpiCanceladas">-</div><div class="kpi-sub">Con fecha de cancelación</div></div>
+        <div class="kpi" onclick="filtrarPorEstado('')"><div class="kpi-label">Total órdenes</div><div class="kpi-value" id="kpiTotal">-</div><div class="kpi-sub">Todas</div></div>
+        <div class="kpi" onclick="filtrarPorEstado('pendiente')"><div class="kpi-label" style="color:var(--warning);">Pendientes</div><div class="kpi-value" id="kpiPendientes">-</div><div class="kpi-sub">Sin enviar</div></div>
+        <div class="kpi" onclick="filtrarPorEstado('enviada')"><div class="kpi-label" style="color:var(--primary);">Enviadas</div><div class="kpi-value" id="kpiEnviadas">-</div><div class="kpi-sub">Al proveedor</div></div>
+        <div class="kpi" onclick="filtrarPorEstado('recibida_parcialmente')"><div class="kpi-label" style="color:#d97706;">Recibidas parcial</div><div class="kpi-value" id="kpiRecibidasParcial">-</div><div class="kpi-sub">En recepción</div></div>
+        <div class="kpi" onclick="filtrarPorEstado('completada')"><div class="kpi-label" style="color:var(--success);">Completadas</div><div class="kpi-value" id="kpiCompletadas">-</div><div class="kpi-sub">Finalizadas</div></div>
+        <div class="kpi" onclick="filtrarPorEstado('cancelada')"><div class="kpi-label" style="color:var(--danger);">Canceladas</div><div class="kpi-value" id="kpiCanceladas">-</div><div class="kpi-sub">Anuladas</div></div>
       </div>
 
       <section class="card">
@@ -452,6 +480,7 @@
         <button class="modal-close" onclick="closeModal('modalDetalle')">&times;</button>
       </div>
       <div class="modal-body">
+        <div id="timelineContainer"></div>
         <div id="detalleInfo"></div>
         <div class="divider"></div>
         <div style="overflow:auto; border:1px solid var(--border); border-radius:10px;">
@@ -461,7 +490,11 @@
           </table>
         </div>
         <div class="divider"></div>
-        <div style="display:flex; justify-content:flex-end; align-items:center; flex-wrap:wrap; gap:8px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+          <div class="btn-row" id="transicionRow">
+            <button class="btn warning" id="btnRecibirParcial" style="display:none;">📦 Recibir Parcial</button>
+            <button class="btn success" id="btnCompletarOrden" style="display:none;">✓ Marcar Completada</button>
+          </div>
           <div class="btn-row">
             <button class="btn primary" id="btnEditarOrden">✎ Editar</button>
             <button class="btn primary-solid" id="btnEnviarOrden">↦ Enviar orden</button>
@@ -641,12 +674,22 @@ const API_BASE = (window.location.port === '8000') ? '/api' : 'http://localhost:
     function renderKpis(items){
       const total = items.length;
       const pendientes = items.filter(o => o.estado === 'pendiente').length;
-      const enviadas = items.filter(o => o.estado === 'enviada' || o.estado === 'recibida_parcialmente').length;
+      const enviadas = items.filter(o => o.estado === 'enviada').length;
+      const recibidasParcial = items.filter(o => o.estado === 'recibida_parcialmente').length;
+      const completadas = items.filter(o => o.estado === 'completada').length;
       const canceladas = items.filter(o => o.estado === 'cancelada').length;
+
       document.getElementById('kpiTotal').textContent = total;
       document.getElementById('kpiPendientes').textContent = pendientes;
       document.getElementById('kpiEnviadas').textContent = enviadas;
+      document.getElementById('kpiRecibidasParcial').textContent = recibidasParcial;
+      document.getElementById('kpiCompletadas').textContent = completadas;
       document.getElementById('kpiCanceladas').textContent = canceladas;
+    }
+
+    function filtrarPorEstado(estado){
+      document.getElementById('filterEstado').value = estado;
+      loadOrdenes();
     }
 
     // ==========================================
@@ -815,6 +858,50 @@ document.getElementById('btnAgregarItem').addEventListener('click', () => { agre
         const o = d.orden;
         titulo.textContent = `Detalle de Orden - ${o.numero_orden}`;
 
+        // Timeline de estados (PC06)
+        const timeline = document.getElementById('timelineContainer');
+        if (o.estado === 'cancelada') {
+          timeline.innerHTML = `
+            <div style="background:rgba(220,38,38,.08); border:1px solid rgba(220,38,38,.25); border-radius:10px; padding:10px 14px; margin-bottom:14px; display:flex; align-items:center; gap:10px; color:#991b1b; font-weight:800; font-size:13px;">
+              <span style="font-size:20px;">🚫</span>
+              <div>
+                <strong>Orden Cancelada (PC05)</strong>
+                <div style="font-size:11px; font-weight:600; opacity:.85;">Fecha de cancelación: ${o.fecha_cancelacion || o.fecha_modificacion || '—'}</div>
+              </div>
+            </div>`;
+        } else {
+          const steps = [
+            { id: 'pendiente', label: '1. Pendiente', date: o.fecha_creacion, num: '1' },
+            { id: 'enviada', label: '2. Enviada', date: o.fecha_envio, num: '2' },
+            { id: 'recibida_parcialmente', label: '3. Recibida parcial', date: (o.estado === 'recibida_parcialmente' ? o.fecha_modificacion : null), num: '3' },
+            { id: 'completada', label: '4. Completada', date: (o.estado === 'completada' ? o.fecha_modificacion : null), num: '4' },
+          ];
+
+          const ordenRanks = { pendiente: 1, enviada: 2, recibida_parcialmente: 3, completada: 4 };
+          const actualRank = ordenRanks[o.estado] || 1;
+
+          timeline.innerHTML = `
+            <div class="state-timeline" aria-label="Línea de tiempo de estados (PC06)">
+              ${steps.map((st, idx) => {
+                const stepRank = idx + 1;
+                let stepClass = '';
+                if (stepRank < actualRank) {
+                  stepClass = 'completed';
+                } else if (stepRank === actualRank) {
+                  stepClass = (st.id === 'recibida_parcialmente') ? 'warning' : 'active';
+                }
+                const icon = stepRank < actualRank ? '✓' : st.num;
+                return `
+                  <div class="timeline-step ${stepClass}">
+                    <div class="timeline-circle">${icon}</div>
+                    <div class="timeline-label">${st.label}</div>
+                    <div class="timeline-date">${st.date || '—'}</div>
+                  </div>
+                `;
+              }).join('')}
+            </div>`;
+        }
+
         info.innerHTML = `
           <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:12px; font-size:13px;">
             <div><span style="color:var(--muted); font-size:11px; font-weight:800;">N° DE ORDEN:</span><br><strong style="font-size:14px;">${o.numero_orden}</strong></div>
@@ -834,6 +921,20 @@ document.getElementById('btnAgregarItem').addEventListener('click', () => { agre
         document.getElementById('btnEditarOrden').disabled = !pendiente;
         document.getElementById('btnCancelarOrden').disabled = !pendiente;
         document.getElementById('btnEnviarOrden').disabled = !pendiente;
+
+        // Botones de avance de estado (PC06)
+        const btnRecParcial = document.getElementById('btnRecibirParcial');
+        const btnComp = document.getElementById('btnCompletarOrden');
+        if (o.estado === 'enviada') {
+          btnRecParcial.style.display = 'inline-flex';
+          btnComp.style.display = 'inline-flex';
+        } else if (o.estado === 'recibida_parcialmente') {
+          btnRecParcial.style.display = 'none';
+          btnComp.style.display = 'inline-flex';
+        } else {
+          btnRecParcial.style.display = 'none';
+          btnComp.style.display = 'none';
+        }
       } catch (err){
         info.innerHTML = '<div class="error-box show">Error de conexión con el servidor.</div>';
       }
@@ -919,6 +1020,40 @@ document.getElementById('btnAgregarItem').addEventListener('click', () => { agre
           showToast(json.message || 'Error al cancelar.', 'error');
         }
       } catch (err){ showToast('Error de conexión.', 'error'); }
+    }
+
+    // ==========================================
+    // PC06: Avanzar estado (Recibir parcial / Completar)
+    // ==========================================
+
+    document.getElementById('btnRecibirParcial').addEventListener('click', () => {
+      if (ordenActual != null) cambiarEstadoOrden(ordenActual, 'recibida_parcialmente');
+    });
+
+    document.getElementById('btnCompletarOrden').addEventListener('click', () => {
+      if (ordenActual != null) cambiarEstadoOrden(ordenActual, 'completada');
+    });
+
+    async function cambiarEstadoOrden(idOrden, nuevoEstado){
+      const o = ordenesCache.find(x => x.id_orden == idOrden);
+      const label = ETIQUETAS_ESTADO[nuevoEstado] || nuevoEstado;
+      if (!confirm(`¿Actualizar la orden ${o?.numero_orden || idOrden} a estado "${label}"? (PC06)`)) return;
+
+      try {
+        const res = await fetch(`${API_BASE}/ordenes-compra/${idOrden}/cambiar-estado`, {
+          method: 'PATCH',
+          headers: { 'Content-Type':'application/json', 'Accept':'application/json' },
+          body: JSON.stringify({ estado: nuevoEstado })
+        });
+        const json = await res.json();
+        if (json.status === 'success') {
+          showToast(json.message, 'success');
+          await loadOrdenes();
+          if (ordenActual != null) verDetalle(ordenActual);
+        } else {
+          showToast(json.message || 'Error al actualizar estado.', 'error');
+        }
+      } catch (err){ showToast('Error de conexión con el servidor.', 'error'); }
     }
 
     // ==========================================

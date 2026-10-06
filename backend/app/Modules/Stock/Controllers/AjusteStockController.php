@@ -30,6 +30,8 @@ class AjusteStockController extends Controller
             'cantidad' => 'required|numeric|gt:0',
             'tipo' => 'required|in:aumentar,disminuir',
             'motivo' => 'required|string|max:255',
+            'id_unidad' => 'nullable|integer|exists:UNIDAD_MEDIDA,id_unidad',
+            'fecha' => 'nullable|date|before_or_equal:today',
         ], [
             'id_producto.required' => 'Debe seleccionar un producto.',
             'cantidad.required' => 'Debe registrar la cantidad ajustada.',
@@ -60,20 +62,30 @@ class AjusteStockController extends Controller
             $cantidad = (int) $request->input('cantidad');
             $tipo = $request->input('tipo');
 
-            // 'ajuste' en el servicio siempre decrementa; para incrementar usamos
-            // un movimiento de ajuste positivo = ingreso por ajuste. Para evitar
-            // confusión, reutilizamos 'ingreso' para incrementos y 'ajuste' para
-            // decrementos, pero todos quedan registrados como ajuste manual en el motivo.
-            $tipoMovimiento = $tipo === 'disminuir' ? 'ajuste' : 'ingreso';
+            // Mantener tipo 'ajuste' siempre para cumplir S12 (historial de ajustes).
+            $tipoMovimiento = 'ajuste';
             $motivo = trim($request->input('motivo'));
             $prefijo = $tipo === 'disminuir' ? 'Ajuste manual (-): ' : 'Ajuste manual (+): ';
+            $idUnidad = $request->has('id_unidad') ? (int) $request->input('id_unidad') : null;
+            $fechaAjuste = null;
+            if ($request->has('fecha') && $request->input('fecha')) {
+                try {
+                    $fechaAjuste = \Carbon\Carbon::parse($request->input('fecha'));
+                } catch (\Throwable $e) {
+                    $fechaAjuste = null;
+                }
+            }
 
             $this->stockService->registrarMovimiento(
                 $producto,
-                $tipoMovimiento,
+                'ajuste',
                 $cantidad,
                 $prefijo . $motivo,
-                $idUsuario
+                $idUsuario,
+                $idUnidad,
+                null,
+                null,
+                $fechaAjuste
             );
 
             $producto->refresh();

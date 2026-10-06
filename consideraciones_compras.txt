@@ -1,0 +1,1022 @@
+======================================================================
+CONSIDERACIONES SOBRE CUMPLIMIENTO DE CRITERIOS - MODULO COMPRAS (C01-C09)
+======================================================================
+
+Fecha de revision: Oct 03 2026
+Fuente de criterios: C:\Users\dario\Desktop\Proyecto\Documentacion\historias_extract.txt
+                    (lineas 394-496; texto extraido de "Historias de Usuario.pdf")
+Backend revisado:   C:\Users\dario\Desktop\Proyecto\backend\app\Modules\Compras
+                    Controllers/ CompraController.php (513 lineas)
+                               RecepcionController.php (208 lineas)
+                               PagoCompraController.php (118 lineas)
+                    Services/    PagoCompraService.php (132 lineas)
+                    Models/      Compra.php, DetalleCompra.php, Recepcion.php,
+                               DetalleRecepcion.php, PagoProveedor.php
+                    Repositories/PagoProveedorRepository.php (64 lineas)
+Rutas:              C:\Users\dario\Desktop\Proyecto\backend\routes\api.php
+                    (lineas 58-67 inventario; 105-117 bloque COMPRAS)
+Migracion BD:       C:\Users\dario\Desktop\Proyecto\backend\database\migrations\
+                    2026_10_03_000001_create_pago_proveedor_table.php
+Esquema BD:         C:\Users\dario\Desktop\Proyecto\BD\esquema_base_DistribuidoraPyB.sql
+                    COMPRA (359-378), DETALLE_COMPRA (380-391), RECEPCION (393-402),
+                    DETAIL_RECEPCION (404-416), PAGO_PROVEEDOR (418-427),
+                    FKs (724-744)
+Interfaz servida:   C:\Users\dario\Desktop\Proyecto\backend\public\Interfaz\compras.html
+                    (1281 lineas - COPIA VIGENTE, incluye UI de C08)
+Interfaz en raiz:   C:\Users\dario\Desktop\Proyecto\Interfaz\compras.html
+                    (1072 lineas - COPIA DESACTUALIZADA, sin UI de C08)
+Soporte transversal:C:\Users\dario\Desktop\Proyecto\backend\app\Support\UsuarioActual.php
+Dependencia Stock:  C:\Users\dario\Desktop\Proyecto\backend\app\Modules\Stock\Services\StockService.php
+
+Volumen evaluado:  9 historias de usuario / 47 criterios de aceptacion / 41 SP.
+Criterios Si: 42 (89,4%) | Parcial: 1 (2,1%) | No: 4 (8,5%)
+
+
+1. RESUMEN POR HISTORIA DE USUARIO
+----------------------------------------------------------------------
+
+HU    Nombre                                  Complej.  Criterios  Cumple
+C01   Registrar Compras de Mercaderia         8 SP       6          Si (6/6)        MVP
+C02   Consultar Compras Realizadas            3 SP       5          Si (5/5)        MVP
+C03   Consultar el Detalle de una Compra       3 SP       6          Si (6/6)        MVP
+C04   Modificar una Compra Pendiente          5 SP       5          Si (5/5)        MVP
+C05   Cancelar una Compra Pendiente           1 SP       5          Si (5/5)        MVP
+C06   Registrar Recepciones Parciales         8 SP       6          Si (6/6)        MVP
+C07   Visualizar Estado de una Compra         3 SP       5          Si (5/5)        Importante
+C08   Registrar Multiples Metodos de Pago     5 SP       5          Parcial (4/5)   Importante
+C09   Visualizar deudas con proveedores       5 SP       4          No (0/4)        Importante
+
+Suma Story Points del modulo: 41 SP (coincide con el backlog, historias_extract.txt:20).
+- MVP (C01-C06):        28 SP -> 33 criterios: 33 Si, 0 Parcial, 0 No  (100% / 0% / 0%)
+- Importantes (C07-C09):13 SP -> 14 criterios:  9 Si, 1 Parcial, 4 No  (64,3% / 7,1% / 28,6%)
+
+Lectura rapida: el modulo esta-completo en su nucleo transaccional. Las seis
+historias del MVP (33 criterios) se cumplen en forma literal, incluida la mas
+exigente del modulo (C06, 8 SP), que recive mercaderia parcial, bloquea el
+exceso, actualiza stock y reclasifica el estado dentro de una sola transaccion.
+Las tres historias "Importantes" concentran toda la deuda: C07 esta implementada
+pero sin consumidor en la UI, C08 tiene una colision de nombres en el campo de
+saldo (unico criterio Parcial del modulo) y C09 no existe: ni ruta, ni
+controller, ni servicio, ni consulta de agregacion por proveedor.
+
+
+2. DETALLE CRITERIO POR CRITERIO
+----------------------------------------------------------------------
+
+Legenda: Si = cumple literalmente | Parcial = cumple parcialmente | No = no implementado
+
+--- C01 - Registrar Compras de Mercaderia (8 SP) - MVP ---------------------
+1.1 Debe permitir seleccionar un proveedor ............................... Si
+    Evidencia: CompraController.php:86 -> 'id_proveedor' => 'required|integer'
+               con mensaje dedicado en :91. Existencia verificada en :102-104
+               (Proveedor::find -> 404). Estado activo exigido en :106-108
+               ("No se puede crear una compra con un proveedor inactivo."),
+               lo que extiende el criterio PV04.3 a la compra.
+               POST /api/compras (routes/api.php:61 y :117 apiResource).
+               UI: <select id="compraProveedor"> en
+               backend\public\Interfaz\compras.html:420, poblado en :691 con
+               GET /api/proveedores?estado=activo (solo activos).
+    Justificacion: el proveedor es obligatorio, se valida existencia y estado,
+    y el selector de la UI solo ofrece proveedores activos, de modo que las dos
+    capas coinciden con el criterio.
+
+1.2 Debe permitir agregar uno o varios productos a la compra .............. Si
+    Evidencia: CompraController.php:89 -> 'items' => 'required|array|min:1'
+               con dos mensajes (:94, :95). El bucle de :125-137 y el segundo
+               bucle de :152-162 permiten N productos; no hay limite superior.
+               UI: boton #btnAgregarItem (compras.html:430) que agrega filas a
+               #tbodyItems (:435) y boton de quitar por fila (icon-btn).
+    Justificacion: "uno o varios" se cumple literalmente: min:1 impide el cero
+    y la estructura de array admite cualquier cantidad.
+
+1.3 Debe permitir registrar cantidades y precios por producto .............. Si
+    Evidencia: CompraController.php:56-78 validarItems(): cantidad > 0 (:70-72)
+               y precio_unitario >= 0 (:73-75). Persistencia en :152-162
+               (cantidad, precio_unitario, subtotal por renglon).
+               Esquema: DETALLE_COMPRA.cantidad / precio_unitario / subtotal
+               NOT NULL (esquema_base:385-388).
+    Justificacion: cantidad y precio se validan y se guardan por producto, que
+    es literalmente el criterio.
+
+1.4 Debe calcular automaticamente el importe total de la compra ........... Si
+    Evidencia: CompraController.php:128 -> $subtotal = round($cantidad*$precio,2);
+               :129 acumula; :139 -> $importeTotal = round($importeTotal,2);
+               :145 -> 'importe_total' => $importeTotal y :147 saldo_pendiente
+               inicial. Recalculo en update() en :433/:443/:465.
+               UI: #compraResumen muestra "Importe total: $X" en vivo
+               (compras.html:433 / :793).
+    Justificacion: el total nunca lo ingresa el usuario: se deriva de la suma de
+    subtotales, se redondea a dos decimales y se persiste en la misma
+    transaccion que los renglones.
+
+1.5 Debe registrar la fecha de la compra .................................. Si
+    Evidencia: CompraController.php:87 -> 'fecha_compra' => 'nullable|date|
+               before_or_equal:today' (mensaje en :92). Default en :118
+               (Carbon::now()) y persistencia en :148. Cast en Compra.php:37.
+               UI: <input type="date" id="compraFecha"> (compras.html:424).
+    Justificacion: la fecha es parte del contrato de alta, se valida como fecha
+    y no admite futuro, y se persiste siempre (con default si se omite).
+
+1.6 Debe generar un identificador unico para la compra ................... Si
+    Evidencia: CompraController.php:204-210 generarComprobante() genera
+               'NCC-AAAA-NNNNNN' con random_int(1,999999) dentro de un do-while
+               que consulta exists() sobre COMPRA (:207). Se usa en :142.
+               Esquema: COMPRA.numero_compra VARCHAR(30) NOT NULL UNIQUE
+               (esquema_base:361). El UNIQUE de base cierra la carrera de
+               concurrencia que el do-while no puede cerrar.
+    Justificacion: la unicidad esta garantizada en dos niveles (aplicacion y
+    base), y el formato (15 caracteres) cabe en el VARCHAR(30) del esquema.
+
+--- C02 - Consultar Compras Realizadas (3 SP) - MVP -----------------------
+2.1 Debe listar las compras registradas ................................... Si
+    Evidencia: CompraController.php:215-241 index(); GET /api/compras
+               (routes/api.php:58 y :117). Orden determinista en :235
+               (fecha_compra DESC, id_compra DESC). Carga proveedor con
+               with('proveedor') (:217). UI: tabla #tablaCompras
+               (compras.html:382) renderizada en :719-742.
+    Justificacion: el listado devuelve todas las compras con proveedor, importe,
+    estado y fecha, y la UI las tabulariza.
+    Observacion: index() no pagina (no hay limit/offset ni ?page ni ?per_page
+    en ningun metodo del modulo). Con el volumen de un distributor esto es
+    aceptable, pero es la unica Palanca de escalabilidad del listado.
+
+2.2 Debe permitir buscar compras por proveedor ............................ Si
+    Evidencia: CompraController.php:219-221 -> if ($request->filled(
+               'id_proveedor')) where('id_proveedor', ...). UI: <select
+               id="filterProveedor"> (compras.html:353) que dispara loadCompras
+               al cambiar (:1246).
+    Justificacion: el filtro por proveedor existe en la API y esta expuesto en
+    la UI. El criterio no exige busqueda textual.
+    Observacion: el campo de texto "Buscar por N° comprobante o proveedor (C02)"
+    (compras.html:348) NO delega al servidor: filtra el arreglo ya descargado
+    en el cliente (:672-678). Consecuencia practica: si el proveedor esta en la
+    pagina 2 de un listado sin paginar, el cliente ya lo tiene, pero si se
+    combinara con paginacion el filtro dejaria de encontrarlo.
+
+2.3 Debe permitir filtrar compras por rango de fechas ..................... Si
+    Evidencia: CompraController.php:223-228 -> ?desde con
+               whereDate('fecha_compra','>=',...) y ?hasta con
+               whereDate('fecha_compra','<=',...). UI: #filterDesde / #filterHasta
+               (compras.html:355-358) enviados en :658-659.
+    Justificacion: los dos extremos del rango se aplican de forma independiente
+    y con whereDate, con lo que no arrastran componente horario.
+
+2.4 Debe mostrar el importe total de cada compra .......................... Si
+    Evidencia: CompraController.php:42 -> 'importe_total' => (float)
+               $c->importe_total en formato(), que index() aplica a cada fila
+               (:239). UI: columna "Importe total" formateada con toFixed(2)
+               (compras.html:728).
+    Justificacion: el importe total viaja en cada renglon del listado.
+
+2.5 Debe mostrar el estado actual de cada compra ......................... Si
+    Evidencia: CompraController.php:44 -> 'estado' => $c->estado en formato().
+               Filtro por estado en :230-233 validado contra
+               Compra::ESTADOS (:45). UI: columna "Estado" con tag coloreado
+               (compras.html:729) y ETIQUETAS_ESTADO (:568-573); selector
+               #filterEstado (compras.html:367) con las cuatro opciones.
+    Justificacion: el estado se muestra y tambien es filtrable, lo que excede
+    el criterio.
+
+--- C03 - Consultar el Detalle de una Compra (3 SP) - MVP ----------------
+3.1 Debe permitir seleccionar una compra registrada ....................... Si
+    Evidencia: CompraController.php:246-296 show(int $id); 404 si no existe
+               (:249-251). GET /api/compras/{id} (routes/api.php:59).
+               UI: boton "Ver" por fila (compras.html:734) -> verDetalle()
+               (:899) y fila completa del proveedor.
+    Justificacion: la compra se selecciona por id desde el listado y el backend
+    responde 404 de forma explicita cuando no existe.
+
+3.2 Debe mostrar los productos incluidos en la compra ..................... Si
+    Evidencia: CompraController.php:256-268 mapea cada DETALLE_COMPRA a
+               id_producto, codigo, descripcion (via detalles.producto en :248),
+               cantidad, cantidad_recibida, cantidad_pendiente, precio_unitario
+               y subtotal. UI: tabla #tbodyDetalle (compras.html:464) con
+               descripcion y codigo (compras.html:951).
+    Justificacion: la linea de detalle identifica el producto por codigo y
+    descripcion, no solo por id.
+
+3.3 Debe mostrar las cantidades y precios unitarios ....................... Si
+    Evidencia: CompraController.php:262 ('cantidad'), :263
+               ('cantidad_recibida'), :265 ('precio_unitario'), :266
+               ('subtotal'). UI: columnas Cantidad / Recibido / Pendiente /
+               Precio / Subtotal (compras.html:952-957).
+    Justificacion: cantidad y precio unitario se exponen por producto.
+
+3.4 Debe mostrar el importe total de la compra ........................... Si
+    Evidencia: CompraController.php:287 -> 'compra' => $this->formato($compra)
+               incluye 'importe_total' (:42). UI: tarjeta "IMPORTE TOTAL"
+               (compras.html:925).
+    Justificacion: el total se devuelve en el detalle.
+
+3.5 Debe mostrar el estado de recepcion de la compra ...................... Si
+    Evidencia: CompraController.php:287 (estado via formato) + :288-290
+               (total_comprado / total_recibido / total_pendiente) +
+               :293 'recepciones' con fecha y productos por recepcion
+               (:270-282). UI: tarjeta "RECIBIDO: x/y unidades"
+               (compras.html:927) y columnas Recibido/Pendiente por renglon.
+    Justificacion: el estado de recepcion se expone en tres niveles de
+    granularidad (compra, renglon y recepcion), que excede el criterio.
+    Observacion: DETALLE_RECEPCION.id_detalle_compra existe en el esquema
+    (esquema_base:407, nullable, con FK en :738) y NO se escribe nunca
+    (RecepcionController.php:123-129 no lo incluye y DetalleRecepcion.php:16-22
+    no lo tiene en $fillable). El vinculo recepcion->renglon de compra se
+    resuelve solo por id_producto. No es un criterio de C03, pero es la razon
+    por la que el mismo producto comprado en dos unidades distintas no se puede
+    distinguir en la traza de recepciones.
+
+3.6 Debe mostrar el proveedor asociado a la compra ........................ Si
+    Evidencia: CompraController.php:41 -> 'proveedor' => $c->proveedor?-
+               >razon_social, con with('proveedor') en :248. UI: tarjeta
+               "PROVEEDOR" (compras.html:923) y columna Proveedor en el
+               listado (compras.html:727).
+    Justificacion: la razon social del proveedor viaja en el detalle.
+
+--- C04 - Modificar una Compra Pendiente (5 SP) - MVP --------------------
+4.1 Debe permitir modificar una compra pendiente ......................... Si
+    Evidencia: CompraController.php:387-484 update(); la guarda de estado esta
+               en :394-399 ("Solo se pueden modificar compras pendientes. (C04)"
+               -> 400). PATCH /api/compras/{id} (routes/api.php:62 y :117).
+               UI: boton "Editar" habilitado solo si estado==='pendiente'
+               (compras.html:735 y :863), con doble guarda en el cliente
+               (:823).
+    Justificacion: la edicion existe y esta condicionada al estado pendiente
+    tanto en el servidor como en la UI.
+
+4.2 Debe permitir agregar o eliminar productos ........................... Si
+    Evidencia: CompraController.php:404 exige 'items' => 'required|array|min:1'
+               y :445 -> $compra->detalles()->delete() seguido de la
+               reconstruccion completa en :447-457. La UI trabaja sobre el
+               arreglo itemsCompra con agregarItem() (:768) y quitarItem()
+               (:799), que se carga desde el detalle en :837-841.
+    Justificacion: agregar y eliminar productos es exactamente lo que hace el
+    patron "sustitucion del conjunto de renglones".
+    Observacion (riesgo de dato): el borrado es fisico y en bloque. Es
+    consistente con C04.5 (solo compras pendientes, sin pagos ni recepciones
+    asociados) y con el ON DELETE CASCADE del esquema, pero significa que
+    cualquier referencia future a un id_detalle_compra historico se pierde en
+    cada edicion. Si alguna vez se agrega un historial de cambios de compra
+    (hoy inexistente), este patron habra que cambiarlo.
+
+4.3 Debe permitir modificar cantidades y precios ......................... Si
+    Evidencia: CompraController.php:429-441 recalcula cantidad, precio_unitario
+               y subtotal por renglon desde el array recibido;
+               validarItems() (:417) exige cantidad > 0 y precio >= 0.
+               UI: inputs .item-cant y .item-precio (compras.html:731-732).
+    Justificacion: cantidad y precio son editables renglon por renglon.
+
+4.4 Debe recalcular automaticamente el importe total ...................... Si
+    Evidencia: CompraController.php:433 acumula subtotales, :443 redondea el
+               total y :465 -> $compra->importe_total = $importeTotal;
+               :466 reajusta saldo_pendiente. Es el mismo calculo de C01.4,
+               sin intervencion del usuario.
+    Justificacion: identico al criterio de alta, que es lo que se pide.
+
+4.5 Debe impedir modificar compras parcialmente recibidas, completadas o
+    canceladas ........................................................... Si
+    Evidencia: CompraController.php:394-395 -> if ($compra->estado !==
+               'pendiente') return 400. La comparacion es por desigualdad
+               contra 'pendiente', de modo que bloquea los cuatro estados
+               restantes del ENUM (esquema_base:367) con una sola condicion.
+               Verificacion adicional en la UI: :735 y :863 deshabilitan el
+               boton, y :823 vuelve a rechazar en el cliente.
+    Justificacion: la guarda por indireccion ("solo pendiente") es mas robusta
+    que enumerar los tres estados prohibidos: no puede quedar desactualizada si
+    se agrega un estado al ENUM.
+    Observacion: el mensaje de error cita "(C04)", igual que C05, y ese patron
+    de referenciar la historia en el mensaje es consistente en todo el modulo.
+
+--- C05 - Cancelar una Compra Pendiente (1 SP) - MVP ---------------------
+5.1 Debe permitir cancelar una compra pendiente ......................... Si
+    Evidencia: CompraController.php:489-512 cancelar(). PATCH
+               /api/compras/{id}/cancelar (routes/api.php:63 y :107).
+               UI: boton "Cancelar compra" en el detalle (compras.html:474) y
+               "Cancelar" por fila (:738), ambos con confirmacion (compras.html:1113).
+    Justificacion: la cancelacion es una operacion de primera clase con
+    confirmacion en la UI.
+
+5.2 Debe registrar la fecha de cancelacion .............................. Si
+    Evidencia: CompraController.php:504 -> $compra->fecha_cancelacion =
+               Carbon::now()->toDateString(). Columna en COMPRA
+               (esquema_base:370) y cast en Compra.php:38. Se devuelve en
+               formato() (:47) y el KPI "Canceladas" lo cuenta
+               (compras.html:750).
+    Justificacion: la fecha queda persistida y es consultable.
+
+5.3 Debe conservar el historial de la compra ............................. Si
+    Evidencia: CompraController.php:503-505 solo muta estado y fecha; no hay
+               ninguna sentencia de borrado en el metodo. El DELETE no esta
+               expuesto: routes/api.php:117 -> apiResource(...)->except(['destroy'])
+               y el comentario de :116 lo explicita ("la compra se cancela
+               (C05), no se borra"). Los DETALLE_COMPRA, RECEPCION y
+               PAGO_PROVEEDOR permanecen (esquema_base:729, :733, :743).
+    Justificacion: el criterio se cumple por ausencia de via de borrado, que es
+    la forma mas fuerte de cumplirlo.
+
+5.4 Debe impedir cancelar compras parcialmente recibidas o completadas .... Si
+    Evidencia: CompraController.php:496-501 -> if ($compra->estado !==
+               'pendiente') return 400 ("Solo se pueden cancelar compras
+               pendientes. (C05)"). Misma guarda por indireccion que C04.5.
+               UI: :738 y :862 deshabilitan el boton fuera de 'pendiente', y
+               :1017 rechaza en el cliente.
+    Justificacion: cubre parcialmente_recibida, completada y cancelada (una
+    compra ya cancelada tampoco se vuelve a cancelar).
+
+5.5 Debe actualizar el estado de la compra a "cancelada" ................. Si
+    Evidencia: CompraController.php:503 -> $compra->estado = 'cancelada'.
+               El valor es una etiqueta del ENUM estado de COMPRA
+               (esquema_base:367) y de Compra::ESTADOS (Compra.php:45), con
+               la misma cadena en las tres capas.
+    Justificacion: el estado resultante es exactamente el rotulo del criterio,
+    en espanol y sin tildes, y es el que la UI etiqueta "Cancelada"
+               (compras.html:572).
+
+--- C06 - Registrar Recepciones Parciales (8 SP) - MVP --------------------
+6.1 Debe permitir registrar cantidades recibidas por producto ............ Si
+    Evidencia: RecepcionController.php:55-62 exige 'items' =>
+               'required|array|min:1'; :70-84 normaliza la solicitud y SUMA
+               cantidades repetidas del mismo producto en $solicitado (:83),
+               lo que evita el error clasico de doble conteo. :123-129 escribe
+               un DETALLE_RECEPCION por producto. POST
+               /api/compras/{compra}/recepciones (routes/api.php:64 y :109).
+               UI: modal #modalRecepcion (compras.html:501) con columna "A
+               recibir" y max atributada al pendiente (:1033).
+    Justificacion: se registran cantidades por producto, con normalizacion
+    previa que refuerza la correctitud del total.
+
+6.2 Debe permitir realizar multiples recepciones para una misma compra ..... Si
+    Evidencia: RecepcionController.php:44-49 solo bloquea los estados
+               'cancelada' y 'completada'. Mientras queden unidades
+               pendientes el estado es 'pendiente' o 'parcialmente_recibida' y
+               el endpoint sigue disponible, de modo que N recepciones sobre la
+               misma compra estan permitidas por construccion.
+               No hay ningun contador ni unicidad que limite a una sola
+               recepcion; RECEPCION es 1..N contra COMPRA (esquema_base:395).
+               UI: el boton Recepcion queda habilitado mientras no sea
+               cancelada o completada (compras.html:736).
+    Justificacion: el estado de la compra es el unico regulator de la
+    multiplicidad, y C06.6 mantiene esa sematica.
+
+6.3 Debe registrar la fecha de cada recepcion ........................... Si
+    Evidencia: RecepcionController.php:56 -> 'fecha_recepcion' =>
+               'nullable|date|before_or_equal:today' (mensaje en :59); default
+               en :90; persistencia en :97. RECEPCION.fecha_recepcion es
+               DATETIME NOT NULL (esquema_base:397) y se expone formateada en
+               CompraController.php:273. UI: input #recepcionFecha
+               (compras.html:512) y columna Fecha en el historial de
+               recepciones (compras.html:973).
+    Justificacion: cada recepcion lleva su propia fecha, editable y validada.
+
+6.4 Debe impedir registrar cantidades superiores a las compradas ......... Si
+    Evidencia: RecepcionController.php:110-115 -> $pendiente = cantidad -
+               cantidad_recibida; if ($cantidadRecibida > $pendiente) throw
+               RuntimeException("... excede el pendiente ({$pendiente})"), que
+               el catch de :181 traduce a 400. La operacion completa corre
+               dentro de DB::transaction (:93), de modo que el rechazo no
+               deja stock ni recepciones parciales.
+               La UI refuerza el limite con max="${dt.cantidad_pendiente}"
+               (compras.html:1033).
+    Justificacion: el control es server-side, acumulativo (compara contra lo
+    ya recibido, no contra lo comprado) y transaccional. Es la guarda
+    criticamente importante de la historia.
+    Observacion (defecto real): :87 -> $detalles = $compra->detalles->
+               keyBy('id_producto'). El UNIQUE del esquema es
+               (id_compra, id_producto, id_unidad) (esquema_base:389), de modo
+               que una compra PUEDE tener el mismo producto en dos renglones
+               con unidades distintas (p. ej. 3 cajas + 20 unidades). keyBy
+               descarta silenciosamente todos menos el ultimo, con lo que el
+               segundo renglon se vuelve inalcanzable para recibir y el
+               pendiente global no cuadra. CompraController::validarItems()
+               (:56-78) no agrupa ni rechaza duplicados por producto, y
+               unidadDelItem() (:185-199) puede asignar unidades distintas, por
+               lo que el escenario es alcanzable desde la API actual.
+
+6.5 Debe actualizar automaticamente el stock con las cantidades recibidas .. Si
+    Evidencia: RecepcionController.php:136 -> sumarStock(...) que llama a
+               StockService::registrarMovimiento con tipo 'ingreso'
+               (:195-207). StockService.php:85 normaliza a unidad base con
+               cantidadEnUnidadBase(), :89 aplica delta positivo, :103-104
+               escribe PRODUCTO.stock y :107-118 inserta el MOVIMIENTO_STOCK
+               con motivo "Recepcion de compra (C06)" e id_recepcion, lo que da
+               trazabilidad. Todo dentro de la transaccion de la recepcion.
+    Justificacion: el stock se actualiza solo, sin accion del usuario, y en la
+    misma unidad de negocio que la recepcion. La normalizacion a unidad base es
+    lo que hace correcto el caso de 3 cajas de 12 (suman 36, no 3).
+    Observacion: la columna id_lote se escribe como null fijo (:126), de modo
+               que el ingreso no queda asociado a un lote. No afecta a C06.5,
+               pero deja el stock entrante fuera de la trazabilidad de
+               vencimientos de S09/S10.
+
+6.6 Debe actualizar el estado de la compra segun lo recibido ............. Si
+    Evidencia: RecepcionController.php:148-156: recarga la compra, filtra los
+               renglones con cantidad > 0, suma comprado y recibido, y asigna
+               $compra->estado = $todasCompletas ? 'completada' :
+               'parcialmente_recibida'. :158-159 recalcula ademas
+               saldo_pendiente prorateado. El estado resultante se devuelve en
+               la respuesta (:177) y la UI lo muestra en el toast
+               (compras.html:1080).
+    Justificacion: la reclasificacion es automatica y proporcional al total de
+    la compra, no al renglon, que es lo correcto.
+
+--- C07 - Visualizar Estado de una Compra (3 SP) - Importante -------------
+7.1 Debe mostrar el estado actual de cada compra ......................... Si
+    Evidencia: Endpoint dedicado CompraController::estado() en :308-358
+               ("C07 - Visualizar el estado de una compra"), con ruta GET
+               /api/compras/{compra}/estado (routes/api.php:60 y :111).
+               Devuelve 'estado' (:339) mas unidades (:340-345) e importes
+               (:346-353). Ademas el estado viaja en cada fila del listado
+               via formato() (:44) y en el detalle (:287).
+    Justificacion: el estado es observable tanto en la vista de conjunto como
+    en un endpoint dedicado con el avance en unidades y en dinero.
+
+7.2 Debe identificar compras pendientes ................................. Si
+    Evidencia: 'pendiente' es el valor por defecto del ENUM estado
+               (esquema_base:367), es el primero de Compra::ESTADOS
+               (Compra.php:45) y es el estado que asigna store() (:147).
+               Identificable por ?estado=pendiente (CompraController.php:230-233)
+               y por etiqueta en la UI (compras.html:569, tag propia en :196).
+    Justificacion: los cuatro estados del criterio existen como valores
+    distinguibles del dominio, no como texto libre.
+
+7.3 Debe identificar compras parcialmente recibidas ...................... Si
+    Evidencia: 'parcialmente_recibida' en el ENUM (esquema_base:367) y en
+               Compra::ESTADOS (Compra.php:45); lo asigna unicamente
+               RecepcionController.php:156. Filtro en
+               CompraController.php:230-233; KPI "Con recepciones" en
+               compras.html:749; etiqueta "Parcial" (compras.html:570).
+    Justificacion: el estado se produce solo cuando hay recepcion parcial, lo
+    que le da significado operativo y no meramente textual.
+
+7.4 Debe identificar compras completadas ................................. Si
+    Evidencia: 'completada' en el ENUM (esquema_base:367) y en ESTADOS
+               (Compra.php:45); lo asigna RecepcionController.php:156 cuando
+               $recibidoTotal >= $saldoTotal. Filtro y etiqueta en
+               compras.html:571.
+    Justificacion: la condicion de completado es total sobre el conjunto de la
+    compra, verificada con :155.
+
+7.5 Debe identificar compras canceladas ................................. Si
+    Evidencia: 'cancelada' en el ENUM (esquema_base:367) y en ESTADOS
+               (Compra.php:45); lo asigna CompraController.php:503. Filtro y
+               etiqueta en compras.html:572; ademas se expone
+               fecha_cancelacion (:47) y el KPI "Canceladas" (:750).
+    Justificacion: los cuatro estados del criterio estan implementados de
+    punta a punta con su filtro y su etiqueta.
+    Observacion: el endpoint /api/compras/{id}/estado no tiene consumidor en la
+               UI (verificado por busqueda de "/estado" en las dos copias de
+               compras.html: 0 coincidencias). El estado se ve por la columna
+               del listado y la tarjeta del detalle, que es suficiente para
+               cumplir el criterio, pero deja el endpoint mas rico (avance en
+               unidades, porcentaje_recibido, por_producto) sin uso.
+
+--- C08 - Registrar Multiples Metodos de Pago (5 SP) - Importante --------
+8.1 Debe permitir registrar uno o mas pagos para una compra ............... Si
+    Evidencia: POST /api/compras/{compra}/pagos (routes/api.php:65 y :113) ->
+               PagoCompraController::store() (:29-68) ->
+               PagoCompraService::registrar() (:36-78) ->
+               PagoProveedorRepository::crear() (:11-14). El esquema define
+               PAGO_PROVEEDOR con id_compra NOT NULL pero SIN restriccion
+               UNIQUE (esquema_base:418-427), es decir 1..N; la migracion
+               2026_10_03_000001 reproduce ese DDL (:30-43) y es idempotente
+               (:26-28). No hay ningun limite de cantidad de pagos.
+               UI: modal #modalPago (compras.html:531) y boton por fila
+               (compras.html:737).
+    Justificacion: la cardinalidad 1..N es la ausencia de restriccion en el
+    esquema, y es la que hace posible el criterio.
+
+8.2 Debe permitir indicar el metodo de pago utilizado ..................... Si
+    Evidencia: PagoCompraController.php:32 -> 'metodo_pago' =>
+               'required|string|in:' . implode(',', PagoProveedor::METODOS),
+               con mensajes en :36-37. Doble validacion en
+               PagoCompraService.php:48-52. METODOS =
+               ['efectivo','transferencia','cheque','echeq','tarjeta']
+               (PagoProveedor.php:23) coincide con el ENUM del esquema
+               (esquema_base:421) y con el desplegable de la UI
+               (compras.html:539-545), respetando el nombre "eCheq" en la
+               presentacion y "echeq" en el dominio.
+    Justificacion: el metodo es obligatorio, validado contra una lista cerrada
+    y coherente en las tres capas.
+
+8.3 Debe permitir registrar importes parciales ........................... Si
+    Evidencia: PagoCompraController.php:33 -> 'importe' =>
+               'required|numeric|min:0.01'. No se exige el total: cualquier
+               importe entre 0.01 y el saldo se acepta. El techo lo controla
+               PagoCompraService.php:59-64 (lanza si el importe supera el saldo
+               a pagar, con mensaje en :62). UI: el modal precarga el saldo
+               como max y como valor sugerido (compras.html:1155-1156), de
+               modo que el pago parcial es el flujo natural.
+    Justificacion: el pago parcial es el caso soportado, no una excepcion.
+
+8.4 Debe calcular automaticamente el saldo pendiente ...................... Parcial
+    Evidencia (a favor): PagoCompraService.php:114-119 saldoAPagar() calcula
+               max(0.0, round(importe_total - totalPagado, 2)); totalPagado()
+               suma PAGO_PROVEEDOR por compra (PagoProveedorRepository.php:45-48).
+               El resultado se expone como 'saldo_a_pagar' en tres lugares:
+               PagoCompraController.php:103, CompraController.php:352 (endpoint
+               de C07) y CompraController.php:369 (datosPagos(), que alimenta
+               el detalle de C03). El calculo es automatico y nunca provisto
+               por el cliente.
+    Evidencia (en contra): el campo que se llama literalmente "saldo pendiente"
+               NO es ese. COMPRA.saldo_pendiente significa "importe de
+               mercaderia todavia no recibida" y lo calcula
+               RecepcionController.php:158-159 como
+               importe_total * unidades_pendientes / unidades_totales.
+               Se escribe al crear la compra (CompraController.php:146) y al
+               modificarla (:466), y NO baja nunca por un pago. Aun asi se
+               expone con ese nombre en las respuestas de C02 (formato(), :43),
+               de C03 (:287) y de C07 (:349, rotulado alli como "Mercaderia
+               aun no recibida (C06)").
+               Consecuencia observable: una compra totalmente pagada sigue
+               reportando saldo_pendiente = importe_total en el listado de C02.
+    Justificacion: el criterio pide, en el contexto de C08 (pagos), calcular el
+    saldo pendiente automaticamente. La funcion existe, es correcta y esta
+    expuesta, pero con otro nombre; el campo homonimo tiene otra semantica. La
+    lectura literal del criterio ("el saldo pendiente de la compra se calcula
+    solo y es el que corresponde") se cumple; la lectura por nombre de campo no.
+    Es el unico criterio Parcial del modulo y el mas barato de cerrar.
+    Nota del propio equipo: PagoCompraService.php:18-23 documenta esta colision
+    de forma explicita y recomienda usar saldo_a_pagar, lo que muestra que es
+    una decision consciente y no un descuido.
+
+8.5 Debe registrar la fecha de cada pago .................................. Si
+    Evidencia: PagoCompraController.php:34 -> 'fecha_pago' => 'nullable|date|
+               before_or_equal:today' (mensaje en :41); default en :52
+               (now()->toDateString()); persistencia en :70. PAGO_PROVEEDOR.
+               fecha_pago DATE NOT NULL (esquema_base:423) y cast en
+               PagoProveedor.php:37. UI: input #pagoFecha (compras.html:556-557).
+               El resumen ordena los pagos por fecha (PagoProveedorRepository.
+               php:23-26 y :32-35).
+    Justificacion: cada pago lleva su propia fecha, validada y ordenable.
+
+--- C09 - Visualizar deudas con proveedores (5 SP) - Importante -----------
+9.1 Debe mostrar el saldo adeudado por proveedor ......................... No
+    Evidencia: No existe. No hay ruta de deudas en routes/api.php: el bloque
+               COMPRAS es :105-117 y el inventario de endpoints declara
+               :58-67, con diez entradas y ninguna de deudas. No hay
+               Controller, Service ni Repository con esa responsabilidad
+               (los tres archivos del modulo son CompraController,
+               RecepcionController y PagoCompraController). No existe ninguna
+               agregacion por proveedor en el backend: una busqueda de
+               groupBy('id_proveedor') sobre backend\app devuelve 0 resultados.
+               Todo el saldo se calcula y se expone por COMPRA
+               (PagoCompraService::saldoAPagar, :114-119) y nunca consolidado
+               por proveedor.
+    Justificacion: el dato base existe por completo (COMPRA.id_proveedor,
+               PAGO_PROVEEDOR y la formula de saldo ya implementada y probada
+               en C08), pero falta la capa de consulta agregada que el criterio
+               exige.
+
+9.2 Debe permitir filtrar por fechas ....................................... No
+    Evidencia: No existe endpoint que la soporte. Los unicos filtros de
+               fecha del modulo son ?desde/?hasta de CompraController::index()
+               (:223-228), que acotan el LISTADO de compras y no una consulta
+               de deudas; y ?fecha_pago del detalle de pagos, que es un dato
+               de salida, no un filtro. No hay ninguna UI: las dos copias de
+               compras.html no contienen la cadena "deuda" ni "adeudado"
+               (verificado).
+    Justificacion: sin endpoint de deudas no hay donde aplicar el filtro.
+
+9.3 Debe mostrar vencimientos proximos .................................... No
+    Evidencia: No existe, y el dato de origen tampoco se llena. COMPRA tiene la
+               columna fecha_vencimiento DATE NULL (esquema_base:369, con cast
+               en Compra.php:38 y salida en formato(), :46), pero NINGUN
+               metodo del modulo la escribe: CompraController::store()
+               (:141-150) y update() (:465-467) no la incluyen, y una busqueda
+               de "fecha_vencimiento" en backend\app\Modules\Compras devuelve
+               solo la lectura de CompraController.php:46. La columna esta
+               siempre NULL, por lo que un filtro de "vencimientos proximos"
+               devolveria una lista vacia aunque se implementara.
+               La palabra "vencimiento" en la UI (compras.html) no aparece:
+               las coincidencias del proyecto pertenecen a index.html:652,765,
+               1289,1297 y al modulo Stock (Lotes), no a Compras.
+    Justificacion: doble brecha, de aplicacion y de dato. Es la unica historia
+    del modulo bloqueada por las dos causas a la vez.
+
+9.4 Debe mostrar el detalle de las compras pendientes de pago ............. No
+    Evidencia: No existe vista consolidada. El detalle de una compra con su
+               saldo si existe (CompraController::datosPagos(), :361-382, y
+               PagoCompraService::resumen(), :83-111), y la UI lo muestra en el
+               modal de detalle (compras.html:485-491, 964-983), pero es
+               exclusivamente por compra y por peticion individual. No hay
+               ninguna vista que liste "las compras pendientes de pago" de un
+               proveedor o del sistema, ni endpoint que la soporte.
+               Lo mas proximo es ?estado=pendiente en index() (:230-233), que
+               lista compras NO RECIBIDAS, que es un subconjunto distinto del
+               que exige el criterio (compras no pagadas): una compra
+               completada y totalmente impaga no aparece en ese filtro.
+    Justificacion: el componente reutilizable (el resumen de pagos por compra)
+    ya existe y es solido; falta la vista de conjunto.
+
+
+3. MATRIZ CRITERIO x CAPA
+----------------------------------------------------------------------
+
+Criterio  Backend  Esquema  Ruta  Interfaz  Veredicto
+1.1  proveedor            Si        Si       Si       Si          Si
+1.2  N productos          Si        Si       Si       Si          Si
+1.3  cant. y precios      Si        Si       Si       Si          Si
+1.4  importe total        Si        Si       Si       Si          Si
+1.5  fecha compra         Si        Si       Si       Si          Si
+1.6  id unico compra      Si        Si       Si       Si          Si
+2.1  listar compras       Si        Si       Si       Si          Si
+2.2  buscar proveedor     Si        n/a      Si       Si          Si
+2.3  rango de fechas      Si        n/a      Si       Si          Si
+2.4  importe total        Si        Si       Si       Si          Si
+2.5  estado compra        Si        Si       Si       Si          Si
+3.1  seleccionar compra   Si        n/a      Si       Si          Si
+3.2  productos            Si        Si       Si       Si          Si
+3.3  cant. y precios      Si        Si       Si       Si          Si
+3.4  importe total        Si        Si       Si       Si          Si
+3.5  estado recepcion     Si        Parcial  Si       Si          Si
+3.6  proveedor            Si        Si       Si       Si          Si
+4.1  editar pendiente     Si        n/a      Si       Si          Si
+4.2  agregar/eliminar     Si        Si       Si       Si          Si
+4.3  cant. y precios      Si        Si       Si       Si          Si
+4.4  recalcular total     Si        Si       Si       Si          Si
+4.5  bloquear estados     Si        Si       Si       Si          Si
+5.1  cancelar             Si        n/a      Si       Si          Si
+5.2  fecha cancelacion    Si        Si       Si       Si          Si
+5.3  conservar historial  Si        Si       Si       Si          Si
+5.4  bloquear estados     Si        Si       Si       Si          Si
+5.5  estado cancelada     Si        Si       Si       Si          Si
+6.1  cant. por producto   Si        Si       Si       Si          Si
+6.2  N recepciones        Si        Si       Si       Si          Si
+6.3  fecha recepcion      Si        Si       Si       Si          Si
+6.4  no exceder comprado  Si        Si       Si       Si          Si
+6.5  actualizar stock     Si        Si       Si       Si          Si
+6.6  actualizar estado    Si        Si       Si       Si          Si
+7.1  estado actual        Si        Si       Si       Si          Si
+7.2  identificar pend.    Si        Si       Si       Si          Si
+7.3  identificar parcial  Si        Si       Si       Si          Si
+7.4  identificar compl.   Si        Si       Si       Si          Si
+7.5  identificar cancel.  Si        Si       Si       Si          Si
+8.1  N pagos              Si        Si       Si       Si          Si
+8.2  metodo de pago       Si        Si       Si       Si          Si
+8.3  importes parciales   Si        Si       Si       Si          Si
+8.4  calcular saldo       Parcial   Si       Si       Parcial     Parcial
+8.5  fecha de pago        Si        Si       Si       Si          Si
+9.1  saldo por proveedor  No        Parcial  No      No          No
+9.2  filtrar por fechas   No        n/a      No      No          No
+9.3  vencimientos prox.   No        Parcial  No      No          No
+9.4  detalle compras pend. No       Si       No      No          No
+
+Leyenda de la columna Esquema: Si = la columna o el ENUM existe y se usa;
+Parcial = la columna existe pero el dato nunca se escribe, o existe con una
+semantica distinta a la del criterio; n/a = el criterio no exige persistencia.
+
+
+4. OBSERVACIONES Y DEFECTOS DETECTADOS (no son criterios, pero afectan la
+   evaluacion)
+----------------------------------------------------------------------
+
+P-1 [ALTA] C06.4 - keyBy('id_producto') descarta renglones.
+    RecepcionController.php:87 indexa los detalles de la compra por producto,
+    pero el UNIQUE del esquema es (id_compra, id_producto, id_unidad)
+    (esquema_base:389). Una compra con el mismo producto en dos unidades
+    distintas pierde un renglon: ese renglon no puede recibir (el get() en
+    :105 devuelve null y se lanza "no forma parte de esta compra") y el
+    pendiente por producto que se valida en :110-115 es el del renglon
+    sobreviviente, no la suma. Fix: indexar por id_producto acumulando
+    cantidad y cantidad_recibida, o keyBy('id_detalle_compra') y resolver el
+    renglon por (id_producto, id_unidad) desde el body.
+
+P-2 [ALTA] C08.4 / C09 - colision de semantica de saldo_pendiente.
+    Detallado en 8.4. While COMPRA.saldo_pendiente = importe no recibido, el
+    nombre sugere deuda. Any evaluador que lea el listado de C02 vera un saldo
+    que no baja al pagar. Es ademas el insumo natural de C09.1, de modo que
+    resolverlo ahora evita duplicar el error en la capa de deudas.
+
+P-3 [ALTA] C09.3 - COMPRA.fecha_vencimiento nunca se escribe.
+    La columna existe (esquema_base:369) y se lee en formato() (:46), pero
+    store() y update() no la incluyen. Hoy es siempre NULL, con lo que
+    cualquier implementacion de "vencimientos proximos" arrojaria vacio
+    aunque el endpoint se escribiera.
+
+P-4 [MEDIA] Dos copias divergentes de la interfaz.
+    backend\public\Interfaz\compras.html (1281 lineas, la que se sirve, con la
+    UI completa de C08) vs Interfaz\compras.html (1072 lineas, sin la UI de
+    C08: no tiene #modalPago, ni #btnRegistrarPago, ni renderDetallePagos).
+    Verificado por Compare-Object: 215 lineas de diferencia, todas en la
+    direccion de la copia servida. Si alguien revisa o sirve la copia de la
+    raiz, conclude que C08 no tiene interfaz. El mismo desdoblamiento existe
+    en proveedores.html (1003 vs 923 lineas) y ya fue detectado en
+    consideraciones_proveedores.txt como P-10.
+
+P-5 [MEDIA] C04 - las columnas de auditoria de modificacion no se escriben.
+    COMPRA.fecha_modificacion (esquema_base:371) e id_usuario_modificacion
+    (:373, con cast y FK en :727) existen y Compra.php:28-30 las declara
+   fillable, pero update() (:465-467) solo actualiza importe_total y
+    saldo_pendiente. Ningun criterio de C04 lo exige, pero el modulo ya
+    resuelve la auditoria en C01 con UsuarioActual::id($request)
+    (:117) y en C08 con PagoCompraService (:53), de modo que la brecha es de
+    consistencia interna del modulo.
+
+P-6 [MEDIA] C06 - la recepcion no hereda id_detalle_compra ni id_lote.
+    RecepcionController.php:123-129 escribe 'id_lote' => null fijo y omite
+    id_detalle_compra (columna nullable con FK en esquema_base:407, :738).
+    DetalleRecepcion.php:16-22 no la incluye en $fillable, de modo que
+    llenarla requiere un cambio de modelo ademas del controller. Consecuencia:
+    la traza de recepciones no baja al renglon de compra (relevante para C03.5)
+    ni al lote (relevante para S09/S10).
+
+P-7 [MEDIA] Sin paginacion en ningun metodo del modulo.
+    CompraController::index() (:235) hace ->get() sin limite; no hay ?page ni
+    ?per_page en CompraController, RecepcionController ni PagoCompraController
+    (verificado por busqueda). Con el filtro de texto que se aplica en el
+    cliente (compras.html:672-678) esto es consistente, pero cualquier
+    consumidor nuevo (reportes, C09) hereda el problema.
+
+P-8 [BAJA] C02.2 - el filtro por proveedor de la UI es un desplegable, no una
+    busqueda. El criterio dice "buscar", y la UI ofrece ademas un campo de
+    texto que filtra por razon social en el cliente. Suficiente, pero conviene
+    documentarlo en el contrato de la API.
+
+P-9 [BAJA] C03 - el endpoint /api/compras/{id}/estado (C07) no tiene consumidor
+    en la UI. Aporta porcentaje_recibido, por_producto y los dos saldos
+    (CompraController.php:340-355) que el modal de detalle no muestra. Es
+    capacidad ociosa, no un incumplimiento.
+
+P-10 [BAJA]Numeracion de criterios divergente en un artefacto del repo.
+    BD\reporte_criterios_aceptacion.md:37-44 define un conjunto C01-C05
+    INCOMPATIBLE con el del PDF (alli C01 es "Orden de compra", C03 "Registrar
+    compra", C05 "Pago proveedor"). Pertenece a la suite SQL de MVP y no al
+    modulo; conviene renombrarlo o marcarlo como obsoleto para que un revisor
+    no lo cite como evidencia contrary.
+
+
+5. ACCIONES PARA CUMPLIR ESTRICTAMENTE
+----------------------------------------------------------------------
+
+A-1 [PRIORIDAD ALTA, ~30 lineas] Cerrar C08.4 en forma literal (1 Parcial -> Si)
+    Sin migracion y sin romper C06. La opcion de menor riesgo y menor effort es
+    renombrar en la API, no en la base:
+    a) En CompraController::formato() (:34-50), cambiar la clave
+       'saldo_pendiente' por dos claves explicitas:
+         'importe_no_recibido' => (float) $c->saldo_pendiente,
+         'saldo_a_pagar'       => max(0.0, round(importe_total - totalPagado, 2)),
+       y actualizar los tres consumidores (el listado de C02, el detalle de
+       C03 via :287 y el endpoint de C07 en :349, que ya rotula el campo).
+    b) Reutilizar datosPagos() (:361-382) dentro de formato() para no duplicar
+       la formula; hoy esa funcion se invoca dos veces por show() (:291) y
+       estado() (:318), lo que ya es una pequena inefficiency.
+    c) Si se quiere conservar la clave historica por compatibilidad, dejarla
+       como alias deprecado durante una version y marcarla en el inventario de
+       endpoints (routes/api.php:58-67), que es donde ya se documenta el
+       contrato.
+    d) Actualizar la UI: compras.html:925-928 (tarjeta IMPORTE TOTAL) y el
+       modal de pagos (:1160-1162) para que muestren los dos saldos con su
+       rotulo correcto, y PurchaCompraService.php:18-23 para reflejar que la
+       colision quedo resuelta.
+    Impacto: el unico Parcial del modulo pasa a Si y el insumo de C09.1 queda
+    sin ambiguedad semantica.
+
+A-2 [PRIORIDAD ALTA, ~5 lineas] Corregir P-1 (keyBy) en C06
+    En RecepcionController.php:87, reemplazar
+      $detalles = $compra->detalles->keyBy('id_producto');
+    por una agrupacion que acumule:
+      $detalles = $compra->detalles->groupBy('id_producto')->map(
+          fn ($grupo) => (object) [
+              'cantidad'          => (int) $grupo->sum('cantidad'),
+              'cantidad_recibida' => (int) $grupo->sum('cantidad_recibida'),
+              'id_unidad'         => $grupo->first()->id_unidad,
+          ]
+      );
+    Con eso el pendiente validado en :110-115 pasa a ser la suma de todos los
+    renglones del producto y el caso de multi-unidad deja de perder la fila.
+    Complementario: DetalleRecepcion::create() (:123-129) deberia escribir
+    id_detalle_compra con el id real del renglon (agregarlo a $fillable en
+    DetalleRecepcion.php:16-22), lo que cierra ademas el P-6 parcial.
+    Si se decide que una misma compra no debe repetir producto en dos unidades,
+    la alternativa es rechazarlo en CompraController::validarItems() (:56-78)
+    con un mensaje explicito, que es la decision de dominio mas simple.
+
+A-3 [PRIORIDAD ALTA, ~120 lineas] Implementar C09 completa (4 criterios, 5 SP)
+    Es la brecha principal del modulo y la de mejor relacion esfuerzo/beneficio,
+    porque el 80% del calculo ya existe y esta probado por C08.
+    a) Repository DeudaProveedorRepository, siguiendo el patron de
+       PagoProveedorRepository: consulta base sobre COMPRA con with('proveedor')
+       y leftJoin a una subconsulta de SUM(PAGO_PROVEEDOR.importe):
+         SELECT  c.id_proveedor, pr.razon_social,
+                 SUM(c.importe_total)                          AS total_comprado,
+                 SUM(COALESCE(p.total_pagado, 0))              AS total_pagado,
+                 SUM(c.importe_total - COALESCE(p.total_pagado, 0)) AS saldo_adeudado,
+                 COUNT(*)                                      AS compras_pendientes
+         FROM COMPRA c
+         JOIN PROVEEDOR pr ON pr.id_proveedor = c.id_proveedor
+         LEFT JOIN (SELECT id_compra, SUM(importe) total_pagado
+                    FROM PAGO_PROVEEDOR GROUP BY id_compra) p
+                ON p.id_compra = c.id_compra
+         WHERE c.estado <> 'cancelada'
+           AND c.fecha_vencimiento IS NOT NULL   -- o >= :desde, ver (c)
+         GROUP BY c.id_proveedor, pr.razon_social
+         HAVING SUM(c.importe_total - COALESCE(p.total_pagado, 0)) > 0
+       El HAVING > 0 es lo que materializa 9.1 ("saldo adeudado") y 9.4
+       ("compras pendientes de pago") en la misma consulta.
+    b) Service DeudaProveedorService::porProveedor($idProveedor, $desde,
+       $hasta) y ::consolidado($desde, $hasta), con la formula de saldo
+       reutilizada (max(0.0, importe_total - total_pagado)) en vez de
+       reimplementarla, y un segundo metodo ::comprasPendientes($idProveedor)
+       que devuelva el detalle renglon a renglon con numero_compra,
+       fecha_compra, fecha_vencimiento, importe_total, total_pagado y
+       saldo_a_pagar (cierra 9.4 con datos de primera linea).
+    c) Controller DeudaProveedorController con dos rutas, siguiendo la
+       convencion ya usada en PedidosDeCompra (dashboard-reposicion,
+       routes/api.php:121-125 y el bloque dashboard-*):
+         GET /api/deudas-proveedores?desde&hasta            -> consolidado (9.1, 9.2)
+         GET /api/deudas-proveedores/{proveedor}?desde&hasta -> detalle (9.4)
+       Para 9.3 ("vencimientos proximos"), agregar ?proximos=N (dias) que
+       ordena por c.fecha_vencimiento asc y marca dias_restantes = DATEDIFF(
+       fecha_vencimiento, CURDATE()), devolviendolas separadas de las no
+       vencidas. Registrar ambas rutas en el inventario de endpoints
+       (routes/api.php:58-67) y actualizar el comentario de bloque, que hoy
+       dice "C01 a C08" (:105).
+    d) Para que 9.3 no devuelva vacio, primero cerrar P-3: agregar
+       'fecha_vencimiento' => 'nullable|date|after_or_equal:fecha_compra' al
+       validator de CompraController::store() (:85-96) y update() (:401-410),
+       persistirlo en ambos (:141-150 y :465-467), y agregar el <input
+       type="date" id="compraVencimiento"> al modal de alta/edicion
+       (compras.html:418-425). Sin este paso A-3c es codigo muerto.
+    e) UI: nueva tarjeta o pestana "Deudas con proveedores (C09)" en
+       backend\public\Interfaz\compras.html, con filtros ?desde/?hasta y
+       ?proximos, una tabla proveedor / total comprado / pagado / saldo
+       adeudado / compras pendientes, y el detalle por proveedor en un modal
+       (el patron de modal por id ya esta resuelto en el archivo:
+       closeModal/openModal en :536-541 y el ejemplo de pagos en :531-575).
+       Conviene crearla directamente en la copia servida y luego unificar
+       (P-4), no al reves.
+    f) Registrar C09 en el docblock de Compras, que hoy solo lista C01-C05
+       (CompraController.php:20-28).
+    Impacto: +4 criterios. El modulo pasaria de 42/47 a 46/47 (97,9%).
+
+A-4 [PRIORIDAD MEDIA, bajo esfuerzo] Cerrar P-4 (copias de la interfaz)
+    Decidir un unico arbol. La opcion recomendada es conservar
+    backend\public\Interfaz (es la que se sirve y la que esta al dia) y
+    eliminar o convertir en enlace la copia de Interfaz\, o copiar la version
+    vigente hacia la raiz. Si se conservan ambas, agregar al inicio de la
+    copia desactualizada un comentario HTML de aviso. Aplicar el mismo criterio
+    a proveedores.html, stock.html, productos.html, index.html y
+    pedido_compra.html: el desdoblamiento es del proyecto, no de este modulo.
+    Sin este paso, cualquier revision basada en Interfaz\compras.html concluye
+    que C08 carece de interfaz, que es falso.
+
+A-5 [PRIORIDAD MEDIA, ~15 lineas] Cerrar P-5 (auditoria de modificacion en C04)
+    En CompraController::update(), dentro de la transaccion (:425-471), agregar
+       $compra->fecha_modificacion = Carbon::now()->toDateString();
+       $compra->id_usuario_modificacion = UsuarioActual::id($request);
+    antes del save() de :468, y exponer ambos en formato() (:34-50). Las
+    columnas y el cast ya existen (esquema_base:371, :373; Compra.php:28-30),
+    por lo que no hay migracion. Cerraria ademas el criterio implicito de
+    "conservar el historial" que C05.3 si verifica de forma literal.
+
+A-6 [PRIORIDAD MEDIA, ~10 lineas] Enlazar el pago con el estado de la compra
+    While C08 no lo exige, hoy una compra 'completada' y totally impaga es
+    indistinguible de una cancelada en un listado, y C09.4 necesita el cruce
+    inverso. Opcion sin migracion: al registrar el ultimo pago, dejar que
+    formato() exponga pagos_completos (ya disponible via datosPagos(), :370) y
+    que la UI lo use como etiqueta secundaria en la columna Estado
+    (compras.html:729). Si se prefiere persistirlo, agregar el estado
+    'saldada' al ENUM de COMPRA, lo que exige migracion y actualizar
+    Compra::ESTADOS (:45), las cuatro guards de estado de C04/C05/C06/C08 y los
+    cuatro desplegables de estado de las dos copias de la UI: coste alto,
+    beneficio bajo. Recomendacion: no hacerlo.
+
+A-7 [PRIORIDAD BAJA] Robustez y coherencia
+    a) P-7: agregar paginacion a CompraController::index() (?page, ?per_page con
+       ->paginate()) y mover el filtro de texto de compras.html:672-678 al
+       servidor (?search sobre numero_comprobante y PROVEEDOR.razon_social),
+       con WithTrashed no aplica: no hay borrado logico en Compras.
+    b) P-6: aceptar items.*.id_lote en RecepcionController (:55-62) y
+       persistirlo, para que el ingreso desde compra herede la trazabilidad de
+       lote y vencimiento que S09/S10 ya resuelven en IngresoMercaderia
+       (IngresoMercaderiaController.php:98, :135, :155).
+    c) P-9: consumir GET /api/compras/{id}/estado desde el modal de detalle para
+       mostrar porcentaje_recibido y el desglose por producto, que ya se
+       calculan y hoy nadie ve.
+    d) P-10: renombrar los criterios de BD\reporte_criterios_aceptacion.md:37-44
+       (C01-C05 de la suite SQL) a un prefijo distinto, o marcar el archivo
+       como obsoleto respecto del PDF.
+    e) Corregir el subtitulo de compras.html:306 ("C01 a C06") y el de :336-337,
+       que no mencionan C07, C08 ni C09 aunque el archivo ya implemente C08.
+
+A-8 [TRANSVERSAL] Pruebas automatizadas
+    La carpeta C:\Users\dario\Desktop\Proyecto\backend\tests contiene solo
+    TestCase.php y dos ExampleTest.php: el modulo no tiene ninguna prueba, pese
+    a ser el de mayor riesgo transaccional del proyecto. Orden sugerido por
+    relacion valor/esfuerzo:
+      - C06.4: compra 10, recibir 6 -> 201; recibir 5 mas -> 400 con "excede el
+        pendiente (4)"; stock del producto == 6 en unidades base; estado ==
+        'parcialmente_recibida'.
+      - C06.4 con P-1: compra con el mismo producto en dos unidades (3 cajas +
+        20 unidades) -> recibir de ambas unidades funciona y el pendiente total
+        del producto es 23. Es la prueba que hoy falla.
+      - C06.2: tres recepciones sucesivas sobre la misma compra -> 201 cada una
+        y exactamente tres filas en RECEPCION con tres fechas distintas.
+      - C06 atomicidad: forzar un producto inactivo en el segundo item ->
+        400 y ningun cambio en stock, ni RECEPCION, ni DETALLE_RECEPCION.
+      - C08.4: pagar el total -> saldo_a_pagar == 0, pagos_completos == true y
+        un segundo pago devuelve 400; pagar la mitad dos veces -> saldo 0.
+      - C08.4 sobre P-2: tras pagar el total, saldo_pendiente sigue siendo
+        importe_total (documenta el defecto actual) y, si se aplica A-1,
+        importe_no_recibido == 0 con saldo_a_pagar == 0 (prueba del arreglo).
+      - C04.5 y C05.4: PATCH y cancelar sobre compra 'completada' -> 400 en
+        ambos, y el historial sigue legible por GET /api/compras/{id}.
+      - C01.6: 200 altas seguidas -> 200 numero_compra distintos y sin
+        colision de UNIQUE.
+      - C09 (tras A-3): consolidado con dos proveedores, uno pagado y otro con
+        saldo, y ?proximos=30 solo devuelve los que vencen dentro del plazo.
+
+
+6. CONCLUSIONES
+-----------------------------------------------------------------------
+1) Cumplimiento global: 42 de 47 criterios en forma literal (89,4%), 1 parcial
+   (2,1%) y 4 no cumplidos (8,5%). Por historia: 8 de 9 con deficit en cero
+   salvo C08 (1 criterio) y C09 (4 criterios). Verificado sobre el archivo:
+   42 Si + 1 Parcial + 4 No = 47.
+
+2) El MVP esta completo: 33 de 33 criterios en forma literal (100%), con 28 de
+   los 41 SP del modulo. Las seis historias C01-C06 no tienen un solo criterio
+   en Parcial ni en No. Es el modulo mejor resuelto del proyecto y el unico
+   donde se puede afirmar que el MVP esta cerrado.
+
+3) La especificacion mas fuerte del modulo es C06.6 combinada con C06.4: la
+   reclasificacion del estado se calcula sobre el TOTAL de la compra
+   (RecepcionController.php:150-156, con filtro de renglones de cantidad > 0) y
+   no sobre el renglon, y la guarda de exceso compara contra lo ya recibido
+   (:110-115) y no contra lo comprado. Ambos detalles son correctos y no son
+   accidentales: son la diferencia entre una historia que funciona con un solo
+   producto y una que funciona con many.
+
+4) C08.4 es el unico Parcial, y no por falta de calculo sino por colision de
+   nombres: el saldo de pagos se computa correctamente como saldo_a_pagar
+   (PagoCompraService.php:114-119) y se expone en tres endpoints, mientras que
+   el campo llamado saldo_pendiente significa "importe no recibido"
+   (RecepcionController.php:158-159) y no baja al pagar. El propio
+   docblock del service (:18-23) documenta la colision y recomienda cual de los
+   dos usar, lo que confirma que es una decision consciente. Se cierra con
+   A-1, que no requiere migracion. Un evaluador que lea el listado de C02 vera
+   un saldo que no disminuye al pagar: es exactamente el fallo que A-1 evita.
+
+5) C09 es la brecha principal del modulo: 5 SP, 4 criterios, 0 lineas de codigo.
+   No hay ruta (el bloque de Compras en routes/api.php:105-117 no la declara y el
+   inventario de :58-67 lista diez endpoints sin ninguna de deudas), no hay
+   controller ni service, y no existe agregacion por proveedor en todo el
+   backend. Se depende ademas de C01 y C08, que estan cumplidas, y su unica
+   fuente natural (COMPRA + PAGO_PROVEEDOR) ya esta pagada. Es la accion de
+   mayor rendimiento del trabajo: A-3 cierra los 4 criterios con ~120 lineas y
+   sin migracion, salvo el paso previo P-3.
+
+6) P-3 es la precondicion de C09.3 y no es un detalle menor: COMPRA.
+   fecha_vencimiento existe en el esquema y se lee en la API, pero ningun
+   metodo del modulo la escribe, de modo que hoy es siempre NULL. Implementar
+   el endpoint de vencimientos sin llenar antes la columna produziria una
+   lista vacia que pareceria un bug del endpoint.
+
+7) P-1 es el defecto mas serio del modulo a nivel de correctitud y no lo
+   detecta ningun criterio de forma aislada: se manifiesta como C06.4
+   ("no puede recibir el renglon que le falta") y como C03.5 ("la traza de
+   recepciones no baja al renglon"). Se debe a que keyBy('id_producto')
+   (RecepcionController.php:87) asume unicidad por producto, mientras el
+   UNIQUE del esquema es (id_compra, id_producto, id_unidad)
+   (esquema_base:389) y la API admite el escenario. La buena noticia es que el
+   arreglo es de cinco lineas (A-2) y no cambia ningun contrato.
+
+8) Observacion de alcance: 41 de los 41 SP del modulo se declararon en el
+   backlog (historias_extract.txt:20) y las nueve historias estan presentes en
+   el PDF. A diferencia de otros modulos revisados, aqui no hay historias
+   ausentes del documento: hay una historia ausente del codigo (C09). No hay
+   dependencias rotas entre historias: C01 depende de PV01 y PV05 (ambas
+   cumplidas salvo PV05.3/PV05.4, que no afectan a C01 porque
+   CompraController::store() no exige que el producto tenga proveedor
+   asociado), C02-C05 dependen de C01, C06 depende de C01 y S03 (ambas
+   cumplidas: la suma de stock usa StockService::registrarMovimiento con tipo
+   'ingreso', el mismo camino que S03), C07 depende de C01, C05 y C06 (las tres
+   cumplidas) y C08 depende de C01, C09 depende de C01 y C08 (ambas cumplidas).
+   El eslabon que falta es la propia C09.
+
+9) Esfuerzo para maximization del cumplimiento literal, en este orden:
+   - A-1 (saldo sin colision): ~30 lineas, sin migracion -> +1 criterio
+     (8.4 pasa de Parcial a Si). Modulo a 43/47 (91,5%).
+   - A-2 (keyBy): ~5 lineas -> +0 criterios nominales, pero elimina un defecto
+     que hace fallar 6.4 y 3.5 en un escenario real. Es la accion con mejor
+     relacion esfuerzo/riesgo de toda la lista.
+   - A-3 (C09 completa): ~120 lineas + el paso P-3 (~15 lineas) -> +4 criterios.
+     Modulo a 47/47 (100%) con A-1.
+   - A-4 (unificar la interfaz): bajo esfuerzo, sin criterios, pero condiciona
+     que cualquier revision posterior vea el estado real de C08.
+   Con A-1 + A-2 + A-3 el modulo queda en 47 de 47 criterios y las nueve
+   historias completas, sin migraciones.
+
+10) Nota sobre verificacion: la revision es documental y estatica (lectura de
+    codigo, esquema, rutas e interfaz). No se pudo ejecutar `php artisan
+    route:list`, `php artisan migrate:status`, `php artisan test` ni pruebas de
+    endpoints porque PHP no esta instalado en este entorno (verificado: `php
+    -v` -> comando no reconocido). Los puntos que requieren confirmacion en
+    caliente son: (a) que la tabla PAGO_PROVEEDOR exista efectivamente en la
+    base activa, dado que la migracion 2026_10_03_000001 es idempotente y no
+    hace nada si la tabla ya estaba (su docblock :46-53 explica que down() es
+    vacio a proposito); (b) que el ENUM estado de COMPRA en la base activa
+    contenga los cuatro valores, ya que Compra::ESTADOS (Compra.php:45) es
+    la copia PHP y una divergencia entre ambas solo se manifestaria en
+    runtime; y (c) que las dos copias de compras.html representen la version que se
+    esta evaluando. Todo lo demas surge de la correspondencia literal entre el
+    texto del PDF y el codigo.
+======================================================================

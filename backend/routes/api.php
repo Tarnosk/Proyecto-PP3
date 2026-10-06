@@ -121,6 +121,8 @@ Route::apiResource('compras', CompraController::class)->except(['destroy']);
 Route::patch('ordenes-compra/{orden}/cancelar', [OrdenCompraController::class, 'cancelar']);
 // Complementaria: enviar una orden pendiente (habilita PC04/PC05/PC06)
 Route::patch('ordenes-compra/{orden}/enviar', [OrdenCompraController::class, 'enviar']);
+// PC06 - Avanzar estado (recibida parcialmente o completada)
+Route::patch('ordenes-compra/{orden}/cambiar-estado', [OrdenCompraController::class, 'cambiarEstado']);
 // destroy queda fuera: la orden se cancela (PC05), no se borra.
 Route::apiResource('ordenes-compra', OrdenCompraController::class)->except(['destroy']);
 

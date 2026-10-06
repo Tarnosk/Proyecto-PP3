@@ -1,0 +1,18 @@
+Grupo 1: Tomas Giraudo, Gino Martellini
+Grupo 2: Dario Tarnoski, Franco Ortelli
+Grupo 3: Santi Gomis, Francisco Calvo
+
+Las historias supuestamente realizadas serian las siguientes:
+
+Grupo 1: (13 SP)
+S09 - (Gestion de Lotes y Vencimientos) (8 SP)
+S10 - (Alerta de Productos Proximos a Vencer) (5 SP)
+
+Grupo 2: (13 SP)
+C07 - (Visualizar Estado de una Compra) (3 SP)
+C08 - (Registrar Múltiples Métodos de Pago) (5 SP)
+PV07- (Registrar plazos de entrega) (5 SP)
+
+Grupo 3: (11 SP)
+PC07 - (Generar Sugerencias de Reposición) (8 SP)
+S11 - (Consultar Productos Próximos a Vencer) (3 SP)

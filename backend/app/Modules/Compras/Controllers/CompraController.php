@@ -84,11 +84,13 @@ class CompraController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'id_proveedor' => 'required|integer',
+            'id_orden' => 'nullable|integer|exists:ORDEN_COMPRA,id_orden',
             'fecha_compra' => 'nullable|date|before_or_equal:today',
             'numero_comprobante' => 'nullable|string|max:50',
             'items' => 'required|array|min:1',
         ], [
             'id_proveedor.required' => 'Debe seleccionar un proveedor.',
+            'id_orden.exists' => 'La orden de compra vinculada no existe.',
             'fecha_compra.before_or_equal' => 'La fecha de la compra no puede ser posterior a la fecha actual.',
             'numero_comprobante.max' => 'El número de comprobante no puede superar los 50 caracteres.',
             'items.required' => 'Debe agregar al menos un producto a la compra.',
@@ -116,9 +118,10 @@ class CompraController extends Controller
 
         $idUsuario = UsuarioActual::id($request);
         $fecha = $request->input('fecha_compra') ?? Carbon::now()->toDateString();
+        $idOrden = $request->filled('id_orden') ? (int) $request->input('id_orden') : null;
 
         try {
-            $compra = DB::transaction(function () use ($request, $proveedor, $items, $idUsuario, $fecha) {
+            $compra = DB::transaction(function () use ($request, $proveedor, $items, $idUsuario, $fecha, $idOrden) {
                 $importeTotal = 0;
                 $detalles = [];
 
@@ -142,6 +145,7 @@ class CompraController extends Controller
                     'numero_compra' => $this->generarComprobante(),
                     'numero_comprobante' => $request->input('numero_comprobante') ?: null,
                     'id_proveedor' => $proveedor->id_proveedor,
+                    'id_orden' => $idOrden,
                     'importe_total' => $importeTotal,
                     'saldo_pendiente' => $importeTotal,
                     'estado' => 'pendiente',

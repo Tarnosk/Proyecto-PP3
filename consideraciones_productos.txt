@@ -1,0 +1,38 @@
+﻿CONSIDERACIONES SOBRE CUMPLIMIENTO DE CRITERIOS - MÓDULO PRODUCTOS (P01-P08)
+
+Fecha: Oct 03 2026
+Referencia: Analisis cruzado PDF Historias de Usuario vs Backend (app/Modules/Productos) + Frontend (Interfaz/)
+
+RESUMEN POR HU
+- P01: Sí (7/7) - Registrar productos
+- P02: Sí (4/4) - Administrar categorías
+- P03: Sí (4/4) - Administrar marcas
+- P04: Sí (6/6) - Modificar productos
+- P05: Parcial (3/5 Sí, 2/5 No) - Buscar productos
+- P06: Sí (4/4) - Desactivar productos
+- P07: Parcial (6/7 Sí, 1/7 No) - Aumentos masivos
+- P08: Parcial (4/5 Sí, 1/5 Parcial) - Consultar historial de precios
+
+BRECHAS PUNTUALES (para cumplimiento estricto)
+
+1. P05.2 - Debe permitir buscar por nombre
+   - Ubicación: app/Modules/Productos/Models/Producto.php - scopeSearch()
+   - Actual: busca solo codigo y descripcion (LIKE)
+   - Acción: agregar nombre al criterio de búsqueda (OR nombre LIKE %term%)
+
+2. P05.5 - Debe mostrar únicamente productos activos
+   - Ubicación: app/Modules/Productos/Controllers/ProductoController.php@index()
+   - Actual: si estado es null o 'todos', no aplica filtro -> trae todos los estados
+   - Acción: forzar estado='activo' por defecto cuando no se especifica filtro (salvo que explícitamente se pida 'todos' o estado específico)
+
+3. P07.7 - Debe permitir aplicar reglas de redondeo configurables
+   - Ubicación: app/Modules/Productos/Controllers/ProductoController.php@aumentoMasivo()
+   - Actual: regla_redondeo hardcodeada a 'sin_redondeo'; cálculo fijo round(...,2)
+   - Acción: agregar parámetro regla_redondeo al request (validado) y aplicarlo al cálculo, persistir valor recibido
+
+4. P08.2 - Debe mostrar precio anterior y nuevo precio
+   - Ubicación: app/Modules/Productos/Models/HistorialPrecio.php, ProductoController@historialPrecios()
+   - Actual: guarda solo precio (resultante). No existen precio_anterior/precio_nuevo explícitos
+   - Acción: persistir ambos valores en cada registro (o añadirlos en respuesta) para cumplir literalidad del criterio
+
+CONCLUSIÓN: 5/8 HUs cumplen íntegramente (P01–P04, P06). 3/8 parciales (P05,P07,P08) con 4 ítems corregibles.

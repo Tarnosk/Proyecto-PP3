@@ -9,6 +9,7 @@ use App\Modules\Compras\Models\DetalleCompra;
 use App\Modules\Compras\Models\DetalleRecepcion;
 use App\Modules\Productos\Models\Producto;
 use App\Modules\Compras\Models\Recepcion;
+use App\Modules\PedidosDeCompra\Models\OrdenCompra;
 use App\Modules\Stock\Services\StockService;
 use App\Support\UsuarioActual;
 use Carbon\Carbon;
@@ -160,6 +161,16 @@ class RecepcionController extends Controller
                 }
 
                 $compra->save();
+
+                // Propagar avance de estado a la ORDEN_COMPRA asociada si existe (PC06)
+                if ($compra->id_orden) {
+                    $orden = OrdenCompra::find($compra->id_orden);
+                    if ($orden && $orden->estado !== 'cancelada') {
+                        $orden->estado = $todasCompletas ? 'completada' : 'recibida_parcialmente';
+                        $orden->fecha_modificacion = Carbon::now()->toDateString();
+                        $orden->save();
+                    }
+                }
 
                 return [
                     'recepcion' => $recepcion,

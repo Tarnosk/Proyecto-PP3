@@ -1,0 +1,28 @@
+Issues Realizadas:
+
+Sprint 1: 18 de Agosto - 31 de Agosto
+
+Administrar Categorias - Productos
+Administrar Marcas - Productos
+Registrar Productos - Productos
+Buscar Productos - Productos
+Modificar Productos - Productos
+Aplicar Aumentos Masivos - Productos
+Desactivar Productos - Productos
+Consulta de Stock Disponible - Stock
+Consultar Historial de Precios - Productos
+
+Sprint 2: 1 de Septiembre - 19 de Septiembre
+
+Consulta de Disponibilidad para Ventas - Stock
+Registrar Proveedores - Proveedores 
+Registro de Ingreso de Mercaderia - Stock
+Actualizacion Automatica por Venta - Stock
+Registro de Devoluciones - Stock
+Ajustes Manuales de Inventario - Stock
+Alertas de Stock Minimo - Stock
+Gestion de Unidades y Equivalencias - Stock
+Consultar Informacion de Proveedores - Proveedores
+Editar Informacion de Proveedores - Proveedores
+Desactivar Proveedores - Proveedores
+Asociar Productos a Proovedores - Proveedores

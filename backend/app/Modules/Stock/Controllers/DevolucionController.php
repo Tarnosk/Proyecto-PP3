@@ -29,6 +29,7 @@ class DevolucionController extends Controller
             'cantidad' => 'required|integer|min:1',
             'motivo' => 'required|string|max:255',
             'id_unidad' => 'nullable|integer|exists:UNIDAD_MEDIDA,id_unidad',
+            'fecha' => 'nullable|date|before_or_equal:today',
         ], [
             'id_producto.required' => 'Debe seleccionar el producto devuelto.',
             'cantidad.required' => 'Debe registrar la cantidad devuelta.',
@@ -56,13 +57,24 @@ class DevolucionController extends Controller
             $idUsuario = UsuarioActual::id($request);
             $idUnidad = $request->has('id_unidad') ? (int) $request->input('id_unidad') : null;
 
+            $fechaDev = null;
+            if ($request->has('fecha') && $request->input('fecha')) {
+                try {
+                    $fechaDev = \Carbon\Carbon::parse($request->input('fecha'));
+                } catch (\Throwable $e) {
+                    $fechaDev = null;
+                }
+            }
             $this->stockService->registrarMovimiento(
                 $producto,
                 'devolucion',
                 (int) $request->input('cantidad'),
                 trim($request->input('motivo')),
                 $idUsuario,
-                $idUnidad
+                $idUnidad,
+                null,
+                null,
+                $fechaDev
             );
 
             $producto->refresh();

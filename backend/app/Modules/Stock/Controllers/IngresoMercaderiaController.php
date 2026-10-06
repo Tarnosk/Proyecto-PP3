@@ -97,6 +97,14 @@ class IngresoMercaderiaController extends Controller
                 $nroLote = isset($item['nro_lote']) ? trim((string) $item['nro_lote']) : null;
                 $vence = $item['fecha_vencimiento'] ?? null;
 
+                $fechaIngreso = null;
+                if ($fecha !== null && $fecha !== '') {
+                    try {
+                        $fechaIngreso = \Carbon\Carbon::parse($fecha);
+                    } catch (\Throwable $e) {
+                        $fechaIngreso = null;
+                    }
+                }
                 $resultado = DB::transaction(function () use (
                     $producto,
                     $cantidad,
@@ -104,7 +112,8 @@ class IngresoMercaderiaController extends Controller
                     $idUsuario,
                     $idUnidad,
                     $nroLote,
-                    $vence
+                    $vence,
+                    $fechaIngreso
                 ) {
                     $movimiento = $this->stockService->registrarMovimiento(
                         $producto,
@@ -112,7 +121,10 @@ class IngresoMercaderiaController extends Controller
                         $cantidad,
                         $motivo,
                         $idUsuario,
-                        $idUnidad
+                        $idUnidad,
+                        null,
+                        null,
+                        $fechaIngreso
                     );
 
                     $loteId = null;

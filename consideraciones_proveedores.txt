@@ -1,0 +1,957 @@
+=======================================================================
+CONSIDERACIONES SOBRE CUMPLIMIENTO DE CRITERIOS - MODULO PROVEEDORES (PV01-PV08)
+=======================================================================
+
+Fecha de revision: Oct 03 2026
+Fuente de criterios: C:\Users\dario\Desktop\Proyecto\Documentacion\historias_extract.txt
+                    (lineas 305-392; texto extraido de "Historias de Usuario.pdf")
+Backend revisado:   C:\Users\dario\Desktop\Proyecto\backend\app\Modules\Proveedores
+                    Controllers/ ProveedorController.php, PlazoEntregaController.php
+                    Services/    PlazoEntregaService.php
+                    Models/      Proveedor.php, ProductoProveedor.php, HistorialPlazoProveedor.php
+                    Repositories/HistorialPlazoProveedorRepository.php
+Rutas:              C:\Users\dario\Desktop\Proyecto\backend\routes\api.php (lineas 90-103)
+Migracion BD:       C:\Users\dario\Desktop\Proyecto\backend\database\migrations\
+                    2026_10_03_000002_create_historial_plazo_proveedor_table.php
+Esquema BD:         C:\Users\dario\Desktop\Proyecto\ACTUALIZACION\DistribuidoraPyB (Version Corregida).sql (254-298)
+                    C:\Users\dario\Desktop\Proyecto\Revision\Diagrama Actual Grupo 3.sql (160-198, 297-311)
+Interfaz servida:   C:\Users\dario\Desktop\Proyecto\backend\public\Interfaz\proveedores.html (914 lineas)
+Interfaz en raiz:   C:\Users\dario\Desktop\Proyecto\Interfaz\proveedores.html (842 lineas, COPIA DESACTUALIZADA)
+Soporte transversal:C:\Users\dario\Desktop\Proyecto\backend\app\Support\UsuarioActual.php
+Bloqueantes externos:backend\app\Modules\Compras (CompraController.php, RecepcionController.php)
+                     backend\app\Modules\PedidosDeCompra (OrdenCompraController.php,
+                     Services\GeneradorSugerenciasReposicionService.php)
+                     backend\app\Modules\Stock (IngresoMercaderiaController.php)
+                     backend\app\Modules\Productos (ProductoController.php, Models\Producto.php)
+
+Volumen evaluado:  8 historias de usuario / 36 criterios de aceptacion.
+Criterios Si: 23 (63,9%) | Parcial: 1 (2,8%) | No: 12 (33,3%)
+
+
+1. RESUMEN POR HISTORIA DE USUARIO
+----------------------------------------------------------------------
+
+HU    Nombre                                  Complej.  Criterios  Cumple
+PV01  Registrar proveedores                   3 SP       4          Si (4/4)        MVP
+PV02  Consultar Informacion de Proveedores    3 SP       4          Si (4/4)        MVP
+PV03  Editar informacion de proveedores       3 SP       5          Parcial (4/5)   MVP
+PV04  Desactivar proveedores                  1 SP       4          Si (4/4)        MVP
+PV05  Asociar productos a proveedores         5 SP       5          Parcial (3/5)   MVP
+PV06  Consultar precios historicos            8 SP       5          No (0/5)        Importante
+PV07  Registrar plazos de entrega             5 SP       4          Si (4/4)        Importante
+PV08  Consultar estadisticas                  8 SP       5          No (0/5)        Futuro
+
+Suma Story Points del modulo: 36 SP (coincide con el backlog, historias_extract.txt:19).
+- MVP (PV01-PV05):        15 SP -> 22 criterios: 19 Si, 1 Parcial, 2 No  (86,4% / 4,5% / 9,1%)
+- Importantes (PV06-PV07):13 SP ->  9 criterios:  4 Si, 0 Parcial, 5 No  (44,4% / 0% / 55,6%)
+- Futuro (PV08):           8 SP ->  5 criterios:  0 Si, 0 Parcial, 5 No  (0% / 0% / 100%)
+
+Lectura rapida: el nucleo CRUD del modulo (alta, consulta, edicion, baja logica,
+plazos de entrega) esta completo y bien auditado. Las dos brechas del MVP son
+de exposicion e historial (PV05.3 y PV05.4). PV06 y PV08 no tienen una sola
+linea de codigo, aunque la tabla HISTORIAL_PRECIO_PROVEEDOR que necesita PV06
+ya existe en el esquema y nunca se escribe.
+
+
+2. DETALLE CRITERIO POR CRITERIO
+----------------------------------------------------------------------
+
+Legenda: Si = cumple literalmente | Parcial = cumple parcialmente | No = no implementado
+
+--- PV01 - Registrar proveedores (3 SP) - MVP ------------------------------
+1.1 Debe permitir cargar razon social, CUIT, telefono y correo ........... Si
+    Evidencia: ProveedorController.php:128-186 store() -> POST /api/proveedores
+               (routes/api.php:103, Route::apiResource). Validacion en :130-135
+               ('razon_social' required, 'cuit' required, 'telefono' nullable,
+               'correo' nullable|email). Persistencia en :155-166. UI: modal
+               #modalProveedor en backend\public\Interfaz\proveedores.html:393-431
+               ("Registrar Proveedor (PV01)").
+    Justificacion: los cuatro campos del criterio se cargan, se validan y se
+               guardan; el correo se mapea a la columna `email` del modelo
+               (Proveedor.php:19) y se devuelve como `correo` en formato()
+               (ProveedorController.php:44), de modo que el contrato de la API
+               usa exactamente el nombre del criterio.
+    Observacion: la columna `direccion` existe en PROVEEDOR
+               (ACTUALIZACION\DistribuidoraPyB (Version Corregida).sql:259) pero
+               no esta en $fillable (Proveedor.php:15-27) ni en formato()
+               (ProveedorController.php:39-52). No es exigido por el criterio,
+               pero es el dato de contacto mas obvio que queda fuera.
+
+1.2 Debe validar que no existan proveedores duplicados ................... Si
+    Evidencia: ProveedorController.php:132 -> 'cuit' => 'required|string|max:20|unique:PROVEEDOR,cuit'
+               con mensaje dedicado en :139; reforzado por el UNIQUE de columna
+               en PROVEEDOR (Version Corregida).sql:257.
+    Justificacion: la deduplicacion se hace por CUIT, que es la clave natural
+               del proveedor (identificacion fiscal argentina). El UNIQUE de
+               base de datos evita duplicados por concurrencia, no solo por
+               validacion de formulario.
+
+1.3 Debe registrar la fecha de alta ....................................... Si
+    Evidencia: ProveedorController.php:152 ('$now = Carbon::now()->toDateString()')
+               y :161 ('fecha_alta' => $now); cast en Proveedor.php:32.
+               Se devuelve en formato() (:46) y se muestra en el alta.
+    Justificacion: la fecha de alta se persiste en el mismo INSERT que el resto
+               de los datos, no se infiere despues.
+
+1.4 Debe guardar el usuario que realizo la carga .......................... Si
+    Evidencia: ProveedorController.php:153 -> UsuarioActual::id($request);
+               :164 -> 'id_usuario_carga' => $idUsuario.
+               UsuarioActual.php:34-51 resuelve la identidad desde el atributo
+               de request 'usuario_autenticado_id', luego guard 'proyecto',
+               luego Auth::id(), y solo como ultimo recurso el usuario
+               administrativo activo mas bajo (:58-77).
+    Justificacion: cumple la separacion de responsabilidades del proyecto
+               (G1 autentica, G3 audita) documentada en UsuarioActual.php:11-18:
+               el id de usuario nunca se toma del body de la peticion, lo que
+               hace la auditoria no falsificable desde el cliente.
+
+--- PV02 - Consultar Informacion de Proveedores (3 SP) - MVP ---------------
+2.1 Debe permitir buscar proveedores por razon social o CUIT .............. Si
+    Evidencia: ProveedorController.php:58-87 index(); :68-73 aplica
+               where('razon_social','LIKE',"%{$search}%")->orWhere('cuit','LIKE',...).
+               GET /api/proveedores (routes/api.php:103). UI: campo
+               "Buscar por Razon Social o CUIT (PV02)" en
+               backend\public\Interfaz\proveedores.html:348, enviado en :573.
+    Justificacion: la busqueda cubre los dos campos exigidos, en una sola
+               consulta y con el operador OR correctamente agrupado en un
+               closure (:69), lo que evita el fallo clasico del OR que se
+               desborda sobre el filtro de estado.
+
+2.2 Debe mostrar los datos de contacto del proveedor ..................... Si
+    Evidencia: ProveedorController.php:42-43 -> 'telefono' => $p->telefono,
+               'correo' => $p->email. Vista de detalle en
+               backend\public\Interfaz\proveedores.html:761-778 (modal
+               "Detalle del Proveedor (PV02)").
+    Justificacion: el criterio pide mostrar los datos de contacto y la respuesta
+               los expone junto a la razon social y el CUIT. La unica omission
+               es `direccion` (ver observacion en 1.1), que no forma parte del
+               criterio literal.
+
+2.3 Debe mostrar el estado (activo/inactivo) del proveedor ................ Si
+    Evidencia: ProveedorController.php:45 -> 'estado' => $p->estado; ademas el
+               listado admite ?estado=activo|inactivo|todos (:61-77) y la UI
+               ofrece el filtro "Estado (PV02/PV04)"
+               (backend\public\Interfaz\proveedores.html:352).
+    Justificacion: el estado es un atributo persistido (borrado logico, no
+               derivado), se devuelve en listado y en detalle, y es filtrable.
+
+2.4 Debe permitir visualizar la informacion registrada del proveedor ...... Si
+    Evidencia: ProveedorController.php:92-122 show() -> GET /api/proveedores/{id}
+               (routes/api.php:103), con 404 explicito si no existe (:96-101).
+               Devuelve todos los campos de formato() mas 'productos_asociados'
+               (:106-119). UI: :761.
+    Justificacion: la ficha completa del proveedor es consultable por id y
+               agrega el detalle de las asociaciones, que es lo que necesita
+               PV05.5.
+
+--- PV03 - Editar informacion de proveedores (3 SP) - MVP ------------------
+3.1 Debe permitir modificar los datos de contacto ........................ Si
+    Evidencia: ProveedorController.php:192-257 update() -> PATCH /api/proveedores/{id}
+               (routes/api.php:103); asignacion de razon_social, cuit, telefono
+               y email en :228-235. UI: mismo modal de alta reetiquetado
+               "Editar Proveedor (PV03)" (proveedores.html:661) con metodo PATCH
+               (proveedores.html:688-691).
+    Justificacion: los cuatro datos de contacto son editables y el formulario
+               reusa el alta con el metodo HTTP correcto.
+
+3.2 Debe permitir modificar los datos comerciales del proveedor ........... Parcial
+    Evidencia: el unico dato comercial a nivel proveedor es
+               `plazo_entrega_dias` (PROVEEDOR.plazo_entrega_dias, Version
+               Corregida.sql:260). Se valida en :208 y :135 y se cambia en
+               :237-244, delegando a PlazoEntregaService::cambiarPlazo()
+               (PlazoEntregaService.php:58-90) para que quede en el historial.
+               A nivel producto-proveedor existe `precio_acordado`
+               (ProductoProveedor.php:20).
+    Justificacion - por que es Parcial y no Si, con tres brechas concretas:
+      (a) El plazo no se puede BORRAR. La guarda `$request->filled('plazo_entrega_dias')`
+          (:237) hace imposible enviar null para dejar el proveedor sin plazo
+          definido; el unico camino para "quitarlo" es el endpoint dedicado
+          PlazoEntregaController.php:31-70, que exige 'required|integer|min:0'
+          (:34). Editar un proveedor que antes tenia plazo y ahora no lo tiene
+          no es una operacion expresable.
+      (b) El precio acordado es de escritura unica. En
+          ProveedorController.php:384-387, si la asociacion ya existe y esta
+          activa, el flujo hace `continue` y devuelve el id en 'ya_asociados'
+          sin actualizar `precio_acordado`. No existe ninguna ruta para editar
+          una asociacion existente (routes/api.php:96-98 solo ofrece asociar,
+          marcar principal y desasociar). Una suba de precio acordada con el
+          proveedor es, por hoy, imposible de registrar.
+      (c) `direccion` (columna existente, Version Corregida.sql:259) no se
+          carga, no se edita y no se muestra.
+    En consecuencia, "modificar los datos comerciales" solo cubre el plazo de
+    entrega, y solo hacia adelante.
+
+3.3 Debe registrar la fecha de modificacion .............................. Si
+    Evidencia: ProveedorController.php:225 ('$now = Carbon::now()->toDateString()')
+               y :233 ('fecha_modificacion' => $now); cast en Proveedor.php:33.
+    Justificacion: se actualiza en la misma operacion que el resto de los campos,
+               incluso cuando el unico cambio real es el plazo (:237-244).
+
+3.4 Debe guardar el usuario que realizo el cambio ........................ Si
+    Evidencia: ProveedorController.php:226 (UsuarioActual::id) y :234
+               ('id_usuario_modificacion' => $idUsuario).
+    Justificacion: misma via de auditoria no falsificable que en 1.4; el campo
+               se distingue del usuario de carga, de modo que se puede saber
+               quien dio de alta y quien edito.
+
+3.5 Debe validar que no se generen proveedores duplicados ................. Si
+    Evidencia: ProveedorController.php:205 ->
+               "required|string|max:20|unique:PROVEEDOR,cuit,{$id},id_proveedor"
+               con mensaje en :212. La regla ignora el propio registro, que es
+               exactamente lo que exige el criterio al editar.
+     Justificacion: el patron de exclusion por id es correcto; se verifico que el
+               nombre de la clave primaria usado en la regla
+               (id_proveedor) coincide con Proveedor.php:12.
+
+--- PV04 - Desactivar proveedores (1 SP) - MVP -----------------------------
+4.1 Debe permitir cambiar el estado del proveedor a inactivo .............. Si
+    Evidencia: ProveedorController.php:263-296 desactivar() ->
+               PATCH /api/proveedores/{id}/desactivar (routes/api.php:93);
+               :284-289 escribe estado='inactivo'. Idempotencia en :274-279
+               (400 si ya estaba inactivo). UI: :721 con confirmacion en :719.
+    Justificacion: el cambio de estado es una operacion de primera clase con
+               endpoint propio, y no un borrado fisico: la ruta destroy esta
+               deliberadamente excluida (routes/api.php:102-103).
+
+4.2 Debe conservar el historial asociado al proveedor ..................... Si
+    Evidencia: no hay DELETE fisico en ningun punto del modulo
+               (routes/api.php:103 `->except(['destroy'])` con el comentario
+               explicito en :102). PROVEEDOR, PRODUCTO_PROVEEDOR,
+               HISTORIAL_PLAZO_PROVEEDOR, COMPRA, ORDEN_COMPRA y RECEPCION
+               declaran FK hacia PROVEEDOR con ON DELETE RESTRICT o CASCADE
+               (Version Corregida).sql:683-726).
+    Justificacion: el historial es inaccesible a un borrado porque la via de
+               borrado no existe y porque las claves foraneas lo restringen. La
+               reactivacion (ProveedorController.php:301-327) tampoco borra: solo
+               vuelve a poner estado='activo' y limpia fecha_desactivacion.
+
+4.3 Debe impedir seleccionar proveedores inactivos para nuevas operaciones  Si
+    Evidencia - el bloqueo esta en los cuatro puntos de entrada de operacion:
+      - Compras (C01):  CompraController.php:106-108
+        "No se puede crear una compra con un proveedor inactivo." (400)
+      - Ordenes de compra (PC01): OrdenCompraController.php:125-127
+        "...con un proveedor inactivo. (PV04)" (400)
+      - Ingreso de mercaderia (S03): IngresoMercaderiaController.php:68-73
+        "...con un proveedor inactivo. (PV04)" (400)
+      - Sugerencias de reposicion (PC07): GeneradorSugerenciasReposicionService.php:254-256
+      - Recepcion (C06): RecepcionController.php:51-53
+      - Asociacion de productos (PV05): ProveedorController.php:344-349
+    Adicionalmente el filtro se aplica en la capa de presentacion: las cuatro
+    pantallas que abren un selector de proveedor piden solo los activos
+    (proveedores.html:573 con ?estado=activo; compras.html:619;
+    pedido_compra.html:582; stock.html:702).
+    Justificacion: es la unica evidencia de la revision que atraviesa cinco
+    modulos distintos, y tres de los cinco mensajes citan "(PV04)" de forma
+               explicita. Es el criterio mejor cubierto del modulo.
+
+4.4 Debe registrar la fecha de desactivacion ............................. Si
+    Evidencia: ProveedorController.php:286 -> 'fecha_desactivacion' => $now;
+               se devuelve en formato() (:48) y se limpia al reactivar (:317).
+    Justificacion: se persiste la fecha efectiva del estado, no solo un flag,
+               lo que permite medir el tiempo de permanencia en cada estado.
+
+--- PV05 - Asociar productos a proveedores (5 SP) - MVP --------------------
+5.1 Debe permitir asociar uno o varios proveedores a un producto ........... Si
+    Evidencia: ProveedorController.php:333-426 asociarProductos() ->
+               POST /api/proveedores/{id}/productos (routes/api.php:96).
+               El body acepta un arreglo: 'id_productos' => 'required|array|min:1'
+               con 'id_productos.*' => 'integer|exists:PRODUCTO,id_producto' (:352-353),
+               recorrido en :378-409. La UI permite cargar varios productos en
+               el modal "Asociar Productos al Proveedor (PV05)"
+               (proveedores.html:475-500, envio en :956).
+    Justificacion: la asociacion es N:1 (N productos a 1 proveedor) en lugar de
+               1:N, pero es funcionalmente equivalente al criterio y evita N
+               peticiones. Los productos se validan uno por uno contra PRODUCTO,
+               de modo que no se puede asociar un id inexistente.
+    Observacion: el `precio_acordado` se lee una sola vez (:371) y se aplica a
+               todo el lote (:403). Con el endpoint actual no se pueden
+               registrar precios acordados distintos para distintos productos
+               de un mismo proveedor en la misma llamada. Es la causa directa
+               de la brecha 3.2(b).
+
+5.2 Debe permitir definir un proveedor principal .......................... Si
+    Evidencia: ProveedorController.php:432-464 definirPrincipal() ->
+               POST /api/proveedores/productos/{id}/principal (routes/api.php:97).
+               Dentro de una transaccion (:446-457) quita el principal a las demas
+               asociaciones activas del producto (:448-450) y marca la elegida.
+               UI: :873, y el rol se muestra en la tabla de asociados (:856).
+               Consumo real: GeneradorSugerenciasReposicionService.php:167-178
+               ordena por precio_acordado y desempata con es_proveedor_principal.
+    Justificacion: el proveedor principal no es decorativo: PC07 lo usa como
+               criterio de desempate al elegir con que proveedor reponer, lo que
+               demuestra que el dato tiene consumidor funcional.
+    Observacion: el metodo no valida que la relacion este `activo` ni que el
+               proveedor este activo. El borrado masivo de :448-450 filtra por
+               `activo = true`, asi que una asociacion inactivada puede quedar
+               marcada como principal y ningun endpoint la va a limpiar.
+
+5.3 Debe poder consultar la asociacion desde la ficha del producto ........ No
+    Evidencia - lo que existe:
+      - La relacion Eloquent SI esta declarada:
+        Producto.php:161-164 -> public function proveedores(): HasMany
+        { return $this->hasMany(ProductoProveedor::class, 'id_producto', 'id_producto'); }
+      - Pero NINGUN endpoint la expone. ProductoController::show()
+        (:165-200) construye el JSON a mano y lista id_producto, codigo,
+        descripcion, nombre, los tres precios, estado, fechas, categoria, marca,
+        stock_disponible, stock_minimo, estado_alerta e historial_precios
+        (:178-198). No hay ninguna clave de proveedores. Lo mismo ocurre en
+        ProductoController::index() (:22-66).
+      - No hay ruta del tipo /api/productos/{id}/proveedores en routes/api.php.
+      - La ficha del producto de la UI (productos.html, verFichaProducto) no
+        muestra proveedores: el unico "proveedor" en productos.html es el enlace
+        de navegacion (:608).
+    Justificacion: la relacion existe a nivel modelo pero no hay ninguna via de
+               lectura. Para cumplir el criterio hay que atravesar el proveedor
+               inverso (GET /api/proveedores/{id}, que ya devuelve
+               productos_asociados) o agregar la exposicion en el lado producto.
+               La brecha es de capa, no de datos: PRODUCTO_PROVEEDOR esta poblado.
+
+5.4 Debe conservar el historial de asociaciones ........................... No
+    Evidencia - el modelo de datos es de overwrite, no de historial:
+      - No existe ninguna tabla de historial de asociaciones. Las unicas
+        tablas del ambito son PROVEEDOR, PRODUCTO_PROVEEDOR,
+        HISTORIAL_PLAZO_PROVEEDOR e HISTORIAL_PRECIO_PROVEEDOR
+        (Revision\Diagrama Actual Grupo 3.sql:160-198 y :297-311).
+      - PRODUCTO_PROVEEDOR es una sola fila por par (producto, proveedor) y su
+        estado sealternate in-place. ProveedorController::desasociarProducto()
+        (:483-488) hace update de la MISMA fila: activo=false,
+        es_proveedor_principal=false, fecha_desasociacion=now.
+      - Al reasociar, ProveedorController.php:389-394 actualiza la misma fila y
+        BORRA la evidencia anterior: 'fecha_desasociacion' => null y
+        'fecha_asociacion' => $now. El periodo anterior de la asociacion deja
+        de existir en la base.
+      - defi nirPrincipal (:452-456) tambien pisa 'fecha_asociacion' con la
+        fecha de la marcacion, con lo que la fecha de asociacion real se
+        corrompe cada vez que se cambia el proveedor principal.
+    Justificacion: se conserva el ESTADO ACTUAL de la asociacion, no su
+               HISTORIAL. No hay forma de responder "cuando estuvo asociado este
+               producto a este proveedor ni cuando se desasocio", ni de auditar
+               una reasociacion. Es la brecha mas relevante del MVP porque el
+               criterio dice literalmente "conservar el historial de
+               asociaciones" y hoy no hay nada que conservar. Notese que el
+               criterio equivalente de PV07.4 ("conservar el historial de
+               modificaciones") SI se cumple, porque para el plazo se creo
+               HISTORIAL_PLAZO_PROVEEDOR (ver 7.4): la prueba de que el patron
+               correcto ya se aplico en este mismo modulo y solo falta replicarlo.
+
+5.5 Debe permitir consultar los productos asociados a un proveedor ........ Si
+    Evidencia: ProveedorController.php:105-119 -> 'productos_asociados' con
+               id_producto_proveedor, id_producto, codigo, descripcion,
+               es_proveedor_principal, precio_acordado y fecha_asociacion
+               (:110-118), cargando con with('productos.producto') (:94) para
+               evitar N+1. Filtra solo las asociaciones activas (:107).
+               UI: tabla "Productos Asociados (PV05)" en
+               backend\public\Interfaz\proveedores.html:444-453, render en :856.
+    Justificacion: la consulta inversa (productos de un proveedor) esta
+               resuelta y optimizada con eager loading, que es exactamente lo
+               que el criterio pide. El criterio 5.3 es el simetrico y el que
+               falta.
+
+--- PV06 - Consultar precios historicos (8 SP) - IMPORTANTE ----------------
+ADVERTENCIA: los cinco criterios de esta historia estan sin implementar en su
+totalidad. No hay Model, Service, Repository, Controller ni ruta. Se documenta
+cada uno para dejar constancia explicita del cero.
+
+6.1 Debe permitir seleccionar un proveedor ............................... No
+    Evidencia: busqueda exhaustiva sobre C:\Users\dario\Desktop\Proyecto\backend
+               de los patronos "HISTORIAL_PRECIO_PROVEEDOR" e
+               "HistorialPrecioProveedor": 0 coincidencias. La tabla existe en
+               el esquema (ACTUALIZACION\DistribuidoraPyB (Version Corregida).sql:286-298
+               y Revision\Diagrama Actual Grupo 3.sql:297-311, esta ultima con
+               las columnas precio_anterior y precio_nuevo, que encajan mejor con
+               el criterio) pero no hay ninguna clase PHP que la mapee ni la
+               escriba. No existe GET /api/proveedores/{id}/precios ni similar.
+    Justificacion: sin endpoint no hay forma de elegir un proveedor como sujeto
+               de la consulta. El selector de proveedor existe en la UI
+               (proveedores.html:348) pero no conduce a ningun reporte de precios.
+
+6.2 Debe mostrar los precios historicos de los productos suministrados .... No
+    Evidencia: `precio_acordado` se escribe una unica vez, al crear la
+               asociacion (ProveedorController.php:403), y no vuelve a
+               escribirse en ningun otro punto del backend. En la muestra por
+               proveedor solo se devuelve el valor vigente
+               (ProveedorController.php:116), que es un unico dato, no un
+               historico.
+    Justificacion: el dato que existe (precio_acordado actual) no es un
+               historico; y la fuente natural del historico
+               (DETALLE_COMPRA.precio_unitario, escrito en CompraController.php:159)
+               no se agrega ni se lee para este fin.
+
+6.3 Debe mostrar la fecha de cada actualizacion ........................... No
+    Evidencia: HISTORIAL_PRECIO_PROVEEDOR.fecha_actualizacion existe en el
+               esquema (Version Corregida.sql:294) pero ninguna clase la lee.
+               PRODUCTO_PROVEEDAR solo tiene fecha_asociacion y
+               fecha_desasociacion (ProductoProveedor.php:22-23), que son fechas
+               de la asociacion, no del precio.
+    Justificacion: sin historial escrito no hay fecha de actualizacion que
+               mostrar. Peor aun: como el precio no se puede modificar (brecha
+               3.2(b)), tampoco existe el evento que generaria la fecha.
+
+6.4 Debe permitir comparar distintos periodos ............................. No
+    Evidencia: ningun endpoint del modulo acepta un rango de fechas. El unico
+               filtro de rango de fechas del proyecto esta en Compras
+               (CompraController.php:223-228, ?desde/?hasta) y en el reporte de
+               vencimientos, ninguno belonging a Proveedores.
+    Justificacion: comparar periodos requiere (a) un historico con
+               fecha_actualizacion y (b) un endpoint con ?desde/?hasta. No hay
+               ninguna de las dos cosas en este ambito.
+
+6.5 Debe ordenar la informacion cronologicamente ......................... No
+    Evidencia: ningun ORDER BY sobre HISTORIAL_PRECIO_PROVEEDOR. La unica
+               ordenacion cronologica del modulo es la del historial de plazos
+               (HistorialPlazoProveedorRepository.php:22-24,
+               orderByDesc('fecha_cambio')->orderByDesc('id_historial_plazo')),
+               que sirve de modelo directo para PV06.
+    Justificacion: sin endpoint ni consulta, no hay nada que ordenar. El
+               criterio es trivial de cumplir una vez que exista el
+               repositorio, usando el mismo patron de HistorialPlazoProveedorRepository.
+
+--- PV07 - Registrar plazos de entrega (5 SP) - IMPORTANTE -----------------
+7.1 Debe permitir registrar un plazo de entrega para cada proveedor ........ Si
+    Evidencia: dos vias, ambas instrumentadas.
+               (a) Endpoint dedicado: PlazoEntregaController.php:31-70 store()
+                   -> POST /api/proveedores/{id}/plazo (routes/api.php:100),
+                   con validacion 'required|integer|min:0' (:34).
+               (b) En el alta: ProveedorController.php:163 escribe
+                   plazo_entrega_dias y :169-173 llama a
+                   PlazoEntregaService::registrarAlta().
+               UI: campo #provPlazo en el modal
+               (proveedores.html:420-421) y boton "Cambiar plazo (PV07)" en el
+               modal de detalle (:447), que llama al endpoint dedicado (:829).
+    Justificacion: el plazo se puede fijar en la carga y cambiar despues sin
+               pasar por la edicion general del proveedor. `min:0` impide
+               valores negativos con mensaje dedicado (:38).
+
+7.2 Debe permitir modificar el plazo registrado ........................... Si
+    Evidencia: PlazoEntregaService::cambiarPlazo() (PlazoEntregaService.php:58-90)
+               fija el valor vigente y escribe el renglon de historial dentro de
+               una misma transaccion (:71-82). Cortocircuito en :62-69: si el
+               plazo es identico, no se escribe un renglon espurio y se informa
+               'cambiado' => false.
+    Justificacion: la actualizacion del valor y su auditoria son atomicas; sin
+               la transaccion, un fallo entre ambos pasos dejaria el historial
+               desalineado con el valor vigente.
+
+7.3 Debe mostrar el plazo configurado al consultar el proveedor ............ Si
+    Evidencia: ProveedorController.php:49 -> 'plazo_entrega_dias' en formato(),
+               por lo que aparece en el listado (proveedores.html:614) y en el
+               detalle (:774). El historial expone ademas 'plazo_vigente_dias'
+               (PlazoEntregaService.php:105-107). La columna "Plazo ent." esta
+               en la tabla (proveedores.html:375).
+    Justificacion: el valor vigente se muestra tanto en la tabla como en la
+               ficha, y el reporte de historial lo confirma de forma redundante.
+
+7.4 Debe conservar el historial de modificaciones ......................... Si
+    Evidencia: tabla HISTORIAL_PLAZO_PROVEEDOR creada por la migracion
+               C:\Users\dario\Desktop\Proyecto\backend\database\migrations\2026_10_03_000002_create_historial_plazo_proveedor_table.php
+               (:30-42), con indice (id_proveedor, fecha_cambio) (:38) y FKs a
+               PROVEEDOR (ON DELETE CASCADE) y USUARIO (:40-41).
+               Modelo HistorialPlazoProveedor.php (:16-43), escritura en
+               HistorialPlazoProveedorRepository::registrar() (:10-13) y lectura
+               en listarPorProveedor() (:20-31).
+               Endpoint GET /api/proveedores/{id}/plazos (routes/api.php:101) ->
+               PlazoEntregaController.php:75-92 -> PlazoEntregaService::historial()
+               (:95-113), que devuelve plazo_anterior_dias, plazo_nuevo_dias,
+               fecha_cambio e id_usuario por renglon (:115-125).
+               UI: "Historial de plazos de entrega (PV07)"
+               (backend\public\Interfaz\proveedores.html:459-465), cargado en
+               :788-817 desde el endpoint :792.
+    Justificacion: el rastro es completo (valor anterior, valor nuevo,
+               fecha, usuario), se escribe desde los tres caminos posibles
+               (alta :46-52, cambio :75-81) y se lee ordenado del mas reciente
+               al mas antiguo (:22-24). El primer renglon de un proveedor con
+               plazo tiene plazo_anterior_dias en null, que representa
+               correctamente la transicion desde "sin plazo". Este criterio es
+               el argumento de que PV05.4 es un incumplimiento y no una
+               decision de diseno: el mismo modulo ya demostro como se hace.
+    Observacion: la migracion es la unica del proyecto que crea una tabla
+               nueva para un criterio de historial; no hay comando artisan ni
+               script que la aplique documentado, y PHP no esta instalado en
+               este entorno, por lo que no se pudo verificar con
+               `php artisan migrate:status` que la tabla exista en la base
+               activa (ver O-11).
+
+--- PV08 - Consultar estadisticas (8 SP) - FUTURO --------------------------
+ADVERTENCIA: los cinco criterios estan sin implementar. La historia esta
+marcada como "Futuro" en el PDF (historias_extract.txt:381-382), por lo que su
+impacto en el MVP es nulo, pero los 8 SP quedan sin Demonstrate.
+
+8.1 Debe mostrar el porcentaje de entregas realizadas en termino ........... No
+    Evidencia: 0 coincidencias de "estadistica|estadisticas|demora|termino"
+               en backend\app\Modules\Proveedores y en routes\api.php.
+               Ademas, el dato que permitiria calcularlo NO EXISTE en el
+               esquema: ningun modelo de orden o recepcion tiene una fecha de
+               entrega comprometida. ORDEN_COMPRA tiene fecha_creacion,
+               fecha_modificacion, fecha_envio y fecha_cancelacion
+               (Revision\Diagrama Actual Grupo 3.sql:202-214); RECEPCION tiene
+               fecha_recepcion. No hay fecha_entrega_estimada ni
+               fecha_entrega_real al lado de cada linea de detalle.
+    Justificacion: la brecha es doble. Falta la aplicacion (endpoint,
+               calculo, UI) y, sobre todo, falta el dato base. La fecha de
+               entrega solo podria inferirse como
+               orden.fecha_envio + PROVEEDOR.plazo_entrega_dias, lo cual es una
+               aproximacion defendible pero no un dato registrado, y ademas se
+               rompe en cuanto el plazo del proveedor cambia (historial que
+               PV07 si conserva).
+
+8.2 Debe mostrar demoras promedio de entrega ............................. No
+    Evidencia: ningun calculo de promedio o de dias de atraso en el codigo.
+               Para computarlo haria falta RECEPCION.fecha_recepcion contra la
+               fecha estimada, y RECEPCION es una cabecera
+               (Revision\Diagrama Actual Grupo 3.sql:262-270): el desvio real
+               de un proveedor se calcula sobre lineas (producto x cantidad),
+               no sobre recepciones completas.
+    Justificacion: requiere un agregado que hoy no existe en ninguna capa. Es
+               el criterio tecnicamente mas caro de los cinco: necesita la
+               fecha estimada, la granularidad por linea y una definicion
+               explicita de que es una "entrega" (recepcion parcial vs. total).
+
+8.3 Debe permitir consultar estadisticas por proveedor .................... No
+    Evidencia: los endpoints existentes del modulo (routes/api.php:93-103)
+               son todos de entidad unitaria (un proveedor, una relacion, un
+               historial). No hay ningun endpoint agregado ni de comparacion.
+    Justificacion: no existe la capacidad de consultar en agregado, que es el
+               nucleo de la historia.
+
+8.4 Debe permitir filtrar por periodo ..................................... No
+    Evidencia: el modulo no acepta ningun parametro de rango de fechas; los
+               unicos inputs admitidos son ?search, ?estado y ?limite
+               (ProveedorController.php:60-61, PlazoEntregaController.php:77).
+    Justificacion: sin parametros de periodo no hay forma de acotar el
+               calculo, que es lo que hace falta para que las estadisticas sean
+               interpretables.
+
+8.5 Debe mostrar indicadores comparativos entre proveedores .............. No
+    Evidencia: el patron de KPIs existe en otras pantallas
+               (proveedores.html:322-330; SugerenciasReposicionController con
+               sus endpoints dashboard-reposicion/*, routes/api.php:193-198),
+               lo que demuestra que la capacidad tecnica existe en el proyecto;
+               pero no hay nada equivalente para cumplimiento de proveedores.
+    Justificacion: es el criterio que convierte las estadisticas en una
+               herramienta de decision ("elegir los mas confiables", que es el
+               motivo declarado de la historia), y no puede construirse sin
+               8.1 a 8.4.
+
+
+3. HALLAZGOS Y OBSERVACIONES
+----------------------------------------------------------------------
+
+P-1 [ALTA] PV06 tiene el modelo de datos pagado y sin usar
+  - Ubicacion: ACTUALIZACION\DistribuidoraPyB (Version Corregida).sql:286-298
+                y Revision\Diagrama Actual Grupo 3.sql:297-311
+  - Actual: HISTORIAL_PRECIO_PROVEEDOR esta creada, con FK a PRODUCTO_PROVEEDOR,
+    PROVEEDOR, PRODUCTO, COMPRA y USUARIO, e indices por id_producto_proveedor
+    y por fecha_actualizacion. En la version mas reciente el diagrama ya la
+    disena con precio_anterior y precio_nuevo, que es lo que pide el criterio
+    "comparar aumentos". Ninguna linea de PHP la referencia (0 coincidencias en
+    todo backend\).
+  - Impacto: 5 criterios (8 SP, historia "Importante"). Es la brecha mas cara
+    del modulo en puntos de historia y la mas barata en esfuerzo, porque no
+    requiere migracion.
+  - Accion: ver A-1.
+
+P-2 [ALTA] PV05.4 no tiene historial de asociaciones, pero PV07.4 si lo tiene
+  - Ubicacion: ProveedorController.php:389-394 (reasociacion que borra
+    fecha_desasociacion) y :483-488 (desasociacion in-place);
+    :452-456 (definirPrincipal pisa fecha_asociacion).
+    Contraste: PlazoEntregaService.php:71-82 y la migracion
+    2026_10_03_000002_create_historial_plazo_proveedor_table.php:30-42.
+  - Actual: PRODUCTO_PROVEEDOR es estado actual, no historico.
+  - Impacto: 1 criterio del MVP (5 SP de historia). Se pierde la trazabilidad de
+    quien asocio o desasocio cada producto y cuando; en un ERP de compras esto
+    es insostenible ante un reclamo de precios.
+  - Accion: replicar el patron de PV07 - tabla HISTORIAL_ASOCIACION_PROVEEDOR
+    (id_producto_proveedor, id_proveedor, id_producto, accion, es_proveedor_principal,
+    precio_acordado, fecha, id_usuario) escrita en los tres metodos. Ver A-3.
+
+P-3 [ALTA] PV05.3: la relacion existe en el modelo y no se expone en ninguna capa
+  - Ubicacion: Producto.php:161-164 declara proveedores(); ProductoController.php:165-200
+    (show) y :22-66 (index) no la incluyen; no hay ruta /api/productos/{id}/proveedores.
+  - Impacto: 1 criterio del MVP. El mismo dato esta disponible desde el lado
+    proveedor (GET /api/proveedores/{id}), lo que hace la brecha mas visible
+    para quien revise la API.
+  - Accion: agregar `Proveedor::with(...)` al show() y la clave
+    `proveedores_asociados`, o una ruta dedicada. Ver A-2.
+
+P-4 [MEDIA] El precio acordado es de escritura unica (no editable)
+  - Ubicacion: ProveedorController.php:384-387 (continue sobre asociacion activa)
+    y :371 + :403 (un unico precio para todo el lote).
+  - Impacto: 1 criterio de PV03 (3.2, ya marcado Parcial) y explica por que
+    PV06.2 no puede tener datos historicos ni siquiera si se agrega el endpoint:
+    no se generan nuevas versiones de precio.
+  - Accion: PATCH /api/proveedores/productos/{id} que actualice precio_acordado,
+    es_proveedor_principal y registre el cambio. Ver A-4.
+
+P-5 [MEDIA] No se puede borrar el plazo de entrega de un proveedor
+  - Ubicacion: ProveedorController.php:237 (`$request->filled('plazo_entrega_dias')`);
+    PlazoEntregaController.php:34 ('required|integer|min:0').
+  - Impacto: 3.2 parcial. Un proveedor nuevo que aun no acordo plazo queda en
+    null, y desde ese momento no hay forma de volver a ese estado.
+  - Accion: cambiar la guarda por `$request->has(...)` y permitir null en el
+    endpoint dedicado, escribiendo un renglon de historial con plazo_nuevo_dias
+    nullable (o mover el valor a un renglon de tipo 'baja' en vez de 'cambio').
+
+P-6 [MEDIA] definirPrincipal no valida el estado de la relacion
+  - Ubicacion: ProveedorController.php:432-457
+  - Actual: el borrado masivo de :448-450 filtra `activo = true`, pero el
+    metodo marca como principal la relacion que se le pase, sin exigir que esa
+    relacion siga activa ni que su proveedor este activo.
+  - Impacto: una asociacion desasociada puede quedar como proveedor principal y
+    ninguna operacion posterior la limpia; GeneradorSugerenciasReposicionService.php:172
+    filtra por activo=true, con lo que el dato queda inconsistente en silencio.
+  - Accion: rechazar con 400 si !$relacion->activo o si el proveedor no esta
+    activo, y volver a evaluates la unicidad del principal.
+
+P-7 [MEDIA] El unico filtro de duplicados es el CUIT, sin normalizar
+  - Ubicacion: ProveedorController.php:132, :156-157, :205, :229-230
+  - Actual: se aplica trim() pero no se valida el formato (11 digitos con digito
+    verificador) ni se normaliza a mayusculas/guiones. "30-12345678-9" y
+    "30123456789" son el mismo proveedor y el UNIQUE de columna no los detecta.
+  - Impacto: riesgo de duplicados reales en la carga, y riesgo de defensa si se
+    pregunta por la validacion de CUIT.
+  - Accion: normalizar a 11 digitos numericos antes de validar y persistir, y
+    agregar una regla regex de 11 digitos con mensaje propio.
+
+P-8 [MEDIA] DefinirPrincipal y actualizarPlazo devuelven 201 sin cambios
+  - Ubicacion: PlazoEntregaController.php:57-61 devuelve 201 aunque
+    PlazoEntregaService.php:62-69 haya respondido 'cambiado' => false.
+  - Impacto: cosmetico, pero ensucia los logs y cualquier cliente que
+    interprete 201 como "hubo escritura".
+  - Accion: devolver 200 cuando $resultado['cambiado'] es false.
+
+P-9 [BAJA] La recepcion se bloquea si el proveedor esta inactivo
+  - Ubicacion: Compras\Controllers\RecepcionController.php:51-53
+  - Actual: no se puede registrar una recepcion (C06) sobre una compra ya
+    cargada si el proveedor fue desactivado entre la compra y la entrega.
+  - Impacto: contradice el spiritu de PV04.2 ("conservar el historial sin
+    permitir nuevas compras"): la compra ya es un hecho consumado y bloquear
+    su cierre deja el stock descuadrado frente a la mercaderia que si llego.
+  - Accion: permitir la recepcion de compras ya registradas y reservar el
+    bloqueo de inactivos para crear compra (C01) y orden (PC01), que es donde
+    el criterio "nuevas operaciones" si tiene sentido.
+
+P-10 [BAJA] Dos copias divergentes de la Interfaz de proveedores
+  - Ubicacion: C:\Users\dario\Desktop\Proyecto\Interfaz\proveedores.html
+    (842 lineas, hash C586D2F7126571DEAFE970A23C5982ED4310839A25FC6AA557706D6AD96BED9E)
+    vs C:\Users\dario\Desktop\Proyecto\backend\public\Interfaz\proveedores.html
+    (914 lineas, hash 7910B73C72D69670F79129411C9401B00EDECFE62AEFD82583D5DA575012D8C7)
+  - Actual: la copia servida tiene la seccion "Historial de plazos de entrega
+    (PV07)" (:459-465) y el boton "Cambiar plazo (PV07)" (:447); la copia de la
+    raiz NO los tiene (solo el campo #provPlazo en el modal). El mismo
+    desfasaje ya fue registrado para stock/productos/compras/pedido_compra en
+    consideraciones_stock.txt O-10.
+  - Impacto: si se revisa o se demuestra la copia de la raiz, PV07.4 aparenta
+    no estar implementado en la interfaz, y cualquier correccion aplicada al
+    archivo equivocado no se vera en la aplicacion.
+  - Accion: dejar una sola fuente de verdad en backend\public\Interfaz o
+    agregar un paso de copia al build, y eliminar el arbol duplicado de la raiz.
+
+P-11 [POR VERIFICAR] Deriva de nombres de tabla/columna entre esquemas
+  - Ubicacion: Revision\Diagrama Actual Grupo 3.sql:175 define
+    HISTORIAL_PLAZO_ENTREGA (id_historial_plazo, plazo_anterior, plazo_nuevo,
+    fecha_cambio DATE); la migracion 2026_10_03_000002 y
+    HistorialPlazoProveedor.php:18 usan HISTORIAL_PLAZO_PROVEEDOR
+    (plazo_anterior_dias, plazo_nuevo_dias, fecha_cambio DATETIME).
+    En el mismo diagrama PROVEEDOR usa la columna `correo` (:165) mientras que
+    Proveedor.php:19 y ACTUALIZACION\...(Version Corregida).sql:257 usan `email`.
+  - Impacto: si la base activa responde al diagrama de Review y no a la version
+    de ACTUALIZACION, PV07.4 (7 criterios visualizados en la UI) falla en
+    runtime con un error de tabla/columna inexistente. Es el unico punto del
+    modulo donde una discrepancia de esquema puede romper una historia que hoy
+    figura como cumplida.
+  - Accion: verificar contra la base activa SHOW CREATE TABLE PROVEEDOR y
+    SHOW CREATE TABLE HISTORIAL_PLAZO_PROVEEDOR, y alinear una sola definicion.
+    No se pudo ejecutar artisan (PHP no instalado en este entorno).
+
+P-12 [BAJA] La cabecera de la UI declara el alcance real del modulo
+  - Ubicacion: backend\public\Interfaz\proveedores.html:306
+    "PV01 a PV05: Alta, Consulta, Edicion, Desactivacion y Asociacion de Productos"
+  - Actual: la propia interfaz reconoce que no cubre PV06 ni PV08, y el titulo
+    ni siquiera menciona PV07 pese a que la pagina si lo implementa.
+  - Impacto: bajo en lo tecnico, alto en lo queyerico: es la primera linea que
+    se lee al abrir la pantalla y hoy describe mal el alcance (omite PV07,
+    expone la ausencia de PV06/PV08).
+  - Accion: actualizar el subtitulo a "PV01 a PV05 y PV07" mientras PV06 y
+    PV08 no se implementen.
+
+P-13 [BAJA] Un unico metodo sin consumidor (a diferencia de Stock, que tiene
+    varios; ver consideraciones_stock.txt O-12)
+  - Verificado: los 9 metodos de ProveedorController (index, show, store, update,
+    desactivar, activar, asociarProductos, definirPrincipal, desasociarProducto),
+    los 2 de PlazoEntregaController (store, index) y los 3 de PlazoEntregaService
+    (registrarAlta, cambiarPlazo, historial) estan enrutados y consumidos por la
+    UI. Los unicos metodos sin consumidor son Proveedor::historialPlazos()
+    (Proveedor.php:49-54) y Proveedor::ultimoPlazoRegistrado() (:57-60), que
+    quedan eclipsados por las consultas directas del repository.
+  - Accion: usar Proveedor::historialPlazos() en el reporte de plazos (con
+    with()) o eliminar ambos metodos.
+
+
+4. MATRIZ DE RUTAS DEL MODULO PROVEEDORES (routes\api.php:90-103)
+----------------------------------------------------------------------
+
+PATCH  /api/proveedores/{id}/desactivar          PV04          ProveedorController@desactivar
+PATCH  /api/proveedores/{id}/activar             PV04 (extra)  ProveedorController@activar
+POST   /api/proveedores/{id}/productos           PV05.1        ProveedorController@asociarProductos
+POST   /api/proveedores/productos/{id}/principal PV05.2        ProveedorController@definirPrincipal
+DELETE /api/proveedores/productos/{id}           PV05 (extra)  ProveedorController@desasociarProducto
+POST   /api/proveedores/{id}/plazo               PV07.1/7.2    PlazoEntregaController@store
+GET    /api/proveedores/{id}/plazos              PV07.4        PlazoEntregaController@index
+GET    /api/proveedores                          PV02.1-2.3    ProveedorController@index
+POST   /api/proveedores                          PV01          ProveedorController@store
+GET    /api/proveedores/{id}                     PV02.4/PV05.5 ProveedorController@show
+PUT|PATCH /api/proveedores/{id}                  PV03          ProveedorController@update
+(sin destroy, deliberado)                        PV04.2        routes/api.php:102-103
+(sin rutas)                                      PV05.3        falta exposicion en productos
+(sin rutas)                                      PV05.4        falta tabla de historial
+(sin rutas)                                      PV06.1-6.5    HistorialPrecioProveedor inexistente
+(sin rutas)                                      PV08.1-8.5    EstadisticasProveedor inexistente
+
+Endpoints en otros modulos que SODISENAN el cumplimiento de PV04.3:
+POST   /api/compras                      C01    CompraController.php:106-108
+PATCH  /api/ordenes-compra/{id}          PC01   OrdenCompraController.php:125-127
+POST   /api/stock/ingresos               S03    IngresoMercaderiaController.php:68-73
+POST   /api/compras/{id}/recepciones     C06    RecepcionController.php:51-53 (ver P-9)
+POST   /api/sugerencias-reposicion/{id}/generar-orden  PC07
+                                              GeneradorSugerenciasReposicionService.php:254-256
+
+Coherencia del anuncio de API: el listado de endpoints de routes/api.php:47-57
+publica las 9 rutas de proveedores y no anuncia ninguna de PV06/PV08, de modo
+que la documentacion de la API es coherente con lo implementado. No hay endpoint
+anunciado que no exista, ni endpoint de proveedores sin anunciar.
+
+
+5. ACCIONES PARA CUMPLIR ESTRICTAMENTE
+----------------------------------------------------------------------
+Priorizadas por relacion (criterios recuperados) / esfuerzo. El orden 1-5 lleva
+el modulo de 23/36 (63,9%) a 33/36 (91,7%) en forma literal.
+
+A-1 [PRIORIDAD MAXIMA] Implementar PV06 completo (5 criterios, 8 SP)
+    Sin migracion: la tabla HISTORIAL_PRECIO_PROVEEDOR ya existe (P-1).
+    a) Model  C:\...\backend\app\Modules\Proveedores\Models\HistorialPrecioProveedor.php
+       -> $table = 'HISTORIAL_PRECIO_PROVEEDOR'; $primaryKey = 'id_historial_prov';
+          casts decimal:2 en precio_anterior/precio_nuevo y datetime en
+          fecha_actualizacion; relaciones producto(), proveedor(), productoProveedor().
+    b) Repository HistorialPrecioProveedorRepository con registrar() y
+       listarPorProveedor($idProveedor, $idProducto = null, $desde, $hasta) usando
+       el MISMO patron de orden cronologico de
+       HistorialPlazoProveedorRepository.php:22-24 (cubre 6.5).
+    c) Service PrecioHistoricoProveedorService::registrarPrecio() y ::consultar().
+       En consultar(), agrupar por producto y calcular la variacion porcentual
+       entre renglones consecutivos para que "comparar aumentos" (motivo de la
+       historia) sea visible; si se pasan $desde/$hasta, cambiar de "todos los
+       renglones" a "el ultimo renglon anterior al inicio del periodo mas los
+       del periodo", que es la unica forma de que la comparacion sea correcta
+       (cubre 6.4).
+    d) Controller PrecioProveedorController@index -> GET /api/proveedores/{id}/precios
+       con ?producto_id, ?desde, ?hasta, devuelve ademas el precio vigente de
+       PRODUCTO_PROVEEDOR.precio_acordado como primer punto de la serie
+       (cubre 6.1, 6.2, 6.3).
+    e) Rutas en routes/api.php, dentro del bloque de proveedores (lineas 90-103):
+       Route::get('proveedores/{proveedor}/precios', [PrecioProveedorController::class, 'index']);
+    f) Puntos de escritura del historial (sin esto 6.3 no tiene datos):
+       - ProveedorController::asociarProductos, al crear la asociacion
+         (despues de la linea 403) y al cambiar el precio (ver A-4).
+       - Nuevo metodo actualizar() de la asociacion (A-4).
+       - Opcionalmente, CompraController::store (:153-161) y
+         PedidosDeCompra\OrdenCompraController al crear la orden, para que el
+         precio efectivamente pagado por el proveedor tambien quede historizado
+         (la tabla ya tiene id_compra para eso).
+    g) UI: una pestana "Precios historicos (PV06)" en el modal de detalle
+       (proveedores.html:437-473), con los dos campos de periodo y la tabla
+       producto / precio anterior / precio nuevo / variacion % / fecha.
+
+A-2 [PRIORIDAD ALTA] Exponer las asociaciones en la ficha del producto (PV05.3)
+    Producto.php:161-164 ya declara la relacion; falta la exposicion.
+    a) ProductoController.php:167 -> Producto::with(['categoria','marca','historialPrecios','proveedores.proveedor'])
+    b) En el array de show() (:178-198) agregar la clave 'proveedores_asociados'
+       con id_proveedor, razon_social, cuit, es_proveedor_principal,
+       precio_acordado, fecha_asociacion y el estado del proveedor, replicando
+       el formato de ProveedorController::formato() (:39-52) para no duplicar reglas.
+    c) Alternativa equivalente y de menor riesgo: ruta explicita
+       Route::get('productos/{id}/proveedores', [ProveedorController::class, 'productosPorProducto']);
+       asi no se toca el contrato de GET /api/productos/{id}, que consume productos.html.
+    d) UI: bloque "Proveedores asociados (PV05)" dentro de la ficha de
+       productos.html (funcion verFichaProducto, ~linea 1165).
+
+A-3 [PRIORIDAD ALTA] Historial de asociaciones (PV05.4)
+    a) Migracion create_historial_asociacion_proveedor_table replicando la de
+       2026_10_03_000002: id_producto_proveedor, id_proveedor, id_producto,
+       accion ENUM('asociacion','reasociacion','desasociacion','principal'),
+       es_proveedor_principal TINYINT, precio_acordado DECIMAL(12,2) NULL,
+       fecha_cambio DATETIME useCurrent, id_usuario INT, con FK e indice
+       (id_proveedor, fecha_cambio).
+    b) Escribir un renglon en los TRES metodos:
+       ProveedorController::asociarProductos (creacion :399-408 y
+       reasociacion :389-394), ::definirPrincipal (:452-456) y
+       ::desasociarProducto (:483-488).
+    c) Corregir de paso el overwrite de fecha_asociacion en :392 y :454: al
+       reasociar o al marcar principal, la fecha de asociacion original debe
+      conservarse (es dato del periodo), no la fecha de la ultima operacion.
+    d) Endpoint GET /api/proveedores/{id}/asociaciones/historial y
+       GET /api/proveedores/productos/{id}/historial, ambos paginados.
+    e) Con A-3, cambiar el borrado in-place de :483-488 por una baja logica que
+       ya no pierde informacion, aunque la fila siga actualizandose.
+
+A-4 [PRIORIDAD MEDIA] Cerrar PV03.2 en forma literal (1 criterio a Si)
+    a) Nuevo metodo actualizar() en ProveedorController + ruta
+       PATCH /api/proveedores/productos/{id}, que actualice precio_acordado y/o
+       es_proveedor_principal de una asociacion existente, valide que el
+       proveedor este activo y registre el cambio en HISTORIAL_PRECIO_PROVEEDOR
+       (A-1) y en HISTORIAL_ASOCIACION_PROVEEDOR (A-3). Esto elimina el
+       `continue` de :384-387 y cierra P-4.
+    b) En asociarProductos (:371), aceptar el precio por producto
+       (id_precio_por_producto: {id_producto: precio}) manteniendo el
+       precio_acordado global como atajo retrocompatible.
+    c) Cambiar $request->filled('plazo_entrega_dias') (:237) por
+       $request->has('plazo_entrega_dias') para poder dejar el plazo en null
+       (cierra P-5), en conjunto con el ajuste del formulario que hoy impide
+       enviar el campo vacio (proveedores.html:686 solo lo agrega si no esta vacio).
+    d) Incorporar `direccion` a $fillable (Proveedor.php:15-27), a formato()
+       (:39-52), al validator de store/update y al formulario
+       proveedores.html:393-431 / 397-421.
+
+A-5 [PRIORIDAD MEDIA] Implementar PV08 (5 criterios, 8 SP, fuera del MVP)
+    Requiere una decision de diseno previa, no solo codigo.
+    a) Definir y persistir la fecha de entrega comprometida. Opcion recomendada
+       sin migracion: fecha_estimada = ORDEN_COMPRA.fecha_envio +
+       PROVEEDOR.plazo_entrega_dias, tomando el plazo vigente en la fecha de
+       envio (HISTORIAL_PLAZO_PROVEEDOR, que PV07 ya conserva, permite
+       reconstruir el plazo de ese momento - otro argumento a favor de PV07.4).
+       Opcion recomendada si hay tiempo: agregar
+       ORDEN_COMPRA.fecha_entrega_estimada NOT NULL, y usar el desvio por linea
+       de DETALLE_COMPRA (cantidad_recibida vs cantidad) para el calculo real.
+    b) Definir "entrega en termino" de forma operativa: usar la RECEPCION que
+       completa la orden (cantidad_recibida == cantidad en los DETALLE_COMPRA),
+       no la compra ni la orden.
+    c) Service EstadisticasProveedorService::porProveedor($id, $desde, $hasta)
+       con: total_entregas, entregas_en_termino, porcentaje_en_termino (8.1),
+       demora_promedio_dias (8.2), y porProveedor($desde, $hasta) que devuelve
+       el mismo conjunto para todos (8.3) mas ranking/percentiles (8.5).
+    d) Controller EstadisticasProveedorController con dos rutas:
+       GET /api/proveedores/estadisticas?desde&hasta  (comparativa, 8.5)
+       GET /api/proveedores/{id}/estadisticas?desde&hasta  (individual, 8.3/8.4)
+    e) UI: pestana "Cumplimiento (PV08)" en el modal de detalle con los filtros
+       de periodo y una tabla comparativa entre proveedores.
+    Nota: el patron de KPIs y de endpoints dashboard-* ya existe en
+    PedidosDeCompra (routes/api.php:193-198), con lo que el 80% de la capa de
+    presentacion es reutilizable.
+
+A-6 [PRIORIDAD MEDIA, baixo esfuerzo] Exponer `direccion` y corregir la cabecera
+    a) Anadir `direccion` al SELECT y al formulario (ver A-4d).
+    b) Corregir el subtitulo de backend\public\Interfaz\proveedores.html:306 a
+       "PV01 a PV05 y PV07" (cierra P-12).
+    c) Corregir `estado` por defecto del listado de proveedores: hoy sin
+       ?estado devuelve activos e inactivos mezclados, lo que es correcto para
+       un administrador, pero la UI de Compras/Ordenes/Stock ya lo resuelve
+       pasando ?estado=activo; documentarlo en el contrato de la API evita que
+       un consumidor nuevo exponga inactivos por omision.
+
+A-7 [PRIORIDAD BAJA] Coherencia de datos y robustez
+    a) Normalizar y validar el CUIT (P-7).
+    b) Exigir relacion activa y proveedor activo en definirPrincipal (P-6).
+    c) Devolver 200 en vez de 201 cuando el plazo no cambia (P-8).
+    d) Permitir la recepcion de compras ya registradas aunque el proveedor este
+       inactivo (P-9).
+    e) Unificar el arbol de Interfaz: una sola copia en
+       backend\public\Interfaz (P-10).
+    f) Verificar contra la base activa que existan HISTORIAL_PLAZO_PROVEEDOR y
+       la columna `email` (P-11), o alinear la migracion con el diagrama de
+       Revision.
+    g) Eliminar o usar Proveedor::historialPlazos() / ultimoPlazoRegistrado()
+       (P-13).
+
+A-8 [TRANSVERSAL] Pruebas automatizadas
+    La carpeta C:\Users\dario\Desktop\Proyecto\backend\tests contiene solo
+    TestCase.php y dos ExampleTest.php: el modulo no tiene ninguna prueba. Para
+    sostener los criterios de auditoria (1.4, 3.4, 4.4, 7.4) y los bloqueos
+    (4.3), que son los mas fragiles ante un refactor, el minimo es:
+      - PV01: dos POST con el mismo CUIT -> el segundo devuelve 400.
+      - PV02: ?search=<razon social> y ?search=<CUIT devuelven el mismo registro.
+      - PV03: PATCH con el CUIT de otro -> 400; PATCH propio -> 200.
+      - PV04: PATCH desactivar sobre proveedor con compras -> las compras siguen
+        legibles; POST /api/compras con ese id -> 400.
+      - PV05: POST asociar dos veces el mismo producto -> la segunda responde
+        201 con 'ya_asociados' y no duplica la fila.
+      - PV06: Given un alta y dos cambios de precio, el endpoint devuelve 3
+        renglones ordenados y ?desde/?hasta recorta la serie.
+      - PV07: tres cambios de plazo -> GET /plazos devuelve 3 renglones con
+        plazo_anterior encadenado, y el ultimo coincide con el plazo vigente.
+
+
+6. CONCLUSIONES
+-----------------------------------------------------------------------
+1) Cumplimiento global: 23 de 36 criterios en forma literal (63,9%), 1 parcial
+   (2,8%) y 12 no cumplidos (33,3%). Por historia: 4 de 8 integras (PV01, PV02,
+   PV04 y PV07), 2 parciales (PV03 y PV05, con un unico criterio fallado cada
+   una) y 2 sin implementar (PV06 y PV08). Conteo verificado sobre el archivo:
+   23 Si + 1 Parcial + 12 No = 36.
+
+2) El MVP esta en muy buen estado: 19 de 22 criterios en forma literal
+   (86,4%). PV01, PV02 y PV04 estan integras dentro del MVP, y las dos historias
+   con deficit (PV03 y PV05) fallan por un solo criterio cada una.
+
+3) La especificacion mas fuerte del modulo es PV04.3: es el unico criterio
+   cuya evidencia atraviesa cinco modulos (Compras, Ordenes de Compra, Stock
+   Ingreso, Recepciones y Sugerencias de Reposicion) y tres de los cinco
+   mensajes de error citan "(PV04)" de forma explicita. Ese patron de
+   "bloquear el inactivo en cada punto de entrada" conviene defenderlo y
+   extenderlo, no refactorizarlo.
+
+4) Brecha estructural principal: PV05.4. PRODUCTO_PROVEEDOR es una foto del
+   estado actual y se pisa in-place en cada cambio; la reasociacion borra
+   explicitamente la evidencia previa (ProveedorController.php:389-394). El
+   criterio pide "conservar el historial de asociaciones" y no hay nada que
+   conservar. El argumento de peso para cerrarlo es que el mismo modulo ya
+   resolvio el mismo problema para PV07.4 creando HISTORIAL_PLAZO_PROVEEDOR:
+   la brecha es de implementacion, no de diseno, y el patron a replicar esta
+   a menos de veinte lineas de distancia.
+
+5) Brecha de exposicion principal: PV05.3. La relacion Producto::proveedores()
+   ya esta declarada en Producto.php:161-164 y no hay ninguna capa que la
+   exponga. Es el criterio mas barato de todo el modulo de cerrar.
+
+6) Brecha de alcance principal: PV06 (8 SP, "Importante"). Cinco criterios en
+   cero y, sobre todo, una tabla HISTORIAL_PRECIO_PROVEEDOR ya creada, con FKs
+   e indices, que ninguna linea del backend referencia. Es la maxima
+   relacion esfuerzo/beneficio del trabajo: sin migracion, con el modelo de
+   datos ya pagado y con un patron de repositorioHistorialPlazoProveedor
+   para copiar literalmente.
+
+7) PV08 esta doblemente bloqueada: falta la aplicacion y, sobre todo, falta el
+   dato. No existe fecha de entrega comprometida en ningun modelo, de modo que
+   "% de entregas en termino" y "demora promedio" no son calculables con el
+   esquema actual sin antes definir una convencion de estimacion. Es coherente
+   con que la historia este marcada "Futuro" en el PDF (linea 381).
+
+8) Dependencias declaradas en el backlog: PV02, PV03, PV04, PV05(parte),
+   PV07 dependen de PV01, que esta cumplida; PV05 depende ademas de P01, que
+   esta cumplida (asociarProductos valida exists:PRODUCTO,
+   ProveedorController.php:353). PV06 depende de PV05 (parcial, por 5.3 y 5.4)
+   y C01 (cumplida: CompraController::store escribe DETALLE_COMPRA.precio_unitario
+   en :159, que es la fuente natural del historico). PV08 depende de PV07
+   (cumplida) y C06 (cumplida). No hay dependencias rotas: hay historias
+   ausentes.
+
+9) Esfuerzo para maximization del cumplimiento literal, en este orden:
+   - A-2 (ficha del producto): ~20 lineas -> +1 criterio (5.3). El mas barato.
+   - A-1 (PV06 completo): ~200 lineas sin migracion -> +5 criterios (6.1-6.5).
+   - A-3 (historial de asociaciones): 1 migracion + ~40 lineas -> +1 criterio (5.4).
+   - A-4 (precio acordado editable, plazo borrable, direccion): ~40 lineas
+     -> +1 criterio (3.2 pasa de Parcial a Si).
+    Con A-1 + A-2 + A-3 + A-4 el modulo pasa de 23 a 31 criterios en forma
+    literal (86,1%) sin tocar PV08: las 6 historias del MVP y de las "Importantes"
+    (PV01-PV07) quedan integras.
+    - A-5 (PV08) agrega los 5 criterios restantes (86,1% -> 100% de 36) pero
+      exige la decision de diseno de A-5a, que conviene tomar antes de codificar.
+
+10) Nota sobre verificacion: la revision es documental y estatica (lectura de
+    codigo y de esquema). No se pudo ejecutar `php artisan route:list`,
+    `php artisan migrate:status` ni pruebas de endpoints porque PHP no esta
+    instalado en este entorno (verificado: `php -v` -> comando no reconocido).
+    Los dos puntos que requieren confirmacion en caliente son P-11 (nombre real
+    de la tabla del historial de plazos y de la columna del correo en la base
+    activa) y la aplicacion efectiva de la migracion
+    2026_10_03_000002. Todo lo demas surge de la correspondencia literal entre
+    el texto del PDF y el codigo.
+=======================================================================

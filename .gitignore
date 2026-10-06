@@ -20,7 +20,8 @@ node_modules/
 
 # Respaldos y material de trabajo que no va al repo
 BD_legacy/
-ERP-Juan23-feature-g3-*/vendor/
+ERP-Juan23-feature-g3-*/
+ACTUALIZACION/
 Contexto G2/
 Revision/
 BD/archivo/
@@ -28,6 +29,10 @@ Interfaz/server.log.err
 backend/server.log.err
 entrevista_extraida.txt
 historias_usuario_extraidas.txt
+historias_extract.txt
+Documentacion/historias_extract.txt
+*_BACKUP.*
+*.broken
 
 # Editor / IDE
 .vscode/

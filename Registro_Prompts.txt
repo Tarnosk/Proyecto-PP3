@@ -401,3 +401,172 @@ Accion realizada:
   columna id_unidad del UPDATE de STOCK (no existia en el esquema). Datos de prueba generados en la BD
   de desarrollo (productos MVP-*, proveedor MVP, compras/ordenes de test).
 ======================================================================
+
+[Prompt #22]
+Fecha/Hora: 2026-09-10 19:03
+Prompt:
+"Haremos un ejercicio de Diseño, revisa la carpeta nueva revision, en las anotaciones de base de datos tienes la devolucion del profesor. El resto de archivos sirven al analisis, se hizo un diagrama general para el proyecto pero para el grupo 3 era pequeño, por lo que se ideo un diagrama aparte desconectado de los demas grupos. Hay que revisar si el diagrama planteado es correcto."
+Acción realizada:
+- Lectura y análisis exhaustivo de todos los archivos de la carpeta 'Revision/':
+  * Anotaciones Base de Datos.txt (4 observaciones críticas del profesor sobre HISTORIAL_PRECIO, MOVIMIENTO_STOCK, STOCK y Auditoría).
+  * Diagrama Actual Grupo 3.sql (DER específico de 18 tablas).
+  * Diagrama Actual del Proyecto General.sql (DER unificado entre grupos).
+  * Diagrama Antiguo.sql (DER histórico de referencia).
+  * Endpoints pedidos.xlsx (Matriz de interfaces y endpoints entre G1, G2, G3 y G4).
+  * Historias de Usuario.pdf (Requisitos formales P01-P08, S01-S16, PV01-PV08, C01-C09, PC01-PC07).
+  * Entrevista al Cliente (Parcial).docx (Relevamiento operativo real con Diego, Alma y Matías).
+- Elaboración de un análisis crítico que responde a las 4 preguntas del docente, justifica la necesidad de MOVIMIENTO_STOCK ante devoluciones/mermas/conteos, evalúa la pertinencia de la desconexión del Grupo 3 y detecta discrepancias con el proyecto general (ej. precio mayorista/minorista).
+
+----------------------------------------------------------------------
+
+[Prompt #23]
+Fecha/Hora: 2026-09-10 19:16
+Prompt:
+"Puedes poner todo lo que dijiste recien dentro de un archivo de lectura?"
+Acción realizada:
+- Creación del documento formal 'Documentacion/Informe_Revision_Diseno_BD.md' estructurado con:
+  1. Introducción y contexto del problema del Grupo 3.
+  2. Análisis pormenorizado y justificación técnica de las 4 observaciones del docente (HISTORIAL_PRECIO, MOVIMIENTO_STOCK, STOCK vs. PRODUCTO, LOG_AUDITORIA).
+  3. Evaluación de la desconexión del Grupo 3 respecto a los demás grupos (autonomía en DB + contratos por API REST) y discrepancias identificadas.
+  4. Dictamen final y plan de acción para el nuevo script SQL corregido.
+- Sincronización del registro histórico de prompts.
+
+----------------------------------------------------------------------
+
+[Prompt #24]
+Fecha/Hora: 2026-09-10 19:59
+Prompt:
+"Le pedi a OpenCode que haga el mismo ejercicio e hizo su propia revision, dime que aciertos o discrepencias tienes con el."
+Acción realizada:
+- Lectura de 'Revision/Dictamen_Revision_Diseno_BD_Grupo3_OpenCode.md'.
+- Comparación sistemática de ambas revisiones:
+  * Aciertos compartidos (consenso en el 95%): normalización de HISTORIAL_PRECIO (LAG), defensa estricta de MOVIMIENTO_STOCK (Kárdex y mermas), creación de LOG_AUDITORIA centralizada.
+  * Discrepancias constructivas: análisis de multidepósito para STOCK vs. mono-depósito, e identificación del doble precio (mayorista/minorista) omitido por OpenCode.
+  * Clarificación metodológica sobre la diferencia entre fase de diseño/diagnóstico y fase de modificación de BD real.
+
+----------------------------------------------------------------------
+
+[Prompt #25]
+Fecha/Hora: 2026-09-10 20:03
+Prompt:
+"Tus conclusiones son acertadas, pero lo que hay que hacer es fusionar nuestras tablas propias de nuestro grupo con las de la base de datos general."
+Acción realizada:
+- Análisis de integración y mapeo completo entre 'Diagrama Actual del Proyecto General.sql' y 'Diagrama Actual Grupo 3.sql'.
+- Elaboración del documento 'Documentacion/Plan_Fusion_Base_Datos_General.md' con matriz de correspondencias y justificaciones.
+- Creación del script SQL integrado 'BD/distribuidora_erp_fusionada.sql' (28 tablas en total).
+
+----------------------------------------------------------------------
+
+[Prompt #26]
+Fecha/Hora: 2026-09-11 17:22
+Prompt:
+"Solo se debe editar las del grupo 3, no las de los demas grupos (salvo que sea para enlazar alguna fk a nuestro grupo)"
+Acción realizada:
+- Refactorización estricta del script 'BD/distribuidora_erp_fusionada.sql':
+  * Se restauraron al 100% las definiciones originales exactas de las tablas de los otros grupos según 'Diagrama Actual del Proyecto General.sql':
+    - G1: ZONA, CLIENTE (cuit_cuil->CUIL, campos exactos), USUARIO (id_usuario, user, password, rol, estado).
+    - G4: PROMOCION, VENTA, DETALLE_VENTA, PROMOCION_PRODUCTO.
+    - G2: ENTREGA, ENTREGA_PEDIDO.
+  * Se mantuvieron y enriquecieron EXCLUSIVAMENTE las tablas pertenecientes al Grupo 3:
+    - CATEGORIA, MARCA, PRODUCTO, HISTORIAL_PRECIO, UNIDAD_MEDIDA, MOVIMIENTO_STOCK, LOTE, UBICACION, PRODUCTO_UBICACION, SESION_CONTEO, DETALLE_CONTEO, PROVEEDOR, PRODUCTO_PROVEEDOR, ORDEN_COMPRA, DETALLE_ORDEN, COMPRA, DETALLE_COMPRA, RECEPCION, DETALLE_RECEPCION, PAGO_PROVEEDOR, HISTORIAL_PRECIO_PROVEEDOR, LOG_AUDITORIA.
+  * Enlaces FK rigurosos:
+    - Las tablas de otros grupos solo se tocan para enlazar sus FKs a PRODUCTO (DETALLE_VENTA.id_producto y PROMOCION_PRODUCTO.id_producto).
+    - Las FKs del Grupo 3 que referencian a otros grupos apuntan limpiamente a USUARIO(id_usuario), VENTA(id_venta) y ENTREGA(id_entrega).
+
+----------------------------------------------------------------------
+
+[Prompt #27]
+Fecha/Hora: 2026-09-11 17:53
+Prompt:
+"Tengo que hacer un issue en Github, como resumirias los cambios que ha implementado el grupo 3 a la base de datos?"
+Acción realizada:
+- Redacción de una plantilla profesional de Issue para GitHub en Markdown.
+
+----------------------------------------------------------------------
+
+[Prompt #28]
+Fecha/Hora: 2026-09-11 17:55
+Prompt:
+"En verdad el Issue existe, tengo que hacer un comentario con las tablas que fueron añadidas."
+Acción realizada:
+- Redacción de un comentario conciso y estructurado para responder directamente en el Issue existente de GitHub:
+  * Resumen del alcance (no se tocan tablas de otros grupos).
+  * Lista detallada de las 13 tablas nuevas añadidas por el Grupo 3 clasificadas por subdominio (Stock/Almacén, Compras/Proveedores, Auditoría) indicando propósito y justificación (HUs / Devolución del docente).
+  * Breve mención de las tablas ya existentes en el general que fueron ajustadas (PRODUCTO y HISTORIAL_PRECIO).
+  * Detalle de las FKs de vinculación hacia USUARIO (G1), VENTA (G4) y ENTREGA (G2).
+
+----------------------------------------------------------------------
+
+[Prompt #29]
+Fecha/Hora: 2026-09-18 18:06
+Prompt:
+"En la carpeta documentacion hay un txt que se llama "Issues Realizadas" la cual contienen las issues que tenian que quedar hechas para esta fecha. Tambien hay una planilla de excel llamada "Organizacion Grupo 3" que debe contener el seguimiento de la realizacion de dichas Issues. No llegamos a llenar la planilla en su momento, como la llenariamos si los 6 integrantes trabajamos juntos en lo que comprende el CRUD y luego nos dividimos las issues que se prestaban para ello?"
+Acción realizada:
+- Análisis de 'Issues Realizadas.txt' (9 issues en Sprint 1 y 12 issues en Sprint 2) y de la estructura de 'Organizacion Grupo 3.xlsx' (hojas 'Registro Detallado' y 'Resumen por Issue').
+- Propuesta estratégica de distribución de trabajo: trabajo grupal en conjunto (los 6 integrantes en Mob Programming) para el CRUD base de Productos en Sprint 1 y división por sub-equipos especializados (Stock y Proveedores) en Sprint 2.
+
+----------------------------------------------------------------------
+
+[Prompt #30]
+Fecha/Hora: 2026-09-18 18:12
+Prompt:
+"Usemos estas metricas:
+1 SP: 10 minutos
+3 SP: 20/30 Minutos
+5 SP: 30/40 Minutos
+8 SP: 1 Hora
+Sabados y Domingos se tuvo disponibilidad completa, de lunes a viernes se trabajo 1 a 2 horas como maximo en el dia."
+Acción realizada:
+- Calibración exacta de Story Points según 'Historias de Usuario.pdf' para las 21 issues.
+- Asignación de horarios respetando estrictamente las restricciones: de lunes a viernes sesiones cortas de 10 a 35 min (muy por debajo del límite de 1 a 2 h/día) y fines de semana sesiones de 35 a 65 min.
+- Generación de 21 registros detallados y 21 filas de resumen, guardando backup previo en 'Documentacion/Organizacion Grupo 3_BACKUP.xlsx'.
+- Escritura y verificación exitosa de los datos reales en 'Documentacion/Organizacion Grupo 3.xlsx' mediante inyección XML en hojas y sharedStrings.
+
+----------------------------------------------------------------------
+
+[Prompt #31]
+Fecha/Hora: 2026-09-18 18:22
+Prompt:
+"Implementemos mas metricas:
+Se trabajo algunos Sabados y domingos con disponibilidad completa
+Se trabajo algunos Jueves de 16:00 a 18:00
+Si ese dia fue feriado (Argentina - Bahia Blanca) se tuvo disponibilidad completa."
+Acción realizada:
+- Análisis de calendario (del 18/08/2026 al 19/09/2026) y verificación de feriados oficiales en Argentina y Bahía Blanca (el Paso a la Inmortalidad de San Martín cayó lunes 17 de agosto, previo al inicio formal del Sprint 1).
+- Incorporación de los bloques específicos de los días JUEVES de 16:00 a 18:00 para sesiones clave.
+
+----------------------------------------------------------------------
+
+[Prompt #32]
+Fecha/Hora: 2026-09-18 18:26
+Prompt:
+"No, elimina los lunes a viernes habituales y distribuyelos a otros horarios."
+Acción realizada:
+- Eliminación total de sesiones en días de semana habituales (lunes, martes, miércoles y viernes).
+- Redistribución estricta de las 21 sesiones para que caigan EXCLUSIVAMENTE en:
+  * Jueves en la franja de 16:00 a 18:00 (Jueves 20/08, 27/08, 03/09, 10/09 y 17/09).
+  * Sábados y Domingos seleccionados con disponibilidad completa (22/08, 23/08, 29/08, 30/08, 05/09, 06/09, 12/09 y 13/09).
+- Mantenimiento exacto de los Story Points, duraciones y notas descriptivas.
+- Regeneración y validación del archivo 'Documentacion/Organizacion Grupo 3_Actualizado.xlsx'.
+======================================================================
+[Prompt #33]
+Fecha/Hora: 2026-09-18 18:31
+Prompt:
+"Me gusta la distribucion pero hay que cambiar las horas siguiendo estas metricas:
+1 SP: 20/30 min
+3 SP: 60 min
+5 SP: 90 Min
+8 SP: 120 min"
+Acción realizada:
+- Calibración y actualización integral de las duraciones por Story Point:
+  * 1 SP: 25 min (0.42 h)
+  * 3 SP: 60 min (1.00 h)
+  * 5 SP: 90 min (1.50 h)
+  * 8 SP: 120 min (2.00 h)
+- Reescalado completo de los bloques horarios de las 21 sesiones respetando estrictamente:
+  * Días permitidos: Únicamente Jueves (16:00 a 18:00) y Sábados/Domingos (disponibilidad completa). Cero lunes, martes, miércoles y viernes.
+  * Duración total estimada del proyecto: 27.68 h; duración real acumulada: 28.16 h.
+- Regeneración directa de las hojas 'Registro Detallado' y 'Resumen por Issue' con inyección XML nativa en OpenXML.
+- Actualización y sincronización de los archivos finales 'Documentacion/Organizacion Grupo 3.xlsx' y 'Documentacion/Organizacion Grupo 3_Final.xlsx'.
+======================================================================
+

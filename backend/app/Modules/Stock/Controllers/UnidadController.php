@@ -98,6 +98,18 @@ class UnidadController extends Controller
             ], 400);
         }
 
+        $equivalenciaNueva = (float) $request->input('equivalencia_base');
+        // Validar que no haya otra unidad con misma equivalencia (coherencia mínima)
+        $existeEq = UnidadMedida::where('id_producto', $producto->id_producto)
+            ->where('equivalencia_base', $equivalenciaNueva)
+            ->exists();
+        if ($existeEq) {
+            return response()->json([
+                'status' => 'error',
+                'message' => "Ya existe otra unidad con equivalencia {$equivalenciaNueva} para este producto.",
+            ], 400);
+        }
+
         $unidad = UnidadMedida::create([
             'id_producto' => $producto->id_producto,
             'nombre_unidad' => $nombre,
@@ -168,7 +180,18 @@ class UnidadController extends Controller
         }
 
         if ($request->has('equivalencia_base')) {
-            $unidad->equivalencia_base = (float) $request->input('equivalencia_base');
+            $eqNueva = (float) $request->input('equivalencia_base');
+            $conflictoEq = UnidadMedida::where('id_producto', $unidad->id_producto)
+                ->where('equivalencia_base', $eqNueva)
+                ->where('id_unidad', '!=', $unidad->id_unidad)
+                ->exists();
+            if ($conflictoEq) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => "Ya existe otra unidad con equivalencia {$eqNueva} para este producto.",
+                ], 400);
+            }
+            $unidad->equivalencia_base = $eqNueva;
         }
 
         if ($request->has('descripcion')) {

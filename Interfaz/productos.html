@@ -656,6 +656,7 @@
             <button class="btn primary-solid" id="btnNuevoProducto"><span style="font-size:15px;">＋</span> Nuevo Producto</button>
             <button class="btn" id="btnAdminCategorias"><span class="mini-icon">🏷️</span> Categorías</button>
             <button class="btn" id="btnAdminMarcas"><span class="mini-icon">⭐</span> Marcas</button>
+            <button class="btn primary" id="btnAumentoMasivo" title="Aplicar aumento porcentual a varios productos a la vez (P07)"><span class="mini-icon">📈</span> Aumento Masivo</button>
             <button class="btn" id="btnRefrescar"><span class="mini-icon">↻</span> Refrescar</button>
           </div>
         </div>
@@ -883,6 +884,60 @@
       </div>
       <div class="modal-footer">
         <button class="btn" onclick="closeModal('modalFicha')">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Aumento Masivo de Precios (P07) -->
+  <div class="modal-backdrop" id="modalAumentoMasivo">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Aplicar Aumento Masivo de Precios</h3>
+        <button class="modal-close" onclick="closeModal('modalAumentoMasivo')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="error-box" id="errorBoxAumento"></div>
+        <p style="margin:0 0 12px; color:var(--muted); font-size:13px;">
+          Se actualizarán los precios y quedará registrado en el historial de cada producto (origen: aumento_masivo).
+        </p>
+        <div class="form-grid">
+          <div class="field">
+            <label for="aumPorcentaje">Porcentaje de Aumento (%) *</label>
+            <input class="control" type="number" step="0.01" min="0.01" id="aumPorcentaje" placeholder="Ej: 10.5" />
+          </div>
+          <div class="field">
+            <label for="aumTipoPrecio">Tipo de Precio</label>
+            <select class="control" id="aumTipoPrecio">
+              <option value="ambos">Ambos (mayorista + minorista)</option>
+              <option value="mayorista">Solo mayorista</option>
+              <option value="minorista">Solo minorista</option>
+            </select>
+          </div>
+          <div class="field span-2">
+            <label for="aumAlcance">Aplicar a</label>
+            <select class="control" id="aumAlcance">
+              <option value="todos">Todos los productos activos</option>
+              <option value="categoria">Productos de una categoría</option>
+              <option value="marca">Productos de una marca</option>
+            </select>
+          </div>
+          <div class="field span-2" id="wrapAumCategoria" style="display:none;">
+            <label for="aumCategoria">Categoría *</label>
+            <select class="control" id="aumCategoria">
+              <option value="">Seleccione una categoría</option>
+            </select>
+          </div>
+          <div class="field span-2" id="wrapAumMarca" style="display:none;">
+            <label for="aumMarca">Marca *</label>
+            <select class="control" id="aumMarca">
+              <option value="">Seleccione una marca</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn" onclick="closeModal('modalAumentoMasivo')">Cancelar</button>
+        <button class="btn primary-solid" id="btnConfirmarAumento">Aplicar Aumento</button>
       </div>
     </div>
   </div>
@@ -1258,6 +1313,87 @@
         showToast('Error de comunicación con el servidor', 'error');
       }
     }
+
+    // ==========================================
+    // P07: AUMENTO MASIVO DE PRECIOS
+    // ==========================================
+
+    document.getElementById('btnAumentoMasivo').addEventListener('click', () => {
+      const errorBox = document.getElementById('errorBoxAumento');
+      errorBox.classList.remove('show');
+      document.getElementById('aumPorcentaje').value = '';
+      document.getElementById('aumTipoPrecio').value = 'ambos';
+      document.getElementById('aumAlcance').value = 'todos';
+      document.getElementById('wrapAumCategoria').style.display = 'none';
+      document.getElementById('wrapAumMarca').style.display = 'none';
+
+      const selCat = document.getElementById('aumCategoria');
+      selCat.innerHTML = '<option value="">Seleccione una categoría</option>' +
+        categoriasCache.map(c => `<option value="${c.id_categoria}">${c.nombre}</option>`).join('');
+
+      const selMar = document.getElementById('aumMarca');
+      selMar.innerHTML = '<option value="">Seleccione una marca</option>' +
+        marcasCache.map(m => `<option value="${m.id_marca}">${m.nombre}</option>`).join('');
+
+      openModal('modalAumentoMasivo');
+    });
+
+    document.getElementById('aumAlcance').addEventListener('change', () => {
+      const alcance = document.getElementById('aumAlcance').value;
+      document.getElementById('wrapAumCategoria').style.display = alcance === 'categoria' ? 'block' : 'none';
+      document.getElementById('wrapAumMarca').style.display = alcance === 'marca' ? 'block' : 'none';
+    });
+
+    document.getElementById('btnConfirmarAumento').addEventListener('click', async () => {
+      const errorBox = document.getElementById('errorBoxAumento');
+      errorBox.classList.remove('show');
+
+      const porcentaje = parseFloat(document.getElementById('aumPorcentaje').value);
+      if (!porcentaje || isNaN(porcentaje) || porcentaje <= 0) {
+        errorBox.textContent = 'Ingrese un porcentaje de aumento mayor a 0.';
+        errorBox.classList.add('show');
+        return;
+      }
+
+      const alcance = document.getElementById('aumAlcance').value;
+      if (alcance === 'categoria' && !document.getElementById('aumCategoria').value) {
+        errorBox.textContent = 'Seleccione una categoría.';
+        errorBox.classList.add('show');
+        return;
+      }
+      if (alcance === 'marca' && !document.getElementById('aumMarca').value) {
+        errorBox.textContent = 'Seleccione una marca.';
+        errorBox.classList.add('show');
+        return;
+      }
+
+      const payload = {
+        porcentaje,
+        tipo_precio: document.getElementById('aumTipoPrecio').value
+      };
+      if (alcance === 'categoria') payload.id_categoria = parseInt(document.getElementById('aumCategoria').value);
+      if (alcance === 'marca') payload.id_marca = parseInt(document.getElementById('aumMarca').value);
+
+      try {
+        const res = await fetch(`${API_BASE}/productos/aumento-masivo`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const json = await res.json();
+        if (json.status === 'success') {
+          showToast(json.message, 'success');
+          closeModal('modalAumentoMasivo');
+          loadProductos();
+        } else {
+          errorBox.textContent = json.message || 'Error al aplicar el aumento masivo.';
+          errorBox.classList.add('show');
+        }
+      } catch (err) {
+        errorBox.textContent = 'Error de conexión con el servidor.';
+        errorBox.classList.add('show');
+      }
+    });
 
     // ==========================================
     // P02: ADMINISTRAR CATEGORÍAS
