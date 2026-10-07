@@ -13,6 +13,8 @@ use Illuminate\Support\Facades\Validator;
 use Carbon\Carbon;
 use Exception;
 use App\Support\UsuarioActual;
+use App\Models\LogAuditoria;
+use App\Support\AuditoriaLogger;
 
 class ProductoController extends Controller
 {
@@ -25,15 +27,11 @@ class ProductoController extends Controller
         $categoriaId = $request->filled('categoria_id') ? (int) $request->input('categoria_id') : null;
         $marcaId = $request->filled('marca_id') ? (int) $request->input('marca_id') : null;
         $estado = $request->input('estado');
-        if ($estado === 'todos') {
+        if ($estado === 'todos' || empty($estado)) {
             $estado = null;
         }
-        // P05.5: forzar estado 'activo' por defecto si no se especifica
-        if ($estado === null && $request->has('estado') === false) {
-            $estado = 'activo';
-        }
 
-        $productos = Producto::with(['categoria', 'marca'])
+        $productos = Producto::with(['categoria', 'marca', 'usuarioCarga', 'usuarioModificacion', 'ubicaciones'])
             ->search($search)
             ->filterCategoria($categoriaId)
             ->filterMarca($marcaId)
@@ -50,13 +48,19 @@ class ProductoController extends Controller
                     'precio_mayorista' => (float) $p->precio_mayorista,
                     'precio_minorista' => (float) $p->precio_minorista,
                     'estado' => $p->estado,
-                    'fecha_alta' => $p->fecha_alta ? $p->fecha_alta->format('Y-m-d') : null,
-                    'fecha_modificacion' => $p->fecha_modificacion ? $p->fecha_modificacion->format('Y-m-d') : null,
-                    'fecha_desactivacion' => $p->fecha_desactivacion ? $p->fecha_desactivacion->format('Y-m-d') : null,
+                    'fecha_alta' => $p->fecha_alta ? ($p->fecha_alta instanceof \Carbon\CarbonInterface ? $p->fecha_alta->format('Y-m-d H:i:s') : (string) $p->fecha_alta) : null,
+                    'fecha_modificacion' => $p->fecha_modificacion ? ($p->fecha_modificacion instanceof \Carbon\CarbonInterface ? $p->fecha_modificacion->format('Y-m-d H:i:s') : (string) $p->fecha_modificacion) : null,
+                    'fecha_desactivacion' => $p->fecha_desactivacion ? ($p->fecha_desactivacion instanceof \Carbon\CarbonInterface ? $p->fecha_desactivacion->format('Y-m-d H:i:s') : (string) $p->fecha_desactivacion) : null,
+                    'id_usuario_carga' => $p->id_usuario_carga,
+                    'usuario_carga_nombre' => $p->usuarioCarga ? $p->usuarioCarga->nombre : ($p->id_usuario_carga ? "Usuario #{$p->id_usuario_carga}" : null),
+                    'id_usuario_modificacion' => $p->id_usuario_modificacion,
+                    'usuario_modificacion_nombre' => $p->usuarioModificacion ? $p->usuarioModificacion->nombre : ($p->id_usuario_modificacion ? "Usuario #{$p->id_usuario_modificacion}" : null),
                     'id_categoria' => $p->id_categoria,
                     'categoria_nombre' => $p->categoria ? $p->categoria->nombre : null,
                     'id_marca' => $p->id_marca,
                     'marca_nombre' => $p->marca ? $p->marca->nombre : null,
+                    'id_ubicacion' => $p->ubicaciones->first()?->id_ubicacion,
+                    'ubicacion_nombre' => $p->ubicaciones->first()?->descripcion ?? 'Sin asignar',
                     'stock_disponible' => $p->stock_disponible,
                     'stock_minimo' => $p->stock_minimo,
                     'estado_alerta' => $p->estado_alerta,
@@ -105,7 +109,7 @@ class ProductoController extends Controller
         }
 
         try {
-            $now = Carbon::now()->toDateString();
+            $now = Carbon::now()->toDateTimeString();
             $stockInicial = (int) ($request->input('stock_disponible', 0));
             $stockMinimo = (int) ($request->input('stock_minimo', 5));
             $idUsuario = UsuarioActual::id($request);
@@ -147,7 +151,31 @@ class ProductoController extends Controller
                     'id_usuario' => $idUsuario,
                 ]);
 
-                return $prod->load(['categoria', 'marca']);
+                // 3. Asignar ubicación física si se especificó (S14)
+                if ($request->filled('id_ubicacion')) {
+                    DB::table('producto_ubicacion')->insert([
+                        'id_producto' => $prod->id_producto,
+                        'id_ubicacion' => (int) $request->input('id_ubicacion'),
+                        'fecha_asignacion' => Carbon::now()->toDateString(),
+                        'id_usuario' => $idUsuario,
+                    ]);
+                }
+
+                AuditoriaLogger::registrar(
+                    'producto',
+                    $prod->id_producto,
+                    'INSERT',
+                    null,
+                    [
+                        'codigo' => $prod->codigo,
+                        'nombre' => $prod->nombre,
+                        'precio_unitario' => $precioUnitario,
+                        'stock' => $stockInicial,
+                    ],
+                    $idUsuario
+                );
+
+                return $prod->load(['categoria', 'marca', 'ubicaciones']);
             });
 
             return response()->json([
@@ -168,7 +196,7 @@ class ProductoController extends Controller
      */
     public function show(int $id): JsonResponse
     {
-        $producto = Producto::with(['categoria', 'marca', 'historialPrecios'])->find($id);
+        $producto = Producto::with(['categoria', 'marca', 'usuarioCarga', 'usuarioModificacion', 'historialPrecios.usuario', 'ubicaciones'])->find($id);
 
         if (!$producto) {
             return response()->json([
@@ -188,13 +216,19 @@ class ProductoController extends Controller
                 'precio_mayorista' => (float) $producto->precio_mayorista,
                 'precio_minorista' => (float) $producto->precio_minorista,
                 'estado' => $producto->estado,
-                'fecha_alta' => $producto->fecha_alta ? $producto->fecha_alta->format('Y-m-d') : null,
-                'fecha_modificacion' => $producto->fecha_modificacion ? $producto->fecha_modificacion->format('Y-m-d') : null,
-                'fecha_desactivacion' => $producto->fecha_desactivacion ? $producto->fecha_desactivacion->format('Y-m-d') : null,
+                'fecha_alta' => $producto->fecha_alta ? ($producto->fecha_alta instanceof \Carbon\CarbonInterface ? $producto->fecha_alta->format('Y-m-d H:i:s') : (string) $producto->fecha_alta) : null,
+                'fecha_modificacion' => $producto->fecha_modificacion ? ($producto->fecha_modificacion instanceof \Carbon\CarbonInterface ? $producto->fecha_modificacion->format('Y-m-d H:i:s') : (string) $producto->fecha_modificacion) : null,
+                'fecha_desactivacion' => $producto->fecha_desactivacion ? ($producto->fecha_desactivacion instanceof \Carbon\CarbonInterface ? $producto->fecha_desactivacion->format('Y-m-d H:i:s') : (string) $producto->fecha_desactivacion) : null,
+                'id_usuario_carga' => $producto->id_usuario_carga,
+                'usuario_carga_nombre' => $producto->usuarioCarga ? $producto->usuarioCarga->nombre : ($producto->id_usuario_carga ? "Usuario #{$producto->id_usuario_carga}" : null),
+                'id_usuario_modificacion' => $producto->id_usuario_modificacion,
+                'usuario_modificacion_nombre' => $producto->usuarioModificacion ? $producto->usuarioModificacion->nombre : ($producto->id_usuario_modificacion ? "Usuario #{$producto->id_usuario_modificacion}" : null),
                 'id_categoria' => $producto->id_categoria,
                 'categoria_nombre' => $producto->categoria ? $producto->categoria->nombre : null,
                 'id_marca' => $producto->id_marca,
                 'marca_nombre' => $producto->marca ? $producto->marca->nombre : null,
+                'id_ubicacion' => $producto->ubicaciones->first()?->id_ubicacion,
+                'ubicacion_nombre' => $producto->ubicaciones->first()?->descripcion ?? 'Sin asignar',
                 'stock_disponible' => $producto->stock_disponible,
                 'stock_minimo' => $producto->stock_minimo,
                 'estado_alerta' => $producto->estado_alerta,
@@ -247,7 +281,7 @@ class ProductoController extends Controller
         }
 
         try {
-            $now = Carbon::now()->toDateString();
+            $now = Carbon::now()->toDateTimeString();
             $idUsuario = UsuarioActual::id($request);
             $nuevoPrecio = (float) ($request->input('precio_unitario') ?? $request->input('precioMay') ?? $producto->precio_unitario);
             $anteriorPrecio = (float) $producto->precio_unitario;
@@ -256,7 +290,27 @@ class ProductoController extends Controller
                 ? trim((string) $request->input('nombre'))
                 : $descripcion;
 
-            DB::transaction(function () use ($producto, $request, $now, $idUsuario, $nuevoPrecio, $anteriorPrecio, $descripcion, $nombre) {
+            $valoresAnteriores = [
+                'codigo' => $producto->codigo,
+                'nombre' => $producto->nombre,
+                'descripcion' => $producto->descripcion,
+                'precio_unitario' => (float) $producto->precio_unitario,
+                'id_categoria' => (int) $producto->id_categoria,
+                'id_marca' => (int) $producto->id_marca,
+                'stock_minimo' => (int) $producto->stock_minimo,
+            ];
+
+            $valoresNuevos = [
+                'codigo' => trim($request->input('codigo')),
+                'nombre' => $nombre,
+                'descripcion' => $descripcion,
+                'precio_unitario' => $nuevoPrecio,
+                'id_categoria' => (int) $request->input('id_categoria'),
+                'id_marca' => (int) $request->input('id_marca'),
+                'stock_minimo' => $request->has('stock_minimo') ? (int) $request->input('stock_minimo') : (int) $producto->stock_minimo,
+            ];
+
+            DB::transaction(function () use ($producto, $request, $now, $idUsuario, $nuevoPrecio, $anteriorPrecio, $descripcion, $nombre, $valoresAnteriores, $valoresNuevos) {
                 // Si cambió el precio unitario, se registra en HISTORIAL_PRECIO (P04)
                 if (abs($nuevoPrecio - $anteriorPrecio) >= 0.001) {
                     $porcentaje = 0.0;
@@ -271,7 +325,7 @@ class ProductoController extends Controller
                         'porcentaje_aumento' => $porcentaje,
                         'regla_redondeo' => 'manual',
                         'origen' => 'manual',
-                        'fecha_cambio' => $now,
+                        'fecha_cambio' => Carbon::now(),
                         'id_usuario' => $idUsuario,
                     ]);
                 }
@@ -293,12 +347,35 @@ class ProductoController extends Controller
                     $producto->stock_minimo = (int) $request->input('stock_minimo');
                     $producto->save();
                 }
+
+                // Actualizar ubicación física si se envió (S14)
+                if ($request->has('id_ubicacion')) {
+                    DB::table('producto_ubicacion')->where('id_producto', $producto->id_producto)->delete();
+                    $idUbic = (int) $request->input('id_ubicacion');
+                    if ($idUbic > 0) {
+                        DB::table('producto_ubicacion')->insert([
+                            'id_producto' => $producto->id_producto,
+                            'id_ubicacion' => $idUbic,
+                            'fecha_asignacion' => Carbon::now()->toDateString(),
+                            'id_usuario' => $idUsuario,
+                        ]);
+                    }
+                }
+
+                AuditoriaLogger::registrar(
+                    'producto',
+                    $producto->id_producto,
+                    'UPDATE',
+                    $valoresAnteriores,
+                    $valoresNuevos,
+                    $idUsuario
+                );
             });
 
             return response()->json([
                 'status' => 'success',
                 'message' => 'Producto modificado exitosamente.',
-                'data' => $producto->fresh(['categoria', 'marca']),
+                'data' => $producto->fresh(['categoria', 'marca', 'ubicaciones']),
             ]);
         } catch (Exception $e) {
             return response()->json([
@@ -322,7 +399,7 @@ class ProductoController extends Controller
             ], 404);
         }
 
-        $now = Carbon::now()->toDateString();
+        $now = Carbon::now()->toDateTimeString();
         $idUsuario = UsuarioActual::id($request);
 
         $producto->update([
@@ -331,6 +408,15 @@ class ProductoController extends Controller
             'fecha_modificacion' => $now,
             'id_usuario_modificacion' => $idUsuario,
         ]);
+
+        AuditoriaLogger::registrar(
+            'producto',
+            $producto->id_producto,
+            'UPDATE',
+            ['estado' => 'activo'],
+            ['estado' => 'inactivo'],
+            $idUsuario
+        );
 
         return response()->json([
             'status' => 'success',
@@ -353,7 +439,7 @@ class ProductoController extends Controller
             ], 404);
         }
 
-        $now = Carbon::now()->toDateString();
+        $now = Carbon::now()->toDateTimeString();
         $idUsuario = UsuarioActual::id($request);
 
         $producto->update([
@@ -362,6 +448,15 @@ class ProductoController extends Controller
             'fecha_modificacion' => $now,
             'id_usuario_modificacion' => $idUsuario,
         ]);
+
+        AuditoriaLogger::registrar(
+            'producto',
+            $producto->id_producto,
+            'UPDATE',
+            ['estado' => 'inactivo'],
+            ['estado' => 'activo'],
+            $idUsuario
+        );
 
         return response()->json([
             'status' => 'success',
@@ -383,7 +478,8 @@ class ProductoController extends Controller
      */
     public function historialPrecios(int $id): JsonResponse
     {
-        $registros = HistorialPrecio::where('id_producto', $id)
+        $registros = HistorialPrecio::with('usuario')
+            ->where('id_producto', $id)
             ->orderBy('fecha_cambio', 'asc')
             ->orderBy('id_historial', 'asc')
             ->get();
@@ -392,6 +488,11 @@ class ProductoController extends Controller
         $precioAnterior = null;
         foreach ($registros as $registro) {
             $precioNuevo = (float) $registro->precio;
+            $variacionPorcentaje = null;
+            if ($precioAnterior !== null && $precioAnterior > 0) {
+                $variacionPorcentaje = round((($precioNuevo - $precioAnterior) / $precioAnterior) * 100, 2);
+            }
+
             $resultado[] = [
                 'id_historial' => $registro->id_historial,
                 'id_producto' => $registro->id_producto,
@@ -399,11 +500,13 @@ class ProductoController extends Controller
                 'precio' => $precioNuevo,
                 'precio_anterior' => $precioAnterior !== null ? (float) $precioAnterior : null,
                 'precio_nuevo' => $precioNuevo,
-                'porcentaje_aumento' => $registro->porcentaje_aumento ? (float) $registro->porcentaje_aumento : null,
+                'porcentaje_aumento' => $variacionPorcentaje,
+                'porcentaje_variacion' => $variacionPorcentaje,
                 'regla_redondeo' => $registro->regla_redondeo,
                 'origen' => $registro->origen,
-                'fecha_cambio' => $registro->fecha_cambio ? $registro->fecha_cambio->format('Y-m-d') : null,
+                'fecha_cambio' => $registro->fecha_cambio ? (is_string($registro->fecha_cambio) ? $registro->fecha_cambio : $registro->fecha_cambio->format('Y-m-d H:i:s')) : null,
                 'id_usuario' => $registro->id_usuario,
+                'usuario_nombre' => $registro->usuario ? $registro->usuario->nombre : ($registro->id_usuario ? "Usuario #{$registro->id_usuario}" : 'Sistema'),
             ];
             $precioAnterior = $precioNuevo;
         }
@@ -412,6 +515,35 @@ class ProductoController extends Controller
         return response()->json([
             'status' => 'success',
             'data' => $resultado,
+        ]);
+    }
+
+    /**
+     * Consultar historial de cambios y auditoría del producto (P04 / Auditoría)
+     */
+    public function auditoria(int $id): JsonResponse
+    {
+        $logs = LogAuditoria::with('usuario')
+            ->where('tabla_afectada', 'producto')
+            ->where('id_registro', $id)
+            ->orderByDesc('fecha_hora')
+            ->orderByDesc('id_auditoria')
+            ->get()
+            ->map(function (LogAuditoria $log) {
+                return [
+                    'id_auditoria' => $log->id_auditoria,
+                    'accion' => $log->accion,
+                    'valores_anteriores' => $log->valores_anteriores,
+                    'valores_nuevos' => $log->valores_nuevos,
+                    'id_usuario' => $log->id_usuario,
+                    'usuario_nombre' => $log->usuario ? $log->usuario->nombre : ($log->id_usuario ? "Usuario #{$log->id_usuario}" : 'Sistema'),
+                    'fecha_hora' => $log->fecha_hora ? $log->fecha_hora->format('Y-m-d H:i:s') : null,
+                ];
+            });
+
+        return response()->json([
+            'status' => 'success',
+            'data' => $logs,
         ]);
     }
 
@@ -453,7 +585,7 @@ class ProductoController extends Controller
             $tipoPrecio = $request->input('tipo_precio', 'ambos');
             $reglaRedondeo = $request->input('regla_redondeo', 'sin_redondeo');
             $idUsuario = UsuarioActual::id($request);
-            $now = Carbon::now()->toDateString();
+            $now = Carbon::now()->toDateTimeString();
 
             try {
                 $query = Producto::query()->where('estado', 'activo');

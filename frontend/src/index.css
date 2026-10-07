@@ -1,0 +1,181 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+@import "tailwindcss";
+
+@layer base {
+  body {
+    font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
+    font-size: 1.125rem; /* Tamaño base >= 1.125rem */
+    background-color: #EBF4FC; /* Celeste ultra suave/azul pastel para fondo de claymorfismo */
+    color: #1E293B; /* Alto contraste */
+  }
+
+  /* Foco ultra-visible para accesibilidad de adultos mayores */
+  *:focus-visible {
+    outline: 4px solid #0D6EFD !important;
+    outline-offset: 2px !important;
+  }
+}
+
+/* Clases de Claymorfismo Minimalista */
+.clay-card {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  border-radius: 1.75rem; /* ~28px */
+  box-shadow: 
+    inset 3px 3px 6px rgba(255, 255, 255, 0.95),
+    inset -3px -3px 6px rgba(30, 41, 59, 0.03),
+    0 10px 30px rgba(13, 110, 253, 0.05),
+    0 2px 4px rgba(30, 41, 59, 0.02);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.clay-card-hover:hover {
+  box-shadow: 
+    inset 4px 4px 8px rgba(255, 255, 255, 0.98),
+    inset -4px -4px 8px rgba(30, 41, 59, 0.05),
+    0 16px 40px rgba(13, 110, 253, 0.09),
+    0 4px 10px rgba(30, 41, 59, 0.03);
+  transform: translateY(-3px);
+}
+
+.clay-sidebar {
+  background: linear-gradient(135deg, #1E40AF 0%, #1D4ED8 40%, #1E3A8A 100%);
+  border-right: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 
+    inset 2px 2px 5px rgba(255, 255, 255, 0.2),
+    inset -2px -2px 5px rgba(0, 0, 0, 0.25),
+    5px 0 25px rgba(30, 41, 59, 0.1);
+}
+
+.clay-btn-primary {
+  background: linear-gradient(135deg, #0D6EFD 0%, #0b5ed7 100%);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 1.25rem;
+  color: #FFFFFF;
+  box-shadow: 
+    inset 3px 3px 5px rgba(255, 255, 255, 0.4),
+    inset -3px -3px 5px rgba(0, 0, 0, 0.2),
+    0 8px 20px rgba(13, 110, 253, 0.25);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.clay-btn-primary:hover {
+  filter: brightness(1.08);
+  box-shadow: 
+    inset 4px 4px 6px rgba(255, 255, 255, 0.5),
+    inset -4px -4px 6px rgba(0, 0, 0, 0.25),
+    0 12px 25px rgba(13, 110, 253, 0.35);
+  transform: translateY(-1.5px);
+}
+
+.clay-btn-primary:active {
+  transform: translateY(1px);
+  box-shadow: 
+    inset 1px 1px 2px rgba(255, 255, 255, 0.2),
+    inset -1px -1px 2px rgba(0, 0, 0, 0.15),
+    0 4px 10px rgba(13, 110, 253, 0.2);
+}
+
+.clay-btn-secondary {
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  border-radius: 1.25rem;
+  color: #1E293B;
+  box-shadow: 
+    inset 2px 2px 4px rgba(255, 255, 255, 0.95),
+    inset -2px -2px 4px rgba(30, 41, 59, 0.05),
+    0 4px 12px rgba(30, 41, 59, 0.04);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.clay-btn-secondary:hover {
+  background: #FFFFFF;
+  box-shadow: 
+    inset 3px 3px 6px rgba(255, 255, 255, 0.98),
+    inset -3px -3px 6px rgba(30, 41, 59, 0.08),
+    0 6px 16px rgba(30, 41, 59, 0.06);
+  transform: translateY(-1.5px);
+}
+
+.clay-input {
+  background: rgba(255, 255, 255, 0.9);
+  border: 2px solid rgba(226, 232, 240, 0.8);
+  border-radius: 1.25rem;
+  box-shadow: 
+    inset 2px 2px 4px rgba(0, 0, 0, 0.02),
+    inset -2px -2px 4px rgba(255, 255, 255, 0.8);
+  transition: all 0.2s ease;
+}
+
+.clay-input:focus {
+  border-color: #0D6EFD;
+  background: #FFFFFF;
+  box-shadow: 
+    inset 2px 2px 4px rgba(0, 0, 0, 0.01),
+    0 0 0 4px rgba(13, 110, 253, 0.15);
+}
+
+/* Asegurar targets interactivos de mínimo 48px */
+input, select, textarea, button, .interactive-target {
+  min-height: 3rem; /* 48px */
+}
+
+/* ======================================================== */
+/* AUTOMATIC PREMIUM AESTHETIC OVERRIDES FOR MIGRATED BOXES */
+/* ======================================================== */
+
+/* Transforma cajas grises viejas en cards claymórficas premium */
+div.bg-\[\#E9ECEF\] {
+  background-color: rgba(255, 255, 255, 0.85) !important;
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(226, 232, 240, 0.8) !important;
+  border-radius: 1.5rem !important;
+  box-shadow: 
+    inset 3px 3px 6px rgba(255, 255, 255, 0.95),
+    inset -3px -3px 6px rgba(30, 41, 59, 0.02),
+    0 10px 30px rgba(13, 110, 253, 0.04) !important;
+}
+
+/* Mejora inputs y botones dentro de cajas convertidas */
+div.bg-\[\#E9ECEF\] input, 
+div.bg-\[\#E9ECEF\] select, 
+div.bg-\[\#E9ECEF\] textarea {
+  border-radius: 1rem !important;
+  border-color: rgba(203, 213, 225, 0.8) !important;
+  background-color: #FFFFFF !important;
+}
+
+/* Transforma las filas y tablas grises en elementos limpios y claros */
+tr.bg-\[\#E9ECEF\], td.bg-\[\#E9ECEF\] {
+  background-color: #FFFFFF !important;
+}
+
+tr.bg-\[\#E9ECEF\]:hover {
+  background-color: rgba(248, 250, 252, 0.95) !important;
+}
+
+thead tr.bg-\[\#E9ECEF\] {
+  background-color: rgba(241, 245, 249, 0.85) !important;
+}
+
+/* Transforma bordes pesados de color gris oscuro en líneas suaves y elegantes */
+.border-\[\#DEE2E6\], 
+.border-2.border-\[\#DEE2E6\], 
+.border-b-2.border-\[\#DEE2E6\], 
+.border-x-2.border-\[\#DEE2E6\] {
+  border-width: 1px !important;
+  border-color: rgba(226, 232, 240, 0.85) !important;
+}
+
+/* Corrige la división de listas con bordes suaves */
+.divide-\[\#DEE2E6\] > * + * {
+  border-color: rgba(226, 232, 240, 0.75) !important;
+}
+
+/* Mejora de textos en contenedores re-estilizados */
+.text-\[\#212529\] {
+  color: #1E293B !important;
+}
+
+

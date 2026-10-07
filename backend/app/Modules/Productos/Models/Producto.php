@@ -5,10 +5,12 @@ namespace App\Modules\Productos\Models;
 
 use App\Modules\Stock\Models\Lote;
 use App\Modules\Stock\Models\MovimientoStock;
+use App\Modules\Stock\Models\Ubicacion;
 use App\Modules\Stock\Models\UnidadMedida;
 use App\Modules\Proveedores\Models\ProductoProveedor;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Builder;
 
@@ -57,9 +59,9 @@ class Producto extends Model
         'id_marca' => 'integer',
         'id_usuario_carga' => 'integer',
         'id_usuario_modificacion' => 'integer',
-        'fecha_alta' => 'date:Y-m-d',
-        'fecha_modificacion' => 'date:Y-m-d',
-        'fecha_desactivacion' => 'date:Y-m-d',
+        'fecha_alta' => 'datetime:Y-m-d H:i:s',
+        'fecha_modificacion' => 'datetime:Y-m-d H:i:s',
+        'fecha_desactivacion' => 'datetime:Y-m-d H:i:s',
     ];
 
     public function categoria(): BelongsTo
@@ -70,6 +72,16 @@ class Producto extends Model
     public function marca(): BelongsTo
     {
         return $this->belongsTo(Marca::class, 'id_marca', 'id_marca');
+    }
+
+    public function usuarioCarga(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\Usuario::class, 'id_usuario_carga', 'id_usuario');
+    }
+
+    public function usuarioModificacion(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\Usuario::class, 'id_usuario_modificacion', 'id_usuario');
     }
 
     /**
@@ -169,6 +181,19 @@ class Producto extends Model
     public function lotes(): HasMany
     {
         return $this->hasMany(Lote::class, 'id_producto', 'id_producto');
+    }
+
+    /**
+     * Ubicaciones físicas asignadas al producto (S14)
+     */
+    public function ubicaciones(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            Ubicacion::class,
+            'producto_ubicacion',
+            'id_producto',
+            'id_ubicacion'
+        )->withPivot(['fecha_asignacion', 'id_usuario']);
     }
 
     /**

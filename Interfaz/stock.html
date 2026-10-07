@@ -334,7 +334,7 @@
       <section class="card">
         <div class="card-h">
           <div>
-            <h2>Consulta de Stock Disponible (S01)</h2>
+            <h2>Consulta de Stock Disponible</h2>
             <p>Stock actualizado por producto. Búsqueda por nombre o código y filtro por nivel.</p>
           </div>
           <div class="btn-row">
@@ -349,11 +349,11 @@
         <div class="card-b">
           <div class="filters">
             <div class="field" style="min-width:220px; flex:2;">
-              <label for="filterSearch">Buscar por Código o Nombre (S01)</label>
+              <label for="filterSearch">Buscar por Código o Nombre</label>
               <input class="control" type="text" id="filterSearch" placeholder="Escribe código o descripción…" />
             </div>
             <div class="field">
-              <label for="filterNivel">Nivel de stock (S01/S07/S15)</label>
+              <label for="filterNivel">Nivel de stock</label>
               <select class="control" id="filterNivel">
                 <option value="">Todos los niveles</option>
                 <option value="critico">Crítico</option>
@@ -398,31 +398,57 @@
   <div class="modal-backdrop" id="modalIngreso">
     <div class="modal-content" style="max-width:760px;">
       <div class="modal-header">
-        <h3>Registro de Ingreso de Mercadería (S03)</h3>
+        <h3>Registro de Ingreso de Mercadería</h3>
         <button class="modal-close" onclick="closeModal('modalIngreso')">&times;</button>
       </div>
       <div class="modal-body">
         <div class="error-box" id="errorBoxIngreso"></div>
+
+        <!-- Guía explicativa sobre fechas -->
+        <div style="background:linear-gradient(135deg, #eff6ff, #e0e7ff); border:1px solid #bfdbfe; border-radius:12px; padding:12px; margin-bottom:14px; font-size:12px; color:#1e3a8a;">
+          <div style="font-weight:bold; margin-bottom:6px; display:flex; align-items:center; gap:6px;">
+            <span>ℹ️ ¿Cómo diferenciar las fechas al ingresar mercadería?</span>
+          </div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+            <div style="background:rgba(255,255,255,0.85); padding:8px 10px; border-radius:8px; border:1px solid #dbeafe;">
+              <strong style="color:#065f46;">📅 Fecha de Entrada / Recepción:</strong><br>
+              <span style="color:#475569; font-size:11px;">Día en que <strong>llegó la mercadería al depósito</strong> (hoy o fecha anterior, <em>nunca futura</em>).</span>
+            </div>
+            <div style="background:rgba(255,255,255,0.85); padding:8px 10px; border-radius:8px; border:1px solid #dbeafe;">
+              <strong style="color:#92400e;">⏳ Fecha de Vencimiento de Lote:</strong><br>
+              <span style="color:#475569; font-size:11px;">Día en que <strong>caduca el producto</strong> según su envase (fecha <em>futura</em> para productos perecederos).</span>
+            </div>
+          </div>
+        </div>
+
         <div class="form-grid">
           <div class="field">
             <label for="ingProveedor">Proveedor *</label>
             <select class="control" id="ingProveedor"><option value="">Seleccione un proveedor</option></select>
           </div>
           <div class="field">
-            <label for="ingFecha">Fecha del ingreso</label>
-            <input class="control" type="date" id="ingFecha" />
+            <label for="ingFecha" style="display:flex; justify-content:space-between; align-items:center;">
+              <span>Fecha del ingreso *</span>
+              <span style="font-size:10px; font-weight:bold; color:#047857; background:#d1fae5; padding:2px 6px; border-radius:10px;">Entrada a depósito (≤ Hoy)</span>
+            </label>
+            <input class="control" type="date" id="ingFecha" max="" />
+            <small style="color:var(--muted); font-size:11px; display:block; margin-top:3px;">
+              Día en que ingresó físicamente al depósito. Debe ser igual o anterior a hoy.
+            </small>
           </div>
         </div>
         <div class="divider"></div>
-        <div class="help" style="margin-bottom:8px;">Productos recibidos (cantidades en unidad base)</div>
-        <div id="ingProductoSelector" style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:10px;">
-          <select class="control" id="ingProductoSelect" style="flex:2; min-width:220px;"></select>
-          <input class="control" type="number" id="ingProductoCant" min="1" style="flex:1; width:120px;" placeholder="Cantidad" />
+        <div class="help" style="margin-bottom:8px;">Productos recibidos (con Lote y Vencimiento obligatorios)</div>
+        <div id="ingProductoSelector" style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px;">
+          <select class="control" id="ingProductoSelect" style="flex:2; min-width:180px;"></select>
+          <input class="control" type="number" id="ingProductoCant" min="1" style="flex:1; width:80px;" placeholder="Cant. *" />
+          <input class="control" type="text" id="ingProductoLote" style="flex:1; width:110px;" placeholder="N° Lote *" />
+          <input class="control" type="date" id="ingProductoVto" style="flex:1; width:130px;" title="Fecha de vencimiento *" />
           <button class="btn primary" id="btnAgregarItemIngreso">＋ Agregar</button>
         </div>
         <div style="max-height:200px; overflow-y:auto; border:1px solid var(--border); border-radius:10px;">
           <table class="items-table" aria-label="Ítems de ingreso">
-            <thead><tr><th>Producto</th><th>Código</th><th>Cantidad</th><th></th></tr></thead>
+            <thead><tr><th>Producto</th><th>Código</th><th>Cantidad</th><th>N° Lote</th><th>Vencimiento</th><th></th></tr></thead>
             <tbody id="tbodyItemsIngreso"></tbody>
           </table>
         </div>
@@ -434,15 +460,24 @@
     </div>
   </div>
 
-  <!-- MODAL: Registrar Devolución (S05) -->
+  <!-- MODAL: Registrar Devolución -->
   <div class="modal-backdrop" id="modalDevolucion">
     <div class="modal-content">
       <div class="modal-header">
-        <h3>Registro de Devoluciones (S05)</h3>
+        <h3>Registro de Devoluciones</h3>
         <button class="modal-close" onclick="closeModal('modalDevolucion')">&times;</button>
       </div>
       <div class="modal-body">
         <div class="error-box" id="errorBoxDevolucion"></div>
+
+        <div style="background:linear-gradient(135deg, #eff6ff, #f0fdf4); border:1px solid #bbf7d0; border-radius:12px; padding:10px 14px; margin-bottom:12px; font-size:12px; color:#14532d;">
+          <div style="font-weight:bold; margin-bottom:4px;">💡 Distinción de Devoluciones en Distribuidora:</div>
+          <div style="font-size:11px; line-height:1.4; color:#334155;">
+            • <strong>Cliente (+):</strong> El cliente devuelve mercadería que le vendimos → <em>Suma unidades al stock</em>.<br>
+            • <strong>Proveedor (-):</strong> Devolvemos mercadería al proveedor por falla/daño → <em>Descuenta unidades del stock</em>.
+          </div>
+        </div>
+
         <form id="formDevolucion">
           <div class="form-grid">
             <div class="field span-2">
@@ -450,8 +485,15 @@
               <select class="control" id="devProducto"><option value="">Seleccione un producto</option></select>
             </div>
             <div class="field">
-              <label for="devCantidad">Cantidad devuelta *</label>
+              <label for="devCantidad">Cantidad *</label>
               <input class="control" type="number" min="1" id="devCantidad" value="1" />
+            </div>
+            <div class="field">
+              <label for="devTipo">Origen / Tipo *</label>
+              <select class="control" id="devTipo">
+                <option value="cliente">Cliente (Suma al stock +)</option>
+                <option value="proveedor">Proveedor (Resta del stock -)</option>
+              </select>
             </div>
             <div class="field span-2">
               <label for="devMotivo">Motivo de la devolución *</label>
@@ -459,7 +501,7 @@
             </div>
           </div>
         </form>
-        <div class="help" id="devInfoStock"></div>
+        <div class="help" id="devInfoStock" style="margin-top:8px; font-weight:bold;"></div>
       </div>
       <div class="modal-footer">
         <button class="btn" onclick="closeModal('modalDevolucion')">Cancelar</button>
@@ -468,11 +510,11 @@
     </div>
   </div>
 
-  <!-- MODAL: Ajuste Manual de Inventario (S06) -->
+  <!-- MODAL: Ajuste Manual de Inventario -->
   <div class="modal-backdrop" id="modalAjuste">
     <div class="modal-content">
       <div class="modal-header">
-        <h3>Ajuste Manual de Inventario (S06)</h3>
+        <h3>Ajuste Manual de Inventario</h3>
         <button class="modal-close" onclick="closeModal('modalAjuste')">&times;</button>
       </div>
       <div class="modal-body">
@@ -507,11 +549,11 @@
     </div>
   </div>
 
-  <!-- MODAL: Configurar Stock Mínimo / Alertas (S07) -->
+  <!-- MODAL: Configurar Stock Mínimo / Alertas -->
   <div class="modal-backdrop" id="modalAlertas">
     <div class="modal-content">
       <div class="modal-header">
-        <h3>Alertas de Stock Mínimo (S07)</h3>
+        <h3>Alertas de Stock Mínimo</h3>
         <button class="modal-close" onclick="closeModal('modalAlertas')">&times;</button>
       </div>
       <div class="modal-body">
@@ -536,11 +578,11 @@
     </div>
   </div>
 
-  <!-- MODAL: Gestión de Unidades y Equivalencias (S08) -->
+  <!-- MODAL: Gestión de Unidades y Equivalencias -->
   <div class="modal-backdrop" id="modalUnidades">
     <div class="modal-content" style="max-width:720px;">
       <div class="modal-header">
-        <h3>Unidades de Medida y Equivalencias (S08)</h3>
+        <h3>Unidades de Medida y Equivalencias</h3>
         <button class="modal-close" onclick="closeModal('modalUnidades')">&times;</button>
       </div>
       <div class="modal-body">
@@ -590,7 +632,7 @@
         <h4 style="margin:10px 0 8px; font-size:14px;">Historial de Movimientos (ingresos, ventas, devoluciones, ajustes)</h4>
         <div style="max-height:260px; overflow-y:auto; border:1px solid var(--border); border-radius:10px;">
           <table aria-label="Historial de movimientos">
-            <thead><tr><th>Fecha</th><th>Tipo</th><th>Cantidad</th><th>Unidad</th><th>Motivo</th><th>Usuario</th></tr></thead>
+            <thead><tr><th>Fecha y Hora</th><th>Tipo</th><th>Cantidad</th><th>Unidad</th><th>Motivo</th><th>Usuario</th></tr></thead>
             <tbody id="tbodyMovimientos"></tbody>
           </table>
         </div>
@@ -777,8 +819,8 @@
       document.getElementById('kpiBajo').textContent = bajo;
       document.getElementById('kpiNormal').textContent = normal;
       document.getElementById('txtAlertasActivas').textContent = (critico + bajo) > 0
-        ? `${critico + bajo} producto(s) requieren reposición (alertas S07)`
-        : 'Sin alertas de stock mínimo (S07)';
+        ? `${critico + bajo} producto(s) requieren reposición (alertas de stock)`
+        : 'Sin alertas de stock mínimo';
     }
 
     // ==========================================
@@ -787,42 +829,69 @@
 
     document.getElementById('btnIngreso').addEventListener('click', () => {
       itemsIngreso = [];
+      const hoyLocal = new Date().toLocaleDateString('en-CA');
       document.getElementById('ingProveedor').value = '';
-      document.getElementById('ingFecha').value = new Date().toISOString().slice(0,10);
+      const inpFecha = document.getElementById('ingFecha');
+      inpFecha.max = hoyLocal;
+      inpFecha.value = hoyLocal;
       renderItemsIngreso();
       cargarSelectsProducto();
       openModal('modalIngreso');
     });
 
+    document.getElementById('ingFecha').addEventListener('change', function() {
+      const hoyLocal = new Date().toLocaleDateString('en-CA');
+      if (this.value && this.value > hoyLocal) {
+        alert('No se pueden registrar ingresos con fechas posteriores a la fecha actual.');
+        this.value = hoyLocal;
+      }
+    });
+
     document.getElementById('btnAgregarItemIngreso').addEventListener('click', () => {
       const sel = document.getElementById('ingProductoSelect');
       const cant = document.getElementById('ingProductoCant');
+      const inpLote = document.getElementById('ingProductoLote');
+      const inpVto = document.getElementById('ingProductoVto');
       const prod = productosCache.find(p => p.id_producto == sel.value);
       const cantidad = parseInt(cant.value, 10);
+      const nroLote = inpLote ? inpLote.value.trim() : '';
+      const fechaVto = inpVto ? inpVto.value : '';
 
       const errorBox = document.getElementById('errorBoxIngreso');
       errorBox.classList.remove('show');
       if (!sel.value) { errorBox.textContent = 'Seleccione un producto.'; errorBox.classList.add('show'); return; }
       if (!cantidad || cantidad < 1) { errorBox.textContent = 'Ingrese una cantidad válida (>0).'; errorBox.classList.add('show'); return; }
-      if (itemsIngreso.some(i => i.id_producto == sel.value)) { errorBox.textContent = 'El producto ya está en la lista. Modifique su cantidad o elimínelo.'; errorBox.classList.add('show'); return; }
+      if (!nroLote) { errorBox.textContent = 'Debe indicar el número de lote para el producto. El lote es obligatorio.'; errorBox.classList.add('show'); return; }
+      if (!fechaVto) { errorBox.textContent = 'Debe indicar la fecha de vencimiento del lote.'; errorBox.classList.add('show'); return; }
 
-      itemsIngreso.push({ id_producto: parseInt(sel.value), codigo: prod.codigo, descripcion: prod.descripcion, cantidad });
+      itemsIngreso.push({
+        id_producto: parseInt(sel.value),
+        codigo: prod.codigo,
+        descripcion: prod.descripcion,
+        cantidad,
+        nro_lote: nroLote,
+        fecha_vencimiento: fechaVto
+      });
       renderItemsIngreso();
       cant.value = '';
       sel.value = '';
+      if (inpLote) inpLote.value = '';
+      if (inpVto) inpVto.value = '';
     });
 
     function renderItemsIngreso(){
       const tbody = document.getElementById('tbodyItemsIngreso');
       if (itemsIngreso.length === 0){
-        tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:12px; color:var(--muted);">No hay productos agregados.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:12px; color:var(--muted);">No hay productos agregados.</td></tr>`;
         return;
       }
       tbody.innerHTML = itemsIngreso.map((it, idx) => `
         <tr>
           <td>${it.descripcion}</td>
           <td>${it.codigo}</td>
-          <td><input class="control" type="number" min="1" value="${it.cantidad}" style="width:90px; padding:6px 8px; font-size:13px;" onchange="editarCantItemIngreso(${idx}, this.value)" /></td>
+          <td><input class="control" type="number" min="1" value="${it.cantidad}" style="width:75px; padding:6px 8px; font-size:13px;" onchange="editarCantItemIngreso(${idx}, this.value)" /></td>
+          <td><strong style="color:#4338ca;">${it.nro_lote}</strong></td>
+          <td><span style="color:#b45309; font-size:12px;">${it.fecha_vencimiento}</span></td>
           <td><button class="icon-btn" onclick="quitarItemIngreso(${idx})" title="Quitar">✕</button></td>
         </tr>
       `).join('');
@@ -847,18 +916,24 @@
       if (itemsIngreso.length === 0) { errorBox.textContent = 'Debe agregar al menos un producto recibido.'; errorBox.classList.add('show'); return; }
 
       const fecha = document.getElementById('ingFecha').value;
-      if (fecha) {
-        const hoy = new Date();
-        hoy.setHours(23, 59, 59, 999);
-        const fechaIngreso = new Date(fecha + 'T00:00:00');
-        if (fechaIngreso > hoy) { errorBox.textContent = 'La fecha del ingreso no puede ser posterior a la fecha actual.'; errorBox.classList.add('show'); return; }
+      const hoyLocal = new Date().toLocaleDateString('en-CA');
+      if (fecha && fecha > hoyLocal) {
+        errorBox.textContent = 'La fecha del ingreso no puede ser posterior a la fecha actual.';
+        errorBox.classList.add('show');
+        return;
       }
 
       const payload = {
         id_proveedor: parseInt(idProveedor),
         fecha: fecha || null,
         id_usuario: 1,
-        items: itemsIngreso.map(i => ({ id_producto: i.id_producto, cantidad: i.cantidad, motivo: 'Ingreso de mercadería (S03)' }))
+        items: itemsIngreso.map(i => ({
+          id_producto: i.id_producto,
+          cantidad: i.cantidad,
+          nro_lote: i.nro_lote,
+          fecha_vencimiento: i.fecha_vencimiento,
+          motivo: 'Ingreso de mercadería'
+        }))
       };
 
       document.getElementById('btnGuardarIngreso').disabled = true;
@@ -895,12 +970,33 @@
       openModal('modalDevolucion');
     });
 
-    document.getElementById('devProducto').addEventListener('change', (e) => {
-      const p = productosCache.find(x => x.id_producto == e.target.value);
-      document.getElementById('devInfoStock').textContent = p
-        ? `Stock actual: ${p.stock_disponible} (mín. ${p.stock_minimo}). La devolución sumará las unidades al stock.`
-        : '';
-    });
+    function actualizarDevInfoStock() {
+      const p = productosCache.find(x => x.id_producto == document.getElementById('devProducto').value);
+      const cant = parseInt(document.getElementById('devCantidad').value, 10) || 0;
+      const tipo = document.getElementById('devTipo').value;
+      const infoEl = document.getElementById('devInfoStock');
+      if (!p) {
+        infoEl.textContent = '';
+        return;
+      }
+      if (tipo === 'cliente') {
+        infoEl.style.color = '#15803d';
+        infoEl.textContent = `Stock actual: ${p.stock_disponible} u. → La devolución de cliente SUMARÁ +${cant} u. al stock (Nuevo saldo: ${p.stock_disponible + cant} u.).`;
+      } else {
+        const saldo = p.stock_disponible - cant;
+        if (saldo < 0) {
+          infoEl.style.color = '#b91c1c';
+          infoEl.textContent = `⚠️ Stock insuficiente: El depósito cuenta con ${p.stock_disponible} u. y se solicita devolver ${cant} u. al proveedor.`;
+        } else {
+          infoEl.style.color = '#b91c1c';
+          infoEl.textContent = `Stock actual: ${p.stock_disponible} u. → La devolución a proveedor DESCONTARÁ -${cant} u. del stock (Nuevo saldo: ${saldo} u.).`;
+        }
+      }
+    }
+
+    document.getElementById('devProducto').addEventListener('change', actualizarDevInfoStock);
+    document.getElementById('devCantidad').addEventListener('input', actualizarDevInfoStock);
+    document.getElementById('devTipo').addEventListener('change', actualizarDevInfoStock);
 
     document.getElementById('btnGuardarDevolucion').addEventListener('click', async () => {
       const errorBox = document.getElementById('errorBoxDevolucion');
@@ -908,16 +1004,32 @@
       const idProducto = document.getElementById('devProducto').value;
       const cantidad = parseInt(document.getElementById('devCantidad').value, 10);
       const motivo = document.getElementById('devMotivo').value.trim();
+      const tipoDevolucion = document.getElementById('devTipo').value;
 
       if (!idProducto) { errorBox.textContent = 'Seleccione el producto devuelto.'; errorBox.classList.add('show'); return; }
       if (!cantidad || cantidad < 1) { errorBox.textContent = 'Registre una cantidad válida.'; errorBox.classList.add('show'); return; }
       if (!motivo) { errorBox.textContent = 'Debe indicar el motivo de la devolución.'; errorBox.classList.add('show'); return; }
 
+      if (tipoDevolucion === 'proveedor') {
+        const p = productosCache.find(x => x.id_producto == idProducto);
+        if (p && cantidad > p.stock_disponible) {
+          errorBox.textContent = `Stock insuficiente para devolver al proveedor. Disponible: ${p.stock_disponible}, Solicitado: ${cantidad}.`;
+          errorBox.classList.add('show');
+          return;
+        }
+      }
+
       try {
         const res = await fetch(`${API_BASE}/stock/devoluciones`, {
           method: 'POST',
           headers: { 'Content-Type':'application/json', 'Accept':'application/json' },
-          body: JSON.stringify({ id_producto: parseInt(idProducto), cantidad, motivo, id_usuario: 1 })
+          body: JSON.stringify({
+            id_producto: parseInt(idProducto),
+            cantidad,
+            motivo,
+            tipo_devolucion: tipoDevolucion,
+            id_usuario: 1
+          })
         });
         const json = await res.json();
         if (json.status === 'success') {
@@ -1192,17 +1304,17 @@
             <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:12px; font-size:13px;">
               <div><span style="color:var(--muted); font-size:11px; font-weight:800;">PRODUCTO:</span><br><strong>${d.codigo}</strong></div>
               <div><span style="color:var(--muted); font-size:11px; font-weight:800;">DESCRIPCIÓN:</span><br><strong>${d.descripcion}</strong></div>
-              <div><span style="color:var(--muted); font-size:11px; font-weight:800;">STOCK DISPONIBLE (S02):</span><br><strong style="font-size:16px; color:var(--primary);">${d.stock_disponible}</strong></div>
+              <div><span style="color:var(--muted); font-size:11px; font-weight:800;">STOCK DISPONIBLE:</span><br><strong style="font-size:16px; color:var(--primary);">${d.stock_disponible}</strong></div>
               <div><span style="color:var(--muted); font-size:11px; font-weight:800;">STOCK MÍN.:</span><br>${d.stock_minimo}</div>
               <div><span style="color:var(--muted); font-size:11px; font-weight:800;">NIVEL:</span><br>${NIVEL_TAG[d.estado_alerta] || '—'}</div>
               <div><span style="color:var(--muted); font-size:11px; font-weight:800;">PRECIO:</span><br><strong>$${Number(d.precio_unitario).toFixed(2)}</strong></div>
             </div>
             <div class="divider"></div>
-            <div class="help" style="margin-bottom:6px;">Disponibilidad por unidad (S08) — notif. para ventas minoristas y mayoristas:</div>
+            <div class="help" style="margin-bottom:6px;">Disponibilidad por unidad — notif. para ventas minoristas y mayoristas:</div>
             <div>${unidadHtml || '<span class="help">Sin unidades configuradas.</span>'}</div>
             <div class="divider"></div>
             <div class="btn-row">
-              <button class="btn primary" onclick="registrarVenta(${idProducto})" title="Descontar stock por venta (S04)">💳 Registrar Venta (S04)</button>
+              <button class="btn primary" onclick="registrarVenta(${idProducto})" title="Descontar stock por venta">💳 Registrar Venta</button>
             </div>
           `;
         } else {
@@ -1212,12 +1324,12 @@
         if (histJson.status === 'success' && histJson.data.movimientos.length > 0){
           tbody.innerHTML = histJson.data.movimientos.map(m => `
             <tr>
-              <td data-label="Fecha">${m.fecha || '—'}</td>
+              <td data-label="Fecha y Hora">${m.fecha || '—'}</td>
               <td data-label="Tipo"><span class="tag ${m.tipo === 'venta' ? 'bajo' : (m.tipo === 'ingreso' || m.tipo === 'devolucion' ? 'normal' : 'critico')}"><span class="s"></span>${TIPO_MOV_LABEL[m.tipo] || m.tipo}</span></td>
               <td data-label="Cantidad" style="font-weight:800;">${m.cantidad}</td>
               <td data-label="Unidad">${m.unidad || '—'}</td>
               <td data-label="Motivo">${m.motivo || '—'}</td>
-              <td data-label="Usuario">#${m.id_usuario}</td>
+              <td data-label="Usuario">${m.usuario_nombre || ('#' + m.id_usuario)}</td>
             </tr>
           `).join('');
         } else {
@@ -1229,7 +1341,7 @@
     }
 
     async function registrarVenta(idProducto){
-      const cantidad = prompt('Cantidad vendida (S04):', '1');
+      const cantidad = prompt('Cantidad vendida:', '1');
       if (cantidad === null) return;
       const n = parseInt(cantidad, 10);
       if (!n || n < 1){ showToast('Cantidad inválida.', 'error'); return; }
@@ -1238,7 +1350,7 @@
         const res = await fetch(`${API_BASE}/stock/ventas`, {
           method: 'POST',
           headers: { 'Content-Type':'application/json', 'Accept':'application/json' },
-          body: JSON.stringify({ id_producto: idProducto, cantidad: n, id_usuario: 1, motivo: 'Venta registrada (S04)' })
+          body: JSON.stringify({ id_producto: idProducto, cantidad: n, id_usuario: 1, motivo: 'Venta registrada' })
         });
         const json = await res.json();
         if (json.status === 'success'){

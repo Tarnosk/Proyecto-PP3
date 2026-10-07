@@ -29,12 +29,17 @@ class HistorialPrecio extends Model
         'tipo_precio' => 'string',
         'precio' => 'decimal:2',
         'porcentaje_aumento' => 'decimal:2',
-        'fecha_cambio' => 'date:Y-m-d',
+        'fecha_cambio' => 'datetime:Y-m-d H:i:s',
         'id_usuario' => 'integer',
     ];
 
     public function producto(): BelongsTo
     {
         return $this->belongsTo(Producto::class, 'id_producto', 'id_producto');
+    }
+
+    public function usuario(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\Usuario::class, 'id_usuario', 'id_usuario');
     }
 }

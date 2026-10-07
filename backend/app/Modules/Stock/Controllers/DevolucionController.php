@@ -28,6 +28,7 @@ class DevolucionController extends Controller
             'id_producto' => 'required|integer|exists:PRODUCTO,id_producto',
             'cantidad' => 'required|integer|min:1',
             'motivo' => 'required|string|max:255',
+            'tipo_devolucion' => 'nullable|string|in:cliente,proveedor',
             'id_unidad' => 'nullable|integer|exists:UNIDAD_MEDIDA,id_unidad',
             'fecha' => 'nullable|date|before_or_equal:today',
         ], [
@@ -35,6 +36,7 @@ class DevolucionController extends Controller
             'cantidad.required' => 'Debe registrar la cantidad devuelta.',
             'cantidad.min' => 'La cantidad devuelta debe ser mayor a cero.',
             'motivo.required' => 'Debe indicar el motivo de la devolución.',
+            'tipo_devolucion.in' => 'El tipo de devolución debe ser cliente o proveedor.',
         ]);
 
         if ($validator->fails()) {
@@ -54,40 +56,79 @@ class DevolucionController extends Controller
                 ], 404);
             }
 
+            if ($producto->estado !== 'activo') {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'No se pueden registrar devoluciones sobre productos inactivos.',
+                ], 400);
+            }
+
             $idUsuario = UsuarioActual::id($request);
             $idUnidad = $request->has('id_unidad') ? (int) $request->input('id_unidad') : null;
+            $cantidad = (int) $request->input('cantidad');
+
+            $tipoDevolucion = $request->input('tipo_devolucion', 'cliente');
+            // Cliente: devuelve mercadería previamente vendida -> SUMA al stock ($esIncremento = true)
+            // Proveedor: se devuelve mercadería al proveedor -> DESCUENTA del stock ($esIncremento = false)
+            $esIncremento = ($tipoDevolucion === 'cliente');
+
+            $cantidadBase = StockService::cantidadEnUnidadBase($cantidad, $idUnidad);
+            if (!$esIncremento && $producto->stock_disponible < $cantidadBase) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => "Stock insuficiente para devolver al proveedor. Stock actual disponible: {$producto->stock_disponible}, solicitado: {$cantidadBase}.",
+                ], 400);
+            }
 
             $fechaDev = null;
             if ($request->has('fecha') && $request->input('fecha')) {
                 try {
                     $fechaDev = \Carbon\Carbon::parse($request->input('fecha'));
+                    if (!str_contains((string) $request->input('fecha'), ':')) {
+                        $ahora = \Carbon\Carbon::now();
+                        $fechaDev->setTime($ahora->hour, $ahora->minute, $ahora->second);
+                    }
                 } catch (\Throwable $e) {
-                    $fechaDev = null;
+                    $fechaDev = \Carbon\Carbon::now();
                 }
+            } else {
+                $fechaDev = \Carbon\Carbon::now();
             }
+
+            $prefijo = $esIncremento ? '[Devolución Cliente]' : '[Devolución a Proveedor]';
+            $motivoRaw = trim((string) $request->input('motivo'));
+            $motivoFinal = str_starts_with($motivoRaw, '[Devolución') ? $motivoRaw : "{$prefijo} {$motivoRaw}";
+
             $this->stockService->registrarMovimiento(
                 $producto,
                 'devolucion',
-                (int) $request->input('cantidad'),
-                trim($request->input('motivo')),
+                $cantidad,
+                $motivoFinal,
                 $idUsuario,
                 $idUnidad,
                 null,
                 null,
-                $fechaDev
+                $fechaDev,
+                $esIncremento
             );
 
             $producto->refresh();
 
+            $mensaje = $esIncremento
+                ? "Devolución de cliente registrada exitosamente (+{$cantidad} u. sumadas al stock)."
+                : "Devolución a proveedor registrada exitosamente (-{$cantidad} u. descontadas del stock).";
+
             return response()->json([
                 'status' => 'success',
-                'message' => 'Devolución registrada exitosamente.',
+                'message' => $mensaje,
                 'data' => [
                     'id_producto' => $producto->id_producto,
                     'codigo' => $producto->codigo,
                     'descripcion' => $producto->descripcion,
-                    'cantidad_devuelta' => (int) $request->input('cantidad'),
-                    'motivo' => trim($request->input('motivo')),
+                    'tipo_devolucion' => $tipoDevolucion,
+                    'impacto_stock' => $esIncremento ? "+{$cantidad}" : "-{$cantidad}",
+                    'cantidad_devuelta' => $cantidad,
+                    'motivo' => $motivoFinal,
                     'stock_disponible' => $producto->stock_disponible,
                     'estado_alerta' => $producto->estado_alerta,
                 ],

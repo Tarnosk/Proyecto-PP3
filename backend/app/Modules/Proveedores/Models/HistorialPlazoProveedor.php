@@ -40,4 +40,9 @@ class HistorialPlazoProveedor extends Model
     {
         return $this->belongsTo(Proveedor::class, 'id_proveedor', 'id_proveedor');
     }
+
+    public function usuario(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\Usuario::class, 'id_usuario', 'id_usuario');
+    }
 }

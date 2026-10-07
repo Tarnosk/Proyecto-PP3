@@ -16,6 +16,7 @@ gcm-diagnose.log
 # Dependencias de terceros (nunca en el repo)
 vendor/
 node_modules/
+dist/
 .phpunit.result.cache
 
 # Respaldos y material de trabajo que no va al repo

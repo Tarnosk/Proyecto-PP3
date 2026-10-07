@@ -60,7 +60,8 @@ class StockService
         ?int $idUnidad = null,
         ?int $idVenta = null,
         ?int $idRecepcion = null,
-        \Carbon\Carbon|string|null $fechaPersonalizada = null
+        \Carbon\Carbon|string|null $fechaPersonalizada = null,
+        bool $esIncremento = false
     ): MovimientoStock {
         if (!in_array($tipo, self::TIPOS, true)) {
             throw new RuntimeException("Tipo de movimiento inválido: {$tipo}");
@@ -72,9 +73,22 @@ class StockService
             throw new RuntimeException('Debe indicar un motivo para el ajuste.');
         }
 
-        $fecha = $fechaPersonalizada instanceof Carbon
-            ? $fechaPersonalizada->toDateString()
-            : ($fechaPersonalizada ?? Carbon::now()->toDateString());
+        if ($fechaPersonalizada instanceof Carbon) {
+            if ($fechaPersonalizada->format('H:i:s') === '00:00:00') {
+                $ahora = Carbon::now();
+                $fechaPersonalizada->setTime($ahora->hour, $ahora->minute, $ahora->second);
+            }
+            $fecha = $fechaPersonalizada->toDateTimeString();
+        } elseif (is_string($fechaPersonalizada) && trim($fechaPersonalizada) !== '') {
+            $parsed = Carbon::parse($fechaPersonalizada);
+            if (!str_contains($fechaPersonalizada, ':') || $parsed->format('H:i:s') === '00:00:00') {
+                $ahora = Carbon::now();
+                $parsed->setTime($ahora->hour, $ahora->minute, $ahora->second);
+            }
+            $fecha = $parsed->toDateTimeString();
+        } else {
+            $fecha = Carbon::now()->toDateTimeString();
+        }
 
         // Transacción atómica: actualizar stock embebido + registrar movimiento
         DB::beginTransaction();
@@ -89,8 +103,10 @@ class StockService
 
             // Determinar delta aplicado al stock
             $delta = match ($tipo) {
-                'ingreso', 'devolucion' => $cantidadBase,
-                'venta', 'ajuste' => -$cantidadBase,
+                'ingreso' => $cantidadBase,
+                'devolucion' => $esIncremento ? $cantidadBase : -$cantidadBase,
+                'venta' => -$cantidadBase,
+                'ajuste' => $esIncremento ? $cantidadBase : -$cantidadBase,
             };
 
             $nuevoDisponible = $disponible + $delta;

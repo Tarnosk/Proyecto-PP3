@@ -121,6 +121,7 @@ class PlazoEntregaService
             'plazo_nuevo_dias' => $h->plazo_nuevo_dias,
             'fecha_cambio' => $h->fecha_cambio?->format('Y-m-d H:i:s'),
             'id_usuario' => $h->id_usuario,
+            'usuario_nombre' => $h->usuario ? $h->usuario->nombre : ($h->id_usuario ? "Usuario #{$h->id_usuario}" : 'Sistema'),
         ];
     }
 }

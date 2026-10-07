@@ -19,7 +19,8 @@ class HistorialPlazoProveedorRepository
      */
     public function listarPorProveedor(int $idProveedor, int $limite = 0)
     {
-        $query = HistorialPlazoProveedor::where('id_proveedor', $idProveedor)
+        $query = HistorialPlazoProveedor::with('usuario')
+            ->where('id_proveedor', $idProveedor)
             ->orderByDesc('fecha_cambio')
             ->orderByDesc('id_historial_plazo');
 

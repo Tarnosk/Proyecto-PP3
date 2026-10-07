@@ -14,6 +14,7 @@ use App\Modules\Stock\Controllers\DevolucionController;
 use App\Modules\Stock\Controllers\AjusteStockController;
 use App\Modules\Stock\Controllers\AlertaStockController;
 use App\Modules\Stock\Controllers\UnidadController;
+use App\Modules\Stock\Controllers\UbicacionController;
 use App\Modules\Stock\Controllers\ConsultaVencimientosController;
 use App\Modules\Proveedores\Controllers\ProveedorController;
 use App\Modules\Proveedores\Controllers\PlazoEntregaController;
@@ -128,6 +129,7 @@ Route::apiResource('ordenes-compra', OrdenCompraController::class)->except(['des
 
 // Productos (P01, P04, P05, P06, P07, P08)
 Route::get('productos/{id}/historial', [ProductoController::class, 'historialPrecios']);
+Route::get('productos/{id}/auditoria', [ProductoController::class, 'auditoria']);
 // P07 - Aplicar aumento porcentual masivo de precios
 Route::post('productos/aumento-masivo', [ProductoController::class, 'aumentoMasivo']);
 Route::patch('productos/{id}/desactivar', [ProductoController::class, 'desactivar']);
@@ -142,7 +144,8 @@ Route::get('stock', [StockController::class, 'consultaGeneral']);
 // S02 - Disponibilidad para Venta (por producto)
 Route::get('stock/{id}/disponibilidad', [StockController::class, 'disponibilidadParaVenta']);
 
-// S12 - Historial de movimientos de stock de un producto
+// S12 - Historial de movimientos de stock de un producto o listado global
+Route::get('stock/movimientos', [StockController::class, 'todosLosMovimientos']);
 Route::get('stock/{id}/historial-movimientos', [StockController::class, 'historial']);
 
 // S03 - Registro de Ingreso de Mercadería
@@ -172,6 +175,12 @@ Route::get('stock/lotes-por-vencer',     [LoteController::class, 'porVencer']);
 // S08 - Gestión de unidades y equivalencias
 Route::get('unidades/convertir', [UnidadController::class, 'convertir']);
 Route::apiResource('productos/{id}/unidades', UnidadController::class);
+
+// S14 - Gestión de ubicaciones de almacenamiento
+Route::get('ubicaciones', [UbicacionController::class, 'index']);
+Route::post('ubicaciones', [UbicacionController::class, 'store']);
+Route::post('productos/{id}/ubicacion', [UbicacionController::class, 'asignarProducto']);
+Route::delete('productos/{id}/ubicacion', [UbicacionController::class, 'desasignarProducto']);
 
 // ─── S11: CONSULTA DE VENCIMIENTOS (sobre la tabla LOTE) ────────────────────────
 Route::prefix('vencimientos')->group(function () {

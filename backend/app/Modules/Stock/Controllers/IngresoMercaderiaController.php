@@ -29,14 +29,24 @@ class IngresoMercaderiaController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'id_proveedor' => 'required|integer|exists:PROVEEDOR,id_proveedor',
-            'fecha' => 'nullable|date|before_or_equal:today',
+            'fecha' => [
+                'nullable',
+                'date',
+                function ($attribute, $value, $fail) {
+                    $fecha = \Carbon\Carbon::parse($value)->startOfDay();
+                    $hoy = \Carbon\Carbon::today();
+                    if ($fecha->greaterThan($hoy)) {
+                        $fail('La fecha del ingreso no puede ser posterior a la fecha actual.');
+                    }
+                },
+            ],
             'items' => 'required|array|min:1',
             'items.*.id_producto' => 'required|integer|exists:PRODUCTO,id_producto',
             'items.*.cantidad' => 'required|integer|min:1',
             'items.*.id_unidad' => 'nullable|integer|exists:UNIDAD_MEDIDA,id_unidad',
             'items.*.motivo' => 'nullable|string|max:255',
-            'items.*.nro_lote' => 'nullable|string|max:100',
-            'items.*.fecha_vencimiento' => 'nullable|date',
+            'items.*.nro_lote' => 'required|string|max:100',
+            'items.*.fecha_vencimiento' => 'required|date',
         ], [
             'id_proveedor.required' => 'Debe seleccionar un proveedor.',
             'id_proveedor.exists' => 'El proveedor seleccionado no existe.',
@@ -46,7 +56,9 @@ class IngresoMercaderiaController extends Controller
             'items.*.id_producto.exists' => 'Uno de los productos seleccionados no existe.',
             'items.*.cantidad.required' => 'Cada ítem debe indicar la cantidad ingresada.',
             'items.*.cantidad.min' => 'La cantidad ingresada debe ser mayor a cero.',
+            'items.*.nro_lote.required' => 'Cada producto ingresado debe estar asociado obligatoriamente a un número de lote.',
             'items.*.nro_lote.max' => 'El número de lote no puede superar los 100 caracteres.',
+            'items.*.fecha_vencimiento.required' => 'Debe indicar la fecha de vencimiento del lote para cada producto ingresado.',
             'items.*.fecha_vencimiento.date' => 'La fecha de vencimiento del lote debe ser una fecha válida.',
         ]);
 
@@ -82,7 +94,7 @@ class IngresoMercaderiaController extends Controller
             foreach ($items as $item) {
                 $producto = Producto::find((int) $item['id_producto']);
                 $idUnidad = isset($item['id_unidad']) ? (int) $item['id_unidad'] : null;
-                $motivo = $item['motivo'] ?? 'Ingreso de mercadería (S03)';
+                $motivo = $item['motivo'] ?? 'Ingreso de mercadería';
                 $cantidad = (int) $item['cantidad'];
 
                 if (!$producto || $producto->estado !== 'activo') {
@@ -101,9 +113,15 @@ class IngresoMercaderiaController extends Controller
                 if ($fecha !== null && $fecha !== '') {
                     try {
                         $fechaIngreso = \Carbon\Carbon::parse($fecha);
+                        if (!str_contains((string) $fecha, ':')) {
+                            $ahora = \Carbon\Carbon::now();
+                            $fechaIngreso->setTime($ahora->hour, $ahora->minute, $ahora->second);
+                        }
                     } catch (\Throwable $e) {
-                        $fechaIngreso = null;
+                        $fechaIngreso = \Carbon\Carbon::now();
                     }
+                } else {
+                    $fechaIngreso = \Carbon\Carbon::now();
                 }
                 $resultado = DB::transaction(function () use (
                     $producto,
@@ -127,18 +145,20 @@ class IngresoMercaderiaController extends Controller
                         $fechaIngreso
                     );
 
-                    $loteId = null;
-                    if ($nroLote !== null && $nroLote !== '' && $vence !== null) {
-                        if (Lote::where('id_producto', $producto->id_producto)
-                            ->where('nro_lote', $nroLote)
-                            ->exists()
-                        ) {
-                            throw new \RuntimeException(
-                                "El lote '{$nroLote}' ya está registrado para el producto {$producto->codigo}."
-                            );
-                        }
+                    $cantidadBase = StockService::cantidadEnUnidadBase($cantidad, $idUnidad);
+                    $loteExistente = Lote::where('id_producto', $producto->id_producto)
+                        ->where('nro_lote', $nroLote)
+                        ->first();
 
-                        $cantidadBase = StockService::cantidadEnUnidadBase($cantidad, $idUnidad);
+                    if ($loteExistente) {
+                        $loteExistente->cantidad_inicial += $cantidadBase;
+                        $loteExistente->cantidad_actual += $cantidadBase;
+                        if ($vence) {
+                            $loteExistente->fecha_vencimiento = $vence;
+                        }
+                        $loteExistente->save();
+                        $lote = $loteExistente;
+                    } else {
                         $lote = Lote::create([
                             'id_producto' => $producto->id_producto,
                             'nro_lote' => $nroLote,
@@ -146,10 +166,10 @@ class IngresoMercaderiaController extends Controller
                             'cantidad_actual' => $cantidadBase,
                             'fecha_vencimiento' => $vence,
                         ]);
-
-                        $movimiento->update(['id_lote' => $lote->id_lote]);
-                        $loteId = $lote->id_lote;
                     }
+
+                    $movimiento->update(['id_lote' => $lote->id_lote]);
+                    $loteId = $lote->id_lote;
 
                     return $loteId;
                 });

@@ -31,7 +31,17 @@ class AjusteStockController extends Controller
             'tipo' => 'required|in:aumentar,disminuir',
             'motivo' => 'required|string|max:255',
             'id_unidad' => 'nullable|integer|exists:UNIDAD_MEDIDA,id_unidad',
-            'fecha' => 'nullable|date|before_or_equal:today',
+            'fecha' => [
+                'nullable',
+                'date',
+                function ($attribute, $value, $fail) {
+                    $fecha = \Carbon\Carbon::parse($value)->startOfDay();
+                    $hoy = \Carbon\Carbon::today();
+                    if ($fecha->greaterThan($hoy)) {
+                        $fail('La fecha del ajuste no puede ser posterior a la fecha actual.');
+                    }
+                },
+            ],
         ], [
             'id_producto.required' => 'Debe seleccionar un producto.',
             'cantidad.required' => 'Debe registrar la cantidad ajustada.',
@@ -58,6 +68,13 @@ class AjusteStockController extends Controller
                 ], 404);
             }
 
+            if ($producto->estado !== 'activo') {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'No se pueden realizar ajustes de stock sobre productos inactivos.',
+                ], 400);
+            }
+
             $idUsuario = UsuarioActual::id($request);
             $cantidad = (int) $request->input('cantidad');
             $tipo = $request->input('tipo');
@@ -71,9 +88,15 @@ class AjusteStockController extends Controller
             if ($request->has('fecha') && $request->input('fecha')) {
                 try {
                     $fechaAjuste = \Carbon\Carbon::parse($request->input('fecha'));
+                    if (!str_contains((string) $request->input('fecha'), ':')) {
+                        $ahora = \Carbon\Carbon::now();
+                        $fechaAjuste->setTime($ahora->hour, $ahora->minute, $ahora->second);
+                    }
                 } catch (\Throwable $e) {
-                    $fechaAjuste = null;
+                    $fechaAjuste = \Carbon\Carbon::now();
                 }
+            } else {
+                $fechaAjuste = \Carbon\Carbon::now();
             }
 
             $this->stockService->registrarMovimiento(
@@ -85,7 +108,8 @@ class AjusteStockController extends Controller
                 $idUnidad,
                 null,
                 null,
-                $fechaAjuste
+                $fechaAjuste,
+                $tipo === 'aumentar'
             );
 
             $producto->refresh();

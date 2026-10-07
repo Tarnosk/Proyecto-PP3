@@ -290,16 +290,15 @@ class LoteController extends Controller
             'id_producto' => $l->id_producto,
             'codigo_producto' => $l->producto ? $l->producto->codigo : null,
             'descripcion_producto' => $l->producto ? $l->producto->descripcion : null,
-            'cantidad' => $l->cantidad_actual,
-            'cantidad_inicial' => $l->cantidad_inicial,
+            'producto_codigo' => $l->producto ? $l->producto->codigo : null,
+            'producto_nombre' => $l->producto ? ($l->producto->codigo . ' - ' . $l->producto->descripcion) : null,
+            'cantidad' => (int) $l->cantidad_actual,
+            'cantidad_actual' => (int) $l->cantidad_actual,
+            'cantidad_inicial' => (int) $l->cantidad_inicial,
             'id_unidad' => $l->movimiento?->id_unidad,
             'nombre_unidad' => $l->movimiento?->unidad?->nombre_unidad,
             'fecha_vencimiento' => $l->fecha_vencimiento ? $l->fecha_vencimiento->format('Y-m-d') : null,
             'dias_para_vencer' => $dias,
-            // El estado lo define Lote::getEstadoAttribute(), que prioriza
-            // 'consumido' (cantidad_actual <= 0) sobre la fecha. Forzar
-            // 'vencido' acá hacía que el filtro estado=consumido devolviera
-            // filas etiquetadas como vencidas.
             'estado' => (string) $l->estado,
             'urgente' => $urgente,
             'id_movimiento' => $l->movimiento?->id_movimiento,

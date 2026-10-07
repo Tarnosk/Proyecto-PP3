@@ -5,6 +5,7 @@ namespace App\Modules\Stock\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Modules\Productos\Models\Producto;
+use App\Modules\Stock\Models\MovimientoStock;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -117,7 +118,7 @@ class StockController extends Controller
      */
     public function historial(Request $request, int $id): JsonResponse
     {
-        $producto = Producto::with('movimientos.unidad')->find($id);
+        $producto = Producto::with(['movimientos.unidad', 'movimientos.usuario'])->find($id);
 
         if (!$producto) {
             return response()->json([
@@ -133,9 +134,10 @@ class StockController extends Controller
                 'tipo' => $m->tipo,
                 'cantidad' => $m->cantidad,
                 'cantidad_base' => $m->cantidad_base,
-                'fecha' => $m->fecha ? $m->fecha->format('Y-m-d') : null,
+                'fecha' => $m->fecha ? $m->fecha->format('Y-m-d H:i:s') : null,
                 'motivo' => $m->motivo,
                 'id_usuario' => $m->id_usuario,
+                'usuario_nombre' => $m->usuario ? $m->usuario->nombre : ($m->id_usuario ? "Usuario #{$m->id_usuario}" : 'Sistema'),
                 'unidad' => $m->unidad ? $m->unidad->nombre_unidad : null,
             ];
         });
@@ -148,6 +150,46 @@ class StockController extends Controller
                 'descripcion' => $producto->descripcion,
                 'movimientos' => $movimientos,
             ],
+        ]);
+    }
+
+    /**
+     * S12 - Listado general de movimientos de stock (Kardex global y por producto).
+     */
+    public function todosLosMovimientos(Request $request): JsonResponse
+    {
+        $query = MovimientoStock::with(['producto', 'unidad', 'usuario'])
+            ->orderBy('id_movimiento', 'desc');
+
+        if ($request->filled('id_producto')) {
+            $query->where('id_producto', (int) $request->input('id_producto'));
+        }
+
+        if ($request->filled('tipo') && in_array($request->input('tipo'), ['ingreso', 'venta', 'devolucion', 'ajuste'])) {
+            $query->where('tipo', $request->input('tipo'));
+        }
+
+        $limite = (int) $request->input('limit', 150);
+        $movimientos = $query->limit($limite)->get()->map(function ($m) {
+            return [
+                'id_movimiento' => $m->id_movimiento,
+                'id_producto' => $m->id_producto,
+                'producto_codigo' => $m->producto ? $m->producto->codigo : '-',
+                'producto_nombre' => $m->producto ? ($m->producto->nombre ?? $m->producto->descripcion) : '-',
+                'tipo' => $m->tipo,
+                'cantidad' => $m->cantidad,
+                'cantidad_base' => $m->cantidad_base,
+                'fecha' => $m->fecha ? $m->fecha->format('Y-m-d H:i:s') : null,
+                'motivo' => $m->motivo,
+                'id_usuario' => $m->id_usuario,
+                'usuario_nombre' => $m->usuario ? $m->usuario->nombre : ($m->id_usuario ? "Usuario #{$m->id_usuario}" : 'Sistema'),
+                'unidad' => $m->unidad ? $m->unidad->nombre_unidad : null,
+            ];
+        });
+
+        return response()->json([
+            'status' => 'success',
+            'data' => $movimientos,
         ]);
     }
 
@@ -228,8 +270,11 @@ class StockController extends Controller
                     'id_producto' => (int) $lote->id_producto,
                     'codigo_producto' => (string) $lote->codigo,
                     'descripcion_producto' => (string) ($lote->nombre ?: $lote->descripcion),
+                    'producto_codigo' => (string) $lote->codigo,
+                    'producto_nombre' => (string) ($lote->codigo . ' - ' . ($lote->nombre ?: $lote->descripcion)),
                     'fecha_vencimiento' => (string) $lote->fecha_vencimiento,
                     'cantidad' => (int) $lote->cantidad_actual,
+                    'cantidad_actual' => (int) $lote->cantidad_actual,
                     'cantidad_inicial' => (int) $lote->cantidad_inicial,
                     'unidades' => (string) ($lote->nombre_unidad ?? ''),
                     'dias_para_vencer' => (int) Carbon::parse($hoy)

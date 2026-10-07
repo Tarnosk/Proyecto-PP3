@@ -43,12 +43,14 @@ class ProveedorController extends Controller
             'telefono' => $p->telefono,
             'correo' => $p->email,
             'estado' => $p->estado,
-            'fecha_alta' => $p->fecha_alta ? $p->fecha_alta->format('Y-m-d') : null,
-            'fecha_modificacion' => $p->fecha_modificacion ? $p->fecha_modificacion->format('Y-m-d') : null,
-            'fecha_desactivacion' => $p->fecha_desactivacion ? $p->fecha_desactivacion->format('Y-m-d') : null,
+            'fecha_alta' => $p->fecha_alta ? ($p->fecha_alta instanceof \Carbon\CarbonInterface ? $p->fecha_alta->format('Y-m-d H:i:s') : (string) $p->fecha_alta) : null,
+            'fecha_modificacion' => $p->fecha_modificacion ? ($p->fecha_modificacion instanceof \Carbon\CarbonInterface ? $p->fecha_modificacion->format('Y-m-d H:i:s') : (string) $p->fecha_modificacion) : null,
+            'fecha_desactivacion' => $p->fecha_desactivacion ? ($p->fecha_desactivacion instanceof \Carbon\CarbonInterface ? $p->fecha_desactivacion->format('Y-m-d H:i:s') : (string) $p->fecha_desactivacion) : null,
             'plazo_entrega_dias' => $p->plazo_entrega_dias,
             'id_usuario_carga' => $p->id_usuario_carga,
+            'usuario_carga_nombre' => $p->usuarioCarga ? $p->usuarioCarga->nombre : ($p->id_usuario_carga ? "Usuario #{$p->id_usuario_carga}" : null),
             'id_usuario_modificacion' => $p->id_usuario_modificacion,
+            'usuario_modificacion_nombre' => $p->usuarioModificacion ? $p->usuarioModificacion->nombre : ($p->id_usuario_modificacion ? "Usuario #{$p->id_usuario_modificacion}" : null),
         ];
     }
 
@@ -63,7 +65,7 @@ class ProveedorController extends Controller
             $estado = null;
         }
 
-        $query = Proveedor::query();
+        $query = Proveedor::with(['usuarioCarga', 'usuarioModificacion']);
 
         if ($search !== '') {
             $query->where(function ($q) use ($search) {
@@ -91,7 +93,7 @@ class ProveedorController extends Controller
      */
     public function show(int $id): JsonResponse
     {
-        $proveedor = Proveedor::with('productos.producto')->find($id);
+        $proveedor = Proveedor::with(['productos.producto', 'usuarioCarga', 'usuarioModificacion'])->find($id);
 
         if (!$proveedor) {
             return response()->json([
@@ -149,7 +151,7 @@ class ProveedorController extends Controller
         }
 
         try {
-            $now = Carbon::now()->toDateString();
+            $now = Carbon::now()->toDateTimeString();
             $idUsuario = UsuarioActual::id($request);
 
             $proveedor = Proveedor::create([
@@ -222,7 +224,7 @@ class ProveedorController extends Controller
         }
 
         try {
-            $now = Carbon::now()->toDateString();
+            $now = Carbon::now()->toDateTimeString();
             $idUsuario = UsuarioActual::id($request);
 
             $proveedor->update([
@@ -278,7 +280,7 @@ class ProveedorController extends Controller
             ], 400);
         }
 
-        $now = Carbon::now()->toDateString();
+        $now = Carbon::now()->toDateTimeString();
         $idUsuario = UsuarioActual::id($request);
 
         $proveedor->update([
@@ -309,7 +311,7 @@ class ProveedorController extends Controller
             ], 404);
         }
 
-        $now = Carbon::now()->toDateString();
+        $now = Carbon::now()->toDateTimeString();
         $idUsuario = UsuarioActual::id($request);
 
         $proveedor->update([

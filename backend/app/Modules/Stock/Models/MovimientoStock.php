@@ -35,7 +35,7 @@ class MovimientoStock extends Model
         'id_unidad' => 'integer',
         'cantidad' => 'integer',
         'cantidad_base' => 'integer',
-        'fecha' => 'date:Y-m-d',
+        'fecha' => 'datetime:Y-m-d H:i:s',
         'id_usuario' => 'integer',
         'id_venta' => 'integer',
         'id_entrega' => 'integer',
@@ -43,6 +43,11 @@ class MovimientoStock extends Model
         'id_recepcion' => 'integer',
         'id_sesion_conteo' => 'integer',
     ];
+
+    public function usuario(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\Usuario::class, 'id_usuario', 'id_usuario');
+    }
 
     public function producto(): BelongsTo
     {
