@@ -27,6 +27,7 @@ class ClienteController extends Controller
                         ->orWhere('dni_cuit', 'like', $pattern)
                         ->orWhere('email', 'like', $pattern)
                         ->orWhere('telefono', 'like', $pattern)
+                        ->orWhere('localidad', 'like', $pattern)
                         ->orWhere('direccion', 'like', $pattern);
                 });
             })

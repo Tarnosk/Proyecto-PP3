@@ -56,9 +56,15 @@
             </div>
         @endif
 
+        <div class="field">
+            <label for="localidad">Localidad <span aria-hidden="true">*</span></label>
+            <input type="text" id="localidad" name="localidad" maxlength="120" required value="{{ old('localidad', $cliente->localidad ?? '') }}">
+            <small class="field-error" data-error-for="localidad"></small>
+        </div>
+
         <div class="field field-full">
-            <label for="direccion">Dirección <span aria-hidden="true">*</span></label>
-            <textarea id="direccion" name="direccion" rows="4" maxlength="255" required>{{ old('direccion', $cliente->direccion ?? '') }}</textarea>
+            <label for="direccion">Domicilio <span aria-hidden="true">*</span></label>
+            <textarea id="direccion" name="direccion" rows="3" maxlength="255" required>{{ old('direccion', $cliente->direccion ?? '') }}</textarea>
             <small class="field-error" data-error-for="direccion"></small>
         </div>
     </div>

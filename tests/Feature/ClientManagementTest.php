@@ -15,11 +15,24 @@ class ClientManagementTest extends TestCase
     public function test_admin_can_list_and_search_clients(): void
     {
         $admin = User::factory()->create(['rol' => UserRole::ADMINISTRATIVO]);
-        Cliente::factory()->create(['creado_por' => $admin->id, 'apellido_razon_social' => 'Comercial Norte', 'dni_cuit' => '20-12345678-9']);
+        Cliente::factory()->create([
+            'creado_por' => $admin->id,
+            'apellido_razon_social' => 'Comercial Norte',
+            'dni_cuit' => '20-12345678-9',
+            'localidad' => 'Pigue',
+            'direccion' => 'San Martin 123',
+        ]);
         Cliente::factory()->create(['creado_por' => $admin->id, 'apellido_razon_social' => 'Comercial Sur']);
 
         $this->signInAs($admin)
             ->get(route('clientes.index', ['q' => '12345678']))
+            ->assertOk()
+            ->assertSeeText('Comercial Norte')
+            ->assertSeeText('Pigue')
+            ->assertSeeText('San Martin 123')
+            ->assertDontSeeText('Comercial Sur');
+
+        $this->get(route('clientes.index', ['q' => 'Pigue']))
             ->assertOk()
             ->assertSeeText('Comercial Norte')
             ->assertDontSeeText('Comercial Sur');
@@ -58,6 +71,8 @@ class ClientManagementTest extends TestCase
 
         $this->assertDatabaseHas('clientes', [
             'dni_cuit' => '20-12345678-9',
+            'localidad' => 'Pigue',
+            'direccion' => 'Calle Principal 123',
             'creado_por' => $admin->id,
             'estado' => 'activo',
         ]);
@@ -74,15 +89,16 @@ class ClientManagementTest extends TestCase
         $this->signInAs($admin);
 
         $this->post(route('clientes.store'), [])->assertSessionHasErrors([
-            'nombre', 'apellido_razon_social', 'dni_cuit', 'telefono', 'email', 'direccion', 'tipo_cliente',
+            'nombre', 'apellido_razon_social', 'dni_cuit', 'telefono', 'email', 'localidad', 'direccion', 'tipo_cliente',
         ]);
 
         $invalid = $this->validData();
         $invalid['dni_cuit'] = 'abc';
         $invalid['telefono'] = 'x';
         $invalid['email'] = 'sin-arroba';
+        $invalid['localidad'] = '   ';
         $invalid['tipo_cliente'] = 'premium';
-        $this->post(route('clientes.store'), $invalid)->assertSessionHasErrors(['dni_cuit', 'telefono', 'email', 'tipo_cliente']);
+        $this->post(route('clientes.store'), $invalid)->assertSessionHasErrors(['dni_cuit', 'telefono', 'email', 'localidad', 'tipo_cliente']);
 
         $this->post(route('clientes.store'), $this->validData())->assertSessionHasErrors(['dni_cuit', 'email']);
     }
@@ -102,7 +118,13 @@ class ClientManagementTest extends TestCase
         $updated['estado'] = 'inactivo';
         $this->put(route('clientes.update', $cliente), $updated)
             ->assertRedirect(route('clientes.index'));
-        $this->assertDatabaseHas('clientes', ['id' => $cliente->id, 'nombre' => 'Ana', 'estado' => 'inactivo']);
+        $this->assertDatabaseHas('clientes', [
+            'id' => $cliente->id,
+            'nombre' => 'Ana',
+            'localidad' => 'Pigue',
+            'direccion' => 'Calle Principal 123',
+            'estado' => 'inactivo',
+        ]);
 
         $updated['dni_cuit'] = $other->dni_cuit;
         $updated['email'] = $other->email;
@@ -127,6 +149,7 @@ class ClientManagementTest extends TestCase
             'dni_cuit' => '20-12345678-9',
             'telefono' => '11-4444-5555',
             'email' => 'cliente@example.com',
+            'localidad' => 'Pigue',
             'direccion' => 'Calle Principal 123',
             'tipo_cliente' => 'mayorista',
         ];

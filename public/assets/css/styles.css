@@ -773,6 +773,29 @@ textarea:focus {
     flex: 1 1 330px;
 }
 
+.product-reach-summary {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 4px 0 18px;
+}
+
+.product-reach-summary strong {
+    color: var(--primary);
+    font-size: 1.8rem;
+}
+
+.report-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 14px 16px;
+    border-top: 1px solid var(--border);
+}
+
 .email-form {
     display: grid;
     grid-template-columns: minmax(220px, 1fr) auto;

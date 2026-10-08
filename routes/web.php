@@ -69,6 +69,7 @@ Route::middleware(['auth', 'session.current'])->group(function (): void {
         Route::get('/ventas-diarias', [ReportController::class, 'dailySales'])->name('daily-sales');
         Route::get('/stock-bajo', [ReportController::class, 'lowStock'])->name('low-stock');
         Route::get('/historial-clientes', [ReportController::class, 'clientHistory'])->name('client-history');
+        Route::get('/clientes-por-producto', [ReportController::class, 'clientProductReach'])->name('client-product-reach');
         Route::get('/ventas-diarias/exportar/{format}', [ReportExportController::class, 'dailySales'])->name('daily-sales.export');
         Route::get('/stock-bajo/exportar/{format}', [ReportExportController::class, 'lowStock'])->name('low-stock.export');
         Route::get('/historial-clientes/exportar/{format}', [ReportExportController::class, 'clientHistory'])->name('client-history.export');

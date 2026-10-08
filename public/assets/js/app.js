@@ -47,6 +47,7 @@
                     'dni_cuit',
                     'telefono',
                     'email',
+                    'localidad',
                     'direccion',
                     'tipo_cliente',
                     'estado'

@@ -30,6 +30,7 @@ class UpdateClienteRequest extends FormRequest
             'dni_cuit' => ['required', 'string', 'max:20', 'regex:/^[0-9.\-\s]{6,20}$/', Rule::unique('clientes', 'dni_cuit')->ignore($cliente)],
             'telefono' => ['required', 'string', 'max:30', 'regex:/^[0-9\s+\-()]{6,30}$/'],
             'email' => ['required', 'email:rfc', 'max:160', Rule::unique('clientes', 'email')->ignore($cliente)],
+            'localidad' => ['required', 'string', 'max:120'],
             'direccion' => ['required', 'string', 'max:255'],
             'tipo_cliente' => ['required', Rule::in(['minorista', 'mayorista'])],
             'estado' => ['required', Rule::in(['activo', 'inactivo'])],
