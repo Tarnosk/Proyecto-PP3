@@ -64,6 +64,10 @@
             <button onclick="recargarProveedores()" class="p-2.5 bg-white text-slate-600 hover:text-blue-600 rounded-xl border border-slate-200/80 shadow-sm" title="Refrescar">
                 <i data-lucide="rotate-cw" class="w-4 h-4"></i>
             </button>
+            <button onclick="abrirModalPreciosHistoricos()" class="px-3.5 py-2.5 bg-white text-slate-700 hover:text-amber-600 hover:border-amber-200 text-xs font-bold flex items-center gap-1.5 rounded-xl border border-slate-200/80 shadow-sm transition-all" title="Consultar Precios Históricos y Aumentos (PV06)">
+                <i data-lucide="trending-up" class="w-4 h-4 text-amber-500"></i>
+                <span class="hidden sm:inline">Precios Históricos (PV06)</span>
+            </button>
             <button onclick="sincronizarAsociacionesAutomaticas()" class="px-3.5 py-2.5 bg-white text-slate-700 hover:text-indigo-600 hover:border-indigo-200 text-xs font-bold flex items-center gap-1.5 rounded-xl border border-slate-200/80 shadow-sm transition-all" title="Asociar automáticamente productos a proveedores según historial de compras e ingresos">
                 <i data-lucide="sparkles" class="w-4 h-4 text-indigo-500"></i>
                 <span class="hidden sm:inline">Sincronizar Asociaciones</span>
@@ -370,6 +374,180 @@
         </div>
     </div>
 </div>
+
+<!-- ========================================== -->
+<!-- MODAL: PRECIOS HISTÓRICOS Y AUMENTOS (PV06)-->
+<!-- ========================================== -->
+<div id="modalPreciosHistoricos" class="clay-modal-backdrop hidden" onclick="if(event.target === this) cerrarModalPreciosHistoricos()">
+    <div class="clay-modal-content max-w-5xl p-6 space-y-4" onclick="event.stopPropagation()">
+        <!-- Encabezado -->
+        <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center text-amber-600 shadow-inner border border-amber-100">
+                    <i data-lucide="trending-up" class="w-5 h-5"></i>
+                </div>
+                <div>
+                    <h3 class="text-base font-black text-slate-800">Precios Históricos y Aumentos (PV06)</h3>
+                    <p id="preciosHistSubtitulo" class="text-xs text-slate-500 font-bold">Evolución de cotizaciones y comparación de aumentos</p>
+                </div>
+            </div>
+            <button onclick="cerrarModalPreciosHistoricos()" class="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+        </div>
+
+        <!-- Filtros del Histórico -->
+        <div class="p-3.5 bg-slate-50/80 rounded-2xl border border-slate-200/60 flex flex-wrap items-center gap-3">
+            <div class="min-w-[200px] flex-1">
+                <label class="block text-[10px] font-extrabold text-slate-400 uppercase tracking-wider mb-1">Proveedor</label>
+                <select id="filtroHistProveedor" onchange="alCambiarProveedorHistorial()" class="clay-input py-1.5 px-3 text-xs font-bold text-slate-700 w-full">
+                    <option value="">Seleccione un proveedor...</option>
+                </select>
+            </div>
+
+            <div class="min-w-[180px] flex-1">
+                <label class="block text-[10px] font-extrabold text-slate-400 uppercase tracking-wider mb-1">Producto</label>
+                <select id="filtroHistProducto" onchange="cargarPreciosHistoricos()" class="clay-input py-1.5 px-3 text-xs font-bold text-slate-700 w-full">
+                    <option value="">Todos los productos</option>
+                </select>
+            </div>
+
+            <div class="min-w-[130px]">
+                <label class="block text-[10px] font-extrabold text-slate-400 uppercase tracking-wider mb-1">Desde</label>
+                <input type="date" id="filtroHistDesde" onchange="cargarPreciosHistoricos()" class="clay-input py-1.5 px-2.5 text-xs font-bold w-full">
+            </div>
+
+            <div class="min-w-[130px]">
+                <label class="block text-[10px] font-extrabold text-slate-400 uppercase tracking-wider mb-1">Hasta</label>
+                <input type="date" id="filtroHistHasta" onchange="cargarPreciosHistoricos()" class="clay-input py-1.5 px-2.5 text-xs font-bold w-full">
+            </div>
+
+            <div class="min-w-[120px]">
+                <label class="block text-[10px] font-extrabold text-slate-400 uppercase tracking-wider mb-1">Orden</label>
+                <select id="filtroHistOrden" onchange="cargarPreciosHistoricos()" class="clay-input py-1.5 px-2.5 text-xs font-bold text-slate-700 w-full">
+                    <option value="desc">Más recientes (DESC)</option>
+                    <option value="asc">Más antiguos (ASC)</option>
+                </select>
+            </div>
+
+            <div class="flex items-end gap-2 pt-4">
+                <button onclick="cargarPreciosHistoricos()" class="clay-btn-secondary px-3.5 py-2 text-xs font-bold flex items-center gap-1.5" title="Actualizar datos">
+                    <i data-lucide="filter" class="w-3.5 h-3.5"></i>
+                    <span>Filtrar</span>
+                </button>
+                <button onclick="abrirModalNuevoPrecioAcordado()" class="clay-btn-primary px-3.5 py-2 text-xs font-bold flex items-center gap-1.5 shadow-sm">
+                    <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i>
+                    <span>Nuevo Precio</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- KPIs Resumen de Aumentos -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div class="p-3 bg-white rounded-xl border border-slate-100 shadow-sm flex items-center gap-3">
+                <div class="p-2.5 bg-blue-50 text-blue-600 rounded-xl">
+                    <i data-lucide="layers" class="w-4 h-4"></i>
+                </div>
+                <div>
+                    <span class="text-[10px] font-extrabold text-slate-400 uppercase block">Registros</span>
+                    <span id="kpiHistTotalRegistros" class="text-base font-black text-slate-800">0</span>
+                </div>
+            </div>
+
+            <div class="p-3 bg-white rounded-xl border border-slate-100 shadow-sm flex items-center gap-3">
+                <div class="p-2.5 bg-amber-50 text-amber-600 rounded-xl">
+                    <i data-lucide="percent" class="w-4 h-4"></i>
+                </div>
+                <div>
+                    <span class="text-[10px] font-extrabold text-slate-400 uppercase block">Aumento Promedio</span>
+                    <span id="kpiHistAumentoPromedio" class="text-base font-black text-amber-700">0.0%</span>
+                </div>
+            </div>
+
+            <div class="p-3 bg-white rounded-xl border border-slate-100 shadow-sm flex items-center gap-3">
+                <div class="p-2.5 bg-rose-50 text-rose-600 rounded-xl">
+                    <i data-lucide="alert-triangle" class="w-4 h-4"></i>
+                </div>
+                <div>
+                    <span class="text-[10px] font-extrabold text-slate-400 uppercase block">Mayor Incremento</span>
+                    <span id="kpiHistMayorIncremento" class="text-xs font-black text-rose-700 truncate max-w-[170px] block">-</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabla Histórica -->
+        <div class="clay-card overflow-hidden">
+            <div class="max-h-[46vh] overflow-y-auto overflow-x-auto">
+                <table class="clay-table">
+                    <thead>
+                        <tr>
+                            <th>Fecha y Hora</th>
+                            <th>Producto</th>
+                            <th class="text-center">Unidad</th>
+                            <th class="text-right">Precio Anterior</th>
+                            <th class="text-right">Precio Acordado</th>
+                            <th class="text-center">Variación</th>
+                            <th>Origen</th>
+                            <th>Usuario</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tablaPreciosHistoricosBody">
+                        <tr>
+                            <td colspan="8" class="text-center py-8 text-slate-400 font-bold">Seleccione un proveedor para consultar su historial de precios.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="flex items-center justify-end pt-2 border-t border-slate-100">
+            <button type="button" onclick="cerrarModalPreciosHistoricos()" class="clay-btn-secondary px-5 py-2 text-xs font-bold">Cerrar</button>
+        </div>
+    </div>
+</div>
+
+<!-- ========================================== -->
+<!-- MODAL: REGISTRAR NUEVO PRECIO ACORDADO     -->
+<!-- ========================================== -->
+<div id="modalNuevoPrecioAcordado" class="clay-modal-backdrop z-[70] hidden" onclick="if(event.target === this) cerrarModalNuevoPrecioAcordado()">
+    <div class="clay-modal-content max-w-md p-6 space-y-4" onclick="event.stopPropagation()">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+            <h3 class="text-base font-black text-slate-800">Registrar Nuevo Precio Acordado</h3>
+            <button onclick="cerrarModalNuevoPrecioAcordado()" class="p-1 text-slate-400 hover:text-slate-600 rounded-lg">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+        </div>
+
+        <form onsubmit="guardarNuevoPrecioAcordado(event)" class="space-y-4">
+            <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">Proveedor *</label>
+                <input type="text" id="nuevoPrecioProvNombre" readonly class="clay-input py-2 px-3 text-xs font-bold text-slate-500 bg-slate-100 w-full">
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">Producto *</label>
+                <select id="nuevoPrecioProdSelect" required class="clay-input py-2 px-3 text-xs font-bold text-slate-800 w-full">
+                    <option value="">Seleccione un producto...</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">Nuevo Precio Acordado ($) *</label>
+                <input type="number" step="0.01" min="0" id="nuevoPrecioMonto" required placeholder="0.00" class="clay-input py-2 px-3 text-sm font-black text-slate-800 w-full">
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">Observaciones / Motivo</label>
+                <input type="text" id="nuevoPrecioObs" placeholder="Ej: Lista de precios actualizada octubre" class="clay-input py-2 px-3 text-xs font-bold text-slate-700 w-full">
+            </div>
+
+            <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+                <button type="button" onclick="cerrarModalNuevoPrecioAcordado()" class="clay-btn-secondary px-4 py-2 text-xs font-bold">Cancelar</button>
+                <button type="submit" class="clay-btn-primary px-5 py-2 text-xs font-bold">Guardar y Registrar</button>
+            </div>
+        </form>
+    </div>
+</div>
 @endsection
 
 @section('scripts')
@@ -463,6 +641,9 @@
                     <td class="text-center"><span class="clay-badge ${badgeClase}">${p.estado}</span></td>
                     <td class="text-center">
                         <div class="flex items-center justify-center gap-1.5">
+                            <button onclick="abrirModalPreciosHistoricos(${p.id_proveedor}, '${(p.razon_social || '').replace(/'/g, "\\'")}')" class="p-1.5 text-amber-600 hover:bg-amber-50 rounded-lg" title="Precios Históricos y Aumentos (PV06)">
+                                <i data-lucide="trending-up" class="w-4 h-4"></i>
+                            </button>
                             <button onclick="verHistorialProveedor(${p.id_proveedor}, '${(p.razon_social || '').replace(/'/g, "\\'")}')" class="p-1.5 text-purple-600 hover:bg-purple-50 rounded-lg" title="Ver Historial de Cambios">
                                 <i data-lucide="history" class="w-4 h-4"></i>
                             </button>
@@ -1042,6 +1223,282 @@
         } catch (e) {
             console.error(e);
             mostrarNotificacion('Error de red al sincronizar asociaciones', 'error');
+        }
+    }
+
+    // =========================================================================
+    // PV06: PRECIOS HISTÓRICOS Y AUMENTOS DE PROVEEDORES
+    // =========================================================================
+    let idProveedorHistorialSeleccionado = null;
+
+    function abrirModalPreciosHistoricos(idProveedor = null, razonSocial = '') {
+        const modal = document.getElementById('modalPreciosHistoricos');
+        const selectProv = document.getElementById('filtroHistProveedor');
+        
+        // Poblar select de proveedores
+        if (selectProv) {
+            selectProv.innerHTML = '<option value="">Seleccione un proveedor...</option>' +
+                proveedoresCache.map(p => `
+                    <option value="${p.id_proveedor}">${p.razon_social} (${p.cuit || p.CUIT || 'Sin CUIT'})</option>
+                `).join('');
+            
+            if (idProveedor) {
+                selectProv.value = String(idProveedor);
+            } else if (proveedoresCache.length > 0 && !selectProv.value) {
+                selectProv.value = String(proveedoresCache[0].id_proveedor);
+            }
+        }
+
+        modal.classList.remove('hidden');
+        alCambiarProveedorHistorial();
+        if (window.lucide) window.lucide.createIcons();
+    }
+
+    function cerrarModalPreciosHistoricos() {
+        document.getElementById('modalPreciosHistoricos').classList.add('hidden');
+    }
+
+    async function alCambiarProveedorHistorial() {
+        const idProv = document.getElementById('filtroHistProveedor')?.value;
+        const selectProd = document.getElementById('filtroHistProducto');
+        const sub = document.getElementById('preciosHistSubtitulo');
+
+        if (!idProv) {
+            if (sub) sub.textContent = 'Seleccione un proveedor para consultar su evolución de precios';
+            if (selectProd) selectProd.innerHTML = '<option value="">Todos los productos</option>';
+            document.getElementById('tablaPreciosHistoricosBody').innerHTML = 
+                '<tr><td colspan="8" class="text-center py-8 text-slate-400 font-bold">Seleccione un proveedor para consultar su historial de precios.</td></tr>';
+            return;
+        }
+
+        idProveedorHistorialSeleccionado = Number(idProv);
+        const prov = proveedoresCache.find(p => String(p.id_proveedor) === String(idProv));
+        if (sub && prov) {
+            sub.textContent = `Proveedor: ${prov.razon_social} · CUIT: ${prov.cuit || prov.CUIT || '-'}`;
+        }
+
+        // Cargar productos del proveedor para el filtro
+        try {
+            const res = await fetch(`${API_BASE}/proveedores/${idProv}/productos`);
+            const json = await res.json();
+            const prods = json.data || [];
+            if (selectProd) {
+                selectProd.innerHTML = '<option value="">Todos los productos provistos</option>' +
+                    prods.map(p => `
+                        <option value="${p.id_producto}">${p.producto?.codigo ? p.producto.codigo + ' - ' : ''}${p.producto?.nombre || p.producto?.descripcion || 'Producto #' + p.id_producto}</option>
+                    `).join('');
+            }
+        } catch (e) {
+            console.error('Error cargando productos de proveedor para histórico:', e);
+        }
+
+        await cargarPreciosHistoricos();
+    }
+
+    async function cargarPreciosHistoricos() {
+        const idProv = document.getElementById('filtroHistProveedor')?.value;
+        if (!idProv) return;
+
+        const idProd = document.getElementById('filtroHistProducto')?.value || '';
+        const desde = document.getElementById('filtroHistDesde')?.value || '';
+        const hasta = document.getElementById('filtroHistHasta')?.value || '';
+        const orden = document.getElementById('filtroHistOrden')?.value || 'desc';
+
+        const tbody = document.getElementById('tablaPreciosHistoricosBody');
+        tbody.innerHTML = '<tr><td colspan="8" class="text-center py-8 text-slate-400 font-bold">Cargando histórico de precios...</td></tr>';
+
+        try {
+            let url = `${API_BASE}/proveedores/${idProv}/precios-historicos?orden=${orden}`;
+            if (idProd) url += `&id_producto=${idProd}`;
+            if (desde) url += `&fecha_desde=${desde}`;
+            if (hasta) url += `&fecha_hasta=${hasta}`;
+
+            const res = await fetch(url);
+            const json = await res.json();
+
+            if (json.status === 'success') {
+                const items = json.data || [];
+                const resumen = json.resumen || {};
+
+                // Actualizar KPIs
+                document.getElementById('kpiHistTotalRegistros').textContent = String(items.length);
+                const avgPct = Number(resumen.variacion_promedio_general ?? 0);
+                const elAvg = document.getElementById('kpiHistAumentoPromedio');
+                elAvg.textContent = `${avgPct > 0 ? '+' : ''}${avgPct}%`;
+                elAvg.className = `text-base font-black ${avgPct > 0 ? 'text-rose-600' : 'text-slate-700'}`;
+
+                const mayor = resumen.producto_mayor_aumento;
+                const elMayor = document.getElementById('kpiHistMayorIncremento');
+                if (mayor && mayor.variacion_porcentual > 0) {
+                    elMayor.textContent = `${mayor.nombre} (+${mayor.variacion_porcentual}%)`;
+                    elMayor.title = `${mayor.nombre} aumentó +${mayor.variacion_porcentual}% ($${mayor.variacion_absoluta})`;
+                } else {
+                    elMayor.textContent = 'Sin aumentos registrados';
+                }
+
+                renderTablaPreciosHistoricos(items);
+            } else {
+                tbody.innerHTML = `<tr><td colspan="8" class="text-center py-8 text-rose-500 font-bold">${json.message || 'Error al cargar historial'}</td></tr>`;
+            }
+        } catch (e) {
+            console.error('Error cargando historial de precios:', e);
+            tbody.innerHTML = '<tr><td colspan="8" class="text-center py-8 text-rose-500 font-bold">Error de red al consultar historial</td></tr>';
+        }
+
+        if (window.lucide) window.lucide.createIcons();
+    }
+
+    function renderTablaPreciosHistoricos(items) {
+        const tbody = document.getElementById('tablaPreciosHistoricosBody');
+        if (!items || items.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="8" class="text-center py-8 text-slate-400 font-bold">No se encontraron registros de precios para los filtros seleccionados.</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = items.map(item => {
+            const precioActual = Number(item.precio_acordado ?? 0);
+            const precioAnt = item.precio_anterior !== null && item.precio_anterior !== undefined ? Number(item.precio_anterior) : null;
+            const diff = item.diferencia_monto !== null && item.diferencia_monto !== undefined ? Number(item.diferencia_monto) : null;
+            const pct = Number(item.variacion_porcentual ?? 0);
+
+            let badgeVariacion = '<span class="text-xs font-bold text-slate-400">-</span>';
+            if (precioAnt !== null) {
+                if (diff > 0) {
+                    badgeVariacion = `
+                        <span class="inline-flex items-center gap-1 text-[11px] font-black px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200">
+                            <i data-lucide="arrow-up-right" class="w-3 h-3"></i>
+                            +$${diff.toFixed(2)} (+${pct}%)
+                        </span>
+                    `;
+                } else if (diff < 0) {
+                    badgeVariacion = `
+                        <span class="inline-flex items-center gap-1 text-[11px] font-black px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                            <i data-lucide="arrow-down-right" class="w-3 h-3"></i>
+                            -$${Math.abs(diff).toFixed(2)} (${pct}%)
+                        </span>
+                    `;
+                } else {
+                    badgeVariacion = `
+                        <span class="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">
+                            Sin cambio (0%)
+                        </span>
+                    `;
+                }
+            } else {
+                badgeVariacion = `
+                    <span class="inline-flex items-center text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
+                        Precio Inicial Base
+                    </span>
+                `;
+            }
+
+            return `
+                <tr>
+                    <td class="font-bold text-xs text-slate-700">
+                        <div class="flex items-center gap-1.5">
+                            <i data-lucide="calendar" class="w-3.5 h-3.5 text-slate-400"></i>
+                            <span>${item.fecha_formateada || item.fecha_actualizacion}</span>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="font-black text-slate-800 text-xs">${item.nombre_producto || '-'}</div>
+                        <div class="text-[10px] font-extrabold text-slate-400">Cód: ${item.codigo_producto || '-'} · ${item.marca || ''}</div>
+                    </td>
+                    <td class="text-center font-bold text-xs text-slate-600">${item.unidad || 'Unidad'}</td>
+                    <td class="text-right font-bold text-xs text-slate-400">
+                        ${precioAnt !== null ? '$' + precioAnt.toFixed(2) : '-'}
+                    </td>
+                    <td class="text-right font-black text-xs text-slate-900">
+                        $${precioActual.toFixed(2)}
+                    </td>
+                    <td class="text-center">${badgeVariacion}</td>
+                    <td class="text-xs font-bold text-slate-600">
+                        <span class="inline-flex items-center gap-1">
+                            <i data-lucide="${item.id_compra ? 'file-text' : 'handshake'}" class="w-3.5 h-3.5 text-slate-400"></i>
+                            <span>${item.origen || 'Acuerdo'}</span>
+                        </span>
+                    </td>
+                    <td class="text-xs font-bold text-slate-500">${item.usuario_nombre || 'Sistema'}</td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    function abrirModalNuevoPrecioAcordado() {
+        const idProv = document.getElementById('filtroHistProveedor')?.value;
+        if (!idProv) {
+            alert('Por favor seleccione un proveedor primero.');
+            return;
+        }
+
+        const prov = proveedoresCache.find(p => String(p.id_proveedor) === String(idProv));
+        document.getElementById('nuevoPrecioProvNombre').value = prov ? prov.razon_social : `Proveedor #${idProv}`;
+
+        const selProd = document.getElementById('nuevoPrecioProdSelect');
+        const selHist = document.getElementById('filtroHistProducto');
+
+        // Copiar opciones de productos provistos
+        if (selHist && selHist.options.length > 1) {
+            selProd.innerHTML = '<option value="">Seleccione un producto provisto...</option>' +
+                Array.from(selHist.options).filter(opt => opt.value !== '').map(opt => `
+                    <option value="${opt.value}">${opt.textContent}</option>
+                `).join('');
+        } else {
+            // Si no tiene asociados, listar catálogo general
+            selProd.innerHTML = '<option value="">Seleccione un producto...</option>' +
+                productosCache.map(p => `
+                    <option value="${p.id_producto}">${p.codigo ? p.codigo + ' - ' : ''}${p.nombre || p.descripcion}</option>
+                `).join('');
+        }
+
+        document.getElementById('nuevoPrecioMonto').value = '';
+        document.getElementById('nuevoPrecioObs').value = '';
+
+        document.getElementById('modalNuevoPrecioAcordado').classList.remove('hidden');
+        if (window.lucide) window.lucide.createIcons();
+    }
+
+    function cerrarModalNuevoPrecioAcordado() {
+        document.getElementById('modalNuevoPrecioAcordado').classList.add('hidden');
+    }
+
+    async function guardarNuevoPrecioAcordado(e) {
+        e.preventDefault();
+        const idProv = document.getElementById('filtroHistProveedor')?.value;
+        const idProd = document.getElementById('nuevoPrecioProdSelect')?.value;
+        const monto = parseFloat(document.getElementById('nuevoPrecioMonto')?.value);
+        const obs = document.getElementById('nuevoPrecioObs')?.value?.trim();
+
+        if (!idProv || !idProd || isNaN(monto) || monto < 0) {
+            alert('Complete los campos obligatorios con valores válidos.');
+            return;
+        }
+
+        try {
+            const res = await fetch(`${API_BASE}/proveedores/${idProv}/productos/${idProd}/precio`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
+                },
+                body: JSON.stringify({
+                    precio_acordado: monto,
+                    observaciones: obs,
+                }),
+            });
+
+            const json = await res.json();
+            if (json.status === 'success') {
+                mostrarNotificacion(json.message || 'Precio acordado registrado exitosamente.', 'success');
+                cerrarModalNuevoPrecioAcordado();
+                await cargarPreciosHistoricos();
+            } else {
+                alert(json.message || 'Error al registrar nuevo precio');
+            }
+        } catch (err) {
+            console.error('Error guardando precio:', err);
+            alert('Error de red al guardar el precio acordado.');
         }
     }
 </script>

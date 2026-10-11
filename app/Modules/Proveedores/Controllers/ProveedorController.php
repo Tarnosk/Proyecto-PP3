@@ -796,7 +796,16 @@ class ProveedorController extends Controller
                         if ($request->has('es_proveedor_principal')) {
                             $updateData['es_proveedor_principal'] = $esPrincipal;
                         }
+                        $precioAnteriorExiste = $existe->precio_acordado !== null ? (float) $existe->precio_acordado : null;
                         $existe->update($updateData);
+
+                        if ($precioAcordado !== null && $precioAcordado !== $precioAnteriorExiste) {
+                            app(\App\Modules\Proveedores\Services\HistorialPrecioService::class)->registrarSnapshot(
+                                $existe->id_producto_proveedor,
+                                (float) $precioAcordado,
+                                $idUsuario
+                            );
+                        }
 
                         $asociados[] = $existe;
                         continue;
@@ -811,6 +820,14 @@ class ProveedorController extends Controller
                         'fecha_asociacion' => $now,
                         'id_usuario' => $idUsuario,
                     ]);
+
+                    if ($precioAcordado !== null && $precioAcordado >= 0) {
+                        app(\App\Modules\Proveedores\Services\HistorialPrecioService::class)->registrarSnapshot(
+                            $nuevo->id_producto_proveedor,
+                            (float) $precioAcordado,
+                            $idUsuario
+                        );
+                    }
                     $asociados[] = $nuevo;
                 }
             });
@@ -1008,7 +1025,7 @@ class ProveedorController extends Controller
             ? ($request->input('precio_acordado') !== null && $request->input('precio_acordado') !== '' ? (float) $request->input('precio_acordado') : null)
             : ($relacion->precio_acordado !== null ? (float) $relacion->precio_acordado : null);
 
-        DB::transaction(function () use ($relacion, $nuevoProductoId, $esPrincipal, $precioAcordado, $idUsuario) {
+        DB::transaction(function () use ($relacion, $nuevoProductoId, $esPrincipal, $precioAcordado, $idUsuario, $precioAnterior) {
             if ($esPrincipal) {
                 ProductoProveedor::where('id_producto', $nuevoProductoId)
                     ->where('activo', true)
@@ -1024,6 +1041,14 @@ class ProveedorController extends Controller
                 'fecha_desasociacion' => null,
                 'id_usuario' => $idUsuario,
             ]);
+
+            if ($precioAcordado !== null && $precioAcordado !== $precioAnterior) {
+                app(\App\Modules\Proveedores\Services\HistorialPrecioService::class)->registrarSnapshot(
+                    $relacion->id_producto_proveedor,
+                    (float) $precioAcordado,
+                    $idUsuario
+                );
+            }
         });
 
         $relacion->refresh()->load(['producto.categoria', 'producto.marca', 'proveedor']);

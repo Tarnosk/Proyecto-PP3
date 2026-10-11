@@ -6,6 +6,7 @@ namespace App\Modules\Proveedores\Models;
 use App\Modules\Productos\Models\Producto;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class ProductoProveedor extends Model
 {
@@ -44,5 +45,10 @@ class ProductoProveedor extends Model
     public function proveedor(): BelongsTo
     {
         return $this->belongsTo(Proveedor::class, 'id_proveedor', 'id_proveedor');
+    }
+
+    public function historialPrecios(): HasMany
+    {
+        return $this->hasMany(HistorialPrecioProveedor::class, 'id_producto_proveedor', 'id_producto_proveedor');
     }
 }

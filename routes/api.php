@@ -18,6 +18,7 @@ use App\Modules\Stock\Controllers\UbicacionController;
 use App\Modules\Stock\Controllers\ConsultaVencimientosController;
 use App\Modules\Proveedores\Controllers\ProveedorController;
 use App\Modules\Proveedores\Controllers\PlazoEntregaController;
+use App\Modules\Proveedores\Controllers\HistorialPrecioController;
 use App\Modules\Compras\Controllers\CompraController;
 use App\Modules\Compras\Controllers\RecepcionController;
 use App\Modules\Compras\Controllers\PagoCompraController;
@@ -111,6 +112,11 @@ Route::post('proveedores/sincronizar-asociaciones', [ProveedorController::class,
 // PV07 - Registrar plazos de entrega y consultar su historial
 Route::post('proveedores/{proveedor}/plazo', [PlazoEntregaController::class, 'store']);
 Route::get('proveedores/{proveedor}/plazos', [PlazoEntregaController::class, 'index']);
+// PV06 - Precios históricos de proveedores (CA-01 a CA-05)
+Route::get('proveedores/{id}/precios-historicos', [HistorialPrecioController::class, 'index']);
+Route::get('proveedores/{id}/productos/{idProducto}/precios-historicos', [HistorialPrecioController::class, 'porProducto']);
+Route::get('proveedores/{id}/comparativa-aumentos', [HistorialPrecioController::class, 'comparativaAumentos']);
+Route::post('proveedores/{id}/productos/{idProducto}/precio', [HistorialPrecioController::class, 'actualizarPrecio']);
 // destroy queda fuera: el proveedor se desactiva (PV04), no se borra.
 Route::apiResource('proveedores', ProveedorController::class)->except(['destroy']);
 

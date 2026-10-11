@@ -1408,27 +1408,41 @@ class UserStoriesFrontendTest extends TestCase
     }
 
     /**
-     * PV06, PV07 - Registrar y Consultar Plazos de Entrega del Proveedor.
+     * PV06, PV07 - Precios Históricos y Plazos de Entrega del Proveedor.
      */
     public function test_pv06_pv07_plazos_entrega_proveedor(): void
     {
         $viewRes = $this->get('/proveedores');
         $viewRes->assertOk();
         $viewRes->assertSee('kpiPlazoPromedio');
+        $viewRes->assertSee('modalPreciosHistoricos');
+        $viewRes->assertSee('tablaPreciosHistoricosBody');
+        $viewRes->assertSee('filtroHistProveedor');
+        $viewRes->assertSee('filtroHistProducto');
 
         $proveedor = Proveedor::where('estado', 'activo')->first();
         $this->assertNotNull($proveedor);
 
-        // Registrar plazo
+        // PV07: Registrar plazo
         $plazoRes = $this->postJson("/api/proveedores/{$proveedor->id_proveedor}/plazo", [
             'plazo_entrega_dias' => 12,
             'motivo' => 'Ajuste estacional de logística',
         ]);
         $plazoRes->assertStatus(201);
 
-        // Consultar historial de plazos
+        // PV07: Consultar historial de plazos
         $histRes = $this->getJson("/api/proveedores/{$proveedor->id_proveedor}/plazos");
         $histRes->assertOk();
+
+        // PV06: Consultar precios históricos del proveedor
+        $preciosRes = $this->getJson("/api/proveedores/{$proveedor->id_proveedor}/precios-historicos");
+        $preciosRes->assertOk()
+            ->assertJsonStructure(['status', 'proveedor', 'data', 'resumen']);
+
+        // PV06: Comparativa de aumentos
+        $compRes = $this->getJson("/api/proveedores/{$proveedor->id_proveedor}/comparativa-aumentos");
+        $compRes->assertOk()
+            ->assertJsonStructure(['status', 'data', 'resumen']);
     }
 
     /**
