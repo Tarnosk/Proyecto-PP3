@@ -487,7 +487,7 @@
                             <th class="text-right">Precio Anterior</th>
                             <th class="text-right">Precio Acordado</th>
                             <th class="text-center">Variación</th>
-                            <th>Origen</th>
+                            <th>Observaciones</th>
                             <th>Usuario</th>
                         </tr>
                     </thead>
@@ -1284,9 +1284,12 @@
             const prods = json.data || [];
             if (selectProd) {
                 selectProd.innerHTML = '<option value="">Todos los productos provistos</option>' +
-                    prods.map(p => `
-                        <option value="${p.id_producto}">${p.producto?.codigo ? p.producto.codigo + ' - ' : ''}${p.producto?.nombre || p.producto?.descripcion || 'Producto #' + p.id_producto}</option>
-                    `).join('');
+                    prods.map(p => {
+                        const cod = p.codigo || p.producto?.codigo || '';
+                        const nom = p.nombre || p.producto?.nombre || p.descripcion || p.producto?.descripcion || ('Producto #' + p.id_producto);
+                        const label = cod ? `${cod} - ${nom}` : nom;
+                        return `<option value="${p.id_producto}">${label}</option>`;
+                    }).join('');
             }
         } catch (e) {
             console.error('Error cargando productos de proveedor para histórico:', e);
@@ -1412,10 +1415,10 @@
                         $${precioActual.toFixed(2)}
                     </td>
                     <td class="text-center">${badgeVariacion}</td>
-                    <td class="text-xs font-bold text-slate-600">
+                    <td class="text-xs font-bold text-slate-600 max-w-[200px] truncate" title="${item.observaciones || item.origen || '-'}">
                         <span class="inline-flex items-center gap-1">
-                            <i data-lucide="${item.id_compra ? 'file-text' : 'handshake'}" class="w-3.5 h-3.5 text-slate-400"></i>
-                            <span>${item.origen || 'Acuerdo'}</span>
+                            <i data-lucide="${item.id_compra ? 'file-text' : (item.observaciones ? 'message-square' : 'handshake')}" class="w-3.5 h-3.5 text-slate-400 flex-shrink-0"></i>
+                            <span class="truncate">${item.observaciones || item.origen || 'Acuerdo comercial'}</span>
                         </span>
                     </td>
                     <td class="text-xs font-bold text-slate-500">${item.usuario_nombre || 'Sistema'}</td>
