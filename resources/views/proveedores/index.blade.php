@@ -64,9 +64,9 @@
             <button onclick="recargarProveedores()" class="p-2.5 bg-white text-slate-600 hover:text-blue-600 rounded-xl border border-slate-200/80 shadow-sm" title="Refrescar">
                 <i data-lucide="rotate-cw" class="w-4 h-4"></i>
             </button>
-            <button onclick="abrirModalPreciosHistoricos()" class="px-3.5 py-2.5 bg-white text-slate-700 hover:text-amber-600 hover:border-amber-200 text-xs font-bold flex items-center gap-1.5 rounded-xl border border-slate-200/80 shadow-sm transition-all" title="Consultar Precios Históricos y Aumentos (PV06)">
+            <button onclick="abrirModalPreciosHistoricos()" class="px-3.5 py-2.5 bg-white text-slate-700 hover:text-amber-600 hover:border-amber-200 text-xs font-bold flex items-center gap-1.5 rounded-xl border border-slate-200/80 shadow-sm transition-all" title="Consultar Precios Históricos y Aumentos">
                 <i data-lucide="trending-up" class="w-4 h-4 text-amber-500"></i>
-                <span class="hidden sm:inline">Precios Históricos (PV06)</span>
+                <span class="hidden sm:inline">Precios Históricos</span>
             </button>
             <button onclick="sincronizarAsociacionesAutomaticas()" class="px-3.5 py-2.5 bg-white text-slate-700 hover:text-indigo-600 hover:border-indigo-200 text-xs font-bold flex items-center gap-1.5 rounded-xl border border-slate-200/80 shadow-sm transition-all" title="Asociar automáticamente productos a proveedores según historial de compras e ingresos">
                 <i data-lucide="sparkles" class="w-4 h-4 text-indigo-500"></i>
@@ -376,7 +376,7 @@
 </div>
 
 <!-- ========================================== -->
-<!-- MODAL: PRECIOS HISTÓRICOS Y AUMENTOS (PV06)-->
+<!-- MODAL: PRECIOS HISTÓRICOS Y AUMENTOS       -->
 <!-- ========================================== -->
 <div id="modalPreciosHistoricos" class="clay-modal-backdrop hidden" onclick="if(event.target === this) cerrarModalPreciosHistoricos()">
     <div class="clay-modal-content max-w-5xl p-6 space-y-4" onclick="event.stopPropagation()">
@@ -387,7 +387,7 @@
                     <i data-lucide="trending-up" class="w-5 h-5"></i>
                 </div>
                 <div>
-                    <h3 class="text-base font-black text-slate-800">Precios Históricos y Aumentos (PV06)</h3>
+                    <h3 class="text-base font-black text-slate-800">Precios Históricos y Aumentos</h3>
                     <p id="preciosHistSubtitulo" class="text-xs text-slate-500 font-bold">Evolución de cotizaciones y comparación de aumentos</p>
                 </div>
             </div>
@@ -641,7 +641,7 @@
                     <td class="text-center"><span class="clay-badge ${badgeClase}">${p.estado}</span></td>
                     <td class="text-center">
                         <div class="flex items-center justify-center gap-1.5">
-                            <button onclick="abrirModalPreciosHistoricos(${p.id_proveedor}, '${(p.razon_social || '').replace(/'/g, "\\'")}')" class="p-1.5 text-amber-600 hover:bg-amber-50 rounded-lg" title="Precios Históricos y Aumentos (PV06)">
+                            <button onclick="abrirModalPreciosHistoricos(${p.id_proveedor}, '${(p.razon_social || '').replace(/'/g, "\\'")}')" class="p-1.5 text-amber-600 hover:bg-amber-50 rounded-lg" title="Precios Históricos y Aumentos">
                                 <i data-lucide="trending-up" class="w-4 h-4"></i>
                             </button>
                             <button onclick="verHistorialProveedor(${p.id_proveedor}, '${(p.razon_social || '').replace(/'/g, "\\'")}')" class="p-1.5 text-purple-600 hover:bg-purple-50 rounded-lg" title="Ver Historial de Cambios">
