@@ -24,6 +24,7 @@ class HistorialPrecioProveedor extends Model
         'id_unidad',
         'precio_acordado',
         'fecha_actualizacion',
+        'observaciones',
         'id_usuario',
     ];
 

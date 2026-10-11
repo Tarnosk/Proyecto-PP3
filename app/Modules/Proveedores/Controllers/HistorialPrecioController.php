@@ -209,8 +209,9 @@ class HistorialPrecioController extends Controller
         $idUsuario = UsuarioActual::id($request);
         $nuevoPrecio = (float) $request->input('precio_acordado');
         $idUnidad = $request->filled('id_unidad') ? (int) $request->input('id_unidad') : null;
+        $observaciones = $request->input('observaciones') ? trim((string) $request->input('observaciones')) : null;
 
-        $resultado = DB::transaction(function () use ($id, $idProducto, $nuevoPrecio, $idUsuario, $idUnidad) {
+        $resultado = DB::transaction(function () use ($id, $idProducto, $nuevoPrecio, $idUsuario, $idUnidad, $observaciones) {
             $relacion = ProductoProveedor::where('id_proveedor', $id)
                 ->where('id_producto', $idProducto)
                 ->first();
@@ -241,7 +242,9 @@ class HistorialPrecioController extends Controller
                 $nuevoPrecio,
                 $idUsuario,
                 null,
-                $idUnidad
+                $idUnidad,
+                null,
+                $observaciones
             );
 
             return [

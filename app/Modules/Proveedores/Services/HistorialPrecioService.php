@@ -25,7 +25,8 @@ class HistorialPrecioService
         int $idUsuario,
         ?int $idCompra = null,
         ?int $idUnidad = null,
-        ?string $fechaActualizacion = null
+        ?string $fechaActualizacion = null,
+        ?string $observaciones = null
     ): HistorialPrecioProveedor {
         if ($nuevoPrecio < 0) {
             throw new InvalidArgumentException('El precio acordado no puede ser negativo.');
@@ -57,6 +58,7 @@ class HistorialPrecioService
             'id_unidad' => $idUnidad,
             'precio_acordado' => round($nuevoPrecio, 2),
             'fecha_actualizacion' => $fecha,
+            'observaciones' => $observaciones ? trim($observaciones) : null,
             'id_usuario' => $idUsuario,
         ]);
     }
@@ -131,6 +133,7 @@ class HistorialPrecioService
                 'origen' => $registro->id_compra
                     ? ('Factura Compra #' . ($registro->compra?->numero_compra ?? $registro->id_compra))
                     : 'Acuerdo comercial',
+                'observaciones' => $registro->observaciones ?? ($registro->id_compra ? ('Factura Compra #' . ($registro->compra?->numero_compra ?? $registro->id_compra)) : 'Acuerdo comercial'),
                 'id_usuario' => $registro->id_usuario,
                 'usuario_nombre' => $registro->usuario?->nombre ?? $registro->usuario?->user ?? 'Sistema',
             ];
