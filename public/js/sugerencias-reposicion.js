@@ -156,7 +156,7 @@ function verDetalle(id) {
             <p><strong>Observaciones:</strong> ${sugerencia.observaciones ?? '—'}</p>
             ${sugerencia.motivo_rechazo ? `<p><strong>Motivo del rechazo:</strong> ${sugerencia.motivo_rechazo}</p>` : ''}
             ${sugerencia.id_orden_compra
-                ? `<p><strong>Orden generada:</strong> <a href="/Interfaz/compras.html" target="_blank">#${sugerencia.id_orden_compra}</a></p>`
+                ? `<p><strong>Orden generada:</strong> <a href="/compras" class="text-blue-600 underline font-bold" target="_blank">#${sugerencia.id_orden_compra}</a></p>`
                 : ''}
         `;
 

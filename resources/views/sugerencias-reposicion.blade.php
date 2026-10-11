@@ -9,6 +9,12 @@
                 <p class="clay-subtitle">Sistema inteligente de sugerencias de compra</p>
             </div>
             <div class="btn-group">
+                <a href="{{ url('/compras') }}" class="clay-btn clay-btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Volver a Compras
+                </a>
+                <a href="{{ url('/dashboard-reposicion') }}" class="clay-btn clay-btn-secondary">
+                    <i class="fas fa-chart-line"></i> Métricas
+                </a>
                 <button class="clay-btn clay-btn-primary" onclick="generarSugerencias()">
                     <i class="fas fa-sync"></i> Generar Sugerencias
                 </button>

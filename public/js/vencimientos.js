@@ -50,24 +50,6 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('limpiarFiltros')
         ?.addEventListener('click', limpiarFiltros);
 
-    document.addEventListener('visibilitychange', function() {
-        if (!document.hidden) {
-            cargarProximosAVencer();
-            cargarAlertas();
-            cargarPorCriticidad(true);
-        }
-    });
-
-    // Consultar en vivo permite reflejar movimientos de stock mientras la
-    // pantalla sigue abierta, sin una acción manual de recálculo.
-    window.setInterval(function() {
-        if (document.visibilityState === 'visible') {
-            cargarProximosAVencer();
-            cargarAlertas();
-            cargarPorCriticidad(true);
-        }
-    }, 60_000);
-
     marcarEncabezadosOrdenables();
 
     // Los <th> ordenables son botones de verdad: click, Enter y Espacio ordenan.
@@ -126,11 +108,7 @@ function cargarProximosAVencer(pagina = 1, dias = diasActual, filtros = filtroAc
             mostrarFiltroActivo();
         }
     })
-    .catch(err => {
-        console.error('Error al cargar los próximos vencimientos:', err);
-        const tbody = document.getElementById('bodyProximos');
-        if (tbody) tbody.innerHTML = '<tr><td colspan="7" class="text-center text-danger">No se pudieron cargar los vencimientos.</td></tr>';
-    });
+    .catch(err => console.error('Error:', err));
 }
 
 /**
@@ -214,7 +192,7 @@ function cargarPorCriticidad(forzar = false) {
             renderSeguros(data.seguro);
         }
     })
-    .catch(err => console.error('Error al cargar vencimientos por criticidad:', err));
+    .catch(err => console.error('Error:', err));
 }
 
 function cargarAlertas() {
@@ -229,11 +207,7 @@ function cargarAlertas() {
             actualizarAlertas(data.alertas);
         }
     })
-    .catch(err => {
-        console.error('Error al cargar alertas de vencimiento:', err);
-        const container = document.getElementById('alertas-vencimiento');
-        if (container) container.textContent = 'No se pudieron actualizar las alertas de vencimiento.';
-    });
+    .catch(err => console.error('Error:', err));
 }
 
 function renderTablaProximos(datos) {
@@ -307,30 +281,7 @@ function actualizarResumen(resumen) {
 }
 
 function actualizarAlertas(alertas) {
-    const container = document.getElementById('alertas-vencimiento');
-    if (!container) return;
-
-    const lista = Array.isArray(alertas) ? alertas : [];
-    const total = lista.reduce((suma, alerta) => suma + (Number(alerta.cantidad) || 0), 0);
-    container.replaceChildren();
-
-    const encabezado = document.createElement('strong');
-    encabezado.className = 'd-block mb-2';
-    encabezado.textContent = total === 0
-        ? 'Sin alertas de vencimiento activas.'
-        : `${total} alerta(s) de vencimiento requieren atención`;
-    container.appendChild(encabezado);
-
-    lista.filter(alerta => (Number(alerta.cantidad) || 0) > 0).forEach(alerta => {
-        const fila = document.createElement('div');
-        fila.className = `alerta-vencimiento badge-${alerta.tipo || 'info'}`;
-        const titulo = document.createElement('strong');
-        titulo.textContent = alerta.titulo || 'Alerta de vencimiento';
-        const cantidad = document.createElement('span');
-        cantidad.textContent = `${Number(alerta.cantidad)} lote(s). ${alerta.accion_recomendada || ''}`;
-        fila.append(titulo, cantidad);
-        container.appendChild(fila);
-    });
+    // Actualizar tarjetas de alerta con datos reales
 }
 
 function aplicarFiltros() {
