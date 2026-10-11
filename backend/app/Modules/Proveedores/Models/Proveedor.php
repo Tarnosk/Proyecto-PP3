@@ -15,9 +15,12 @@ class Proveedor extends Model
 
     protected $fillable = [
         'razon_social',
+        'contacto',
         'cuit',
+        'CUIT',
         'telefono',
         'email',
+        'direccion',
         'estado',
         'fecha_alta',
         'fecha_modificacion',
@@ -26,6 +29,11 @@ class Proveedor extends Model
         'id_usuario_carga',
         'id_usuario_modificacion',
     ];
+
+    public function getCuitAttribute(): ?string
+    {
+        return $this->attributes['cuit'] ?? $this->attributes['CUIT'] ?? null;
+    }
 
     protected $casts = [
         'id_proveedor' => 'integer',

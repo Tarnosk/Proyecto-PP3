@@ -20,6 +20,7 @@ dist/
 .phpunit.result.cache
 
 # Respaldos y material de trabajo que no va al repo
+Basura/
 BD_legacy/
 ERP-Juan23-feature-g3-*/
 ACTUALIZACION/

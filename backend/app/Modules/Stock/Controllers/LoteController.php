@@ -74,6 +74,11 @@ class LoteController extends Controller
      */
     public function store(Request $request): JsonResponse
     {
+        $rawUnidad = $request->input('id_unidad');
+        if ($rawUnidad === 0 || $rawUnidad === '0' || $rawUnidad === '' || $rawUnidad === null) {
+            $request->merge(['id_unidad' => null]);
+        }
+
         $validator = Validator::make($request->all(), [
             'id_producto' => 'required|integer|exists:PRODUCTO,id_producto',
             'nro_lote' => 'required|string|max:100',
@@ -113,7 +118,9 @@ class LoteController extends Controller
         $idUsuario = UsuarioActual::id($request);
         $asociarIngreso = filter_var($request->input('asociar_ingreso', true), FILTER_VALIDATE_BOOLEAN);
         $cantidad = (int) $request->input('cantidad');
-        $idUnidad = $request->filled('id_unidad') ? (int) $request->input('id_unidad') : null;
+        $idUnidad = ($request->filled('id_unidad') && (int) $request->input('id_unidad') > 0)
+            ? (int) $request->input('id_unidad')
+            : null;
         $nroLote = trim((string) $request->input('nro_lote'));
         $fechaVencimiento = Carbon::parse($request->input('fecha_vencimiento'))->toDateString();
         $motivo = $request->input('motivo') ?? "Ingreso mercadería lote {$nroLote}";
@@ -127,12 +134,15 @@ class LoteController extends Controller
             ], 400);
         }
 
+        $cantidadBase = StockService::cantidadEnUnidadBase($cantidad, $idUnidad);
+
         try {
             $lote = DB::transaction(function () use (
                 $producto,
                 $nroLote,
                 $fechaVencimiento,
                 $cantidad,
+                $cantidadBase,
                 $idUnidad,
                 $asociarIngreso,
                 $motivo,
@@ -140,7 +150,6 @@ class LoteController extends Controller
             ) {
                 // LOTE no tiene id_unidad: se guarda en unidades base, igual que
                 // PRODUCTO.stock, para que la suma de lotes sea comparable al stock.
-                $cantidadBase = StockService::cantidadEnUnidadBase($cantidad, $idUnidad);
 
                 if ($asociarIngreso) {
                     $movimiento = $this->stockService->registrarMovimiento(
@@ -178,11 +187,24 @@ class LoteController extends Controller
             $lote->load(['producto', 'movimiento']);
             $producto->refresh();
 
+            $unidadObj = $idUnidad ? \App\Modules\Stock\Models\UnidadMedida::find($idUnidad) : null;
+            $nombreUnidad = $unidadObj ? $unidadObj->nombre_unidad : 'u.';
+            $equivTexto = ($unidadObj && (float) $unidadObj->equivalencia_base > 1.0)
+                ? "{$cantidad} {$nombreUnidad} ({$cantidadBase} u. individuales)"
+                : "{$cantidadBase} u.";
+            $msg = ($unidadObj && (float) $unidadObj->equivalencia_base > 1.0)
+                ? "Lote registrado exitosamente: {$equivTexto}."
+                : 'Lote registrado exitosamente.';
+
             return response()->json([
                 'status' => 'success',
-                'message' => 'Lote registrado exitosamente.',
+                'message' => $msg,
                 'data' => [
                     'lote' => $this->formatearLote($lote),
+                    'id_unidad' => $idUnidad,
+                    'nombre_unidad' => $nombreUnidad,
+                    'cantidad_base' => $cantidadBase,
+                    'equivalencia_texto' => $equivTexto,
                     'stock_disponible' => $producto->stock_disponible,
                     'estado_alerta' => $producto->estado_alerta,
                 ],

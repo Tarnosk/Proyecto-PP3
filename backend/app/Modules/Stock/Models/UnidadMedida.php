@@ -18,6 +18,7 @@ class UnidadMedida extends Model
         'id_producto',
         'nombre_unidad',
         'equivalencia_base',
+        'es_base',
         'descripcion',
     ];
 
@@ -25,6 +26,7 @@ class UnidadMedida extends Model
         'id_unidad' => 'integer',
         'id_producto' => 'integer',
         'equivalencia_base' => 'decimal:4',
+        'es_base' => 'integer',
     ];
 
     public function producto(): BelongsTo

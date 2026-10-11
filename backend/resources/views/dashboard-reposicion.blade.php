@@ -2,9 +2,19 @@
 
 @section('content')
 <div class="container-fluid p-4">
-    <div class="clay-header mb-4">
-        <h1 class="clay-title">📊 Dashboard de Reposición</h1>
-        <p class="clay-subtitle">Vista general de sugerencias y vencimientos</p>
+    <div class="clay-header mb-4 d-flex justify-content-between align-items-center">
+        <div>
+            <h1 class="clay-title">📊 Dashboard de Reposición</h1>
+            <p class="clay-subtitle">Vista general de sugerencias y vencimientos</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{{ url('/compras') }}" class="clay-btn clay-btn-secondary">
+                <i class="fas fa-arrow-left"></i> Volver a Compras
+            </a>
+            <a href="{{ url('/sugerencias-reposicion') }}" class="clay-btn clay-btn-primary">
+                <i class="fas fa-list"></i> Ver Sugerencias
+            </a>
+        </div>
     </div>
 
     <div class="row mb-4">

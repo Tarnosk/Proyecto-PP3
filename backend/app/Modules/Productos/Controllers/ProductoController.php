@@ -6,6 +6,9 @@ namespace App\Modules\Productos\Controllers;
 use App\Http\Controllers\Controller;
 use App\Modules\Productos\Models\Producto;
 use App\Modules\Productos\Models\HistorialPrecio;
+use App\Modules\Productos\Models\Categoria;
+use App\Modules\Productos\Models\Marca;
+use App\Modules\Stock\Models\MovimientoStock;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -31,7 +34,7 @@ class ProductoController extends Controller
             $estado = null;
         }
 
-        $productos = Producto::with(['categoria', 'marca', 'usuarioCarga', 'usuarioModificacion', 'ubicaciones'])
+        $productos = Producto::with(['categoria', 'marca', 'usuarioCarga', 'usuarioModificacion', 'ubicaciones', 'unidades'])
             ->search($search)
             ->filterCategoria($categoriaId)
             ->filterMarca($marcaId)
@@ -61,9 +64,13 @@ class ProductoController extends Controller
                     'marca_nombre' => $p->marca ? $p->marca->nombre : null,
                     'id_ubicacion' => $p->ubicaciones->first()?->id_ubicacion,
                     'ubicacion_nombre' => $p->ubicaciones->first()?->descripcion ?? 'Sin asignar',
-                    'stock_disponible' => $p->stock_disponible,
-                    'stock_minimo' => $p->stock_minimo,
+                    'stock' => (int) ($p->stock ?? $p->stock_disponible ?? 0),
+                    'stock_disponible' => (int) ($p->stock_disponible ?? $p->stock ?? 0),
+                    'stock_minimo' => (int) ($p->stock_minimo ?? 0),
                     'estado_alerta' => $p->estado_alerta,
+                    'unidad_medida' => $p->unidad_medida,
+                    'equivalencia_unidad' => $p->equivalencia_unidad,
+                    'id_unidad_activa' => $p->id_unidad_activa,
                 ];
             });
 
@@ -161,6 +168,19 @@ class ProductoController extends Controller
                     ]);
                 }
 
+                // 4. Si se especificó stock inicial > 0, registrar movimiento de ingreso inicial en Kardex (S12)
+                if ($stockInicial > 0) {
+                    MovimientoStock::create([
+                        'id_producto' => $prod->id_producto,
+                        'tipo' => 'ingreso',
+                        'cantidad' => $stockInicial,
+                        'cantidad_base' => $stockInicial,
+                        'fecha' => $now,
+                        'motivo' => 'Stock inicial al registrar producto',
+                        'id_usuario' => $idUsuario,
+                    ]);
+                }
+
                 AuditoriaLogger::registrar(
                     'producto',
                     $prod->id_producto,
@@ -196,7 +216,7 @@ class ProductoController extends Controller
      */
     public function show(int $id): JsonResponse
     {
-        $producto = Producto::with(['categoria', 'marca', 'usuarioCarga', 'usuarioModificacion', 'historialPrecios.usuario', 'ubicaciones'])->find($id);
+        $producto = Producto::with(['categoria', 'marca', 'usuarioCarga', 'usuarioModificacion', 'historialPrecios.usuario', 'ubicaciones', 'unidades'])->find($id);
 
         if (!$producto) {
             return response()->json([
@@ -229,9 +249,13 @@ class ProductoController extends Controller
                 'marca_nombre' => $producto->marca ? $producto->marca->nombre : null,
                 'id_ubicacion' => $producto->ubicaciones->first()?->id_ubicacion,
                 'ubicacion_nombre' => $producto->ubicaciones->first()?->descripcion ?? 'Sin asignar',
-                'stock_disponible' => $producto->stock_disponible,
-                'stock_minimo' => $producto->stock_minimo,
+                'stock' => (int) ($producto->stock ?? $producto->stock_disponible ?? 0),
+                'stock_disponible' => (int) ($producto->stock_disponible ?? $producto->stock ?? 0),
+                'stock_minimo' => (int) ($producto->stock_minimo ?? 0),
                 'estado_alerta' => $producto->estado_alerta,
+                'unidad_medida' => $producto->unidad_medida,
+                'equivalencia_unidad' => $producto->equivalencia_unidad,
+                'id_unidad_activa' => $producto->id_unidad_activa,
                 'historial_precios' => $producto->historialPrecios,
             ],
         ]);
@@ -474,13 +498,70 @@ class ProductoController extends Controller
     }
 
     /**
-     * Consultar historial de precios cronológico (P08 / P04)
+     * Consultar historial global de precios y aumentos masivos (P08 / P07)
+     */
+    public function historialPreciosGlobal(Request $request): JsonResponse
+    {
+        $idProducto = $request->filled('id_producto') ? (int) $request->input('id_producto') : null;
+        $origen = $request->input('origen');
+
+        $query = HistorialPrecio::with(['producto', 'usuario'])
+            ->orderBy('id_historial', 'desc');
+
+        if ($idProducto) {
+            $query->where('id_producto', $idProducto);
+        }
+        if ($origen) {
+            $query->where('origen', $origen);
+        }
+
+        $registros = $query->limit(200)->get()->map(function (HistorialPrecio $h) {
+            $prod = $h->producto;
+            $precioNuevo = (float) $h->precio;
+            $pct = $h->porcentaje_aumento !== null ? (float) $h->porcentaje_aumento : null;
+            $precioAnterior = null;
+            if ($pct !== null && $pct > -100 && (1 + $pct / 100.0) > 0) {
+                $precioAnterior = round($precioNuevo / (1 + $pct / 100.0), 2);
+            }
+
+            return [
+                'id_historial' => $h->id_historial,
+                'id_producto' => $h->id_producto,
+                'codigo_producto' => $prod?->codigo,
+                'producto_nombre' => $prod ? ($prod->codigo . ' - ' . $prod->nombre) : "Producto #{$h->id_producto}",
+                'tipo_precio' => $h->tipo_precio,
+                'precio' => $precioNuevo,
+                'precio_anterior' => $precioAnterior,
+                'precio_nuevo' => $precioNuevo,
+                'porcentaje_aumento' => $pct,
+                'origen' => $h->origen,
+                'fecha_cambio' => $h->fecha_cambio ? (is_string($h->fecha_cambio) ? $h->fecha_cambio : $h->fecha_cambio->format('Y-m-d H:i:s')) : null,
+                'id_usuario' => $h->id_usuario,
+                'usuario_nombre' => $h->usuario ? $h->usuario->nombre : ($h->id_usuario ? "Usuario #{$h->id_usuario}" : 'Sistema'),
+            ];
+        });
+
+        return response()->json([
+            'status' => 'success',
+            'data' => $registros,
+        ]);
+    }
+
+    /**
+     * Consultar historial de precios cronológico de un producto (P08 / P04)
      */
     public function historialPrecios(int $id): JsonResponse
     {
+        $producto = Producto::find($id);
+        if (!$producto) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'El producto solicitado no existe.',
+            ], 404);
+        }
+
         $registros = HistorialPrecio::with('usuario')
             ->where('id_producto', $id)
-            ->orderBy('fecha_cambio', 'asc')
             ->orderBy('id_historial', 'asc')
             ->get();
 
@@ -491,6 +572,14 @@ class ProductoController extends Controller
             $variacionPorcentaje = null;
             if ($precioAnterior !== null && $precioAnterior > 0) {
                 $variacionPorcentaje = round((($precioNuevo - $precioAnterior) / $precioAnterior) * 100, 2);
+            } elseif ($registro->porcentaje_aumento !== null) {
+                $variacionPorcentaje = (float) $registro->porcentaje_aumento;
+            }
+
+            $precioAntCalc = $precioAnterior;
+            if ($precioAntCalc === null && $registro->porcentaje_aumento !== null && (float)$registro->porcentaje_aumento > 0) {
+                $pct = (float)$registro->porcentaje_aumento;
+                $precioAntCalc = round($precioNuevo / (1 + $pct / 100.0), 2);
             }
 
             $resultado[] = [
@@ -498,7 +587,7 @@ class ProductoController extends Controller
                 'id_producto' => $registro->id_producto,
                 'tipo_precio' => $registro->tipo_precio,
                 'precio' => $precioNuevo,
-                'precio_anterior' => $precioAnterior !== null ? (float) $precioAnterior : null,
+                'precio_anterior' => $precioAntCalc !== null ? (float) $precioAntCalc : null,
                 'precio_nuevo' => $precioNuevo,
                 'porcentaje_aumento' => $variacionPorcentaje,
                 'porcentaje_variacion' => $variacionPorcentaje,
@@ -519,32 +608,128 @@ class ProductoController extends Controller
     }
 
     /**
+     * Consultar historial global de cambios y auditoría de productos (P04 / Auditoría)
+     */
+    public function auditoriaGlobal(Request $request): JsonResponse
+    {
+        $idProducto = $request->filled('id_producto') ? (int) $request->input('id_producto') : null;
+
+        $query = LogAuditoria::with('usuario')
+            ->where('tabla_afectada', 'producto')
+            ->orderByDesc('fecha_hora')
+            ->orderByDesc('id_auditoria');
+
+        if ($idProducto) {
+            $query->where('id_registro', $idProducto);
+        }
+
+        $categorias = Categoria::pluck('nombre', 'id_categoria')->all();
+        $marcas = Marca::pluck('nombre', 'id_marca')->all();
+        $productos = Producto::pluck('nombre', 'id_producto')->all();
+        $codigos = Producto::pluck('codigo', 'id_producto')->all();
+
+        $logs = $query->limit(200)->get()->map(function (LogAuditoria $log) use ($categorias, $marcas, $productos, $codigos) {
+            return $this->formatearLogAuditoria($log, $categorias, $marcas, $productos, $codigos);
+        });
+
+        return response()->json([
+            'status' => 'success',
+            'data' => $logs,
+        ]);
+    }
+
+    /**
      * Consultar historial de cambios y auditoría del producto (P04 / Auditoría)
      */
     public function auditoria(int $id): JsonResponse
     {
+        $categorias = Categoria::pluck('nombre', 'id_categoria')->all();
+        $marcas = Marca::pluck('nombre', 'id_marca')->all();
+        $productos = Producto::pluck('nombre', 'id_producto')->all();
+        $codigos = Producto::pluck('codigo', 'id_producto')->all();
+
         $logs = LogAuditoria::with('usuario')
             ->where('tabla_afectada', 'producto')
             ->where('id_registro', $id)
             ->orderByDesc('fecha_hora')
             ->orderByDesc('id_auditoria')
             ->get()
-            ->map(function (LogAuditoria $log) {
-                return [
-                    'id_auditoria' => $log->id_auditoria,
-                    'accion' => $log->accion,
-                    'valores_anteriores' => $log->valores_anteriores,
-                    'valores_nuevos' => $log->valores_nuevos,
-                    'id_usuario' => $log->id_usuario,
-                    'usuario_nombre' => $log->usuario ? $log->usuario->nombre : ($log->id_usuario ? "Usuario #{$log->id_usuario}" : 'Sistema'),
-                    'fecha_hora' => $log->fecha_hora ? $log->fecha_hora->format('Y-m-d H:i:s') : null,
-                ];
+            ->map(function (LogAuditoria $log) use ($categorias, $marcas, $productos, $codigos) {
+                return $this->formatearLogAuditoria($log, $categorias, $marcas, $productos, $codigos);
             });
 
         return response()->json([
             'status' => 'success',
             'data' => $logs,
         ]);
+    }
+
+    /**
+     * Formatear fila de auditoría resaltando los campos modificados
+     */
+    private function formatearLogAuditoria(LogAuditoria $log, array $categorias, array $marcas, array $productos, array $codigos): array
+    {
+        $ant = is_array($log->valores_anteriores) ? $log->valores_anteriores : json_decode((string)$log->valores_anteriores, true);
+        $nue = is_array($log->valores_nuevos) ? $log->valores_nuevos : json_decode((string)$log->valores_nuevos, true);
+
+        $cambios = [];
+        if ($log->accion === 'INSERT') {
+            $cambios[] = 'Alta inicial del producto';
+        } elseif ($log->accion === 'UPDATE' && is_array($ant) && is_array($nue)) {
+            foreach ($nue as $campo => $valorNuevo) {
+                $valorAnt = $ant[$campo] ?? null;
+                if ($valorAnt != $valorNuevo) {
+                    $labelCampo = match ($campo) {
+                        'nombre' => 'Nombre',
+                        'codigo' => 'Código',
+                        'descripcion' => 'Descripción',
+                        'precio_unitario' => 'Precio Unitario',
+                        'id_categoria' => 'Categoría',
+                        'id_marca' => 'Marca',
+                        'stock_minimo' => 'Stock Mínimo',
+                        'estado' => 'Estado',
+                        'aumento_masivo_porcentaje' => 'Aumento Masivo %',
+                        default => ucfirst((string) $campo),
+                    };
+
+                    $displayAnt = $valorAnt;
+                    $displayNuevo = $valorNuevo;
+                    if ($campo === 'id_categoria') {
+                        $displayAnt = $categorias[$valorAnt] ?? ($valorAnt ? "Cat #{$valorAnt}" : 'Sin categoría');
+                        $displayNuevo = $categorias[$valorNuevo] ?? ($valorNuevo ? "Cat #{$valorNuevo}" : 'Sin categoría');
+                    } elseif ($campo === 'id_marca') {
+                        $displayAnt = $marcas[$valorAnt] ?? ($valorAnt ? "Marca #{$valorAnt}" : 'Sin marca');
+                        $displayNuevo = $marcas[$valorNuevo] ?? ($valorNuevo ? "Marca #{$valorNuevo}" : 'Sin marca');
+                    } elseif ($campo === 'precio_unitario') {
+                        $displayAnt = '$' . number_format((float)$valorAnt, 2, ',', '.');
+                        $displayNuevo = '$' . number_format((float)$valorNuevo, 2, ',', '.');
+                    }
+
+                    $cambios[] = "{$labelCampo}: '{$displayAnt}' → '{$displayNuevo}'";
+                }
+            }
+        } elseif ($log->accion === 'DELETE') {
+            $cambios[] = 'Baja o desactivación del producto';
+        }
+
+        $idProd = (int) $log->id_registro;
+        $cod = $codigos[$idProd] ?? ($nue['codigo'] ?? ($ant['codigo'] ?? "ID #{$idProd}"));
+        $nom = $productos[$idProd] ?? ($nue['nombre'] ?? ($ant['nombre'] ?? "Producto #{$idProd}"));
+
+        return [
+            'id_auditoria' => $log->id_auditoria,
+            'id_producto' => $idProd,
+            'codigo_producto' => $cod,
+            'producto_nombre' => "{$cod} - {$nom}",
+            'accion' => $log->accion,
+            'cambios_resumen' => count($cambios) > 0 ? implode('; ', $cambios) : 'Modificación de registro',
+            'cambios' => $cambios,
+            'valores_anteriores' => $ant,
+            'valores_nuevos' => $nue,
+            'id_usuario' => $log->id_usuario,
+            'usuario_nombre' => $log->usuario ? $log->usuario->nombre : ($log->id_usuario ? "Usuario #{$log->id_usuario}" : 'Sistema'),
+            'fecha_hora' => $log->fecha_hora ? $log->fecha_hora->format('Y-m-d H:i:s') : null,
+        ];
     }
 
     /**
@@ -558,19 +743,18 @@ class ProductoController extends Controller
             $validator = Validator::make($request->all(), [
             'porcentaje' => 'required|numeric|gt:0',
             'tipo_precio' => 'nullable|string|in:ambos,mayorista,minorista',
-            'regla_redondeo' => 'nullable|string|in:sin_redondeo,redondeo,ceil,floor,redondeo_0,redondeo_2',
+            'regla_redondeo' => 'nullable|string',
             'ids' => 'nullable|array',
             'ids.*' => 'integer|exists:PRODUCTO,id_producto',
             'id_categoria' => 'nullable|integer|exists:CATEGORIA,id_categoria',
             'id_marca' => 'nullable|integer|exists:MARCA,id_marca',
         ], [
             'porcentaje.required' => 'Debe indicar el porcentaje de aumento.',
-            'porcentaje.numeric' => 'El porcentaje debe ser numǸrico.',
+            'porcentaje.numeric' => 'El porcentaje debe ser numérico.',
             'porcentaje.gt' => 'El porcentaje de aumento debe ser mayor a 0.',
             'tipo_precio.in' => 'El tipo de precio debe ser: ambos, mayorista o minorista.',
-            'regla_redondeo.in' => 'La regla de redondeo debe ser: sin_redondeo, redondeo, ceil, floor, redondeo_0 o redondeo_2.',
             'ids.*.exists' => 'Alguno de los productos indicados no existe.',
-            'id_categoria.exists' => 'La categor��a seleccionada no existe.',
+            'id_categoria.exists' => 'La categoría seleccionada no existe.',
             'id_marca.exists' => 'La marca seleccionada no existe.',
         ]);
 
@@ -583,7 +767,6 @@ class ProductoController extends Controller
 
             $porcentaje = (float) $request->input('porcentaje');
             $tipoPrecio = $request->input('tipo_precio', 'ambos');
-            $reglaRedondeo = $request->input('regla_redondeo', 'sin_redondeo');
             $idUsuario = UsuarioActual::id($request);
             $now = Carbon::now()->toDateTimeString();
 
@@ -600,21 +783,13 @@ class ProductoController extends Controller
 
                 $productos = $query->orderBy('id_producto', 'asc')->get();
 
-                $detalles = DB::transaction(function () use ($productos, $porcentaje, $tipoPrecio, $reglaRedondeo, $idUsuario, $now) {
+                $detalles = DB::transaction(function () use ($productos, $porcentaje, $tipoPrecio, $idUsuario, $now) {
                     $detalles = [];
 
                     foreach ($productos as $producto) {
                         $cambio = false;
                         $precioAnterior = (float) $producto->precio_unitario;
-                        $precioCalculado = $precioAnterior * (1 + $porcentaje / 100.0);
-                        $nuevoPrecio = match ($reglaRedondeo) {
-                            'redondeo' => round($precioCalculado, 2),
-                            'ceil' => ceil($precioCalculado * 100) / 100,
-                            'floor' => floor($precioCalculado * 100) / 100,
-                            'redondeo_0' => round($precioCalculado, 0),
-                            'redondeo_2' => round($precioCalculado, 2),
-                            default => round($precioCalculado, 2),
-                        };
+                        $nuevoPrecio = round($precioAnterior * (1 + $porcentaje / 100.0), 2);
 
                         if (abs($nuevoPrecio - $precioAnterior) >= 0.001) {
                             HistorialPrecio::create([
@@ -622,7 +797,7 @@ class ProductoController extends Controller
                                 'tipo_precio' => 'general',
                                 'precio' => $nuevoPrecio,
                                 'porcentaje_aumento' => $porcentaje,
-                                'regla_redondeo' => $reglaRedondeo,
+                                'regla_redondeo' => 'sin_redondeo',
                                 'origen' => 'aumento_masivo',
                                 'fecha_cambio' => $now,
                                 'id_usuario' => $idUsuario,
@@ -633,6 +808,16 @@ class ProductoController extends Controller
                             'fecha_modificacion' => $now,
                             'id_usuario_modificacion' => $idUsuario,
                         ]);
+
+                        AuditoriaLogger::registrar(
+                            'producto',
+                            $producto->id_producto,
+                            'UPDATE',
+                            ['precio_unitario' => $precioAnterior],
+                            ['precio_unitario' => $nuevoPrecio, 'aumento_masivo_porcentaje' => $porcentaje],
+                            $idUsuario
+                        );
+
                         $cambio = true;
                     }
 

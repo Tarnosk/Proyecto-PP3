@@ -61,8 +61,11 @@ class StockService
         ?int $idVenta = null,
         ?int $idRecepcion = null,
         \Carbon\Carbon|string|null $fechaPersonalizada = null,
-        bool $esIncremento = false
+        bool $esIncremento = false,
+        ?int $idLote = null
     ): MovimientoStock {
+        $idUnidad = ($idUnidad !== null && (int) $idUnidad > 0) ? (int) $idUnidad : null;
+
         if (!in_array($tipo, self::TIPOS, true)) {
             throw new RuntimeException("Tipo de movimiento inválido: {$tipo}");
         }
@@ -134,6 +137,7 @@ class StockService
                 'id_usuario' => $idUsuario,
                 'id_venta' => $idVenta,
                 'id_recepcion' => $idRecepcion,
+                'id_lote' => $idLote,
             ]);
 
             DB::commit();
@@ -156,7 +160,7 @@ class StockService
      */
     public static function cantidadEnUnidadBase(int $cantidad, ?int $idUnidad): int
     {
-        if ($idUnidad === null) {
+        if ($idUnidad === null || (int) $idUnidad <= 0) {
             return $cantidad;
         }
 

@@ -272,7 +272,7 @@ class OrdenCompraController extends Controller
      */
     public function update(Request $request, int $id): JsonResponse
     {
-        $orden = OrdenCompra::find($id);
+        $orden = OrdenCompra::with('proveedor')->find($id);
         if (!$orden) {
             return response()->json(['status' => 'error', 'message' => 'La orden de compra no existe.'], 404);
         }
@@ -281,6 +281,13 @@ class OrdenCompraController extends Controller
             return response()->json([
                 'status' => 'error',
                 'message' => 'Solo se pueden editar órdenes pendientes. Una vez enviada no puede modificarse. (PC04)',
+            ], 400);
+        }
+
+        if ($orden->proveedor && $orden->proveedor->estado !== 'activo') {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'No se puede editar una orden de compra de un proveedor inactivo. (PV04)',
             ], 400);
         }
 
@@ -391,13 +398,20 @@ class OrdenCompraController extends Controller
      */
     public function enviar(Request $request, int $id): JsonResponse
     {
-        $orden = OrdenCompra::find($id);
+        $orden = OrdenCompra::with('proveedor')->find($id);
         if (!$orden) {
             return response()->json(['status' => 'error', 'message' => 'La orden de compra no existe.'], 404);
         }
 
         if ($orden->estado !== 'pendiente') {
             return response()->json(['status' => 'error', 'message' => 'Solo se pueden enviar órdenes pendientes.'], 400);
+        }
+
+        if ($orden->proveedor && $orden->proveedor->estado !== 'activo') {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'No se puede enviar una orden a un proveedor inactivo. (PV04)',
+            ], 400);
         }
 
         $fechaEnv = $request->input('fecha_envio') ?? Carbon::now()->toDateString();

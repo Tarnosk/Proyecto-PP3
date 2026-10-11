@@ -22,12 +22,16 @@ class Producto extends Model
 
     protected $appends = [
         'stock_disponible',
+        'stock_actual',
         'estado_alerta',
         'precio_unitario',
         'precio_mayorista',
         'precio_minorista',
         'precioMay',
         'precioMin',
+        'unidad_medida',
+        'equivalencia_unidad',
+        'id_unidad_activa',
     ];
 
     protected $fillable = [
@@ -89,6 +93,11 @@ class Producto extends Model
      * PRODUCTO.stock (OB3), por lo que este atributo expone la columna directa.
      */
     public function getStockDisponibleAttribute(?int $value = null): int
+    {
+        return (int) ($value ?? $this->stock);
+    }
+
+    public function getStockActualAttribute(?int $value = null): int
     {
         return (int) ($value ?? $this->stock);
     }
@@ -165,6 +174,30 @@ class Producto extends Model
     public function unidades(): HasMany
     {
         return $this->hasMany(UnidadMedida::class, 'id_producto', 'id_producto');
+    }
+
+    public function getUnidadMedidaAttribute(): string
+    {
+        $u = $this->relationLoaded('unidades')
+            ? $this->unidades->firstWhere('es_base', 1)
+            : $this->unidades()->where('es_base', 1)->first();
+        return $u ? $u->nombre_unidad : 'u.';
+    }
+
+    public function getEquivalenciaUnidadAttribute(): float
+    {
+        $u = $this->relationLoaded('unidades')
+            ? $this->unidades->firstWhere('es_base', 1)
+            : $this->unidades()->where('es_base', 1)->first();
+        return $u ? (float) $u->equivalencia_base : 1.0;
+    }
+
+    public function getIdUnidadActivaAttribute(): ?int
+    {
+        $u = $this->relationLoaded('unidades')
+            ? $this->unidades->firstWhere('es_base', 1)
+            : $this->unidades()->where('es_base', 1)->first();
+        return $u ? (int) $u->id_unidad : null;
     }
 
     /**

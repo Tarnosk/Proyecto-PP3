@@ -132,4 +132,70 @@ class UbicacionController extends Controller
             'message' => 'Ubicación desasignada exitosamente.',
         ]);
     }
+
+    /**
+     * S14 - Modificar una ubicación física de almacenamiento.
+     */
+    public function update(Request $request, int $id): JsonResponse
+    {
+        $ubicacion = Ubicacion::find($id);
+        if (!$ubicacion) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Ubicación no encontrada.',
+            ], 404);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'descripcion' => 'required|string|max:100|unique:ubicacion,descripcion,' . $id . ',id_ubicacion',
+        ], [
+            'descripcion.required' => 'La descripción de la ubicación es obligatoria.',
+            'descripcion.unique' => "La ubicación ':input' ya se encuentra registrada.",
+            'descripcion.max' => 'La descripción no puede superar los 100 caracteres.',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => 'error',
+                'message' => $validator->errors()->first(),
+            ], 400);
+        }
+
+        $ubicacion->descripcion = trim($request->input('descripcion'));
+        $ubicacion->save();
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Ubicación física actualizada exitosamente.',
+            'data' => $ubicacion,
+        ]);
+    }
+
+    /**
+     * S14 - Dar de baja o eliminar una ubicación si no está asignada a productos.
+     */
+    public function destroy(int $id): JsonResponse
+    {
+        $ubicacion = Ubicacion::withCount('productos')->find($id);
+        if (!$ubicacion) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Ubicación no encontrada.',
+            ], 404);
+        }
+
+        if ($ubicacion->productos_count > 0) {
+            return response()->json([
+                'status' => 'error',
+                'message' => "No se puede eliminar la ubicación '{$ubicacion->descripcion}' porque está asignada a {$ubicacion->productos_count} producto(s).",
+            ], 400);
+        }
+
+        $ubicacion->delete();
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Ubicación eliminada exitosamente.',
+        ]);
+    }
 }

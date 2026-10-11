@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Modules\Compras\Models\Compra;
 use App\Modules\Compras\Models\DetalleCompra;
 use App\Modules\Productos\Models\Producto;
+use App\Modules\Proveedores\Models\ProductoProveedor;
 use App\Modules\Proveedores\Models\Proveedor;
 use App\Modules\Stock\Models\UnidadMedida;
 use App\Modules\Compras\Models\Recepcion;
@@ -86,6 +87,7 @@ class CompraController extends Controller
             'id_proveedor' => 'required|integer',
             'id_orden' => 'nullable|integer|exists:ORDEN_COMPRA,id_orden',
             'fecha_compra' => 'nullable|date|before_or_equal:today',
+            'fecha_vencimiento' => 'nullable|date',
             'numero_comprobante' => 'nullable|string|max:50',
             'items' => 'required|array|min:1',
         ], [
@@ -140,6 +142,7 @@ class CompraController extends Controller
                 }
 
                 $importeTotal = round($importeTotal, 2);
+                $fechaVenc = $request->input('fecha_vencimiento') ?: Carbon::parse($fecha)->addDays(30)->toDateString();
 
                 $compra = Compra::create([
                     'numero_compra' => $this->generarComprobante(),
@@ -150,6 +153,7 @@ class CompraController extends Controller
                     'saldo_pendiente' => $importeTotal,
                     'estado' => 'pendiente',
                     'fecha_compra' => $fecha,
+                    'fecha_vencimiento' => $fechaVenc,
                     'id_usuario' => $idUsuario,
                 ]);
 
@@ -163,6 +167,29 @@ class CompraController extends Controller
                         'precio_unitario' => $d['precio_unitario'],
                         'subtotal' => $d['subtotal'],
                     ]);
+
+                    // PV05: Asociar automáticamente el producto al proveedor al registrar una compra
+                    $asocProv = ProductoProveedor::where('id_producto', $d['id_producto'])
+                        ->where('id_proveedor', $proveedor->id_proveedor)
+                        ->first();
+                    if (!$asocProv) {
+                        $tieneOtroPrincipal = ProductoProveedor::where('id_producto', $d['id_producto'])
+                            ->where('activo', true)
+                            ->where('es_proveedor_principal', true)
+                            ->exists();
+
+                        ProductoProveedor::create([
+                            'id_producto' => $d['id_producto'],
+                            'id_proveedor' => $proveedor->id_proveedor,
+                            'es_proveedor_principal' => !$tieneOtroPrincipal,
+                            'precio_acordado' => (float) $d['precio_unitario'],
+                            'activo' => true,
+                            'fecha_asociacion' => $fecha,
+                            'id_usuario' => $idUsuario,
+                        ]);
+                    } elseif ($asocProv->precio_acordado === null) {
+                        $asocProv->update(['precio_acordado' => (float) $d['precio_unitario']]);
+                    }
                 }
 
                 return $compra;
@@ -241,6 +268,122 @@ class CompraController extends Controller
         return response()->json([
             'status' => 'success',
             'data' => $compras->map(fn (Compra $c) => $this->formato($c)),
+        ], 200);
+    }
+
+    /**
+     * C09 - Visualizar deudas con proveedores (Issue #42).
+     *
+     * Consulta las compras no canceladas que tengan saldo pendiente de pago
+     * (importe_total - total_pagado > 0), con detalle agrupado por proveedor,
+     * compras pendientes y fechas de vencimiento próximas.
+     */
+    public function deudas(Request $request): JsonResponse
+    {
+        $query = Compra::with(['proveedor', 'pagos'])
+            ->where('estado', '!=', 'cancelada');
+
+        if ($request->filled('id_proveedor')) {
+            $query->where('id_proveedor', (int) $request->input('id_proveedor'));
+        }
+        if ($request->filled('desde')) {
+            $query->whereDate('fecha_compra', '>=', $request->input('desde'));
+        }
+        if ($request->filled('hasta')) {
+            $query->whereDate('fecha_compra', '<=', $request->input('hasta'));
+        }
+
+        $compras = $query->orderBy('fecha_vencimiento', 'asc')
+            ->orderBy('fecha_compra', 'desc')
+            ->get();
+
+        $deudasPorProveedor = [];
+        $totalDeudaGeneral = 0.0;
+        $todasComprasConDeuda = [];
+
+        foreach ($compras as $c) {
+            $totalPagado = round((float) $c->pagos->sum('importe'), 2);
+            $importeTotal = round((float) $c->importe_total, 2);
+            $saldoAPagar = max(0.0, round($importeTotal - $totalPagado, 2));
+
+            if ($saldoAPagar <= 0) {
+                continue;
+            }
+
+            $totalDeudaGeneral += $saldoAPagar;
+            $idProv = $c->id_proveedor;
+
+            $diasParaVencer = null;
+            $estaVencida = false;
+            if ($c->fecha_vencimiento) {
+                $hoy = Carbon::today();
+                $venc = Carbon::parse($c->fecha_vencimiento);
+                $diasParaVencer = (int) $hoy->diffInDays($venc, false);
+                $estaVencida = $diasParaVencer < 0;
+            }
+
+            $itemCompra = [
+                'id_compra' => $c->id_compra,
+                'numero_compra' => $c->numero_compra,
+                'numero_comprobante' => $c->numero_comprobante,
+                'fecha_compra' => $c->fecha_compra ? $c->fecha_compra->format('Y-m-d') : null,
+                'fecha_vencimiento' => $c->fecha_vencimiento ? $c->fecha_vencimiento->format('Y-m-d') : null,
+                'importe_total' => $importeTotal,
+                'total_pagado' => $totalPagado,
+                'saldo_a_pagar' => $saldoAPagar,
+                'estado' => $c->estado,
+                'dias_para_vencer' => $diasParaVencer,
+                'esta_vencida' => $estaVencida,
+                'proveedor' => $c->proveedor?->razon_social,
+                'id_proveedor' => $idProv,
+            ];
+
+            $todasComprasConDeuda[] = $itemCompra;
+
+            if (!isset($deudasPorProveedor[$idProv])) {
+                $deudasPorProveedor[$idProv] = [
+                    'id_proveedor' => $idProv,
+                    'razon_social' => $c->proveedor?->razon_social ?? "Proveedor #{$idProv}",
+                    'cuit' => $c->proveedor?->cuit,
+                    'telefono' => $c->proveedor?->telefono,
+                    'email' => $c->proveedor?->email,
+                    'saldo_adeudado' => 0.0,
+                    'total_adeudado' => 0.0,
+                    'cantidad_compras' => 0,
+                    'proximo_vencimiento' => null,
+                    'compras' => [],
+                ];
+            }
+
+            $nuevoSaldo = round($deudasPorProveedor[$idProv]['saldo_adeudado'] + $saldoAPagar, 2);
+            $deudasPorProveedor[$idProv]['saldo_adeudado'] = $nuevoSaldo;
+            $deudasPorProveedor[$idProv]['total_adeudado'] = $nuevoSaldo;
+            $deudasPorProveedor[$idProv]['cantidad_compras']++;
+            $deudasPorProveedor[$idProv]['compras'][] = $itemCompra;
+
+            if ($c->fecha_vencimiento) {
+                $fechaV = $c->fecha_vencimiento->format('Y-m-d');
+                if ($deudasPorProveedor[$idProv]['proximo_vencimiento'] === null || $fechaV < $deudasPorProveedor[$idProv]['proximo_vencimiento']) {
+                    $deudasPorProveedor[$idProv]['proximo_vencimiento'] = $fechaV;
+                }
+            }
+        }
+
+        $listaProveedores = collect(array_values($deudasPorProveedor))
+            ->sortByDesc('saldo_adeudado')
+            ->values()
+            ->all();
+
+        return response()->json([
+            'status' => 'success',
+            'data' => [
+                'saldo_adeudado_total' => round($totalDeudaGeneral, 2),
+                'proveedores_con_deuda' => count($listaProveedores),
+                'compras_con_deuda' => count($todasComprasConDeuda),
+                'por_proveedor' => $listaProveedores,
+                'proveedores' => $listaProveedores,
+                'compras_pendientes' => $todasComprasConDeuda,
+            ],
         ], 200);
     }
 
@@ -390,7 +533,7 @@ class CompraController extends Controller
      */
     public function update(Request $request, int $id): JsonResponse
     {
-        $compra = Compra::find($id);
+        $compra = Compra::with('proveedor')->find($id);
         if (!$compra) {
             return response()->json(['status' => 'error', 'message' => 'La compra no existe.'], 404);
         }
@@ -402,8 +545,16 @@ class CompraController extends Controller
             ], 400);
         }
 
+        if ($compra->proveedor && $compra->proveedor->estado !== 'activo') {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'No se puede modificar una compra de un proveedor inactivo. (PV04)',
+            ], 400);
+        }
+
         $validator = Validator::make($request->all(), [
             'fecha_compra' => 'nullable|date|before_or_equal:today',
+            'fecha_vencimiento' => 'nullable|date',
             'numero_comprobante' => 'nullable|string|max:50',
             'items' => 'required|array|min:1',
         ], [
@@ -463,11 +614,16 @@ class CompraController extends Controller
                 if ($request->filled('fecha_compra')) {
                     $compra->fecha_compra = $request->input('fecha_compra');
                 }
+                if ($request->has('fecha_vencimiento')) {
+                    $compra->fecha_vencimiento = $request->input('fecha_vencimiento') ?: null;
+                }
                 if ($request->has('numero_comprobante')) {
                     $compra->numero_comprobante = $request->input('numero_comprobante') ?: null;
                 }
                 $compra->importe_total = $importeTotal;
                 $compra->saldo_pendiente = $importeTotal;
+                $compra->fecha_modificacion = Carbon::now();
+                $compra->id_usuario_modificacion = $idUsuario;
 
                 $compra->save();
 

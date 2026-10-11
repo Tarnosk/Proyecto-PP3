@@ -8,9 +8,14 @@
                 <h1 class="clay-title">📦 Consulta de Productos Próximos a Vencer</h1>
                 <p class="clay-subtitle">Monitorea y controla los vencimientos de tu inventario</p>
             </div>
-            <button class="clay-btn clay-btn-primary" data-bs-toggle="modal" data-bs-target="#filtrosModal">
-                <i class="fas fa-filter"></i> Filtros
-            </button>
+            <div class="d-flex gap-2">
+                <a href="{{ url('/inventario') }}" class="clay-btn clay-btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Volver a Inventario
+                </a>
+                <button class="clay-btn clay-btn-primary" data-bs-toggle="modal" data-bs-target="#filtrosModal">
+                    <i class="fas fa-filter"></i> Filtros
+                </button>
+            </div>
         </div>
     </div>
 
