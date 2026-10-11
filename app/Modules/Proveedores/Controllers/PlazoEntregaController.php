@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Modules\Proveedores\Models\Proveedor;
 use App\Modules\Proveedores\Services\PlazoEntregaService;
 use App\Support\UsuarioActual;
+use App\Support\AuditoriaLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -47,12 +48,27 @@ class PlazoEntregaController extends Controller
             return response()->json(['status' => 'error', 'message' => 'El proveedor no existe.'], 404);
         }
 
+        if ($modelo->estado !== 'activo') {
+            return response()->json(['status' => 'error', 'message' => 'No se puede modificar el plazo de entrega de un proveedor inactivo. (PV04)'], 400);
+        }
+
         try {
             $resultado = $this->service->cambiarPlazo(
                 $modelo,
                 (int) $validator->validated()['plazo_entrega_dias'],
                 UsuarioActual::id($request)
             );
+
+            if (!empty($resultado['cambiado'])) {
+                AuditoriaLogger::registrar(
+                    'proveedor',
+                    $modelo->id_proveedor,
+                    'UPDATE',
+                    ['plazo_entrega_dias' => $resultado['plazo_anterior_dias']],
+                    ['plazo_entrega_dias' => $resultado['plazo_nuevo_dias']],
+                    UsuarioActual::id($request)
+                );
+            }
 
             return response()->json([
                 'status' => 'success',

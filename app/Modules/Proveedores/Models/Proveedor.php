@@ -5,6 +5,7 @@ namespace App\Modules\Proveedores\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Proveedor extends Model
 {
@@ -14,9 +15,12 @@ class Proveedor extends Model
 
     protected $fillable = [
         'razon_social',
+        'contacto',
         'cuit',
+        'CUIT',
         'telefono',
         'email',
+        'direccion',
         'estado',
         'fecha_alta',
         'fecha_modificacion',
@@ -26,11 +30,16 @@ class Proveedor extends Model
         'id_usuario_modificacion',
     ];
 
+    public function getCuitAttribute(): ?string
+    {
+        return $this->attributes['cuit'] ?? $this->attributes['CUIT'] ?? null;
+    }
+
     protected $casts = [
         'id_proveedor' => 'integer',
-        'fecha_alta' => 'date:Y-m-d',
-        'fecha_modificacion' => 'date:Y-m-d',
-        'fecha_desactivacion' => 'date:Y-m-d',
+        'fecha_alta' => 'datetime:Y-m-d H:i:s',
+        'fecha_modificacion' => 'datetime:Y-m-d H:i:s',
+        'fecha_desactivacion' => 'datetime:Y-m-d H:i:s',
         'plazo_entrega_dias' => 'integer',
     ];
 
@@ -57,5 +66,15 @@ class Proveedor extends Model
     public function ultimoPlazoRegistrado(): ?HistorialPlazoProveedor
     {
         return $this->historialPlazos()->first();
+    }
+
+    public function usuarioCarga(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\Usuario::class, 'id_usuario_carga', 'id_usuario');
+    }
+
+    public function usuarioModificacion(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\Usuario::class, 'id_usuario_modificacion', 'id_usuario');
     }
 }

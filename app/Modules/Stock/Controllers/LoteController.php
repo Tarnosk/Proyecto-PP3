@@ -74,6 +74,11 @@ class LoteController extends Controller
      */
     public function store(Request $request): JsonResponse
     {
+        $rawUnidad = $request->input('id_unidad');
+        if ($rawUnidad === 0 || $rawUnidad === '0' || $rawUnidad === '' || $rawUnidad === null) {
+            $request->merge(['id_unidad' => null]);
+        }
+
         $validator = Validator::make($request->all(), [
             'id_producto' => 'required|integer|exists:PRODUCTO,id_producto',
             'nro_lote' => 'required|string|max:100',
@@ -113,10 +118,23 @@ class LoteController extends Controller
         $idUsuario = UsuarioActual::id($request);
         $asociarIngreso = filter_var($request->input('asociar_ingreso', true), FILTER_VALIDATE_BOOLEAN);
         $cantidad = (int) $request->input('cantidad');
-        $idUnidad = $request->filled('id_unidad') ? (int) $request->input('id_unidad') : null;
+        $idUnidad = ($request->filled('id_unidad') && (int) $request->input('id_unidad') > 0)
+            ? (int) $request->input('id_unidad')
+            : null;
         $nroLote = trim((string) $request->input('nro_lote'));
         $fechaVencimiento = Carbon::parse($request->input('fecha_vencimiento'))->toDateString();
         $motivo = $request->input('motivo') ?? "Ingreso mercadería lote {$nroLote}";
+
+        // LOTE tiene UNIQUE(id_producto, nro_lote): se chequea antes de insertar
+        // para devolver un 400 legible en vez de un 500 con SQL crudo.
+        if (Lote::where('id_producto', $producto->id_producto)->where('nro_lote', $nroLote)->exists()) {
+            return response()->json([
+                'status' => 'error',
+                'message' => "El lote '{$nroLote}' ya está registrado para el producto {$producto->codigo}.",
+            ], 400);
+        }
+
+        $cantidadBase = StockService::cantidadEnUnidadBase($cantidad, $idUnidad);
 
         try {
             $lote = DB::transaction(function () use (
@@ -124,6 +142,7 @@ class LoteController extends Controller
                 $nroLote,
                 $fechaVencimiento,
                 $cantidad,
+                $cantidadBase,
                 $idUnidad,
                 $asociarIngreso,
                 $motivo,
@@ -131,17 +150,6 @@ class LoteController extends Controller
             ) {
                 // LOTE no tiene id_unidad: se guarda en unidades base, igual que
                 // PRODUCTO.stock, para que la suma de lotes sea comparable al stock.
-                $cantidadBase = StockService::cantidadEnUnidadBase($cantidad, $idUnidad);
-                $lote = Lote::where('id_producto', $producto->id_producto)
-                    ->where('nro_lote', $nroLote)
-                    ->lockForUpdate()
-                    ->first();
-
-                if ($lote && $lote->fecha_vencimiento->toDateString() !== $fechaVencimiento) {
-                    throw new \RuntimeException(
-                        "El lote '{$nroLote}' ya existe con una fecha de vencimiento distinta."
-                    );
-                }
 
                 if ($asociarIngreso) {
                     $movimiento = $this->stockService->registrarMovimiento(
@@ -153,30 +161,17 @@ class LoteController extends Controller
                         $idUnidad
                     );
 
-                    if ($lote) {
-                        $lote->cantidad_inicial = (int) $lote->cantidad_inicial + $cantidadBase;
-                        $lote->cantidad_actual = (int) $lote->cantidad_actual + $cantidadBase;
-                        $lote->save();
-                    } else {
-                        $lote = Lote::create([
-                            'id_producto' => $producto->id_producto,
-                            'nro_lote' => $nroLote,
-                            'cantidad_inicial' => $cantidadBase,
-                            'cantidad_actual' => $cantidadBase,
-                            'fecha_vencimiento' => $fechaVencimiento,
-                        ]);
-                    }
+                    $lote = Lote::create([
+                        'id_producto' => $producto->id_producto,
+                        'nro_lote' => $nroLote,
+                        'cantidad_inicial' => $cantidadBase,
+                        'cantidad_actual' => $cantidadBase,
+                        'fecha_vencimiento' => $fechaVencimiento,
+                    ]);
 
                     // La FK vive en MOVIMIENTO_STOCK.id_lote, no en LOTE.
                     $movimiento->update(['id_lote' => $lote->id_lote]);
 
-                    return $lote;
-                }
-
-                if ($lote) {
-                    $lote->cantidad_inicial = (int) $lote->cantidad_inicial + $cantidadBase;
-                    $lote->cantidad_actual = (int) $lote->cantidad_actual + $cantidadBase;
-                    $lote->save();
                     return $lote;
                 }
 
@@ -192,11 +187,24 @@ class LoteController extends Controller
             $lote->load(['producto', 'movimiento']);
             $producto->refresh();
 
+            $unidadObj = $idUnidad ? \App\Modules\Stock\Models\UnidadMedida::find($idUnidad) : null;
+            $nombreUnidad = $unidadObj ? $unidadObj->nombre_unidad : 'u.';
+            $equivTexto = ($unidadObj && (float) $unidadObj->equivalencia_base > 1.0)
+                ? "{$cantidad} {$nombreUnidad} ({$cantidadBase} u. individuales)"
+                : "{$cantidadBase} u.";
+            $msg = ($unidadObj && (float) $unidadObj->equivalencia_base > 1.0)
+                ? "Lote registrado exitosamente: {$equivTexto}."
+                : 'Lote registrado exitosamente.';
+
             return response()->json([
                 'status' => 'success',
-                'message' => 'Lote registrado exitosamente.',
+                'message' => $msg,
                 'data' => [
                     'lote' => $this->formatearLote($lote),
+                    'id_unidad' => $idUnidad,
+                    'nombre_unidad' => $nombreUnidad,
+                    'cantidad_base' => $cantidadBase,
+                    'equivalencia_texto' => $equivTexto,
                     'stock_disponible' => $producto->stock_disponible,
                     'estado_alerta' => $producto->estado_alerta,
                 ],
@@ -271,22 +279,13 @@ class LoteController extends Controller
      */
     public function porVencer(Request $request): JsonResponse
     {
-        $validator = Validator::make($request->query(), [
-            'dias' => 'nullable|integer|min:1|max:365',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'status' => 'error',
-                'message' => $validator->errors()->first(),
-            ], 422);
+        $dias = (int) $request->input('dias', 30);
+        if ($dias < 1) {
+            $dias = 30;
         }
-
-        $dias = (int) $request->query('dias', 30);
 
         $lotes = Lote::with(['producto'])
             ->porVencer($dias)
-            ->whereHas('producto', fn ($query) => $query->where('estado', 'activo'))
             ->orderBy('fecha_vencimiento', 'asc')
             ->get()
             ->map(function (Lote $l) {
@@ -313,16 +312,15 @@ class LoteController extends Controller
             'id_producto' => $l->id_producto,
             'codigo_producto' => $l->producto ? $l->producto->codigo : null,
             'descripcion_producto' => $l->producto ? $l->producto->descripcion : null,
-            'cantidad' => $l->cantidad_actual,
-            'cantidad_inicial' => $l->cantidad_inicial,
+            'producto_codigo' => $l->producto ? $l->producto->codigo : null,
+            'producto_nombre' => $l->producto ? ($l->producto->codigo . ' - ' . $l->producto->descripcion) : null,
+            'cantidad' => (int) $l->cantidad_actual,
+            'cantidad_actual' => (int) $l->cantidad_actual,
+            'cantidad_inicial' => (int) $l->cantidad_inicial,
             'id_unidad' => $l->movimiento?->id_unidad,
             'nombre_unidad' => $l->movimiento?->unidad?->nombre_unidad,
             'fecha_vencimiento' => $l->fecha_vencimiento ? $l->fecha_vencimiento->format('Y-m-d') : null,
             'dias_para_vencer' => $dias,
-            // El estado lo define Lote::getEstadoAttribute(), que prioriza
-            // 'consumido' (cantidad_actual <= 0) sobre la fecha. Forzar
-            // 'vencido' acá hacía que el filtro estado=consumido devolviera
-            // filas etiquetadas como vencidas.
             'estado' => (string) $l->estado,
             'urgente' => $urgente,
             'id_movimiento' => $l->movimiento?->id_movimiento,

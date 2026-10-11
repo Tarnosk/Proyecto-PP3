@@ -5,10 +5,12 @@ namespace App\Modules\Productos\Models;
 
 use App\Modules\Stock\Models\Lote;
 use App\Modules\Stock\Models\MovimientoStock;
+use App\Modules\Stock\Models\Ubicacion;
 use App\Modules\Stock\Models\UnidadMedida;
 use App\Modules\Proveedores\Models\ProductoProveedor;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Builder;
 
@@ -20,12 +22,16 @@ class Producto extends Model
 
     protected $appends = [
         'stock_disponible',
+        'stock_actual',
         'estado_alerta',
         'precio_unitario',
         'precio_mayorista',
         'precio_minorista',
         'precioMay',
         'precioMin',
+        'unidad_medida',
+        'equivalencia_unidad',
+        'id_unidad_activa',
     ];
 
     protected $fillable = [
@@ -57,9 +63,9 @@ class Producto extends Model
         'id_marca' => 'integer',
         'id_usuario_carga' => 'integer',
         'id_usuario_modificacion' => 'integer',
-        'fecha_alta' => 'date:Y-m-d',
-        'fecha_modificacion' => 'date:Y-m-d',
-        'fecha_desactivacion' => 'date:Y-m-d',
+        'fecha_alta' => 'datetime:Y-m-d H:i:s',
+        'fecha_modificacion' => 'datetime:Y-m-d H:i:s',
+        'fecha_desactivacion' => 'datetime:Y-m-d H:i:s',
     ];
 
     public function categoria(): BelongsTo
@@ -72,11 +78,26 @@ class Producto extends Model
         return $this->belongsTo(Marca::class, 'id_marca', 'id_marca');
     }
 
+    public function usuarioCarga(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\Usuario::class, 'id_usuario_carga', 'id_usuario');
+    }
+
+    public function usuarioModificacion(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\Usuario::class, 'id_usuario_modificacion', 'id_usuario');
+    }
+
     /**
      * Stock disponible. En el esquema fusionado el stock vive embebido en
      * PRODUCTO.stock (OB3), por lo que este atributo expone la columna directa.
      */
     public function getStockDisponibleAttribute(?int $value = null): int
+    {
+        return (int) ($value ?? $this->stock);
+    }
+
+    public function getStockActualAttribute(?int $value = null): int
     {
         return (int) ($value ?? $this->stock);
     }
@@ -155,6 +176,30 @@ class Producto extends Model
         return $this->hasMany(UnidadMedida::class, 'id_producto', 'id_producto');
     }
 
+    public function getUnidadMedidaAttribute(): string
+    {
+        $u = $this->relationLoaded('unidades')
+            ? $this->unidades->firstWhere('es_base', 1)
+            : $this->unidades()->where('es_base', 1)->first();
+        return $u ? $u->nombre_unidad : 'u.';
+    }
+
+    public function getEquivalenciaUnidadAttribute(): float
+    {
+        $u = $this->relationLoaded('unidades')
+            ? $this->unidades->firstWhere('es_base', 1)
+            : $this->unidades()->where('es_base', 1)->first();
+        return $u ? (float) $u->equivalencia_base : 1.0;
+    }
+
+    public function getIdUnidadActivaAttribute(): ?int
+    {
+        $u = $this->relationLoaded('unidades')
+            ? $this->unidades->firstWhere('es_base', 1)
+            : $this->unidades()->where('es_base', 1)->first();
+        return $u ? (int) $u->id_unidad : null;
+    }
+
     /**
      * Asociaciones proveedor-producto del producto (PV05)
      */
@@ -172,7 +217,20 @@ class Producto extends Model
     }
 
     /**
-     * Scope para búsqueda flexible por código o descripción (P05)
+     * Ubicaciones físicas asignadas al producto (S14)
+     */
+    public function ubicaciones(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            Ubicacion::class,
+            'producto_ubicacion',
+            'id_producto',
+            'id_ubicacion'
+        )->withPivot(['fecha_asignacion', 'id_usuario']);
+    }
+
+    /**
+     * Scope para bǧsqueda flexible por c��digo, nombre o descripci��n (P05)
      */
     public function scopeSearch(Builder $query, ?string $term): Builder
     {
@@ -180,6 +238,7 @@ class Producto extends Model
             $term = trim($term);
             return $query->where(function (Builder $q) use ($term) {
                 $q->where('codigo', 'LIKE', "%{$term}%")
+                  ->orWhere('nombre', 'LIKE', "%{$term}%")
                   ->orWhere('descripcion', 'LIKE', "%{$term}%");
             });
         }

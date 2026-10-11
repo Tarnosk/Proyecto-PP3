@@ -272,7 +272,7 @@ class OrdenCompraController extends Controller
      */
     public function update(Request $request, int $id): JsonResponse
     {
-        $orden = OrdenCompra::find($id);
+        $orden = OrdenCompra::with('proveedor')->find($id);
         if (!$orden) {
             return response()->json(['status' => 'error', 'message' => 'La orden de compra no existe.'], 404);
         }
@@ -281,6 +281,13 @@ class OrdenCompraController extends Controller
             return response()->json([
                 'status' => 'error',
                 'message' => 'Solo se pueden editar órdenes pendientes. Una vez enviada no puede modificarse. (PC04)',
+            ], 400);
+        }
+
+        if ($orden->proveedor && $orden->proveedor->estado !== 'activo') {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'No se puede editar una orden de compra de un proveedor inactivo. (PV04)',
             ], 400);
         }
 
@@ -391,13 +398,20 @@ class OrdenCompraController extends Controller
      */
     public function enviar(Request $request, int $id): JsonResponse
     {
-        $orden = OrdenCompra::find($id);
+        $orden = OrdenCompra::with('proveedor')->find($id);
         if (!$orden) {
             return response()->json(['status' => 'error', 'message' => 'La orden de compra no existe.'], 404);
         }
 
         if ($orden->estado !== 'pendiente') {
             return response()->json(['status' => 'error', 'message' => 'Solo se pueden enviar órdenes pendientes.'], 400);
+        }
+
+        if ($orden->proveedor && $orden->proveedor->estado !== 'activo') {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'No se puede enviar una orden a un proveedor inactivo. (PV04)',
+            ], 400);
         }
 
         $fechaEnv = $request->input('fecha_envio') ?? Carbon::now()->toDateString();
@@ -408,6 +422,47 @@ class OrdenCompraController extends Controller
         return response()->json([
             'status' => 'success',
             'message' => 'Orden de compra enviada al proveedor.',
+            'data' => $this->formato($orden),
+        ], 200);
+    }
+
+    /**
+     * PC06 - Visualizar y registrar avance de estado de una orden enviada.
+     * Permite avanzar a 'recibida_parcialmente' o 'completada'.
+     */
+    public function cambiarEstado(Request $request, int $id): JsonResponse
+    {
+        $orden = OrdenCompra::find($id);
+        if (!$orden) {
+            return response()->json(['status' => 'error', 'message' => 'La orden de compra no existe.'], 404);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'estado' => 'required|string|in:recibida_parcialmente,completada',
+        ], [
+            'estado.required' => 'Debe indicar el nuevo estado.',
+            'estado.in' => 'El nuevo estado debe ser recibida_parcialmente o completada.',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['status' => 'error', 'message' => $validator->errors()->first()], 400);
+        }
+
+        if (!in_array($orden->estado, ['enviada', 'recibida_parcialmente'], true)) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Solo se pueden marcar como recibidas las órdenes que han sido enviadas previamente (PC06).',
+            ], 400);
+        }
+
+        $nuevoEstado = $request->input('estado');
+        $orden->estado = $nuevoEstado;
+        $orden->fecha_modificacion = Carbon::now()->toDateString();
+        $orden->save();
+
+        return response()->json([
+            'status' => 'success',
+            'message' => "Estado de la orden de compra actualizado exitosamente a {$nuevoEstado}.",
             'data' => $this->formato($orden),
         ], 200);
     }

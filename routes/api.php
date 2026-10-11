@@ -14,6 +14,7 @@ use App\Modules\Stock\Controllers\DevolucionController;
 use App\Modules\Stock\Controllers\AjusteStockController;
 use App\Modules\Stock\Controllers\AlertaStockController;
 use App\Modules\Stock\Controllers\UnidadController;
+use App\Modules\Stock\Controllers\UbicacionController;
 use App\Modules\Stock\Controllers\ConsultaVencimientosController;
 use App\Modules\Proveedores\Controllers\ProveedorController;
 use App\Modules\Proveedores\Controllers\PlazoEntregaController;
@@ -24,6 +25,7 @@ use App\Modules\PedidosDeCompra\Controllers\OrdenCompraController;
 use App\Modules\PedidosDeCompra\Controllers\SugerenciasReposicionController;
 use App\Modules\PedidosDeCompra\Controllers\DashboardReposicionController;
 
+Route::name('api.')->group(function () {
 Route::get('/', function (Request $request) {
     $payload = [
         'status' => 'success',
@@ -88,14 +90,24 @@ Route::apiResource('categorias', CategoriaController::class);
 Route::apiResource('marcas', MarcaController::class);
 
 // ========== MÓDULO PROVEEDORES (PV01 a PV07) ==========
+// Historial de cambios y auditoría (Alta, Modificaciones, Bajas)
+Route::get('proveedores/historial', [ProveedorController::class, 'historialGlobal']);
+Route::get('proveedores/auditoria', [ProveedorController::class, 'historialGlobal']);
+Route::get('proveedores/{proveedor}/historial', [ProveedorController::class, 'historial']);
+Route::get('proveedores/{proveedor}/auditoria', [ProveedorController::class, 'historial']);
 // PV01/PV03 - Alta y edición
 // PV04 - Desactivar/reactivar (borrado lógico)
 Route::patch('proveedores/{proveedor}/desactivar', [ProveedorController::class, 'desactivar']);
 Route::patch('proveedores/{proveedor}/activar', [ProveedorController::class, 'activar']);
 // PV05 - Asociación de productos a proveedores
+Route::get('proveedores/{proveedor}/productos', [ProveedorController::class, 'listarProductos']);
 Route::post('proveedores/{proveedor}/productos', [ProveedorController::class, 'asociarProductos']);
+Route::get('proveedores/productos/{id}', [ProveedorController::class, 'obtenerAsociacion']);
+Route::put('proveedores/productos/{id}', [ProveedorController::class, 'actualizarAsociacion']);
+Route::patch('proveedores/productos/{id}', [ProveedorController::class, 'actualizarAsociacion']);
 Route::post('proveedores/productos/{id}/principal', [ProveedorController::class, 'definirPrincipal']);
 Route::delete('proveedores/productos/{id}', [ProveedorController::class, 'desasociarProducto']);
+Route::post('proveedores/sincronizar-asociaciones', [ProveedorController::class, 'sincronizarAsociaciones']);
 // PV07 - Registrar plazos de entrega y consultar su historial
 Route::post('proveedores/{proveedor}/plazo', [PlazoEntregaController::class, 'store']);
 Route::get('proveedores/{proveedor}/plazos', [PlazoEntregaController::class, 'index']);
@@ -113,6 +125,9 @@ Route::get('compras/{compra}/estado', [CompraController::class, 'estado']);
 Route::post('compras/{compra}/pagos', [PagoCompraController::class, 'store']);
 Route::get('compras/{compra}/pagos', [PagoCompraController::class, 'index']);
 Route::get('compras/{compra}/pagos/resumen', [PagoCompraController::class, 'resumen']);
+// C09 - Visualizar deudas con proveedores (Issue #42)
+Route::get('compras/deudas', [CompraController::class, 'deudas']);
+Route::get('proveedores/deudas', [CompraController::class, 'deudas']);
 // destroy queda fuera: la compra se cancela (C05), no se borra.
 Route::apiResource('compras', CompraController::class)->except(['destroy']);
 
@@ -121,11 +136,16 @@ Route::apiResource('compras', CompraController::class)->except(['destroy']);
 Route::patch('ordenes-compra/{orden}/cancelar', [OrdenCompraController::class, 'cancelar']);
 // Complementaria: enviar una orden pendiente (habilita PC04/PC05/PC06)
 Route::patch('ordenes-compra/{orden}/enviar', [OrdenCompraController::class, 'enviar']);
+// PC06 - Avanzar estado (recibida parcialmente o completada)
+Route::patch('ordenes-compra/{orden}/cambiar-estado', [OrdenCompraController::class, 'cambiarEstado']);
 // destroy queda fuera: la orden se cancela (PC05), no se borra.
 Route::apiResource('ordenes-compra', OrdenCompraController::class)->except(['destroy']);
 
 // Productos (P01, P04, P05, P06, P07, P08)
+Route::get('productos/historial', [ProductoController::class, 'historialPreciosGlobal']);
 Route::get('productos/{id}/historial', [ProductoController::class, 'historialPrecios']);
+Route::get('productos/auditoria', [ProductoController::class, 'auditoriaGlobal']);
+Route::get('productos/{id}/auditoria', [ProductoController::class, 'auditoria']);
 // P07 - Aplicar aumento porcentual masivo de precios
 Route::post('productos/aumento-masivo', [ProductoController::class, 'aumentoMasivo']);
 Route::patch('productos/{id}/desactivar', [ProductoController::class, 'desactivar']);
@@ -140,7 +160,8 @@ Route::get('stock', [StockController::class, 'consultaGeneral']);
 // S02 - Disponibilidad para Venta (por producto)
 Route::get('stock/{id}/disponibilidad', [StockController::class, 'disponibilidadParaVenta']);
 
-// S12 - Historial de movimientos de stock de un producto
+// S12 - Historial de movimientos de stock de un producto o listado global
+Route::get('stock/movimientos', [StockController::class, 'todosLosMovimientos']);
 Route::get('stock/{id}/historial-movimientos', [StockController::class, 'historial']);
 
 // S03 - Registro de Ingreso de Mercadería
@@ -169,7 +190,16 @@ Route::get('stock/lotes-por-vencer',     [LoteController::class, 'porVencer']);
 
 // S08 - Gestión de unidades y equivalencias
 Route::get('unidades/convertir', [UnidadController::class, 'convertir']);
+Route::post('productos/{id}/unidades/{idUnidad}/seleccionar', [UnidadController::class, 'seleccionar']);
 Route::apiResource('productos/{id}/unidades', UnidadController::class);
+
+// S14 - Gestión de ubicaciones de almacenamiento
+Route::get('ubicaciones', [UbicacionController::class, 'index']);
+Route::post('ubicaciones', [UbicacionController::class, 'store']);
+Route::put('ubicaciones/{id}', [UbicacionController::class, 'update']);
+Route::delete('ubicaciones/{id}', [UbicacionController::class, 'destroy']);
+Route::post('productos/{id}/ubicacion', [UbicacionController::class, 'asignarProducto']);
+Route::delete('productos/{id}/ubicacion', [UbicacionController::class, 'desasignarProducto']);
 
 // ─── S11: CONSULTA DE VENCIMIENTOS (sobre la tabla LOTE) ────────────────────────
 Route::prefix('vencimientos')->group(function () {
@@ -195,4 +225,5 @@ Route::prefix('dashboard-reposicion')->group(function () {
     Route::get('/grafico-motivos',   [DashboardReposicionController::class, 'graficoMotivos']);
     Route::get('/grafico-tendencia', [DashboardReposicionController::class, 'graficoTendencia']);
     Route::get('/grafico-criticidad',[DashboardReposicionController::class, 'graficoCriticidad']);
+});
 });

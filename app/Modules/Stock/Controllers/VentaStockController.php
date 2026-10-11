@@ -63,9 +63,9 @@ class VentaStockController extends Controller
             }
 
             $idUsuario = UsuarioActual::id($request);
-            $idUnidad = $request->has('id_unidad') ? (int) $request->input('id_unidad') : null;
-            $idVenta = $request->has('id_venta') ? (int) $request->input('id_venta') : null;
-            $motivo = $request->input('motivo') ?? 'Venta registrada (S04)';
+            $idUnidad = $request->filled('id_unidad') ? (int) $request->input('id_unidad') : null;
+            $idVenta = $request->filled('id_venta') ? (int) $request->input('id_venta') : null;
+            $motivo = $request->input('motivo') ?? 'Venta registrada';
 
             $this->stockService->registrarMovimiento(
                 $producto,

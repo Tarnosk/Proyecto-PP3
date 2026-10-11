@@ -51,4 +51,9 @@ class OrdenCompra extends Model
     {
         return $this->hasMany(DetalleOrden::class, 'id_orden', 'id_orden');
     }
+
+    public function compras(): HasMany
+    {
+        return $this->hasMany(\App\Modules\Compras\Models\Compra::class, 'id_orden', 'id_orden');
+    }
 }

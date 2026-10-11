@@ -25,7 +25,7 @@ class IdentidadUsuario
 {
     public function handle(Request $request, Closure $next): Response
     {
-        $id = $this->idDisponible();
+        $id = $this->idDisponible($request);
 
         if ($id !== null) {
             $request->attributes->set(UsuarioActual::ATTRIBUTO, $id);
@@ -34,18 +34,96 @@ class IdentidadUsuario
         return $next($request);
     }
 
-    private function idDisponible(): ?int
+    private function idDisponible(Request $request): ?int
     {
-        $guard = config('auth.guards.proyecto') !== null ? Auth::guard('proyecto') : null;
+        // 1. Identidad enviada desde el frontend SPA / cliente HTTP
+        $headerUsername = $request->header('X-User-Username');
+        $headerNameRaw = $request->header('X-User-Name');
+        $headerName = $headerNameRaw ? urldecode($headerNameRaw) : null;
+        $headerRole = $request->header('X-User-Role');
+
+        if (!empty($headerUsername) || !empty($headerName)) {
+            $resolvedId = $this->resolverOCrearUsuario($headerUsername, $headerName, $headerRole);
+            if ($resolvedId !== null) {
+                return $resolvedId;
+            }
+        }
+
+        // 2. Guard de Laravel configurado
+        $guard = config('auth.guards.proyecto') !== null ? \Illuminate\Support\Facades\Auth::guard('proyecto') : null;
 
         if ($guard !== null && $guard->check()) {
             return (int) $guard->id();
         }
 
-        if (Auth::check()) {
-            return (int) Auth::id();
+        if (\Illuminate\Support\Facades\Auth::check()) {
+            return (int) \Illuminate\Support\Facades\Auth::id();
         }
 
         return null;
+    }
+
+    private function resolverOCrearUsuario(?string $username, ?string $nombre, ?string $rol): ?int
+    {
+        try {
+            $query = \Illuminate\Support\Facades\DB::table('usuario');
+            if (!empty($username)) {
+                $query->where('usuario', $username);
+            } elseif (!empty($nombre)) {
+                $query->where('nombre', $nombre);
+            }
+
+            $user = $query->first();
+
+            if ($user) {
+                // Si el usuario en la BD tiene el nombre genérico "Administrador" o vacío,
+                // y se proveyó un nombre de persona real, actualizar el nombre
+                if (!empty($nombre) && ($user->nombre === 'Administrador' || empty($user->nombre))) {
+                    \Illuminate\Support\Facades\DB::table('usuario')
+                        ->where('id_usuario', $user->id_usuario)
+                        ->update(['nombre' => $nombre]);
+                }
+                return (int) $user->id_usuario;
+            }
+
+            // Buscar por nombre si no se encontró por usuario
+            if (!empty($nombre)) {
+                $userByNombre = \Illuminate\Support\Facades\DB::table('usuario')
+                    ->where('nombre', $nombre)
+                    ->first();
+                if ($userByNombre) {
+                    return (int) $userByNombre->id_usuario;
+                }
+            }
+
+            // Crear el usuario con su nombre real de persona
+            $nombreFinal = !empty($nombre) ? $nombre : ($username ?: 'Usuario');
+            $userLogin = !empty($username) ? $username : strtolower(preg_replace('/[^a-zA-Z0-9]/', '', $nombreFinal));
+            if (empty($userLogin)) {
+                $userLogin = 'usr_' . time();
+            }
+
+            $rolEnum = match (strtolower((string) $rol)) {
+                'repartidor' => 'repartidor',
+                'vendedor', 'preventista' => 'vendedor',
+                'contador' => 'contador',
+                'deposito' => 'deposito',
+                default => 'administrativo',
+            };
+
+            $newId = \Illuminate\Support\Facades\DB::table('usuario')->insertGetId([
+                'usuario' => $userLogin,
+                'nombre' => $nombreFinal,
+                'rol' => $rolEnum,
+                'estado' => 'activo',
+                'password_hash' => \Illuminate\Support\Facades\Hash::make('secret123'),
+                'intentos_fallidos' => 0,
+                'created_at' => now(),
+            ]);
+
+            return (int) $newId;
+        } catch (\Throwable $e) {
+            return null;
+        }
     }
 }

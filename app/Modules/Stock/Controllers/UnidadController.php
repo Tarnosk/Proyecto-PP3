@@ -29,6 +29,7 @@ class UnidadController extends Controller
 
         // Unidad base implícita (equivalencia 1) si no está registrada
         $base = $producto->unidades->first(fn ($u) => (float) $u->equivalencia_base === 1.0);
+        $uActiva = $producto->unidades->firstWhere('es_base', 1);
 
         $unidades = $producto->unidades->map(function ($u) {
             return [
@@ -36,6 +37,7 @@ class UnidadController extends Controller
                 'id_producto' => $u->id_producto,
                 'nombre_unidad' => $u->nombre_unidad,
                 'equivalencia_base' => (float) $u->equivalencia_base,
+                'es_base' => (int) ($u->es_base ?? 0),
                 'descripcion' => $u->descripcion,
             ];
         });
@@ -47,6 +49,11 @@ class UnidadController extends Controller
                 'codigo' => $producto->codigo,
                 'descripcion' => $producto->descripcion,
                 'tiene_unidad_base' => $base ? true : false,
+                'unidad_activa' => $uActiva ? [
+                    'id_unidad' => $uActiva->id_unidad,
+                    'nombre_unidad' => $uActiva->nombre_unidad,
+                    'equivalencia_base' => (float) $uActiva->equivalencia_base,
+                ] : null,
                 'unidades' => $unidades,
             ],
         ]);
@@ -72,6 +79,7 @@ class UnidadController extends Controller
             'nombre_unidad' => 'required|string|max:50',
             'equivalencia_base' => 'required|numeric|gt:0',
             'descripcion' => 'nullable|string|max:255',
+            'es_base' => 'nullable|boolean',
         ], [
             'nombre_unidad.required' => 'Debe indicar el nombre de la unidad (ej: caja, pallet).',
             'equivalencia_base.required' => 'Debe indicar la equivalencia respecto a la unidad base.',
@@ -98,10 +106,28 @@ class UnidadController extends Controller
             ], 400);
         }
 
+        $equivalenciaNueva = (float) $request->input('equivalencia_base');
+        // Validar que no haya otra unidad con misma equivalencia (coherencia mínima)
+        $existeEq = UnidadMedida::where('id_producto', $producto->id_producto)
+            ->where('equivalencia_base', $equivalenciaNueva)
+            ->exists();
+        if ($existeEq) {
+            return response()->json([
+                'status' => 'error',
+                'message' => "Ya existe otra unidad con equivalencia {$equivalenciaNueva} para este producto.",
+            ], 400);
+        }
+
+        $esBase = $request->boolean('es_base');
+        if ($esBase) {
+            UnidadMedida::where('id_producto', $producto->id_producto)->update(['es_base' => 0]);
+        }
+
         $unidad = UnidadMedida::create([
             'id_producto' => $producto->id_producto,
             'nombre_unidad' => $nombre,
             'equivalencia_base' => (float) $request->input('equivalencia_base'),
+            'es_base' => $esBase ? 1 : 0,
             'descripcion' => $request->input('descripcion'),
         ]);
 
@@ -113,6 +139,7 @@ class UnidadController extends Controller
                 'id_producto' => $unidad->id_producto,
                 'nombre_unidad' => $unidad->nombre_unidad,
                 'equivalencia_base' => (float) $unidad->equivalencia_base,
+                'es_base' => (int) $unidad->es_base,
                 'descripcion' => $unidad->descripcion,
             ],
         ], 201);
@@ -168,11 +195,32 @@ class UnidadController extends Controller
         }
 
         if ($request->has('equivalencia_base')) {
-            $unidad->equivalencia_base = (float) $request->input('equivalencia_base');
+            $eqNueva = (float) $request->input('equivalencia_base');
+            $conflictoEq = UnidadMedida::where('id_producto', $unidad->id_producto)
+                ->where('equivalencia_base', $eqNueva)
+                ->where('id_unidad', '!=', $unidad->id_unidad)
+                ->exists();
+            if ($conflictoEq) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => "Ya existe otra unidad con equivalencia {$eqNueva} para este producto.",
+                ], 400);
+            }
+            $unidad->equivalencia_base = $eqNueva;
         }
 
         if ($request->has('descripcion')) {
             $unidad->descripcion = $request->input('descripcion');
+        }
+
+        if ($request->has('es_base')) {
+            $esBase = $request->boolean('es_base');
+            if ($esBase) {
+                UnidadMedida::where('id_producto', $unidad->id_producto)->update(['es_base' => 0]);
+                $unidad->es_base = 1;
+            } else {
+                $unidad->es_base = 0;
+            }
         }
 
         $unidad->save();
@@ -181,6 +229,61 @@ class UnidadController extends Controller
             'status' => 'success',
             'message' => 'Unidad de medida actualizada exitosamente.',
             'data' => $unidad,
+        ]);
+    }
+
+    /**
+     * S08 - Elegir una unidad de medida / equivalencia como la unidad visual activa del producto.
+     * Si $idUnidad es 0, restablece a unidades individuales por defecto.
+     * POST /api/productos/{id}/unidades/{idUnidad}/seleccionar
+     */
+    public function seleccionar(Request $request, int $id, int $idUnidad): JsonResponse
+    {
+        $producto = Producto::find($id);
+        if (!$producto) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Producto no encontrado.',
+            ], 404);
+        }
+
+        if ($idUnidad === 0) {
+            UnidadMedida::where('id_producto', $id)->update(['es_base' => 0]);
+            return response()->json([
+                'status' => 'success',
+                'message' => 'El producto ahora se visualizará en unidades individuales por defecto (u.).',
+                'data' => [
+                    'id_producto' => $producto->id_producto,
+                    'unidad_medida' => 'u.',
+                    'unidad_activa' => 'u.',
+                    'equivalencia_unidad' => 1.0,
+                    'id_unidad_activa' => null,
+                ],
+            ]);
+        }
+
+        $unidad = UnidadMedida::where('id_producto', $id)->where('id_unidad', $idUnidad)->first();
+        if (!$unidad) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'La unidad de medida seleccionada no pertenece a este producto.',
+            ], 404);
+        }
+
+        UnidadMedida::where('id_producto', $id)->update(['es_base' => 0]);
+        $unidad->es_base = 1;
+        $unidad->save();
+
+        return response()->json([
+            'status' => 'success',
+            'message' => "La unidad '{$unidad->nombre_unidad}' (Eq: {$unidad->equivalencia_base} u.) fue establecida como la unidad de medida del producto.",
+            'data' => [
+                'id_producto' => $producto->id_producto,
+                'unidad_medida' => $unidad->nombre_unidad,
+                'unidad_activa' => $unidad->nombre_unidad,
+                'equivalencia_unidad' => (float) $unidad->equivalencia_base,
+                'id_unidad_activa' => $unidad->id_unidad,
+            ],
         ]);
     }
 
