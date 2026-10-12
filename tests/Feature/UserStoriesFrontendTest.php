@@ -258,7 +258,11 @@ class UserStoriesFrontendTest extends TestCase
         $viewRes->assertSee('modalAumento');
         $viewRes->assertSee('aumentoCriterio');
         $viewRes->assertSee('aumentoPorcentaje');
-        $viewRes->assertDontSee('aumentoRedondeo');
+        $viewRes->assertSee('aumentoRedondeo');
+        $viewRes->assertSee('peso_mas_cercano');
+        $viewRes->assertSee('peso_superior');
+        $viewRes->assertSee('terminar_90');
+        $viewRes->assertSee('terminar_99');
         $viewRes->assertSee('cambiarEstadoProducto');
 
         $producto = Producto::where('estado', 'activo')->first();
@@ -275,7 +279,7 @@ class UserStoriesFrontendTest extends TestCase
         $actRes->assertOk();
         $this->assertEquals('activo', $actRes->json('data.estado'));
 
-        // P07: Aumento Masivo de Precios (sin regla de redondeo)
+        // P07: Aumento Masivo de Precios (regla de redondeo predeterminada)
         $aumentoRes = $this->postJson('/api/productos/aumento-masivo', [
             'tipo_criterio' => 'todos',
             'porcentaje' => 10.0,
@@ -283,6 +287,54 @@ class UserStoriesFrontendTest extends TestCase
         ]);
         $aumentoRes->assertOk();
         $this->assertTrue($aumentoRes->json('status') === 'success');
+        $this->assertSame('sin_redondeo', $aumentoRes->json('data.regla_redondeo'));
+    }
+
+    public function test_p07_aplica_y_registra_reglas_de_redondeo_configurables(): void
+    {
+        $producto = Producto::where('estado', 'activo')->first();
+        $this->assertNotNull($producto);
+
+        $casos = [
+            ['regla' => 'sin_redondeo', 'precio_base' => 100.13, 'precio_esperado' => 110.14],
+            ['regla' => 'peso_mas_cercano', 'precio_base' => 100.13, 'precio_esperado' => 110.0],
+            ['regla' => 'peso_superior', 'precio_base' => 100.13, 'precio_esperado' => 111.0],
+            ['regla' => 'terminar_90', 'precio_base' => 100.13, 'precio_esperado' => 110.90],
+            ['regla' => 'terminar_99', 'precio_base' => 100.13, 'precio_esperado' => 110.99],
+            ['regla' => 'terminar_90', 'precio_base' => 100.87, 'precio_esperado' => 111.90],
+        ];
+
+        foreach ($casos as $caso) {
+            $producto->refresh()->update(['precio_unitario' => $caso['precio_base']]);
+
+            $respuesta = $this->postJson('/api/productos/aumento-masivo', [
+                'ids' => [$producto->id_producto],
+                'porcentaje' => 10,
+                'regla_redondeo' => $caso['regla'],
+            ]);
+
+            $respuesta->assertOk()
+                ->assertJsonPath('data.regla_redondeo', $caso['regla']);
+            $this->assertEquals(
+                $caso['precio_esperado'],
+                (float) $respuesta->json('data.productos.0.precio_nuevo'),
+                "La regla {$caso['regla']} debe calcular el precio esperado."
+            );
+
+            $historial = \App\Modules\Productos\Models\HistorialPrecio::where('id_producto', $producto->id_producto)
+                ->where('origen', 'aumento_masivo')
+                ->latest('id_historial')
+                ->first();
+            $this->assertNotNull($historial);
+            $this->assertSame($caso['regla'], $historial->regla_redondeo);
+        }
+
+        $respuestaInvalida = $this->postJson('/api/productos/aumento-masivo', [
+            'ids' => [$producto->id_producto],
+            'porcentaje' => 10,
+            'regla_redondeo' => 'regla_invalida',
+        ]);
+        $respuestaInvalida->assertStatus(400);
     }
 
     /**

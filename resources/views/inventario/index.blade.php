@@ -1091,7 +1091,7 @@
         <div class="flex items-center justify-between pb-3 border-b border-slate-100">
             <div>
                 <h3 class="text-base font-black text-slate-800">Aumento Masivo de Precios (P07)</h3>
-                <p class="text-[11px] font-bold text-slate-500">Actualización porcentual directa sin regla de redondeo</p>
+                <p class="text-[11px] font-bold text-slate-500">Configurá cómo redondear los nuevos precios</p>
             </div>
             <button onclick="cerrarModalAumentoMasivo()" class="p-1 text-slate-400 hover:text-slate-600 rounded-lg">
                 <i data-lucide="x" class="w-5 h-5"></i>
@@ -1124,6 +1124,17 @@
                     <input type="number" step="0.1" min="0.1" id="aumentoPorcentaje" required class="clay-input w-full font-black text-sm pr-8" placeholder="15.0" oninput="actualizarVistaPreviaAumento()">
                     <span class="absolute right-3 top-2.5 text-xs font-black text-slate-400">%</span>
                 </div>
+            </div>
+
+            <div>
+                <label for="aumentoRedondeo" class="block text-[11px] font-extrabold text-slate-600 uppercase mb-1">Regla de Redondeo</label>
+                <select id="aumentoRedondeo" class="clay-input w-full text-xs font-bold" onchange="actualizarVistaPreviaAumento()">
+                    <option value="sin_redondeo">Sin redondeo (mantener centavos)</option>
+                    <option value="peso_mas_cercano">Al peso más cercano</option>
+                    <option value="peso_superior">Siempre hacia arriba al peso</option>
+                    <option value="terminar_90">Terminar en .90 (hacia arriba)</option>
+                    <option value="terminar_99">Terminar en .99 (hacia arriba)</option>
+                </select>
             </div>
 
             <!-- Vista Previa de Productos Afectados (Criterio P07) -->
@@ -3689,6 +3700,7 @@
         const crit = document.getElementById('aumentoCriterio')?.value || 'todos';
         const pctInput = document.getElementById('aumentoPorcentaje')?.value;
         const pct = Number(pctInput) || 0;
+        const reglaRedondeo = document.getElementById('aumentoRedondeo')?.value || 'sin_redondeo';
         const tbody = document.getElementById('aumentoPreviewBody');
         const countSpan = document.getElementById('aumentoPreviewCount');
         if (!tbody) return;
@@ -3711,7 +3723,22 @@
 
         tbody.innerHTML = prods.slice(0, 100).map(p => {
             const actual = Number(p.precio_unitario || 0);
-            const nuevo = pct > 0 ? (Math.round((actual * (1 + pct / 100)) * 100) / 100).toFixed(2) : actual.toFixed(2);
+            const calculado = pct > 0 ? Math.round(actual * (1 + pct / 100) * 100) / 100 : actual;
+            const precioEnCentavos = Math.round(calculado * 100);
+            const unidadPeso = Math.floor(precioEnCentavos / 100);
+            let nuevoEnCentavos = precioEnCentavos;
+
+            if (reglaRedondeo === 'peso_mas_cercano') {
+                nuevoEnCentavos = Math.round(calculado) * 100;
+            } else if (reglaRedondeo === 'peso_superior') {
+                nuevoEnCentavos = Math.ceil(calculado) * 100;
+            } else if (reglaRedondeo === 'terminar_90' || reglaRedondeo === 'terminar_99') {
+                const terminacion = reglaRedondeo === 'terminar_90' ? 90 : 99;
+                const candidato = unidadPeso * 100 + terminacion;
+                nuevoEnCentavos = precioEnCentavos <= candidato ? candidato : (unidadPeso + 1) * 100 + terminacion;
+            }
+
+            const nuevo = (nuevoEnCentavos / 100).toFixed(2);
             return `
                 <tr>
                     <td class="font-extrabold text-slate-700 text-xs">${p.codigo}</td>
@@ -3728,6 +3755,7 @@
         const csrf = document.querySelector('meta[name="csrf-token"]').content;
         const crit = document.getElementById('aumentoCriterio').value;
         const porcentaje = Number(document.getElementById('aumentoPorcentaje').value);
+        const reglaRedondeo = document.getElementById('aumentoRedondeo').value;
 
         if (!porcentaje || porcentaje <= 0) {
             alert('Debe ingresar un porcentaje mayor a 0');
@@ -3737,6 +3765,7 @@
         const payload = {
             tipo_criterio: crit,
             porcentaje: porcentaje,
+            regla_redondeo: reglaRedondeo,
             confirmar: true
         };
         if (crit === 'categoria') payload.id_categoria = document.getElementById('aumentoCategoriaSelect').value;
