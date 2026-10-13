@@ -1032,7 +1032,7 @@
             <!-- Asignación Obligatoria de Lote -->
             <div class="space-y-2 p-3 bg-blue-50/60 rounded-xl border border-blue-100">
                 <div class="flex items-center justify-between">
-                    <label class="block text-[11px] font-extrabold text-blue-950 uppercase">Asignación Obligatoria de Lote *</label>
+                    <label class="block text-[11px] font-extrabold text-blue-950 uppercase">Lote para el ajuste</label>
                     <div id="ajusteModoTabs" class="inline-flex p-0.5 bg-white/90 rounded-lg border border-blue-200 text-[10px] font-bold">
                         <button type="button" id="btnAjusteModoExistente" onclick="cambiarModoLoteAjuste('existente')" class="px-2 py-0.5 rounded bg-blue-600 text-white font-extrabold shadow-xs transition-all">
                             Lote Existente
@@ -1046,10 +1046,10 @@
                 <!-- Selector de Lote Existente -->
                 <div id="contenedorAjusteLoteExistente" class="space-y-1">
                     <select id="ajusteLoteSelect" onchange="onLoteAjusteChange()" class="clay-input w-full text-xs font-bold bg-white">
-                        <option value="">-- Seleccione un Lote Existente Obligatorio --</option>
+                        <option value="">-- Seleccione un lote si corresponde --</option>
                     </select>
                     <div id="ajusteLoteInfo" class="mt-1 hidden"></div>
-                    <p id="msgSinLotesAjuste" class="hidden text-[11px] text-amber-700 font-bold">Este producto no posee lotes registrados aún. Para sumar stock sin descuadre, use la opción "Nuevo Lote".</p>
+                    <p id="msgSinLotesAjuste" class="hidden text-[11px] text-amber-700 font-bold"></p>
                 </div>
 
                 <!-- Formulario Nuevo Lote (sólo disponible al aumentar) -->
@@ -1067,7 +1067,7 @@
                     <p class="text-[10px] text-blue-700 font-medium">Se creará este nuevo lote y se incrementará simultáneamente el stock general del producto.</p>
                 </div>
 
-                <p class="text-[10px] text-slate-500 font-bold">Regla de inventario: Todo ajuste en el lote actualiza obligatoriamente el producto en la misma cantidad.</p>
+                <p class="text-[10px] text-slate-500 font-bold">Si el producto tiene lotes, seleccione uno. Si no tiene lotes, puede disminuir directamente del stock general.</p>
             </div>
 
             <div>
@@ -2998,9 +2998,21 @@
         const tipo = document.getElementById('ajusteTipo')?.value || 'aumentar';
         const tabs = document.getElementById('ajusteModoTabs');
         const labelCant = document.getElementById('ajusteCantidadLabel');
+        const msgSinLotes = document.getElementById('msgSinLotesAjuste');
 
         if (labelCant) {
             labelCant.textContent = tipo === 'fijar' ? 'Nueva Cantidad Exacta del Lote' : 'Cantidad';
+        }
+
+        if (msgSinLotes && !msgSinLotes.classList.contains('hidden')) {
+            const prodId = document.getElementById('ajusteProductoSelect')?.value;
+            const producto = productosCache.find(p => String(p.id_producto) === String(prodId));
+            const stockActual = Number(producto?.stock ?? producto?.stock_disponible ?? 0);
+            msgSinLotes.textContent = tipo === 'disminuir'
+                ? `No hay lotes registrados. La disminución se aplicará al stock general (${stockActual} u.), sin asociarse a un lote.`
+                : tipo === 'aumentar'
+                    ? 'Este producto no posee lotes. Para aumentar el stock, registre un Nuevo Lote.'
+                    : 'Este producto no posee lotes registrados para fijar una cantidad exacta.';
         }
 
         if (tipo === 'disminuir' || tipo === 'fijar') {
@@ -3167,8 +3179,15 @@
 
         if (lotes.length === 0) {
             selectLote.innerHTML = '<option value="">-- No hay lotes registrados para este producto --</option>';
-            if (msgSinLotes) msgSinLotes.classList.remove('hidden');
             const tipo = document.getElementById('ajusteTipo')?.value;
+            if (msgSinLotes) {
+                msgSinLotes.textContent = tipo === 'disminuir'
+                    ? `No hay lotes registrados. La disminución se aplicará al stock general (${stockActual} u.), sin asociarse a un lote.`
+                    : tipo === 'aumentar'
+                        ? 'Este producto no posee lotes. Para aumentar el stock, registre un Nuevo Lote.'
+                        : 'Este producto no posee lotes registrados para fijar una cantidad exacta.';
+                msgSinLotes.classList.remove('hidden');
+            }
             if (tipo === 'aumentar') {
                 cambiarModoLoteAjuste('nuevo');
             }
@@ -3286,10 +3305,17 @@
         if (modoLoteAjuste === 'existente') {
             const loteId = document.getElementById('ajusteLoteSelect')?.value;
             if (!loteId) {
-                alert('Debe seleccionar obligatoriamente un lote existente para realizar el ajuste.');
-                return;
+                const selectLote = document.getElementById('ajusteLoteSelect');
+                const hayLotes = Array.from(selectLote?.options || []).some(opcion => opcion.value !== '');
+                if (tipo !== 'disminuir' || hayLotes) {
+                    alert(hayLotes
+                        ? 'Seleccione el lote del que desea descontar.'
+                        : 'Para este ajuste debe seleccionar o crear un lote.');
+                    return;
+                }
+            } else {
+                payload.id_lote = Number(loteId);
             }
-            payload.id_lote = Number(loteId);
         } else {
             const nroLote = document.getElementById('ajusteNroLoteNuevo')?.value.trim();
             if (!nroLote) {

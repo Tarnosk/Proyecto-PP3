@@ -234,11 +234,37 @@ class CompraController extends Controller
         }
 
         $idProducto = (int) ($item['id_producto'] ?? 0);
-        $base = $idProducto > 0
-            ? UnidadMedida::where('id_producto', $idProducto)->where('es_base', 1)->value('id_unidad')
-            : null;
+        if ($idProducto <= 0) {
+            throw new \InvalidArgumentException('Cada ítem debe indicar un producto válido para asignar su unidad de medida.');
+        }
 
-        return (int) ($base ?? UnidadMedida::where('es_base', 1)->orderBy('id_unidad')->value('id_unidad'));
+        $base = UnidadMedida::where('id_producto', $idProducto)
+            ->where('es_base', 1)
+            ->first();
+
+        if ($base) {
+            return (int) $base->id_unidad;
+        }
+
+        $base = UnidadMedida::where('id_producto', $idProducto)
+            ->where('equivalencia_base', 1)
+            ->orderBy('id_unidad')
+            ->first();
+
+        if ($base) {
+            $base->es_base = true;
+            $base->save();
+
+            return (int) $base->id_unidad;
+        }
+
+        return (int) UnidadMedida::create([
+            'id_producto' => $idProducto,
+            'nombre_unidad' => 'Unidad individual',
+            'equivalencia_base' => 1,
+            'es_base' => true,
+            'descripcion' => 'Unidad base del producto',
+        ])->id_unidad;
     }
 
     /**

@@ -66,19 +66,22 @@ class IdentidadUsuario
     private function resolverOCrearUsuario(?string $username, ?string $nombre, ?string $rol): ?int
     {
         try {
+            $columnas = \Illuminate\Support\Facades\Schema::getConnection()->getSchemaBuilder()->getColumnListing('usuario');
+            $nombreExiste = in_array('nombre', $columnas, true);
+            $campoUsuario = in_array('user', $columnas, true) ? 'user' : 'usuario';
+            $campoPassword = in_array('password', $columnas, true) ? 'password' : 'password_hash';
+
             $query = \Illuminate\Support\Facades\DB::table('usuario');
             if (!empty($username)) {
-                $query->where('usuario', $username);
-            } elseif (!empty($nombre)) {
+                $query->where($campoUsuario, $username);
+            } elseif (!empty($nombre) && $nombreExiste) {
                 $query->where('nombre', $nombre);
             }
 
             $user = $query->first();
 
             if ($user) {
-                // Si el usuario en la BD tiene el nombre genérico "Administrador" o vacío,
-                // y se proveyó un nombre de persona real, actualizar el nombre
-                if (!empty($nombre) && ($user->nombre === 'Administrador' || empty($user->nombre))) {
+                if (!empty($nombre) && $nombreExiste && ($user->nombre === 'Administrador' || empty($user->nombre))) {
                     \Illuminate\Support\Facades\DB::table('usuario')
                         ->where('id_usuario', $user->id_usuario)
                         ->update(['nombre' => $nombre]);
@@ -86,8 +89,7 @@ class IdentidadUsuario
                 return (int) $user->id_usuario;
             }
 
-            // Buscar por nombre si no se encontró por usuario
-            if (!empty($nombre)) {
+            if (!empty($nombre) && $nombreExiste) {
                 $userByNombre = \Illuminate\Support\Facades\DB::table('usuario')
                     ->where('nombre', $nombre)
                     ->first();
@@ -96,7 +98,6 @@ class IdentidadUsuario
                 }
             }
 
-            // Crear el usuario con su nombre real de persona
             $nombreFinal = !empty($nombre) ? $nombre : ($username ?: 'Usuario');
             $userLogin = !empty($username) ? $username : strtolower(preg_replace('/[^a-zA-Z0-9]/', '', $nombreFinal));
             if (empty($userLogin)) {
@@ -111,19 +112,42 @@ class IdentidadUsuario
                 default => 'administrativo',
             };
 
-            $newId = \Illuminate\Support\Facades\DB::table('usuario')->insertGetId([
-                'usuario' => $userLogin,
-                'nombre' => $nombreFinal,
+            $insertData = [
+                $campoUsuario => $userLogin,
                 'rol' => $rolEnum,
                 'estado' => 'activo',
-                'password_hash' => \Illuminate\Support\Facades\Hash::make('secret123'),
-                'intentos_fallidos' => 0,
-                'created_at' => now(),
-            ]);
+                $campoPassword => \Illuminate\Support\Facades\Hash::make('secret123'),
+            ];
+
+            if ($nombreExiste) {
+                $insertData['nombre'] = $nombreFinal;
+            }
+
+            $newId = $this->crearUsuarioConClienteCompatible($insertData, $nombreFinal, $userLogin);
 
             return (int) $newId;
         } catch (\Throwable $e) {
             return null;
         }
+    }
+
+    private function crearUsuarioConClienteCompatible(array $insertData, string $nombreFinal, string $userLogin): int
+    {
+        if (\Illuminate\Support\Facades\Schema::hasTable('cliente')) {
+            $clienteMax = (int) \Illuminate\Support\Facades\DB::table('cliente')->max('id_cliente');
+            $usuarioMax = (int) \Illuminate\Support\Facades\DB::table('usuario')->max('id_usuario');
+            $proximoId = max($clienteMax, $usuarioMax) + 1;
+            $insertData['id_usuario'] = $proximoId;
+
+            \Illuminate\Support\Facades\DB::table('cliente')->insertOrIgnore([
+                'id_cliente' => $proximoId,
+                'nombre' => $nombreFinal,
+                'estado' => 'activo',
+            ]);
+
+            return (int) \Illuminate\Support\Facades\DB::table('usuario')->insertGetId($insertData);
+        }
+
+        return (int) \Illuminate\Support\Facades\DB::table('usuario')->insertGetId($insertData);
     }
 }

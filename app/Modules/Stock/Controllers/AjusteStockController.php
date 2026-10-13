@@ -21,10 +21,8 @@ class AjusteStockController extends Controller
 
     /**
      * S06 - Ajuste manual de inventario (rotura, pérdida, correcciones).
-     * Regla de negocio estricta:
-     * Si se descuenta/aumenta del lote, se descuenta/aumenta obligatoriamente del producto,
-     * y viceversa. Lo que cambia es desde qué lado se inicia (producto o lote), pero ambos
-     * se actualizan siempre de forma sincrónica e indivisible.
+     * Cuando se indica un lote, el ajuste actualiza también el stock general.
+     * Si el producto no tiene lotes, se permite disminuir directamente el stock general.
      */
     public function store(Request $request): JsonResponse
     {
@@ -170,19 +168,32 @@ class AjusteStockController extends Controller
                 ], 200);
             }
 
-            // Identificar lote asignado: OBLIGATORIO para evitar desincronización
+            $cantidad = (int) $request->input('cantidad', 0);
+            $tipo = $request->input('tipo', 'aumentar');
+
+            // Identificar el lote cuando corresponda.
             $idLote = $request->filled('id_lote') ? (int) $request->input('id_lote') : null;
             $nroLote = $request->filled('nro_lote') ? trim((string) $request->input('nro_lote')) : null;
 
-            if (!$idLote && !$nroLote) {
+            if (!$idLote && !$nroLote && $tipo !== 'disminuir') {
                 return response()->json([
                     'status' => 'error',
                     'message' => 'Debe seleccionar un lote existente o indicar el número de lote. No se permite ajustar stock sin asignar lote para evitar desincronizaciones.',
                 ], 400);
             }
 
-            $cantidad = (int) $request->input('cantidad', 0);
-            $tipo = $request->input('tipo', 'aumentar');
+            if (
+                !$idLote
+                && !$nroLote
+                && $tipo === 'disminuir'
+                && Lote::where('id_producto', $producto->id_producto)->exists()
+            ) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Este producto tiene lotes registrados. Seleccione el lote del que desea descontar.',
+                ], 400);
+            }
+
             $cantidadBase = StockService::cantidadEnUnidadBase($cantidad, $idUnidad);
 
             $lote = null;
@@ -311,7 +322,9 @@ class AjusteStockController extends Controller
             $producto->refresh();
             $sumaLotes = (int) Lote::where('id_producto', $producto->id_producto)->sum('cantidad_actual');
             $impactoStr = $esIncremento ? "+{$cantFinal}" : "-{$cantFinal}";
-            $loteMsg = $lote ? " y al lote '{$lote->nro_lote}' (Stock en lote: {$lote->cantidad_actual} u.)" : "";
+            $destinoAjuste = $lote
+                ? "al producto y al lote '{$lote->nro_lote}' (Stock en lote: {$lote->cantidad_actual} u.)"
+                : 'al stock general del producto (sin lote asociado)';
             $unidadObj = $idUnidad ? \App\Modules\Stock\Models\UnidadMedida::find($idUnidad) : null;
             $nombreUnidad = $unidadObj ? $unidadObj->nombre_unidad : 'u.';
             $equivTexto = ($unidadObj && (float) $unidadObj->equivalencia_base > 1.0)
@@ -321,7 +334,7 @@ class AjusteStockController extends Controller
 
             return response()->json([
                 'status' => 'success',
-                'message' => "Ajuste de inventario registrado ({$impactoStr} u. aplicadas obligatoriamente tanto al producto{$loteMsg}){$unidadMsg}.",
+                'message' => "Ajuste de inventario registrado ({$impactoStr} u. aplicadas {$destinoAjuste}){$unidadMsg}.",
                 'data' => [
                     'id_producto' => $producto->id_producto,
                     'codigo' => $producto->codigo,

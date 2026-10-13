@@ -680,11 +680,45 @@ class UserStoriesFrontendTest extends TestCase
         $viewRes->assertSee('ajusteLoteSelect');
         $viewRes->assertSee('ajusteModoTabs');
         $viewRes->assertSee('ajusteNroLoteNuevo');
+        $viewRes->assertSee('La disminución se aplicará al stock general');
 
         $producto = Producto::where('estado', 'activo')->first();
         $this->assertNotNull($producto);
 
-        // 1. Intentar ajuste sin lote específico debe ser RECHAZADO (400) para evitar desincronización
+        // Permitir disminuir del stock general cuando no existen lotes.
+        $productoSinLotes = $producto->replicate();
+        $productoSinLotes->codigo = 'TEST-AJU-SIN-LOTE-' . uniqid();
+        $productoSinLotes->stock = 12;
+        $productoSinLotes->save();
+
+        $ajusteSinLoteRes = $this->postJson('/api/stock/ajustes', [
+            'id_producto' => $productoSinLotes->id_producto,
+            'tipo' => 'disminuir',
+            'cantidad' => 3,
+            'motivo' => 'Merma sin lote asociado',
+        ]);
+        $ajusteSinLoteRes->assertStatus(201)
+            ->assertJsonPath('data.id_lote', null)
+            ->assertJsonPath('data.stock_disponible', 9);
+        $this->assertSame(0, Lote::where('id_producto', $productoSinLotes->id_producto)->count());
+        $this->assertSame(9, (int) $productoSinLotes->fresh()->stock_disponible);
+        $movimientoSinLote = MovimientoStock::where('id_producto', $productoSinLotes->id_producto)
+            ->where('tipo', 'ajuste')
+            ->latest('id_movimiento')
+            ->first();
+        $this->assertNotNull($movimientoSinLote);
+        $this->assertNull($movimientoSinLote->id_lote);
+
+        $ajusteExcesoSinLoteRes = $this->postJson('/api/stock/ajustes', [
+            'id_producto' => $productoSinLotes->id_producto,
+            'tipo' => 'disminuir',
+            'cantidad' => 10,
+            'motivo' => 'Intento de descuento excedente sin lote',
+        ]);
+        $ajusteExcesoSinLoteRes->assertStatus(400);
+        $this->assertSame(9, (int) $productoSinLotes->fresh()->stock_disponible);
+
+        // Aumentar sin lote debe seguir rechazándose para evitar desincronizar el inventario.
         $ajusteSinLoteRes = $this->postJson('/api/stock/ajustes', [
             'id_producto' => $producto->id_producto,
             'tipo' => 'aumentar',

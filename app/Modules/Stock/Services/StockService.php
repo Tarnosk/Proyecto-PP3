@@ -8,6 +8,7 @@ use App\Modules\Stock\Models\UnidadMedida;
 use App\Modules\Productos\Models\Producto;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use RuntimeException;
 
 /**
@@ -62,9 +63,27 @@ class StockService
         ?int $idRecepcion = null,
         \Carbon\Carbon|string|null $fechaPersonalizada = null,
         bool $esIncremento = false,
-        ?int $idLote = null
+        ?int $idLote = null,
+        ?int $idSesionConteo = null
     ): MovimientoStock {
         $idUnidad = ($idUnidad !== null && (int) $idUnidad > 0) ? (int) $idUnidad : null;
+        $datosMovimiento = [
+            'id_producto' => $producto->id_producto,
+            'id_unidad' => $idUnidad,
+            'tipo' => $tipo,
+            'cantidad' => $cantidad,
+            'cantidad_base' => self::cantidadEnUnidadBase($cantidad, $idUnidad),
+            'fecha' => '',
+            'motivo' => $motivo,
+            'id_usuario' => $idUsuario,
+            'id_venta' => $idVenta,
+            'id_recepcion' => $idRecepcion,
+            'id_lote' => $idLote,
+        ];
+
+        if (Schema::hasColumn('MOVIMIENTO_STOCK', 'id_sesion_conteo')) {
+            $datosMovimiento['id_sesion_conteo'] = $idSesionConteo;
+        }
 
         if (!in_array($tipo, self::TIPOS, true)) {
             throw new RuntimeException("Tipo de movimiento inválido: {$tipo}");
@@ -126,19 +145,8 @@ class StockService
             $producto->save();
             $this->recalcularAlerta($producto);
 
-            $movimiento = MovimientoStock::create([
-                'id_producto' => $producto->id_producto,
-                'id_unidad' => $idUnidad,
-                'tipo' => $tipo,
-                'cantidad' => $cantidad,
-                'cantidad_base' => $cantidadBase,
-                'fecha' => $fecha,
-                'motivo' => $motivo,
-                'id_usuario' => $idUsuario,
-                'id_venta' => $idVenta,
-                'id_recepcion' => $idRecepcion,
-                'id_lote' => $idLote,
-            ]);
+            $datosMovimiento['fecha'] = $fecha;
+            $movimiento = MovimientoStock::create($datosMovimiento);
 
             DB::commit();
 
