@@ -39,12 +39,39 @@ class Usuario extends Model
         $attributes['id_usuario'] = $idUsuario;
 
         if (Schema::hasTable('cliente') && $idUsuario > 0) {
-            if (!DB::table('cliente')->where('id_cliente', $idUsuario)->exists()) {
-                DB::table('cliente')->insert([
-                    'id_cliente' => $idUsuario,
-                    'nombre' => $attributes['nombre'] ?? $attributes['user'] ?? $attributes['usuario'] ?? 'Cliente',
-                    'estado' => 'activo',
-                ]);
+            try {
+                if (!DB::table('cliente')->where('id_cliente', $idUsuario)->exists()) {
+                    $colsCliente = Schema::getColumnListing('cliente');
+                    $clienteData = [
+                        'id_cliente' => $idUsuario,
+                        'nombre' => $attributes['nombre'] ?? $attributes['user'] ?? $attributes['usuario'] ?? 'Cliente',
+                        'estado' => 'activo',
+                    ];
+                    if (in_array('apellido_razon_social', $colsCliente, true)) {
+                        $clienteData['apellido_razon_social'] = $clienteData['nombre'];
+                    }
+                    if (in_array('dni_cuit', $colsCliente, true)) {
+                        $clienteData['dni_cuit'] = '99-' . str_pad((string)$idUsuario, 8, '0', STR_PAD_LEFT) . '-9';
+                    }
+                    if (in_array('telefono', $colsCliente, true)) {
+                        $clienteData['telefono'] = '000-000000';
+                    }
+                    if (in_array('email', $colsCliente, true)) {
+                        $clienteData['email'] = 'user' . $idUsuario . '@distribuidora.local';
+                    }
+                    if (in_array('direccion', $colsCliente, true)) {
+                        $clienteData['direccion'] = 'S/D';
+                    }
+                    if (in_array('tipo_cliente', $colsCliente, true)) {
+                        $clienteData['tipo_cliente'] = 'minorista';
+                    }
+                    if (in_array('creado_por', $colsCliente, true)) {
+                        $clienteData['creado_por'] = 1;
+                    }
+                    DB::table('cliente')->insert($clienteData);
+                }
+            } catch (\Throwable $e) {
+                // Sincronización secundaria opcional
             }
         }
 
