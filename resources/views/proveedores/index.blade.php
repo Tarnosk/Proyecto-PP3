@@ -86,7 +86,7 @@
                 <thead>
                     <tr>
                         <th>Razón Social</th>
-                        <th>CUIT</th>
+                        <th class="whitespace-nowrap min-w-[125px]">CUIT</th>
                         <th>Contacto Principal</th>
                         <th>Teléfono / Email</th>
                         <th>Dirección</th>
@@ -622,7 +622,6 @@
                 <tr>
                     <td>
                         <div class="font-black text-slate-800 text-sm leading-tight">${p.razon_social}</div>
-                        <div class="text-[11px] text-slate-400 font-bold">${direccion}</div>
                         <div class="mt-1">
                             <button onclick="abrirModalAsociarProducto(${p.id_proveedor})" class="text-[10px] font-extrabold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200/60 px-2 py-0.5 rounded-md inline-flex items-center gap-1 transition-colors" title="Ver y asociar productos provistos">
                                 <i data-lucide="package" class="w-3 h-3"></i>
@@ -630,7 +629,7 @@
                             </button>
                         </div>
                     </td>
-                    <td class="font-extrabold text-slate-700">${p.cuit || p.CUIT || '-'}</td>
+                    <td class="font-extrabold text-slate-700 whitespace-nowrap">${p.cuit || p.CUIT || '-'}</td>
                     <td class="font-bold text-slate-700 text-xs">${p.contacto || '-'}</td>
                     <td>
                         <div class="text-xs font-bold text-slate-800">${p.telefono || '-'}</div>
