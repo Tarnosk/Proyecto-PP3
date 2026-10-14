@@ -27,7 +27,7 @@ use App\Modules\PedidosDeCompra\Controllers\OrdenCompraController;
 use App\Modules\PedidosDeCompra\Controllers\SugerenciasReposicionController;
 use App\Modules\PedidosDeCompra\Controllers\DashboardReposicionController;
 
-Route::name('api.')->group(function () {
+$registrarRutasG3 = function () {
 Route::get('/', function (Request $request) {
     $payload = [
         'status' => 'success',
@@ -254,4 +254,10 @@ Route::prefix('dashboard-reposicion')->group(function () {
     Route::get('/grafico-tendencia', [DashboardReposicionController::class, 'graficoTendencia']);
     Route::get('/grafico-criticidad',[DashboardReposicionController::class, 'graficoCriticidad']);
 });
-});
+};
+
+// Rutas versión 1 (estándar unificado inter-grupos): /api/v1/...
+Route::prefix('v1')->name('api.v1.')->group($registrarRutasG3);
+
+// Compatibilidad retroactiva directa: /api/... (para clientes existentes)
+Route::name('api.')->group($registrarRutasG3);

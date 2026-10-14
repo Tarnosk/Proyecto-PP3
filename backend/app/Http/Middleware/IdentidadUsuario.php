@@ -36,7 +36,22 @@ class IdentidadUsuario
 
     private function idDisponible(Request $request): ?int
     {
-        // 1. Identidad enviada desde el frontend SPA / cliente HTTP
+        // 1. Token Bearer (G1 / llamadas autenticadas entre módulos)
+        $bearer = $request->bearerToken();
+        if (!empty($bearer)) {
+            $idToken = $this->resolverTokenG1($bearer);
+            if ($idToken !== null) {
+                return $idToken;
+            }
+        }
+
+        // 2. Encabezado directo de ID de usuario
+        $headerId = $request->header('X-User-Id');
+        if (!empty($headerId) && is_numeric($headerId) && (int) $headerId > 0) {
+            return (int) $headerId;
+        }
+
+        // 3. Identidad enviada desde el frontend SPA / cliente HTTP
         $headerUsername = $request->header('X-User-Username');
         $headerNameRaw = $request->header('X-User-Name');
         $headerName = $headerNameRaw ? urldecode($headerNameRaw) : null;
@@ -49,7 +64,7 @@ class IdentidadUsuario
             }
         }
 
-        // 2. Guard de Laravel configurado
+        // 4. Guard de Laravel configurado
         $guard = config('auth.guards.proyecto') !== null ? \Illuminate\Support\Facades\Auth::guard('proyecto') : null;
 
         if ($guard !== null && $guard->check()) {
@@ -58,6 +73,62 @@ class IdentidadUsuario
 
         if (\Illuminate\Support\Facades\Auth::check()) {
             return (int) \Illuminate\Support\Facades\Auth::id();
+        }
+
+        return null;
+    }
+
+    /**
+     * Resuelve un token emitido por el módulo de autenticación (Grupo 1).
+     * Soporta:
+     * - Token interno de servicio entre grupos (services.internal_api.token).
+     * - Token de sesión registrado en tabla usuario (current_session_id sha256).
+     * - Token cifrado de G1 con payload JSON (user_id + expires_at).
+     */
+    private function resolverTokenG1(?string $token): ?int
+    {
+        if (!is_string($token) || trim($token) === '') {
+            return null;
+        }
+
+        try {
+            // A) Token interno de servicio inter-módulos
+            $internal = config('services.internal_api.token');
+            if (is_string($internal) && $internal !== '' && hash_equals($internal, $token)) {
+                return 1;
+            }
+
+            // B) Token registrado en sesión activa de usuario
+            $hashToken = hash('sha256', $token);
+            $tablaUsuario = \Illuminate\Support\Facades\Schema::hasTable('usuario') ? 'usuario' : (\Illuminate\Support\Facades\Schema::hasTable('users') ? 'users' : null);
+
+            if ($tablaUsuario !== null && \Illuminate\Support\Facades\Schema::hasColumn($tablaUsuario, 'current_session_id')) {
+                $campoId = \Illuminate\Support\Facades\Schema::hasColumn($tablaUsuario, 'id_usuario') ? 'id_usuario' : 'id';
+                $usuarioPorSession = \Illuminate\Support\Facades\DB::table($tablaUsuario)
+                    ->where('current_session_id', $hashToken)
+                    ->where(function ($q) use ($tablaUsuario) {
+                        if (\Illuminate\Support\Facades\Schema::hasColumn($tablaUsuario, 'estado')) {
+                            $q->where('estado', 'activo');
+                        }
+                    })
+                    ->value($campoId);
+
+                if ($usuarioPorSession !== null) {
+                    return (int) $usuarioPorSession;
+                }
+            }
+
+            // C) Desencriptar payload de token si fue emitido con Crypt de Laravel
+            $payloadJson = \Illuminate\Support\Facades\Crypt::decryptString($token);
+            $payload = json_decode($payloadJson, true);
+
+            if (is_array($payload) && isset($payload['user_id'])) {
+                if (!isset($payload['expires_at']) || (int) $payload['expires_at'] > time()) {
+                    return (int) $payload['user_id'];
+                }
+            }
+        } catch (\Throwable $e) {
+            // Silencioso: si el token no es compatible, continúa la cadena de resolución
         }
 
         return null;
