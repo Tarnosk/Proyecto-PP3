@@ -1472,7 +1472,7 @@ export function CustomersView({
                             Plazo
                           </span>
                           <span className="text-xs font-black text-amber-900 block mt-0.5 group-hover:underline">
-                            {supplier.plazo_entrega_dias !== undefined ? `${supplier.plazo_entrega_dias}d` : 'S/D'}
+                            {supplier.plazo_entrega_dias !== undefined ? `${supplier.plazo_entrega_dias} días` : 'S/D'}
                           </span>
                         </button>
 
