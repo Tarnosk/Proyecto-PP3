@@ -13,11 +13,13 @@ use App\Modules\Stock\Controllers\VentaStockController;
 use App\Modules\Stock\Controllers\DevolucionController;
 use App\Modules\Stock\Controllers\AjusteStockController;
 use App\Modules\Stock\Controllers\AlertaStockController;
+use App\Modules\Stock\Controllers\ConteoFisicoController;
 use App\Modules\Stock\Controllers\UnidadController;
 use App\Modules\Stock\Controllers\UbicacionController;
 use App\Modules\Stock\Controllers\ConsultaVencimientosController;
 use App\Modules\Proveedores\Controllers\ProveedorController;
 use App\Modules\Proveedores\Controllers\PlazoEntregaController;
+use App\Modules\Proveedores\Controllers\HistorialPrecioController;
 use App\Modules\Compras\Controllers\CompraController;
 use App\Modules\Compras\Controllers\RecepcionController;
 use App\Modules\Compras\Controllers\PagoCompraController;
@@ -111,6 +113,11 @@ Route::post('proveedores/sincronizar-asociaciones', [ProveedorController::class,
 // PV07 - Registrar plazos de entrega y consultar su historial
 Route::post('proveedores/{proveedor}/plazo', [PlazoEntregaController::class, 'store']);
 Route::get('proveedores/{proveedor}/plazos', [PlazoEntregaController::class, 'index']);
+// PV06 - Precios históricos de proveedores (CA-01 a CA-05)
+Route::get('proveedores/{id}/precios-historicos', [HistorialPrecioController::class, 'index']);
+Route::get('proveedores/{id}/productos/{idProducto}/precios-historicos', [HistorialPrecioController::class, 'porProducto']);
+Route::get('proveedores/{id}/comparativa-aumentos', [HistorialPrecioController::class, 'comparativaAumentos']);
+Route::post('proveedores/{id}/productos/{idProducto}/precio', [HistorialPrecioController::class, 'actualizarPrecio']);
 // destroy queda fuera: el proveedor se desactiva (PV04), no se borra.
 Route::apiResource('proveedores', ProveedorController::class)->except(['destroy']);
 
@@ -175,6 +182,17 @@ Route::post('stock/devoluciones', [DevolucionController::class, 'store']);
 
 // S06 - Ajustes manuales de inventario
 Route::post('stock/ajustes', [AjusteStockController::class, 'store']);
+
+// S13 - Conteo físico de inventario
+Route::prefix('stock/conteos')->group(function () {
+    Route::post('sesiones', [ConteoFisicoController::class, 'store']);
+    Route::get('sesiones', [ConteoFisicoController::class, 'index']);
+    Route::get('sesiones/{id}', [ConteoFisicoController::class, 'show'])->whereNumber('id');
+    Route::post('sesiones/{id}/items', [ConteoFisicoController::class, 'registrarItem'])->whereNumber('id');
+    Route::delete('sesiones/{id}/items/{idProducto}', [ConteoFisicoController::class, 'eliminarItem'])
+        ->whereNumber('id')->whereNumber('idProducto');
+    Route::post('sesiones/{id}/finalizar', [ConteoFisicoController::class, 'finalizar'])->whereNumber('id');
+});
 
 // S07 - Alertas de stock mínimo
 Route::get('stock/alertas', [AlertaStockController::class, 'index']);

@@ -28,7 +28,9 @@ import {
   CheckCircle,
   XCircle,
   RefreshCw,
-  ExternalLink
+  ExternalLink,
+  TrendingUp,
+  DollarSign
 } from 'lucide-react';
 
 interface CustomersViewProps {
@@ -109,6 +111,14 @@ export function CustomersView({
   const [nuevoPlazoMotivo, setNuevoPlazoMotivo] = useState('');
   const [plazosLoading, setPlazosLoading] = useState(false);
   const [plazosError, setPlazosError] = useState('');
+
+  // Modal de Precios Históricos y Comparativa (PV06)
+  const [supplierForPrecios, setSupplierForPrecios] = useState<Supplier | null>(null);
+  const [preciosHistList, setPreciosHistList] = useState<any[]>([]);
+  const [comparativaAumentos, setComparativaAumentos] = useState<any[]>([]);
+  const [preciosModalTab, setPreciosModalTab] = useState<'HISTORIAL' | 'COMPARATIVA'>('HISTORIAL');
+  const [preciosHistLoading, setPreciosHistLoading] = useState(false);
+  const [preciosHistError, setPreciosHistError] = useState('');
 
   // Campos para una Nueva Compra (Ingreso de Mercadería)
   const [purchaseSupplierId, setPurchaseSupplierId] = useState('');
@@ -473,6 +483,30 @@ export function CustomersView({
       setNuevoPlazoMotivo('');
     } catch (err: any) {
       setPlazosError(err.message || 'Error al registrar plazo de entrega.');
+    }
+  };
+
+  // PV06: Precios históricos y comparativa de aumentos
+  const handleOpenPreciosModal = async (supplier: Supplier) => {
+    setSupplierForPrecios(supplier);
+    setPreciosHistError('');
+    setPreciosModalTab('HISTORIAL');
+    setPreciosHistLoading(true);
+    const idProv = supplier.id_proveedor || Number(supplier.id);
+    try {
+      const [histRes, compRes] = await Promise.all([
+        proveedoresService.getHistorialPrecios(idProv).catch(() => null),
+        proveedoresService.getComparativaAumentos(idProv).catch(() => null),
+      ]);
+      const listData = histRes?.data || (Array.isArray(histRes) ? histRes : []);
+      setPreciosHistList(listData);
+
+      const compData = compRes?.data || (Array.isArray(compRes) ? compRes : []);
+      setComparativaAumentos(compData);
+    } catch (err: any) {
+      setPreciosHistError(err.message || 'Error al consultar historial de precios del proveedor.');
+    } finally {
+      setPreciosHistLoading(false);
     }
   };
 
@@ -1425,8 +1459,8 @@ export function CustomersView({
                       )}
                     </div>
 
-                    {/* Badges de Plazo de Entrega y Productos Asociados */}
-                    <div className="grid grid-cols-2 gap-2 pt-1 border-t border-dashed">
+                    {/* Badges de Plazo de Entrega, Catálogo y Precios Históricos (PV06) */}
+                    <div className="grid grid-cols-3 gap-2 pt-1 border-t border-dashed">
                         <button
                           type="button"
                           onClick={() => handleOpenPlazosModal(supplier)}
@@ -1435,10 +1469,10 @@ export function CustomersView({
                         >
                           <span className="text-[10px] font-bold text-amber-700 flex items-center gap-1">
                             <Clock className="w-3 h-3 text-amber-600" />
-                            Plazo Entrega
+                            Plazo
                           </span>
                           <span className="text-xs font-black text-amber-900 block mt-0.5 group-hover:underline">
-                            {supplier.plazo_entrega_dias !== undefined ? `${supplier.plazo_entrega_dias} días` : 'No asignado'}
+                            {supplier.plazo_entrega_dias !== undefined ? `${supplier.plazo_entrega_dias}d` : 'S/D'}
                           </span>
                         </button>
 
@@ -1450,10 +1484,25 @@ export function CustomersView({
                         >
                           <span className="text-[10px] font-bold text-blue-700 flex items-center gap-1">
                             <Package className="w-3 h-3 text-blue-600" />
-                            Catálogo Prov.
+                            Catálogo
                           </span>
                           <span className="text-xs font-black text-blue-900 block mt-0.5 group-hover:underline">
-                            {assocCount} {assocCount === 1 ? 'producto' : 'productos'}
+                            {assocCount} {assocCount === 1 ? 'prod.' : 'prods.'}
+                          </span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleOpenPreciosModal(supplier)}
+                          className="p-2 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-xl text-left cursor-pointer transition-colors group"
+                          title="Ver historial de precios y comparativa de aumentos (PV06)"
+                        >
+                          <span className="text-[10px] font-bold text-emerald-700 flex items-center gap-1">
+                            <TrendingUp className="w-3 h-3 text-emerald-600" />
+                            Precios
+                          </span>
+                          <span className="text-xs font-black text-emerald-900 block mt-0.5 group-hover:underline">
+                            PV06 Hist.
                           </span>
                         </button>
                       </div>
@@ -1812,6 +1861,198 @@ export function CustomersView({
               <button
                 type="button"
                 onClick={() => setSupplierForPlazos(null)}
+                className="px-6 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-sm rounded-xl cursor-pointer"
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL PRECIOS HISTÓRICOS Y COMPARATIVA DE AUMENTOS (PV06) */}
+      {supplierForPrecios && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl max-w-4xl w-full p-6 space-y-6 shadow-2xl border-4 border-emerald-500">
+            <div className="flex items-center justify-between border-b pb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                  <TrendingUp className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="text-2xl font-black text-slate-800">
+                    Historial de Precios y Comparativa (PV06)
+                  </h3>
+                  <p className="text-sm font-bold text-slate-500">
+                    Proveedor: <span className="text-emerald-700 font-extrabold">{supplierForPrecios.name}</span>
+                  </p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setSupplierForPrecios(null)} 
+                className="p-2 bg-slate-100 text-slate-600 hover:bg-slate-200 rounded-xl cursor-pointer"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            {preciosHistError && (
+              <div className="p-3 bg-red-50 border-2 border-red-300 text-red-700 rounded-xl font-bold text-sm flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 shrink-0" />
+                <span>{preciosHistError}</span>
+              </div>
+            )}
+
+            {/* SELECTOR DE PESTAÑAS */}
+            <div className="flex gap-2 border-b pb-2">
+              <button
+                type="button"
+                onClick={() => setPreciosModalTab('HISTORIAL')}
+                className={`px-4 py-2 rounded-xl text-xs font-black cursor-pointer transition-colors flex items-center gap-2 ${
+                  preciosModalTab === 'HISTORIAL'
+                    ? 'bg-emerald-600 text-white shadow'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`}
+              >
+                <Clock className="w-4 h-4" />
+                <span>Historial de Precios Registrados</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setPreciosModalTab('COMPARATIVA')}
+                className={`px-4 py-2 rounded-xl text-xs font-black cursor-pointer transition-colors flex items-center gap-2 ${
+                  preciosModalTab === 'COMPARATIVA'
+                    ? 'bg-emerald-600 text-white shadow'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`}
+              >
+                <TrendingUp className="w-4 h-4" />
+                <span>Comparativa de Aumentos</span>
+              </button>
+            </div>
+
+            {/* CONTENIDO SEGÚN PESTAÑA */}
+            {preciosModalTab === 'HISTORIAL' ? (
+              <div className="border-2 border-slate-200 rounded-2xl overflow-hidden bg-white max-h-80 overflow-y-auto">
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead>
+                    <tr className="bg-slate-100 border-b font-extrabold text-slate-700 uppercase">
+                      <th className="p-3">Fecha</th>
+                      <th className="p-3">Producto</th>
+                      <th className="p-3 text-right">Precio</th>
+                      <th className="p-3 text-center">Tipo / Origen</th>
+                      <th className="p-3">Observaciones</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200">
+                    {preciosHistLoading ? (
+                      <tr>
+                        <td colSpan={5} className="p-6 text-center text-slate-400 font-bold">
+                          Cargando historial de precios...
+                        </td>
+                      </tr>
+                    ) : preciosHistList.length === 0 ? (
+                      <tr>
+                        <td colSpan={5} className="p-6 text-center text-slate-400 font-bold">
+                          No hay registros de precios históricos para este proveedor.
+                        </td>
+                      </tr>
+                    ) : (
+                      preciosHistList.map((item, idx) => (
+                        <tr key={idx} className="hover:bg-slate-50 font-semibold">
+                          <td className="p-3 font-mono text-slate-600">
+                            {item.fecha || item.fecha_actualizacion || item.created_at || 'S/F'}
+                          </td>
+                          <td className="p-3">
+                            <span className="font-mono text-slate-500 font-bold mr-1.5">[{item.codigo_producto || item.codigo || 'PROD'}]</span>
+                            <span className="text-slate-800 font-bold">{item.nombre_producto || item.producto || 'Producto'}</span>
+                          </td>
+                          <td className="p-3 text-right font-black font-mono text-emerald-700 text-sm">
+                            ${Number(item.precio ?? item.precio_unitario ?? 0).toFixed(2)}
+                          </td>
+                          <td className="p-3 text-center">
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700 uppercase">
+                              {item.origen || item.tipo || 'acordado'}
+                            </span>
+                          </td>
+                          <td className="p-3 text-slate-600">
+                            {item.observaciones || '-'}
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="border-2 border-slate-200 rounded-2xl overflow-hidden bg-white max-h-80 overflow-y-auto">
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead>
+                    <tr className="bg-slate-100 border-b font-extrabold text-slate-700 uppercase">
+                      <th className="p-3">Producto</th>
+                      <th className="p-3 text-right">Precio Anterior</th>
+                      <th className="p-3 text-right">Precio Actual</th>
+                      <th className="p-3 text-center">% Variación</th>
+                      <th className="p-3 text-center">Diagnóstico</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200">
+                    {preciosHistLoading ? (
+                      <tr>
+                        <td colSpan={5} className="p-6 text-center text-slate-400 font-bold">
+                          Calculando comparativa de aumentos...
+                        </td>
+                      </tr>
+                    ) : comparativaAumentos.length === 0 ? (
+                      <tr>
+                        <td colSpan={5} className="p-6 text-center text-slate-400 font-bold">
+                          Sin datos comparativos suficientes para este proveedor.
+                        </td>
+                      </tr>
+                    ) : (
+                      comparativaAumentos.map((c, idx) => {
+                        const variacion = Number(c.porcentaje_aumento ?? c.variacion ?? 0);
+                        return (
+                          <tr key={idx} className="hover:bg-slate-50 font-semibold">
+                            <td className="p-3">
+                              <span className="font-mono text-slate-500 font-bold mr-1.5">[{c.codigo_producto || 'PROD'}]</span>
+                              <span className="text-slate-800 font-bold">{c.nombre_producto || c.producto}</span>
+                            </td>
+                            <td className="p-3 text-right font-mono text-slate-500">
+                              ${Number(c.precio_anterior ?? 0).toFixed(2)}
+                            </td>
+                            <td className="p-3 text-right font-mono font-black text-slate-800">
+                              ${Number(c.precio_actual ?? c.precio_nuevo ?? 0).toFixed(2)}
+                            </td>
+                            <td className="p-3 text-center font-mono font-black">
+                              <span className={`px-2 py-0.5 rounded-full text-xs ${
+                                variacion > 0 ? 'bg-rose-100 text-rose-700' : variacion < 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-700'
+                              }`}>
+                                {variacion > 0 ? `+${variacion.toFixed(1)}%` : `${variacion.toFixed(1)}%`}
+                              </span>
+                            </td>
+                            <td className="p-3 text-center font-bold">
+                              {variacion > 15 ? (
+                                <span className="text-rose-600">Aumento Superior a Inflación</span>
+                              ) : variacion > 0 ? (
+                                <span className="text-amber-600">Aumento Esperado</span>
+                              ) : (
+                                <span className="text-emerald-600">Sin Aumento / Estable</span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            <div className="flex justify-end pt-2 border-t">
+              <button
+                type="button"
+                onClick={() => setSupplierForPrecios(null)}
                 className="px-6 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-sm rounded-xl cursor-pointer"
               >
                 Cerrar

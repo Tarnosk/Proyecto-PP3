@@ -110,6 +110,10 @@ export const productosService = {
     porcentaje: number;
     id_categoria?: number;
     id_marca?: number;
+    regla_redondeo?: 'sin_redondeo' | 'peso_mas_cercano' | 'peso_superior' | 'terminar_90' | 'terminar_99';
+    ids?: number[];
+    tipo_precio?: 'ambos' | 'mayorista' | 'minorista';
+    tipo_criterio?: string;
   }): Promise<any> => {
     return apiClient.post('/productos/aumento-masivo', data);
   },

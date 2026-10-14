@@ -127,7 +127,7 @@ export function InventoryView({ currentUser, products, onUpdateProducts, orders 
   const [aumAlcance, setAumAlcance] = useState<'TODOS' | 'CATEGORIA' | 'MARCA'>('TODOS');
   const [aumCatId, setAumCatId] = useState<number>(96);
   const [aumMarcaId, setAumMarcaId] = useState<number>(88);
-  const [aumRedondeo, setAumRedondeo] = useState(true);
+  const [aumReglaRedondeo, setAumReglaRedondeo] = useState<'sin_redondeo' | 'peso_mas_cercano' | 'peso_superior' | 'terminar_90' | 'terminar_99'>('sin_redondeo');
   const [aumError, setAumError] = useState('');
 
   // Formulario Ajuste de Stock
@@ -519,7 +519,10 @@ export function InventoryView({ currentUser, products, onUpdateProducts, orders 
     }
 
     try {
-      const payload: any = { porcentaje: aumPorcentaje };
+      const payload: any = { 
+        porcentaje: aumPorcentaje,
+        regla_redondeo: aumReglaRedondeo,
+      };
       if (aumAlcance === 'CATEGORIA') payload.id_categoria = aumCatId;
       if (aumAlcance === 'MARCA') payload.id_marca = aumMarcaId;
 
@@ -713,7 +716,7 @@ export function InventoryView({ currentUser, products, onUpdateProducts, orders 
     }
   };
 
-  // --- CONTEO FÍSICO ---
+  // --- CONTEO FÍSICO (S13) ---
   const handleGuardarConteo = async () => {
     if (!conteoProd) return;
     if (isProdInactivo(conteoProd)) {
@@ -722,27 +725,48 @@ export function InventoryView({ currentUser, products, onUpdateProducts, orders 
     }
     const diferencia = conteoCantidadFisica - conteoProd.stock;
 
-    if (diferencia !== 0) {
-      const tipo = diferencia > 0 ? 'aumentar' : 'disminuir';
-      const motivo = `Ajuste por conteo físico: Diferencia de ${diferencia} u. Obs: ${conteoObs}`;
-      try {
-        const idProd = conteoProd.id_producto || Number(conteoProd.id);
-        if (!isNaN(idProd) && idProd > 0) {
-          await stockService.registrarAjuste({
-            id_producto: idProd,
-            cantidad: Math.abs(diferencia),
-            tipo,
-            motivo,
+    try {
+      const idProd = conteoProd.id_producto || Number(conteoProd.id);
+      if (!isNaN(idProd) && idProd > 0) {
+        // Usar flujo oficial S13: Iniciar sesión -> registrar ítem -> finalizar con ajuste
+        try {
+          const sesion = await stockService.iniciarSesionConteo({
+            observaciones: conteoObs || `Auditoría física de stock: ${conteoProd.name}`,
+            id_usuario: (currentUser as any)?.id_usuario ? Number((currentUser as any).id_usuario) : (Number(currentUser?.id) || 1),
           });
+
+          if (sesion && sesion.id_sesion) {
+            await stockService.registrarItemConteo(sesion.id_sesion, {
+              id_producto: idProd,
+              cantidad_fisica: conteoCantidadFisica,
+              observaciones: conteoObs || (diferencia === 0 ? 'Conteo coincidente' : `Diferencia de ${diferencia} u.`),
+            });
+
+            await stockService.finalizarSesionConteo(sesion.id_sesion, {
+              aplicar_ajustes: true,
+            });
+          }
+        } catch (apiErr) {
+          console.warn('Fallo API de sesión S13, usando fallback directo de ajuste:', apiErr);
+          if (diferencia !== 0) {
+            const tipo = diferencia > 0 ? 'aumentar' : 'disminuir';
+            const motivo = `Ajuste por conteo físico: Diferencia de ${diferencia} u. Obs: ${conteoObs}`;
+            await stockService.registrarAjuste({
+              id_producto: idProd,
+              cantidad: Math.abs(diferencia),
+              tipo,
+              motivo,
+            });
+          }
         }
-        onUpdateProducts(products.map(p => p.id === conteoProd.id ? { ...p, stock: conteoCantidadFisica } : p));
-      } catch (e: any) {
-        alert(e.message || 'Error al aplicar conciliación.');
-        return;
       }
+      onUpdateProducts(products.map(p => p.id === conteoProd.id ? { ...p, stock: conteoCantidadFisica } : p));
+    } catch (e: any) {
+      alert(e.message || 'Error al aplicar conciliación.');
+      return;
     }
 
-    alert(`Conteo registrado para ${conteoProd.name}. Diferencia: ${diferencia} u.`);
+    alert(`Conteo registrado para ${conteoProd.name}. Diferencia: ${diferencia} u. Stock actualizado a ${conteoCantidadFisica} u.`);
     setShowConteoModal(false);
     setConteoProd(null);
     setConteoObs('');
@@ -2430,6 +2454,21 @@ export function InventoryView({ currentUser, products, onUpdateProducts, orders 
                   </select>
                 </div>
               )}
+
+              <div>
+                <label className="text-xs font-bold text-slate-500 uppercase">Regla de Redondeo (P07)</label>
+                <select
+                  value={aumReglaRedondeo}
+                  onChange={(e) => setAumReglaRedondeo(e.target.value as any)}
+                  className="w-full mt-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold"
+                >
+                  <option value="sin_redondeo">Sin redondeo (decimales exactos)</option>
+                  <option value="peso_mas_cercano">Al peso más cercano (entero)</option>
+                  <option value="peso_superior">Al peso superior (hacia arriba)</option>
+                  <option value="terminar_90">Terminar en .90 (ej. $110.90)</option>
+                  <option value="terminar_99">Terminar en .99 (ej. $110.99)</option>
+                </select>
+              </div>
 
               <div className="flex justify-end gap-2 pt-3">
                 <button type="button" onClick={() => setShowAumentoMasivoModal(false)} className="px-4 py-2 font-bold text-xs text-slate-500">

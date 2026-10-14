@@ -12,14 +12,21 @@ class UsuariosRealesSeeder extends Seeder
 {
     public function run(): void
     {
+        $columnas = DB::getSchemaBuilder()->getColumnListing('usuario');
+        $campoUsuario = in_array('user', $columnas, true) ? 'user' : 'usuario';
+        $campoPassword = in_array('password', $columnas, true) ? 'password' : 'password_hash';
+        $tieneNombre = in_array('nombre', $columnas, true);
+
         // 1. Actualizar usuario admin existente para que su nombre sea el nombre real "Don Alberto"
+        $updateAdmin = ['rol' => 'administrativo'];
+        if ($tieneNombre) {
+            $updateAdmin['nombre'] = 'Don Alberto';
+        }
+
         DB::table('usuario')
-            ->where('usuario', 'admin')
+            ->where($campoUsuario, 'admin')
             ->orWhere('id_usuario', 21)
-            ->update([
-                'nombre' => 'Don Alberto',
-                'rol' => 'administrativo',
-            ]);
+            ->update($updateAdmin);
 
         // 2. Usuarios del sistema con sus nombres y roles de negocio
         $usuarios = [
@@ -55,30 +62,37 @@ class UsuariosRealesSeeder extends Seeder
             ],
         ];
 
-        $now = Carbon::now();
         $passwordHash = Hash::make('password123');
 
         foreach ($usuarios as $u) {
-            $existente = DB::table('usuario')->where('usuario', $u['usuario'])->first();
+            $existente = DB::table('usuario')->where($campoUsuario, $u['usuario'])->first();
 
             if ($existente) {
-                DB::table('usuario')
-                    ->where('id_usuario', $existente->id_usuario)
-                    ->update([
-                        'nombre' => $u['nombre'],
-                        'rol' => $u['rol'],
-                        'estado' => $u['estado'],
-                    ]);
-            } else {
-                DB::table('usuario')->insert([
-                    'usuario' => $u['usuario'],
-                    'password_hash' => $passwordHash,
-                    'nombre' => $u['nombre'],
+                $updateData = [
                     'rol' => $u['rol'],
                     'estado' => $u['estado'],
-                    'intentos_fallidos' => 0,
-                    'created_at' => $now,
-                ]);
+                ];
+
+                if ($tieneNombre) {
+                    $updateData['nombre'] = $u['nombre'];
+                }
+
+                DB::table('usuario')
+                    ->where('id_usuario', $existente->id_usuario)
+                    ->update($updateData);
+            } else {
+                $insertData = [
+                    $campoUsuario => $u['usuario'],
+                    $campoPassword => $passwordHash,
+                    'rol' => $u['rol'],
+                    'estado' => $u['estado'],
+                ];
+
+                if ($tieneNombre) {
+                    $insertData['nombre'] = $u['nombre'];
+                }
+
+                DB::table('usuario')->insert($insertData);
             }
         }
     }

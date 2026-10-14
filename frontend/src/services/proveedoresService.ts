@@ -113,4 +113,28 @@ export const proveedoresService = {
       motivo,
     });
   },
+
+  getHistorialPrecios: async (idProveedor: number | string): Promise<any> => {
+    const res = await apiClient.get<ApiResponse<any>>(`/proveedores/${idProveedor}/precios-historicos`);
+    return res.data || res;
+  },
+
+  getHistorialPreciosPorProducto: async (idProveedor: number | string, idProducto: number | string): Promise<any> => {
+    const res = await apiClient.get<ApiResponse<any>>(`/proveedores/${idProveedor}/productos/${idProducto}/precios-historicos`);
+    return res.data || res;
+  },
+
+  getComparativaAumentos: async (idProveedor: number | string): Promise<any> => {
+    const res = await apiClient.get<ApiResponse<any>>(`/proveedores/${idProveedor}/comparativa-aumentos`);
+    return res.data || res;
+  },
+
+  actualizarPrecioProducto: async (
+    idProveedor: number | string,
+    idProducto: number | string,
+    data: { precio: number; id_unidad?: number; observaciones?: string }
+  ): Promise<any> => {
+    return apiClient.post(`/proveedores/${idProveedor}/productos/${idProducto}/precio`, data);
+  },
 };
+

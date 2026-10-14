@@ -45,6 +45,38 @@ export interface Lote {
   dias_para_vencer?: number;
 }
 
+export interface SesionConteo {
+  id_sesion: number;
+  fecha_conteo: string;
+  estado: 'en_proceso' | 'finalizado' | string;
+  observaciones?: string;
+  total_productos: number;
+  total_diferencias: number;
+  fecha_cierre?: string;
+  id_usuario?: number;
+  items?: DetalleConteo[];
+  resumen?: {
+    total_contados: number;
+    inconsistencias: number;
+  };
+}
+
+export interface DetalleConteo {
+  id_detalle: number;
+  id_sesion: number;
+  id_producto: number;
+  cantidad_sistema: number;
+  cantidad_fisica: number;
+  diferencia: number;
+  diagnostico: 'coincidente' | 'sobrante' | 'faltante' | string;
+  observaciones?: string;
+  producto?: {
+    id_producto: number;
+    codigo: string;
+    nombre: string;
+  };
+}
+
 export const stockService = {
   getConsultaGeneral: async (params?: { search?: string; estado_alerta?: string }): Promise<StockItem[]> => {
     const res = await apiClient.get<ApiResponse<StockItem[]>>('/stock', params);
@@ -164,4 +196,35 @@ export const stockService = {
   eliminarUnidad: async (idProducto: number | string, idUnidad: number | string): Promise<any> => {
     return apiClient.delete(`/productos/${idProducto}/unidades/${idUnidad}`);
   },
+
+  getSesionesConteo: async (): Promise<SesionConteo[]> => {
+    const res = await apiClient.get<ApiResponse<SesionConteo[]>>('/stock/conteos/sesiones');
+    return res.data || (Array.isArray(res) ? res : []);
+  },
+
+  getSesionConteo: async (id: number | string): Promise<SesionConteo> => {
+    const res = await apiClient.get<ApiResponse<SesionConteo>>(`/stock/conteos/sesiones/${id}`);
+    return res.data || (res as any);
+  },
+
+  iniciarSesionConteo: async (data: { fecha_conteo?: string; observaciones?: string; id_usuario?: number }): Promise<SesionConteo> => {
+    const res = await apiClient.post<ApiResponse<SesionConteo>>('/stock/conteos/sesiones', data);
+    return res.data || (res as any);
+  },
+
+  registrarItemConteo: async (
+    idSesion: number | string,
+    data: { id_producto: number; cantidad_fisica: number; observaciones?: string }
+  ): Promise<any> => {
+    return apiClient.post(`/stock/conteos/sesiones/${idSesion}/items`, data);
+  },
+
+  eliminarItemConteo: async (idSesion: number | string, idProducto: number | string): Promise<any> => {
+    return apiClient.delete(`/stock/conteos/sesiones/${idSesion}/items/${idProducto}`);
+  },
+
+  finalizarSesionConteo: async (idSesion: number | string, data?: { aplicar_ajustes?: boolean }): Promise<any> => {
+    return apiClient.post(`/stock/conteos/sesiones/${idSesion}/finalizar`, data || {});
+  },
 };
+

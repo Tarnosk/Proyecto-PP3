@@ -178,7 +178,7 @@ class CompraController extends Controller
                             ->where('es_proveedor_principal', true)
                             ->exists();
 
-                        ProductoProveedor::create([
+                        $asocProv = ProductoProveedor::create([
                             'id_producto' => $d['id_producto'],
                             'id_proveedor' => $proveedor->id_proveedor,
                             'es_proveedor_principal' => !$tieneOtroPrincipal,
@@ -189,6 +189,18 @@ class CompraController extends Controller
                         ]);
                     } elseif ($asocProv->precio_acordado === null) {
                         $asocProv->update(['precio_acordado' => (float) $d['precio_unitario']]);
+                    }
+
+                    // PV06: Registrar snapshot de precio en el historial del proveedor vinculado a la compra
+                    if ($asocProv) {
+                        app(\App\Modules\Proveedores\Services\HistorialPrecioService::class)->registrarSnapshot(
+                            $asocProv->id_producto_proveedor,
+                            (float) $d['precio_unitario'],
+                            $idUsuario,
+                            $compra->id_compra,
+                            $d['id_unidad'],
+                            $fecha
+                        );
                     }
                 }
 
@@ -222,11 +234,37 @@ class CompraController extends Controller
         }
 
         $idProducto = (int) ($item['id_producto'] ?? 0);
-        $base = $idProducto > 0
-            ? UnidadMedida::where('id_producto', $idProducto)->where('es_base', 1)->value('id_unidad')
-            : null;
+        if ($idProducto <= 0) {
+            throw new \InvalidArgumentException('Cada ítem debe indicar un producto válido para asignar su unidad de medida.');
+        }
 
-        return (int) ($base ?? UnidadMedida::where('es_base', 1)->orderBy('id_unidad')->value('id_unidad'));
+        $base = UnidadMedida::where('id_producto', $idProducto)
+            ->where('es_base', 1)
+            ->first();
+
+        if ($base) {
+            return (int) $base->id_unidad;
+        }
+
+        $base = UnidadMedida::where('id_producto', $idProducto)
+            ->where('equivalencia_base', 1)
+            ->orderBy('id_unidad')
+            ->first();
+
+        if ($base) {
+            $base->es_base = true;
+            $base->save();
+
+            return (int) $base->id_unidad;
+        }
+
+        return (int) UnidadMedida::create([
+            'id_producto' => $idProducto,
+            'nombre_unidad' => 'Unidad individual',
+            'equivalencia_base' => 1,
+            'es_base' => true,
+            'descripcion' => 'Unidad base del producto',
+        ])->id_unidad;
     }
 
     /**

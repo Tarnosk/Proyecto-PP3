@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Schema;
 
 class Producto extends Model
 {
@@ -39,6 +40,8 @@ class Producto extends Model
         'nombre',
         'descripcion',
         'precio_unitario',
+        'precioMay',
+        'precioMin',
         'imagen',
         'stock',
         'stock_minimo',
@@ -67,6 +70,59 @@ class Producto extends Model
         'fecha_modificacion' => 'datetime:Y-m-d H:i:s',
         'fecha_desactivacion' => 'datetime:Y-m-d H:i:s',
     ];
+
+    public static function create(array $attributes = [])
+    {
+        $attributes = static::normalizarAtributos($attributes);
+        $instance = new static($attributes);
+        $instance->save();
+
+        return $instance;
+    }
+
+    protected static function normalizarAtributos(array $attributes): array
+    {
+        $columnas = Schema::getConnection()->getSchemaBuilder()->getColumnListing('producto');
+        $normalizados = [];
+
+        foreach ($attributes as $clave => $valor) {
+            $claveNormalizada = $clave;
+
+            if ($clave === 'precio_unitario' && !in_array('precio_unitario', $columnas, true)) {
+                if (in_array('precioMay', $columnas, true)) {
+                    $normalizados['precioMay'] = $valor;
+                }
+                if (in_array('precioMin', $columnas, true)) {
+                    $normalizados['precioMin'] = $valor;
+                }
+                continue;
+            }
+
+            if ($clave === 'precioMay' && !in_array('precioMay', $columnas, true) && in_array('precio_unitario', $columnas, true)) {
+                $claveNormalizada = 'precio_unitario';
+            }
+
+            if ($clave === 'precioMin' && !in_array('precioMin', $columnas, true) && in_array('precio_unitario', $columnas, true)) {
+                $claveNormalizada = 'precio_unitario';
+            }
+
+            if (!in_array($claveNormalizada, $columnas, true) && !in_array($claveNormalizada, ['precio_unitario', 'precioMay', 'precioMin', 'stock_disponible', 'stock_actual'], true)) {
+                continue;
+            }
+
+            $normalizados[$claveNormalizada] = $valor;
+        }
+
+        if (!array_key_exists('fecha_alta', $normalizados) && in_array('fecha_alta', $columnas, true)) {
+            $normalizados['fecha_alta'] = now()->toDateString();
+        }
+
+        if (!array_key_exists('id_usuario_carga', $normalizados) && in_array('id_usuario_carga', $columnas, true)) {
+            $normalizados['id_usuario_carga'] = 1;
+        }
+
+        return $normalizados;
+    }
 
     public function categoria(): BelongsTo
     {
@@ -130,27 +186,27 @@ class Producto extends Model
      */
     public function getPrecioUnitarioAttribute(): float
     {
-        return (float) ($this->attributes['precio_unitario'] ?? 0.0);
+        return (float) ($this->attributes['precio_unitario'] ?? $this->attributes['precioMin'] ?? $this->attributes['precioMay'] ?? 0.0);
     }
 
     public function getPrecioMayoristaAttribute(): float
     {
-        return (float) ($this->attributes['precio_unitario'] ?? 0.0);
+        return (float) ($this->attributes['precio_unitario'] ?? $this->attributes['precioMay'] ?? 0.0);
     }
 
     public function getPrecioMinoristaAttribute(): float
     {
-        return (float) ($this->attributes['precio_unitario'] ?? 0.0);
+        return (float) ($this->attributes['precio_unitario'] ?? $this->attributes['precioMin'] ?? 0.0);
     }
 
     public function getPrecioMayAttribute(): float
     {
-        return (float) ($this->attributes['precio_unitario'] ?? 0.0);
+        return (float) ($this->attributes['precio_unitario'] ?? $this->attributes['precioMay'] ?? 0.0);
     }
 
     public function getPrecioMinAttribute(): float
     {
-        return (float) ($this->attributes['precio_unitario'] ?? 0.0);
+        return (float) ($this->attributes['precio_unitario'] ?? $this->attributes['precioMin'] ?? 0.0);
     }
 
     public function historialPrecios(): HasMany

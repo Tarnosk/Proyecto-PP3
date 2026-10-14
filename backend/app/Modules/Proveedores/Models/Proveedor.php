@@ -62,6 +62,16 @@ class Proveedor extends Model
             ->orderByDesc('id_historial_plazo');
     }
 
+    /**
+     * Historial de precios acordados y compras (PV06).
+     */
+    public function historialPrecios(): HasMany
+    {
+        return $this->hasMany(HistorialPrecioProveedor::class, 'id_proveedor', 'id_proveedor')
+            ->orderByDesc('fecha_actualizacion')
+            ->orderByDesc('id_historial_prov');
+    }
+
     /** Último plazo registrado en el historial (el vigente debería coincidir). */
     public function ultimoPlazoRegistrado(): ?HistorialPlazoProveedor
     {

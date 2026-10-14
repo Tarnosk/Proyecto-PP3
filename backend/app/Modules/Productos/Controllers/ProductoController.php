@@ -743,7 +743,7 @@ class ProductoController extends Controller
             $validator = Validator::make($request->all(), [
             'porcentaje' => 'required|numeric|gt:0',
             'tipo_precio' => 'nullable|string|in:ambos,mayorista,minorista',
-            'regla_redondeo' => 'nullable|string',
+            'regla_redondeo' => 'nullable|string|in:sin_redondeo,peso_mas_cercano,peso_superior,terminar_90,terminar_99',
             'ids' => 'nullable|array',
             'ids.*' => 'integer|exists:PRODUCTO,id_producto',
             'id_categoria' => 'nullable|integer|exists:CATEGORIA,id_categoria',
@@ -767,6 +767,7 @@ class ProductoController extends Controller
 
             $porcentaje = (float) $request->input('porcentaje');
             $tipoPrecio = $request->input('tipo_precio', 'ambos');
+            $reglaRedondeo = $request->input('regla_redondeo', 'sin_redondeo');
             $idUsuario = UsuarioActual::id($request);
             $now = Carbon::now()->toDateTimeString();
 
@@ -783,13 +784,16 @@ class ProductoController extends Controller
 
                 $productos = $query->orderBy('id_producto', 'asc')->get();
 
-                $detalles = DB::transaction(function () use ($productos, $porcentaje, $tipoPrecio, $idUsuario, $now) {
+                $detalles = DB::transaction(function () use ($productos, $porcentaje, $tipoPrecio, $reglaRedondeo, $idUsuario, $now) {
                     $detalles = [];
 
                     foreach ($productos as $producto) {
                         $cambio = false;
                         $precioAnterior = (float) $producto->precio_unitario;
-                        $nuevoPrecio = round($precioAnterior * (1 + $porcentaje / 100.0), 2);
+                        $nuevoPrecio = $this->aplicarReglaRedondeo(
+                            $precioAnterior * (1 + $porcentaje / 100.0),
+                            $reglaRedondeo
+                        );
 
                         if (abs($nuevoPrecio - $precioAnterior) >= 0.001) {
                             HistorialPrecio::create([
@@ -797,7 +801,7 @@ class ProductoController extends Controller
                                 'tipo_precio' => 'general',
                                 'precio' => $nuevoPrecio,
                                 'porcentaje_aumento' => $porcentaje,
-                                'regla_redondeo' => 'sin_redondeo',
+                                'regla_redondeo' => $reglaRedondeo,
                                 'origen' => 'aumento_masivo',
                                 'fecha_cambio' => $now,
                                 'id_usuario' => $idUsuario,
@@ -848,6 +852,7 @@ class ProductoController extends Controller
                 'data' => [
                     'porcentaje' => $porcentaje,
                     'tipo_precio' => $tipoPrecio,
+                    'regla_redondeo' => $reglaRedondeo,
                     'total_aplicados' => $totalAplicados,
                     'productos' => $detalles,
                 ],
@@ -858,5 +863,30 @@ class ProductoController extends Controller
                 'message' => 'Error al aplicar el aumento masivo: ' . $e->getMessage(),
             ], 500);
         }
+    }
+
+    private function aplicarReglaRedondeo(float $precio, string $regla): float
+    {
+        $precio = round($precio, 2);
+
+        return match ($regla) {
+            'peso_mas_cercano' => round($precio),
+            'peso_superior' => ceil($precio),
+            'terminar_90', 'terminar_99' => $this->redondearAterminacion($precio, $regla === 'terminar_90' ? 90 : 99),
+            default => $precio,
+        };
+    }
+
+    private function redondearAterminacion(float $precio, int $centavos): float
+    {
+        $precioEnCentavos = (int) round($precio * 100);
+        $unidadPeso = intdiv($precioEnCentavos, 100);
+        $candidato = $unidadPeso * 100 + $centavos;
+
+        if ($precioEnCentavos > $candidato) {
+            $candidato += 100;
+        }
+
+        return $candidato / 100;
     }
 }

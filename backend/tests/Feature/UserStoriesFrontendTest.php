@@ -258,7 +258,11 @@ class UserStoriesFrontendTest extends TestCase
         $viewRes->assertSee('modalAumento');
         $viewRes->assertSee('aumentoCriterio');
         $viewRes->assertSee('aumentoPorcentaje');
-        $viewRes->assertDontSee('aumentoRedondeo');
+        $viewRes->assertSee('aumentoRedondeo');
+        $viewRes->assertSee('peso_mas_cercano');
+        $viewRes->assertSee('peso_superior');
+        $viewRes->assertSee('terminar_90');
+        $viewRes->assertSee('terminar_99');
         $viewRes->assertSee('cambiarEstadoProducto');
 
         $producto = Producto::where('estado', 'activo')->first();
@@ -275,7 +279,7 @@ class UserStoriesFrontendTest extends TestCase
         $actRes->assertOk();
         $this->assertEquals('activo', $actRes->json('data.estado'));
 
-        // P07: Aumento Masivo de Precios (sin regla de redondeo)
+        // P07: Aumento Masivo de Precios (regla de redondeo predeterminada)
         $aumentoRes = $this->postJson('/api/productos/aumento-masivo', [
             'tipo_criterio' => 'todos',
             'porcentaje' => 10.0,
@@ -283,6 +287,54 @@ class UserStoriesFrontendTest extends TestCase
         ]);
         $aumentoRes->assertOk();
         $this->assertTrue($aumentoRes->json('status') === 'success');
+        $this->assertSame('sin_redondeo', $aumentoRes->json('data.regla_redondeo'));
+    }
+
+    public function test_p07_aplica_y_registra_reglas_de_redondeo_configurables(): void
+    {
+        $producto = Producto::where('estado', 'activo')->first();
+        $this->assertNotNull($producto);
+
+        $casos = [
+            ['regla' => 'sin_redondeo', 'precio_base' => 100.13, 'precio_esperado' => 110.14],
+            ['regla' => 'peso_mas_cercano', 'precio_base' => 100.13, 'precio_esperado' => 110.0],
+            ['regla' => 'peso_superior', 'precio_base' => 100.13, 'precio_esperado' => 111.0],
+            ['regla' => 'terminar_90', 'precio_base' => 100.13, 'precio_esperado' => 110.90],
+            ['regla' => 'terminar_99', 'precio_base' => 100.13, 'precio_esperado' => 110.99],
+            ['regla' => 'terminar_90', 'precio_base' => 100.87, 'precio_esperado' => 111.90],
+        ];
+
+        foreach ($casos as $caso) {
+            $producto->refresh()->update(['precio_unitario' => $caso['precio_base']]);
+
+            $respuesta = $this->postJson('/api/productos/aumento-masivo', [
+                'ids' => [$producto->id_producto],
+                'porcentaje' => 10,
+                'regla_redondeo' => $caso['regla'],
+            ]);
+
+            $respuesta->assertOk()
+                ->assertJsonPath('data.regla_redondeo', $caso['regla']);
+            $this->assertEquals(
+                $caso['precio_esperado'],
+                (float) $respuesta->json('data.productos.0.precio_nuevo'),
+                "La regla {$caso['regla']} debe calcular el precio esperado."
+            );
+
+            $historial = \App\Modules\Productos\Models\HistorialPrecio::where('id_producto', $producto->id_producto)
+                ->where('origen', 'aumento_masivo')
+                ->latest('id_historial')
+                ->first();
+            $this->assertNotNull($historial);
+            $this->assertSame($caso['regla'], $historial->regla_redondeo);
+        }
+
+        $respuestaInvalida = $this->postJson('/api/productos/aumento-masivo', [
+            'ids' => [$producto->id_producto],
+            'porcentaje' => 10,
+            'regla_redondeo' => 'regla_invalida',
+        ]);
+        $respuestaInvalida->assertStatus(400);
     }
 
     /**
@@ -628,11 +680,45 @@ class UserStoriesFrontendTest extends TestCase
         $viewRes->assertSee('ajusteLoteSelect');
         $viewRes->assertSee('ajusteModoTabs');
         $viewRes->assertSee('ajusteNroLoteNuevo');
+        $viewRes->assertSee('La disminución se aplicará al stock general');
 
         $producto = Producto::where('estado', 'activo')->first();
         $this->assertNotNull($producto);
 
-        // 1. Intentar ajuste sin lote específico debe ser RECHAZADO (400) para evitar desincronización
+        // Permitir disminuir del stock general cuando no existen lotes.
+        $productoSinLotes = $producto->replicate();
+        $productoSinLotes->codigo = 'TEST-AJU-SIN-LOTE-' . uniqid();
+        $productoSinLotes->stock = 12;
+        $productoSinLotes->save();
+
+        $ajusteSinLoteRes = $this->postJson('/api/stock/ajustes', [
+            'id_producto' => $productoSinLotes->id_producto,
+            'tipo' => 'disminuir',
+            'cantidad' => 3,
+            'motivo' => 'Merma sin lote asociado',
+        ]);
+        $ajusteSinLoteRes->assertStatus(201)
+            ->assertJsonPath('data.id_lote', null)
+            ->assertJsonPath('data.stock_disponible', 9);
+        $this->assertSame(0, Lote::where('id_producto', $productoSinLotes->id_producto)->count());
+        $this->assertSame(9, (int) $productoSinLotes->fresh()->stock_disponible);
+        $movimientoSinLote = MovimientoStock::where('id_producto', $productoSinLotes->id_producto)
+            ->where('tipo', 'ajuste')
+            ->latest('id_movimiento')
+            ->first();
+        $this->assertNotNull($movimientoSinLote);
+        $this->assertNull($movimientoSinLote->id_lote);
+
+        $ajusteExcesoSinLoteRes = $this->postJson('/api/stock/ajustes', [
+            'id_producto' => $productoSinLotes->id_producto,
+            'tipo' => 'disminuir',
+            'cantidad' => 10,
+            'motivo' => 'Intento de descuento excedente sin lote',
+        ]);
+        $ajusteExcesoSinLoteRes->assertStatus(400);
+        $this->assertSame(9, (int) $productoSinLotes->fresh()->stock_disponible);
+
+        // Aumentar sin lote debe seguir rechazándose para evitar desincronizar el inventario.
         $ajusteSinLoteRes = $this->postJson('/api/stock/ajustes', [
             'id_producto' => $producto->id_producto,
             'tipo' => 'aumentar',
@@ -1408,27 +1494,41 @@ class UserStoriesFrontendTest extends TestCase
     }
 
     /**
-     * PV06, PV07 - Registrar y Consultar Plazos de Entrega del Proveedor.
+     * PV06, PV07 - Precios Históricos y Plazos de Entrega del Proveedor.
      */
     public function test_pv06_pv07_plazos_entrega_proveedor(): void
     {
         $viewRes = $this->get('/proveedores');
         $viewRes->assertOk();
         $viewRes->assertSee('kpiPlazoPromedio');
+        $viewRes->assertSee('modalPreciosHistoricos');
+        $viewRes->assertSee('tablaPreciosHistoricosBody');
+        $viewRes->assertSee('filtroHistProveedor');
+        $viewRes->assertSee('filtroHistProducto');
 
         $proveedor = Proveedor::where('estado', 'activo')->first();
         $this->assertNotNull($proveedor);
 
-        // Registrar plazo
+        // PV07: Registrar plazo
         $plazoRes = $this->postJson("/api/proveedores/{$proveedor->id_proveedor}/plazo", [
             'plazo_entrega_dias' => 12,
             'motivo' => 'Ajuste estacional de logística',
         ]);
         $plazoRes->assertStatus(201);
 
-        // Consultar historial de plazos
+        // PV07: Consultar historial de plazos
         $histRes = $this->getJson("/api/proveedores/{$proveedor->id_proveedor}/plazos");
         $histRes->assertOk();
+
+        // PV06: Consultar precios históricos del proveedor
+        $preciosRes = $this->getJson("/api/proveedores/{$proveedor->id_proveedor}/precios-historicos");
+        $preciosRes->assertOk()
+            ->assertJsonStructure(['status', 'proveedor', 'data', 'resumen']);
+
+        // PV06: Comparativa de aumentos
+        $compRes = $this->getJson("/api/proveedores/{$proveedor->id_proveedor}/comparativa-aumentos");
+        $compRes->assertOk()
+            ->assertJsonStructure(['status', 'data', 'resumen']);
     }
 
     /**
