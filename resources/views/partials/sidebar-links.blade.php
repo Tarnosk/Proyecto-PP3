@@ -36,13 +36,6 @@
     </div>
 </div>
 
-<!-- VENCIMIENTOS -->
-<a href="{{ url('/vencimientos') }}" 
-   class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all {{ request()->is('vencimientos*') ? 'bg-white/20 text-white shadow-inner font-black' : 'text-blue-100 hover:bg-white/10 hover:text-white' }}">
-    <i data-lucide="calendar" class="w-4 h-4 shrink-0"></i>
-    <span>Lotes y Vencimientos</span>
-</a>
-
 <!-- SUGERENCIAS REPOSICIÓN -->
 <a href="{{ url('/sugerencias-reposicion') }}" 
    class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all {{ request()->is('sugerencias-reposicion*') ? 'bg-white/20 text-white shadow-inner font-black' : 'text-blue-100 hover:bg-white/10 hover:text-white' }}">

@@ -119,7 +119,7 @@
                 </select>
 
                 <!-- Filtro Nivel de Stock (S15 / S16) -->
-                <select id="filtroNivelStock" onchange="renderProductos()" class="clay-input py-2 text-xs font-bold text-slate-700 min-w-[145px]" title="Filtrar por Nivel de Stock (S15/S16)">
+                <select id="filtroNivelStock" onchange="renderProductos()" class="clay-input py-2 text-xs font-bold text-slate-700 min-w-[145px]" title="Filtrar por Nivel de Stock">
                     <option value="todos">Todos los Niveles</option>
                     <option value="suficiente">🟢 Stock Suficiente</option>
                     <option value="bajo">🟡 Stock Bajo</option>
@@ -127,8 +127,8 @@
                     <option value="agotado">⚫ Sin Stock (0 u.)</option>
                 </select>
 
-                <!-- Rango de Cantidad de Stock (S15) -->
-                <div class="flex items-center gap-1.5 bg-slate-50 px-2.5 py-1 rounded-xl border border-slate-200 text-xs font-bold" title="Filtrar por Rango de Cantidad de Stock (S15)">
+                <!-- Rango de Cantidad de Stock -->
+                <div class="flex items-center gap-1.5 bg-slate-50 px-2.5 py-1 rounded-xl border border-slate-200 text-xs font-bold" title="Filtrar por Rango de Cantidad de Stock">
                     <span class="text-slate-400 text-[11px] uppercase font-black">Stock:</span>
                     <input type="number" id="filtroStockMinCant" placeholder="Mín" min="0" oninput="renderProductos()" class="w-16 bg-white border border-slate-200 rounded px-1.5 py-0.5 text-center font-bold text-xs">
                     <span class="text-slate-300">-</span>
@@ -142,19 +142,19 @@
                     <i data-lucide="plus" class="w-4 h-4"></i>
                     <span>Nuevo Producto</span>
                 </button>
-                <button onclick="abrirModalAumentoMasivo()" class="clay-btn-secondary px-3.5 py-2.5 text-xs font-bold flex items-center gap-2" title="Aumento Porcentual Masivo (P07)">
+                <button onclick="abrirModalAumentoMasivo()" class="clay-btn-secondary px-3.5 py-2.5 text-xs font-bold flex items-center gap-2" title="Aumento Porcentual Masivo">
                     <i data-lucide="trending-up" class="w-4 h-4 text-blue-600"></i>
                     <span class="hidden sm:inline">Aumento %</span>
                 </button>
-                <button onclick="abrirHistorialPreciosGlobal()" class="clay-btn-secondary px-3.5 py-2.5 text-xs font-bold flex items-center gap-2" title="Historial de Precios y Aumentos Masivos (P08)">
+                <button onclick="abrirHistorialPreciosGlobal()" class="clay-btn-secondary px-3.5 py-2.5 text-xs font-bold flex items-center gap-2" title="Historial de Precios y Aumentos Masivos">
                     <i data-lucide="history" class="w-4 h-4 text-emerald-600"></i>
                     <span class="hidden sm:inline">Historial Precios</span>
                 </button>
-                <button onclick="abrirModalCategorias()" class="clay-btn-secondary px-3.5 py-2.5 text-xs font-bold flex items-center gap-2" title="Administrar Categorías (P02)">
+                <button onclick="abrirModalCategorias()" class="clay-btn-secondary px-3.5 py-2.5 text-xs font-bold flex items-center gap-2" title="Administrar Categorías">
                     <i data-lucide="layers" class="w-4 h-4 text-indigo-600"></i>
                     <span>Categorías</span>
                 </button>
-                <button onclick="abrirModalMarcas()" class="clay-btn-secondary px-3.5 py-2.5 text-xs font-bold flex items-center gap-2" title="Administrar Marcas (P03)">
+                <button onclick="abrirModalMarcas()" class="clay-btn-secondary px-3.5 py-2.5 text-xs font-bold flex items-center gap-2" title="Administrar Marcas">
                     <i data-lucide="tag" class="w-4 h-4 text-amber-600"></i>
                     <span>Marcas</span>
                 </button>
@@ -222,7 +222,7 @@
                     <i data-lucide="alert-triangle" class="w-5 h-5"></i>
                 </div>
                 <div>
-                    <span class="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block">Bajo / Crítico (S07)</span>
+                    <span class="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block">Bajo / Crítico</span>
                     <span id="kpiStockBajoCritico" class="text-xl font-black text-amber-700">0</span>
                     <span class="text-[11px] text-amber-600 font-bold ml-1">artículos</span>
                 </div>
@@ -260,33 +260,33 @@
                     <option value="agotado">⚫ Sin Existencias (0 u.)</option>
                 </select>
 
-                <!-- Selector de Vista: Todos los Productos vs Solo Alertas Críticas (S07) -->
+                <!-- Selector de Vista: Todos los Productos vs Solo Alertas Críticas -->
                 <div class="bg-slate-100 p-1 rounded-xl flex items-center border border-slate-200/80 text-xs font-black">
                     <button type="button" id="btnSubtabStockTodos" onclick="cambiarSubtabStock('todos')" class="px-3 py-1.5 rounded-lg bg-white shadow-xs text-blue-700 transition-all cursor-pointer">
-                        Todos los Productos (S01/S02)
+                        Todos los Productos
                     </button>
                     <button type="button" id="btnSubtabStockAlertas" onclick="cambiarSubtabStock('alertas')" class="px-3 py-1.5 rounded-lg text-slate-600 hover:text-slate-900 transition-all cursor-pointer flex items-center gap-1.5">
                         <i data-lucide="alert-triangle" class="w-3.5 h-3.5 text-amber-500"></i>
-                        <span>Solo Críticos (S07)</span>
+                        <span>Solo Críticos</span>
                         <span id="badgeContadorAlertasStock" class="clay-badge clay-badge-danger text-[10px] px-1.5 py-0">0</span>
                     </button>
                 </div>
             </div>
 
             <div class="flex items-center gap-2 flex-wrap shrink-0">
-                <button onclick="abrirModalIngreso()" class="clay-btn-primary px-3.5 py-2 text-xs font-bold flex items-center gap-1.5 shadow-md" title="Registrar Ingreso de Mercadería (S03)">
+                <button onclick="abrirModalIngreso()" class="clay-btn-primary px-3.5 py-2 text-xs font-bold flex items-center gap-1.5 shadow-md" title="Registrar Ingreso de Mercadería">
                     <i data-lucide="arrow-down-right" class="w-4 h-4"></i>
                     <span>Ingreso Mercadería</span>
                 </button>
-                <button onclick="abrirModalDevolucion()" class="clay-btn-secondary px-3 py-2 text-xs font-bold flex items-center gap-1.5" title="Registrar Devolución (S05)">
+                <button onclick="abrirModalDevolucion()" class="clay-btn-secondary px-3 py-2 text-xs font-bold flex items-center gap-1.5" title="Registrar Devolución">
                     <i data-lucide="rotate-ccw" class="w-4 h-4 text-purple-600"></i>
                     <span>Devolución</span>
                 </button>
-                <button onclick="abrirModalAjuste()" class="clay-btn-secondary px-3 py-2 text-xs font-bold flex items-center gap-1.5" title="Ajuste Manual de Inventario (S06)">
+                <button onclick="abrirModalAjuste()" class="clay-btn-secondary px-3 py-2 text-xs font-bold flex items-center gap-1.5" title="Ajuste Manual de Inventario">
                     <i data-lucide="sliders" class="w-4 h-4 text-amber-600"></i>
                     <span>Ajuste Manual</span>
                 </button>
-                <button onclick="abrirModalUbicaciones()" class="clay-btn-secondary px-3 py-2 text-xs font-bold flex items-center gap-1.5" title="Gestión de Ubicaciones Físicas (S14)">
+                <button onclick="abrirModalUbicaciones()" class="clay-btn-secondary px-3 py-2 text-xs font-bold flex items-center gap-1.5" title="Gestión de Ubicaciones Físicas">
                     <i data-lucide="map-pin" class="w-4 h-4 text-slate-600"></i>
                     <span>Ubicaciones</span>
                 </button>
@@ -298,7 +298,7 @@
             <div class="p-3.5 border-b border-slate-100 flex items-center justify-between">
                 <span class="text-xs font-black text-slate-700 uppercase tracking-wider flex items-center gap-2">
                     <i data-lucide="package-check" class="w-4 h-4 text-blue-600"></i>
-                    Inventario Completo y Disponibilidad para Venta en Tiempo Real (S01 / S02)
+                    Inventario Completo y Disponibilidad para Venta en Tiempo Real
                 </span>
                 <span id="totalStockProductosTag" class="text-xs font-bold text-slate-500">0 artículos</span>
             </div>
@@ -308,12 +308,12 @@
                         <tr>
                             <th>Código</th>
                             <th>Producto / Descripción</th>
-                            <th>Ubicación Física (S14)</th>
+                            <th>Ubicación Física</th>
                             <th class="text-center">Stock Físico</th>
                             <th class="text-center">Comprometido</th>
-                            <th class="text-center bg-blue-50/50">Disponible Venta (S02)</th>
-                            <th class="text-center">Stock Mínimo (S07)</th>
-                            <th class="text-center">Nivel Semáforo (S16)</th>
+                            <th class="text-center bg-blue-50/50">Disponible Venta</th>
+                            <th class="text-center">Stock Mínimo</th>
+                            <th class="text-center">Nivel Semáforo</th>
                             <th class="text-center">Acciones</th>
                         </tr>
                     </thead>
@@ -326,7 +326,7 @@
             </div>
         </div>
 
-        <!-- VISTA 2: TABLA DE ALERTAS DE STOCK MÍNIMO Y CRÍTICO (S07) -->
+        <!-- VISTA 2: TABLA DE ALERTAS DE STOCK MÍNIMO Y CRÍTICO -->
         <div id="contenedorStockAlertas" class="clay-card overflow-hidden hidden">
             <div class="p-4 border-b border-slate-100 flex items-center justify-between">
                 <span class="text-xs font-extrabold text-slate-700 uppercase tracking-wider flex items-center gap-2">
@@ -365,7 +365,7 @@
     <div id="pestana-lotes" class="pestana-content hidden space-y-4">
         <div class="clay-card p-5 flex items-center justify-between flex-wrap gap-4">
             <div>
-                <h3 class="text-base font-black text-slate-800">Lotes y Vencimientos de Mercadería (S09 / S11)</h3>
+                <h3 class="text-base font-black text-slate-800">Lotes y Vencimientos de Mercadería</h3>
                 <p class="text-xs text-slate-500 font-bold">Monitoreo de lotes individuales, cantidades remanentes y fechas de expiración</p>
             </div>
             <div class="flex items-center gap-2">
@@ -373,30 +373,26 @@
                     <i data-lucide="plus" class="w-4 h-4"></i>
                     <span>Nuevo Lote</span>
                 </button>
-                <a href="{{ url('/vencimientos') }}" class="clay-btn-secondary px-4 py-2 text-xs font-bold flex items-center gap-2" title="Semáforo de vencimientos (S10/S11)">
-                    <i data-lucide="calendar" class="w-4 h-4 text-blue-600"></i>
-                    <span>Ver Semáforo Completo (S11)</span>
-                </a>
             </div>
         </div>
 
-        <!-- BANNER DE ALERTA: PRODUCTOS PRÓXIMOS A VENCER (S10) -->
+        <!-- BANNER DE ALERTA: PRODUCTOS PRÓXIMOS A VENCER -->
         <div id="bannerAlertaVencimientos" class="p-4 rounded-2xl bg-amber-50/80 border border-amber-200/90 flex items-center justify-between flex-wrap gap-3 hidden">
             <div class="flex items-center gap-3">
                 <div class="p-2.5 bg-amber-100 text-amber-700 rounded-xl">
                     <i data-lucide="alert-triangle" class="w-5 h-5"></i>
                 </div>
                 <div>
-                    <h4 class="text-xs font-black text-amber-900">Alerta de Lotes Próximos a Vencer (S10)</h4>
+                    <h4 class="text-xs font-black text-amber-900">Alerta de Lotes Próximos a Vencer</h4>
                     <p id="textoAlertaVencimientos" class="text-xs text-amber-800 font-bold">Se detectaron lotes con fecha de vencimiento crítica o cercana a 30 días.</p>
                 </div>
             </div>
-            <a href="{{ url('/vencimientos') }}" class="clay-btn-primary px-3.5 py-1.5 text-xs font-black shadow-xs">
-                Gestionar Vencimientos
-            </a>
+            <button type="button" onclick="mostrarLotesEnAlerta()" class="clay-btn-primary px-3.5 py-1.5 text-xs font-black shadow-xs">
+                Ver lotes alertados
+            </button>
         </div>
 
-        <!-- BARRA DE FILTROS Y ORDENAMIENTO DE LOTES (S11) -->
+        <!-- BARRA DE FILTROS Y ORDENAMIENTO DE LOTES -->
         <div class="clay-card p-4 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
             <div class="flex items-center flex-1 gap-2.5 flex-wrap">
                 <div class="relative flex-1 min-w-[200px]">
@@ -407,6 +403,7 @@
                 </div>
                 <select id="filtroLotesEstado" onchange="renderTablaLotes()" class="clay-input py-1.5 px-3 text-xs font-bold text-slate-700 min-w-[150px]">
                     <option value="todos">Todos los Estados</option>
+                    <option value="alerta">⚠️ Próximos a vencer o vencidos</option>
                     <option value="vigente">🟢 Vigentes (> 30 días)</option>
                     <option value="proximo">🟡 Próximos a Vencer (≤ 30 días)</option>
                     <option value="vencido">🔴 Vencidos</option>
@@ -432,7 +429,7 @@
                             <th class="text-center">Stock en Lote</th>
                             <th class="text-center">Fecha Vencimiento</th>
                             <th class="text-center">Plazo / Días</th>
-                            <th class="text-center">Estado (S10)</th>
+                            <th class="text-center">Estado</th>
                             <th class="text-center">Acción</th>
                         </tr>
                     </thead>
@@ -453,7 +450,7 @@
         <div class="clay-card p-5 flex flex-col sm:flex-row items-center justify-between gap-4">
             <div>
                 <h3 class="text-base font-black text-slate-800">Historiales y Auditoría del Sistema</h3>
-                <p class="text-xs text-slate-500 font-bold">Registro cronológico de movimientos de stock (Kardex - S12), variaciones de precios (P08) y modificaciones de productos (P04)</p>
+                <p class="text-xs text-slate-500 font-bold">Registro cronológico de movimientos de stock (Kardex), variaciones de precios y modificaciones de productos</p>
             </div>
             <div class="flex items-center gap-2 flex-wrap">
                 <!-- Segmented Control para elegir entre Stock, Precios y Auditoría -->
@@ -462,10 +459,10 @@
                         Movimientos Stock
                     </button>
                     <button type="button" id="btnSubtabMovPrecios" onclick="cambiarSubtabMovimientos('precios')" class="px-3 py-1.5 rounded-lg text-slate-600 hover:text-slate-900 transition-all cursor-pointer">
-                        Historial Precios (P08)
+                        Historial Precios
                     </button>
                     <button type="button" id="btnSubtabMovAuditoria" onclick="cambiarSubtabMovimientos('auditoria')" class="px-3 py-1.5 rounded-lg text-slate-600 hover:text-slate-900 transition-all cursor-pointer">
-                        Modificaciones Productos (P04)
+                        Modificaciones Productos
                     </button>
                 </div>
                 <button type="button" onclick="recargarHistorialActual()" class="clay-btn-secondary px-3 py-1.5 text-xs font-bold flex items-center gap-1.5">
@@ -475,20 +472,20 @@
             </div>
         </div>
 
-        <!-- SUBTAB 1: MOVIMIENTOS DE STOCK (Kardex - S12) -->
+        <!-- SUBTAB 1: MOVIMIENTOS DE STOCK (Kardex) -->
         <div id="contenedorMovimientosStock" class="clay-card overflow-hidden">
             <div class="p-4 border-b border-slate-100 flex items-center justify-between flex-wrap gap-2">
                 <span class="text-xs font-black text-slate-700 uppercase tracking-wider flex items-center gap-2">
                     <i data-lucide="arrow-left-right" class="w-4 h-4 text-blue-600"></i>
-                    Libro Diario de Movimientos de Inventario (Kardex - S12)
+                    Libro Diario de Movimientos de Inventario (Kardex)
                 </span>
                 <div class="flex items-center gap-2 flex-wrap">
                     <select id="filtroTipoMovStock" onchange="cargarMovimientos()" class="clay-input py-1 px-2.5 text-xs font-bold">
                         <option value="">Todos los Tipos</option>
-                        <option value="ingreso">🟢 Ingresos (S03)</option>
-                        <option value="venta">🔵 Ventas (S04)</option>
-                        <option value="ajuste">🟠 Ajustes Manuales (S06)</option>
-                        <option value="devolucion">🟣 Devoluciones (S05)</option>
+                        <option value="ingreso">🟢 Ingresos</option>
+                        <option value="venta">🔵 Ventas</option>
+                        <option value="ajuste">🟠 Ajustes Manuales</option>
+                        <option value="devolucion">🟣 Devoluciones</option>
                     </select>
                     <select id="filtroProdMovStock" onchange="cargarMovimientos()" class="clay-input py-1 px-2.5 text-xs font-bold min-w-[180px]">
                         <option value="">Todos los Productos</option>
@@ -516,7 +513,7 @@
             </div>
         </div>
 
-        <!-- SUBTAB 2: HISTORIAL DE PRECIOS Y AUMENTOS MASIVOS (P08) -->
+        <!-- SUBTAB 2: HISTORIAL DE PRECIOS Y AUMENTOS MASIVOS -->
         <div id="contenedorHistorialPrecios" class="clay-card overflow-hidden hidden">
             <div class="p-4 border-b border-slate-100 flex items-center justify-between flex-wrap gap-2">
                 <span class="text-xs font-black text-slate-700 uppercase tracking-wider flex items-center gap-2">
@@ -526,7 +523,7 @@
                 <div class="flex items-center gap-2">
                     <select id="filtroOrigenMovPrecios" onchange="cargarMovimientosPrecios()" class="clay-input py-1 px-2.5 text-xs font-bold">
                         <option value="">Todos los Orígenes</option>
-                        <option value="aumento_masivo">Solo Aumentos Masivos (P07)</option>
+                        <option value="aumento_masivo">Solo Aumentos Masivos</option>
                         <option value="manual">Solo Modificación Manual</option>
                     </select>
                 </div>
@@ -553,12 +550,12 @@
             </div>
         </div>
 
-        <!-- SUBTAB 3: AUDITORÍA DE MODIFICACIONES DE PRODUCTOS (P04) -->
+        <!-- SUBTAB 3: AUDITORÍA DE MODIFICACIONES DE PRODUCTOS -->
         <div id="contenedorMovimientosAuditoria" class="clay-card overflow-hidden hidden">
             <div class="p-4 border-b border-slate-100 flex items-center justify-between flex-wrap gap-2">
                 <span class="text-xs font-black text-slate-700 uppercase tracking-wider flex items-center gap-2">
                     <i data-lucide="clipboard-check" class="w-4 h-4 text-indigo-600"></i>
-                    Historial de Modificaciones y Auditoría de Productos (P04)
+                    Historial de Modificaciones y Auditoría de Productos
                 </span>
                 <div class="flex items-center gap-2">
                     <select id="filtroProdMovAuditoria" onchange="cargarMovimientosAuditoria()" class="clay-input py-1 px-2.5 text-xs font-bold">
@@ -588,26 +585,34 @@
     </div>
 
     <!-- ========================================================= -->
-    <!-- PESTAÑA 5: CONTEO FÍSICO E INCONSISTENCIAS (S13)          -->
+    <!-- PESTAÑA 5: CONTEO FÍSICO E INCONSISTENCIAS          -->
     <!-- ========================================================= -->
     <div id="pestana-conteo" class="pestana-content hidden space-y-4">
         <div class="clay-card p-6 max-w-2xl mx-auto space-y-4">
             <div>
-                <h3 class="text-base font-black text-slate-800">Sesión de Conteo Físico e Inventario (S13)</h3>
+                <h3 class="text-base font-black text-slate-800">Sesión de Conteo Físico e Inventario</h3>
                 <p class="text-xs text-slate-500 font-bold">Ingresá la cantidad real contada en depósito para detectar diferencias y conciliar inconsistencias</p>
             </div>
 
             <form onsubmit="ejecutarConteoFisico(event)" class="space-y-4">
                 <div>
                     <label class="block text-xs font-extrabold text-slate-600 uppercase mb-1">Producto a Conciliar *</label>
-                    <select id="conteoProductoSelect" onchange="actualizarInfoConteo()" required class="clay-input w-full text-sm font-bold">
+                    <select id="conteoProductoSelect" onchange="actualizarLotesConteo(true)" required class="clay-input w-full text-sm font-bold">
                         <option value="">Seleccione un producto...</option>
                     </select>
                 </div>
 
+                <div>
+                    <label class="block text-xs font-extrabold text-slate-600 uppercase mb-1">Lote a Conciliar *</label>
+                    <select id="conteoLoteSelect" onchange="cambiarLoteConteo()" required disabled class="clay-input w-full text-sm font-bold">
+                        <option value="">Primero seleccione un producto...</option>
+                    </select>
+                    <p id="conteoLoteAyuda" class="mt-1 text-[11px] text-slate-500 font-bold">Seleccione un producto para ver sus lotes registrados.</p>
+                </div>
+
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-xs font-extrabold text-slate-500 uppercase mb-1">Stock Registrado en Sistema</label>
+                        <label class="block text-xs font-extrabold text-slate-500 uppercase mb-1">Stock Registrado en el Lote</label>
                         <input type="text" id="conteoStockSistema" readonly value="-" class="clay-input w-full bg-slate-50 font-black text-slate-600">
                     </div>
                     <div>
@@ -616,7 +621,7 @@
                     </div>
                 </div>
 
-                <!-- Diagnóstico y Comparativa en Vivo (S13) -->
+                <!-- Diagnóstico y Comparativa en Vivo -->
                 <div id="conteoPreviewBox" class="p-3.5 rounded-xl border border-slate-200 bg-slate-50 hidden space-y-1">
                     <div class="flex items-center justify-between">
                         <span class="text-xs font-bold text-slate-600">Diferencia Detectada:</span>
@@ -631,17 +636,17 @@
                 </div>
 
                 <button type="submit" class="clay-btn-primary w-full py-3 text-sm font-black shadow-lg">
-                    Registrar y Conciliar Diferencia (Ajuste S06)
+                    Registrar y Conciliar Diferencia
                 </button>
             </form>
         </div>
 
-        <!-- TABLA: RESUMEN DE INCONSISTENCIAS Y CONTEOS FÍSICOS (S13) -->
+        <!-- TABLA: RESUMEN DE INCONSISTENCIAS Y CONTEOS FÍSICOS -->
         <div class="clay-card overflow-hidden">
             <div class="p-4 border-b border-slate-100 flex items-center justify-between">
                 <span class="text-xs font-black text-slate-700 uppercase tracking-wider flex items-center gap-2">
                     <i data-lucide="clipboard-check" class="w-4 h-4 text-emerald-600"></i>
-                    Resumen de Inconsistencias y Conteos Físicos Realizados (S13)
+                    Resumen de Inconsistencias y Conteos Físicos Realizados
                 </span>
                 <span id="totalConteosTag" class="text-xs font-bold text-slate-500">Historial de conciliaciones</span>
             </div>
@@ -823,7 +828,7 @@
         <div class="flex items-center justify-between pb-3 border-b border-slate-100">
             <div>
                 <h3 class="text-base font-black text-slate-800">Registrar Ingreso de Mercadería</h3>
-                <p class="text-[11px] text-slate-500 font-bold">Ingreso de stock con asignación y creación de lote (S03/S09)</p>
+                <p class="text-[11px] text-slate-500 font-bold">Ingreso de stock con asignación y creación de lote</p>
             </div>
             <button onclick="cerrarModalIngreso()" class="p-1 text-slate-400 hover:text-slate-600 rounded-lg">
                 <i data-lucide="x" class="w-5 h-5"></i>
@@ -918,7 +923,7 @@
         <div class="flex items-center justify-between pb-3 border-b border-slate-100">
             <div>
                 <h3 class="text-base font-black text-slate-800">Registrar Nuevo Lote</h3>
-                <p class="text-[11px] text-slate-500 font-bold">Creación directa de lote con control de vencimiento (S09)</p>
+                <p class="text-[11px] text-slate-500 font-bold">Creación directa de lote con control de vencimiento</p>
             </div>
             <button onclick="cerrarModalNuevoLote()" class="p-1 text-slate-400 hover:text-slate-600 rounded-lg">
                 <i data-lucide="x" class="w-5 h-5"></i>
@@ -1032,7 +1037,7 @@
             <!-- Asignación Obligatoria de Lote -->
             <div class="space-y-2 p-3 bg-blue-50/60 rounded-xl border border-blue-100">
                 <div class="flex items-center justify-between">
-                    <label class="block text-[11px] font-extrabold text-blue-950 uppercase">Lote para el ajuste</label>
+                    <label class="block text-[11px] font-extrabold text-blue-950 uppercase">Asignación Obligatoria de Lote *</label>
                     <div id="ajusteModoTabs" class="inline-flex p-0.5 bg-white/90 rounded-lg border border-blue-200 text-[10px] font-bold">
                         <button type="button" id="btnAjusteModoExistente" onclick="cambiarModoLoteAjuste('existente')" class="px-2 py-0.5 rounded bg-blue-600 text-white font-extrabold shadow-xs transition-all">
                             Lote Existente
@@ -1046,10 +1051,10 @@
                 <!-- Selector de Lote Existente -->
                 <div id="contenedorAjusteLoteExistente" class="space-y-1">
                     <select id="ajusteLoteSelect" onchange="onLoteAjusteChange()" class="clay-input w-full text-xs font-bold bg-white">
-                        <option value="">-- Seleccione un lote si corresponde --</option>
+                        <option value="">-- Seleccione un Lote Existente Obligatorio --</option>
                     </select>
                     <div id="ajusteLoteInfo" class="mt-1 hidden"></div>
-                    <p id="msgSinLotesAjuste" class="hidden text-[11px] text-amber-700 font-bold"></p>
+                    <p id="msgSinLotesAjuste" class="hidden text-[11px] text-amber-700 font-bold">Este producto no posee lotes registrados aún. Para sumar stock sin descuadre, use la opción "Nuevo Lote".</p>
                 </div>
 
                 <!-- Formulario Nuevo Lote (sólo disponible al aumentar) -->
@@ -1067,7 +1072,7 @@
                     <p class="text-[10px] text-blue-700 font-medium">Se creará este nuevo lote y se incrementará simultáneamente el stock general del producto.</p>
                 </div>
 
-                <p class="text-[10px] text-slate-500 font-bold">Si el producto tiene lotes, seleccione uno. Si no tiene lotes, puede disminuir directamente del stock general.</p>
+                <p class="text-[10px] text-slate-500 font-bold">Regla de inventario: Todo ajuste en el lote actualiza obligatoriamente el producto en la misma cantidad.</p>
             </div>
 
             <div>
@@ -1084,14 +1089,14 @@
 </div>
 
 <!-- ========================================== -->
-<!-- MODAL: AUMENTO MASIVO DE PRECIOS (P07)     -->
+<!-- MODAL: AUMENTO MASIVO DE PRECIOS     -->
 <!-- ========================================== -->
 <div id="modalAumento" class="clay-modal-backdrop hidden" onclick="if(event.target === this) cerrarModalAumentoMasivo()">
     <div class="clay-modal-content max-w-xl p-6 space-y-4" onclick="event.stopPropagation()">
         <div class="flex items-center justify-between pb-3 border-b border-slate-100">
             <div>
-                <h3 class="text-base font-black text-slate-800">Aumento Masivo de Precios (P07)</h3>
-                <p class="text-[11px] font-bold text-slate-500">Configurá cómo redondear los nuevos precios</p>
+                <h3 class="text-base font-black text-slate-800">Aumento Masivo de Precios</h3>
+                <p class="text-[11px] font-bold text-slate-500">Actualización porcentual directa sin regla de redondeo</p>
             </div>
             <button onclick="cerrarModalAumentoMasivo()" class="p-1 text-slate-400 hover:text-slate-600 rounded-lg">
                 <i data-lucide="x" class="w-5 h-5"></i>
@@ -1124,17 +1129,6 @@
                     <input type="number" step="0.1" min="0.1" id="aumentoPorcentaje" required class="clay-input w-full font-black text-sm pr-8" placeholder="15.0" oninput="actualizarVistaPreviaAumento()">
                     <span class="absolute right-3 top-2.5 text-xs font-black text-slate-400">%</span>
                 </div>
-            </div>
-
-            <div>
-                <label for="aumentoRedondeo" class="block text-[11px] font-extrabold text-slate-600 uppercase mb-1">Regla de Redondeo</label>
-                <select id="aumentoRedondeo" class="clay-input w-full text-xs font-bold" onchange="actualizarVistaPreviaAumento()">
-                    <option value="sin_redondeo">Sin redondeo (mantener centavos)</option>
-                    <option value="peso_mas_cercano">Al peso más cercano</option>
-                    <option value="peso_superior">Siempre hacia arriba al peso</option>
-                    <option value="terminar_90">Terminar en .90 (hacia arriba)</option>
-                    <option value="terminar_99">Terminar en .99 (hacia arriba)</option>
-                </select>
             </div>
 
             <!-- Vista Previa de Productos Afectados (Criterio P07) -->
@@ -1181,7 +1175,7 @@
     <div class="clay-modal-content max-w-4xl p-6 space-y-4" onclick="event.stopPropagation()">
         <div class="flex items-center justify-between pb-3 border-b border-slate-100">
             <div>
-                <h3 class="text-base font-black text-slate-800">Historial y Auditoría de Productos (P08 / P04)</h3>
+                <h3 class="text-base font-black text-slate-800">Historial y Auditoría de Productos</h3>
                 <p id="historialProductoTitulo" class="text-xs font-bold text-slate-500">Historial Global de Precios y Modificaciones</p>
             </div>
             <button onclick="cerrarModalHistorial()" class="p-1 text-slate-400 hover:text-slate-600 rounded-lg">
@@ -1193,11 +1187,11 @@
         <div class="flex items-center gap-2 border-b border-slate-100 pb-2">
             <button type="button" id="modalHistTabBtn-precios" onclick="cambiarModalHistTab('precios')" class="px-3.5 py-1.5 rounded-xl font-black text-xs bg-white text-blue-600 shadow-xs border border-slate-200/80 transition-all cursor-pointer flex items-center gap-1.5">
                 <i data-lucide="trending-up" class="w-3.5 h-3.5 text-blue-600"></i>
-                <span>Historial de Precios (P08)</span>
+                <span>Historial de Precios</span>
             </button>
             <button type="button" id="modalHistTabBtn-auditoria" onclick="cambiarModalHistTab('auditoria')" class="px-3.5 py-1.5 rounded-xl font-bold text-xs text-slate-600 hover:text-slate-900 transition-all cursor-pointer flex items-center gap-1.5">
                 <i data-lucide="clipboard-check" class="w-3.5 h-3.5 text-slate-500"></i>
-                <span>Historial de Modificaciones / Auditoría (P04)</span>
+                <span>Historial de Modificaciones / Auditoría</span>
             </button>
         </div>
 
@@ -1212,7 +1206,7 @@
             <div id="historialFiltroOrigenGrupo" class="flex items-center gap-2">
                 <select id="historialFiltroOrigen" onchange="cambiarFiltroHistorialModal()" class="clay-input py-1 px-2.5 text-xs font-bold">
                     <option value="">Todos los Orígenes</option>
-                    <option value="aumento_masivo">Aumentos Masivos (P07)</option>
+                    <option value="aumento_masivo">Aumentos Masivos</option>
                     <option value="manual">Modificación Manual</option>
                 </select>
             </div>
@@ -1238,7 +1232,7 @@
             </table>
         </div>
 
-        <!-- VISTA 2: TABLA MODIFICACIONES Y AUDITORÍA (P04) -->
+        <!-- VISTA 2: TABLA MODIFICACIONES Y AUDITORÍA -->
         <div id="contenedorModalHistAuditoria" class="overflow-x-auto max-h-80 border border-slate-100 rounded-xl hidden">
             <table class="clay-table">
                 <thead>
@@ -1265,13 +1259,13 @@
 
 <!-- ========================================== -->
 <!-- ========================================== -->
-<!-- MODAL: GESTIÓN DE CATEGORÍAS (P02)        -->
+<!-- MODAL: GESTIÓN DE CATEGORÍAS        -->
 <!-- ========================================== -->
 <div id="modalCategoria" class="clay-modal-backdrop hidden" onclick="if(event.target === this) cerrarModalCategorias()">
     <div class="clay-modal-content max-w-lg p-6 space-y-4" onclick="event.stopPropagation()">
         <div class="flex items-center justify-between pb-3 border-b border-slate-100">
             <div>
-                <h3 class="text-base font-black text-slate-800">Administrar Categorías (P02)</h3>
+                <h3 class="text-base font-black text-slate-800">Administrar Categorías</h3>
                 <p class="text-[11px] font-bold text-slate-500">Alta, modificación y baja controlada de categorías</p>
             </div>
             <button onclick="cerrarModalCategorias()" class="p-1 text-slate-400 hover:text-slate-600 rounded-lg">
@@ -1322,13 +1316,13 @@
 </div>
 
 <!-- ========================================== -->
-<!-- MODAL: GESTIÓN DE MARCAS (P03)            -->
+<!-- MODAL: GESTIÓN DE MARCAS            -->
 <!-- ========================================== -->
 <div id="modalMarca" class="clay-modal-backdrop hidden" onclick="if(event.target === this) cerrarModalMarcas()">
     <div class="clay-modal-content max-w-lg p-6 space-y-4" onclick="event.stopPropagation()">
         <div class="flex items-center justify-between pb-3 border-b border-slate-100">
             <div>
-                <h3 class="text-base font-black text-slate-800">Administrar Marcas (P03)</h3>
+                <h3 class="text-base font-black text-slate-800">Administrar Marcas</h3>
                 <p class="text-[11px] font-bold text-slate-500">Alta, modificación y baja controlada de marcas comerciales</p>
             </div>
             <button onclick="cerrarModalMarcas()" class="p-1 text-slate-400 hover:text-slate-600 rounded-lg">
@@ -1380,13 +1374,13 @@
 
 <!-- ========================================== -->
 <!-- ========================================== -->
-<!-- MODAL: GESTIÓN DE UBICACIONES (S14)       -->
+<!-- MODAL: GESTIÓN DE UBICACIONES       -->
 <!-- ========================================== -->
 <div id="modalUbicaciones" class="clay-modal-backdrop hidden" onclick="if(event.target === this) cerrarModalUbicaciones()">
     <div class="clay-modal-content max-w-xl p-6 space-y-4" onclick="event.stopPropagation()">
         <div class="flex items-center justify-between pb-3 border-b border-slate-100">
             <div>
-                <h3 class="text-base font-black text-slate-800">Ubicaciones de Almacenamiento (S14)</h3>
+                <h3 class="text-base font-black text-slate-800">Ubicaciones de Almacenamiento</h3>
                 <p class="text-[11px] font-bold text-slate-500">Pasillos, estantes, niveles y góndolas del depósito</p>
             </div>
             <button onclick="cerrarModalUbicaciones()" class="p-1 text-slate-400 hover:text-slate-600 rounded-lg">
@@ -1449,13 +1443,13 @@
 </div>
 
 <!-- ========================================== -->
-<!-- MODAL: GESTIÓN DE UNIDADES Y EQUIVALENCIAS (S08) -->
+<!-- MODAL: GESTIÓN DE UNIDADES Y EQUIVALENCIAS -->
 <!-- ========================================== -->
 <div id="modalUnidades" class="clay-modal-backdrop hidden" onclick="if(event.target === this) cerrarModalUnidades()">
     <div class="clay-modal-content max-w-xl p-6 space-y-4" onclick="event.stopPropagation()">
         <div class="flex items-center justify-between pb-3 border-b border-slate-100">
             <div>
-                <h3 class="text-base font-black text-slate-800">Unidades de Medida y Equivalencias (S08)</h3>
+                <h3 class="text-base font-black text-slate-800">Unidades de Medida y Equivalencias</h3>
                 <p id="modalUnidadProdTitulo" class="text-xs font-extrabold text-blue-600">Configuración para el producto seleccionado</p>
             </div>
             <button onclick="cerrarModalUnidades()" class="p-1 text-slate-400 hover:text-slate-600 rounded-lg">
@@ -1531,12 +1525,12 @@
 </div>
 
 <!-- ========================================== -->
-<!-- MODAL: REGISTRAR DEVOLUCIÓN (S05)         -->
+<!-- MODAL: REGISTRAR DEVOLUCIÓN         -->
 <!-- ========================================== -->
 <div id="modalDevolucion" class="clay-modal-backdrop hidden" onclick="if(event.target === this) cerrarModalDevolucion()">
     <div class="clay-modal-content max-w-md p-6 space-y-4" onclick="event.stopPropagation()">
         <div class="flex items-center justify-between pb-3 border-b border-slate-100">
-            <h3 class="text-base font-black text-slate-800">Registrar Devolución (S05)</h3>
+            <h3 class="text-base font-black text-slate-800">Registrar Devolución</h3>
             <button onclick="cerrarModalDevolucion()" class="p-1 text-slate-400 hover:text-slate-600 rounded-lg">
                 <i data-lucide="x" class="w-5 h-5"></i>
             </button>
@@ -1613,6 +1607,9 @@
 
     document.addEventListener('DOMContentLoaded', () => {
         recargarTodo();
+        if (new URLSearchParams(window.location.search).get('tab') === 'lotes') {
+            cambiarPestana('lotes');
+        }
     });
 
     async function recargarTodo() {
@@ -1810,7 +1807,7 @@
             const cantStock = Number(p.stock ?? p.stock_disponible ?? 0);
             const stockMin = Number(p.stock_minimo || 5);
 
-            // Semáforo visual (S16)
+            // Semáforo visual
             let semaforoBadge = '';
             if (cantStock === 0) {
                 semaforoBadge = '<span class="clay-badge clay-badge-danger font-black"><span class="w-1.5 h-1.5 rounded-full bg-red-600 inline-block mr-1"></span>Agotado</span>';
@@ -1832,7 +1829,7 @@
                         <div class="text-[11px] text-slate-400 flex items-center gap-1.5 mt-0.5">
                             <span>${p.descripcion || '-'}</span>
                             <span class="text-slate-300">•</span>
-                            <span class="text-slate-500 font-bold flex items-center gap-0.5" title="Ubicación en depósito (S14)"><i data-lucide="map-pin" class="w-3 h-3 text-slate-400"></i>${ubicacionTexto}</span>
+                            <span class="text-slate-500 font-bold flex items-center gap-0.5" title="Ubicación en depósito"><i data-lucide="map-pin" class="w-3 h-3 text-slate-400"></i>${ubicacionTexto}</span>
                         </div>
                     </td>
                     <td><span class="text-xs font-bold text-slate-600">${p.categoria?.nombre || p.categoria_nombre || '-'}</span></td>
@@ -1847,16 +1844,16 @@
                     </td>
                     <td class="text-center">
                         <div class="flex items-center justify-center gap-1.5">
-                            <button onclick="abrirModalUnidades(${p.id_producto})" class="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg" title="Unidades y Equivalencias (S08)">
+                            <button onclick="abrirModalUnidades(${p.id_producto})" class="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg" title="Unidades y Equivalencias">
                                 <i data-lucide="layers" class="w-4 h-4"></i>
                             </button>
-                            <button onclick="abrirHistorialPrecios(${p.id_producto})" class="p-1.5 text-amber-600 hover:bg-amber-50 rounded-lg" title="Historial de Precios (P08)">
+                            <button onclick="abrirHistorialPrecios(${p.id_producto})" class="p-1.5 text-amber-600 hover:bg-amber-50 rounded-lg" title="Historial de Precios">
                                 <i data-lucide="history" class="w-4 h-4"></i>
                             </button>
-                            <button onclick="editarProducto(${p.id_producto})" class="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg" title="Editar Producto (P04)">
+                            <button onclick="editarProducto(${p.id_producto})" class="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg" title="Editar Producto">
                                 <i data-lucide="edit-3" class="w-4 h-4"></i>
                             </button>
-                            <button onclick="cambiarEstadoProducto(${p.id_producto}, '${p.estado}')" class="p-1.5 ${esActivo ? 'text-rose-600 hover:bg-rose-50' : 'text-emerald-600 hover:bg-emerald-50'} rounded-lg" title="${esActivo ? 'Desactivar (P06)' : 'Activar (P06)'}">
+                            <button onclick="cambiarEstadoProducto(${p.id_producto}, '${p.estado}')" class="p-1.5 ${esActivo ? 'text-rose-600 hover:bg-rose-50' : 'text-emerald-600 hover:bg-emerald-50'} rounded-lg" title="${esActivo ? 'Desactivar' : 'Activar'}">
                                 <i data-lucide="${esActivo ? 'power' : 'check'}" class="w-4 h-4"></i>
                             </button>
                         </div>
@@ -1951,7 +1948,7 @@
                         <div class="text-[11px] text-slate-400">${p.categoria?.nombre || p.categoria_nombre || '-'}</div>
                     </td>
                     <td>
-                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 font-bold text-xs" title="Ubicación física (S14)">
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 font-bold text-xs" title="Ubicación física">
                             <i data-lucide="map-pin" class="w-3 h-3 text-slate-500"></i>
                             ${ubicacionTexto}
                         </span>
@@ -1963,14 +1960,14 @@
                     <td class="text-center">${semaforoBadge}</td>
                     <td class="text-center">
                         <div class="flex items-center justify-center gap-1">
-                            <button onclick="abrirModalIngresoRapido(${p.id_producto})" class="clay-btn-primary px-2 py-1 text-[11px] font-bold" title="Reponer Stock (S03)">Reponer</button>
-                            <button onclick="abrirModalAjuste(${p.id_producto})" class="p-1 text-amber-600 hover:bg-amber-50 rounded" title="Ajuste Manual de Inventario (S06)">
+                            <button onclick="abrirModalIngresoRapido(${p.id_producto})" class="clay-btn-primary px-2 py-1 text-[11px] font-bold" title="Reponer Stock">Reponer</button>
+                            <button onclick="abrirModalAjuste(${p.id_producto})" class="p-1 text-amber-600 hover:bg-amber-50 rounded" title="Ajuste Manual de Inventario">
                                 <i data-lucide="sliders" class="w-3.5 h-3.5"></i>
                             </button>
-                            <button onclick="abrirModalDevolucion(${p.id_producto})" class="p-1 text-purple-600 hover:bg-purple-50 rounded" title="Registrar Devolución (S05)">
+                            <button onclick="abrirModalDevolucion(${p.id_producto})" class="p-1 text-purple-600 hover:bg-purple-50 rounded" title="Registrar Devolución">
                                 <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
                             </button>
-                            <button onclick="abrirModalUnidades(${p.id_producto})" class="p-1 text-indigo-600 hover:bg-indigo-50 rounded" title="Unidades de Medida (S08)">
+                            <button onclick="abrirModalUnidades(${p.id_producto})" class="p-1 text-indigo-600 hover:bg-indigo-50 rounded" title="Unidades de Medida">
                                 <i data-lucide="layers" class="w-3.5 h-3.5"></i>
                             </button>
                         </div>
@@ -2069,6 +2066,7 @@
         if (selectIngreso) selectIngreso.innerHTML = options;
         if (selectAjuste) selectAjuste.innerHTML = options;
         if (selectNuevoLote) selectNuevoLote.innerHTML = options;
+        actualizarLotesConteo();
     }
 
     async function cargarLotes() {
@@ -2076,8 +2074,52 @@
             const res = await fetch(`${API_BASE}/stock/lotes`);
             const json = await res.json();
             lotesCache = json.data || [];
+            actualizarLotesConteo();
             renderTablaLotes();
         } catch (e) { console.error('Error lotes', e); }
+    }
+
+    function actualizarLotesConteo(limpiarConteo = false) {
+        const selectProducto = document.getElementById('conteoProductoSelect');
+        const selectLote = document.getElementById('conteoLoteSelect');
+        const ayuda = document.getElementById('conteoLoteAyuda');
+        if (!selectProducto || !selectLote) return;
+
+        const idProducto = selectProducto.value;
+        const idLoteActual = selectLote.value;
+        const lotesProducto = lotesCache.filter(l => String(l.id_producto) === idProducto);
+
+        selectLote.replaceChildren(new Option('Seleccione un lote...', ''));
+        lotesProducto.forEach(lote => {
+            const vencimiento = lote.fecha_vencimiento ? ` · Vence: ${lote.fecha_vencimiento.substring(0, 10)}` : '';
+            selectLote.add(new Option(
+                `${lote.nro_lote} · Stock: ${Number(lote.cantidad_actual ?? 0)} u.${vencimiento}`,
+                String(lote.id_lote)
+            ));
+        });
+
+        selectLote.disabled = !idProducto || lotesProducto.length === 0;
+        if (lotesProducto.some(l => String(l.id_lote) === idLoteActual)) {
+            selectLote.value = idLoteActual;
+        }
+        if (limpiarConteo) {
+            document.getElementById('conteoCantidadFisica').value = '';
+        }
+
+        if (ayuda) {
+            ayuda.textContent = !idProducto
+                ? 'Seleccione un producto para ver sus lotes registrados.'
+                : lotesProducto.length > 0
+                    ? 'Seleccione el lote que está contando físicamente.'
+                    : 'Este producto no tiene lotes registrados. Cree uno desde la pestaña Lotes y Vencimientos para poder contarlo.';
+        }
+
+        actualizarStockConteo();
+    }
+
+    function cambiarLoteConteo() {
+        document.getElementById('conteoCantidadFisica').value = '';
+        actualizarStockConteo();
     }
 
     function renderTablaLotes() {
@@ -2142,10 +2184,12 @@
 
         // Filtro estado
         if (estadoFiltro !== 'todos') {
-            lotes = lotes.filter(l => l.estadoCalculado === estadoFiltro);
+            lotes = lotes.filter(l => estadoFiltro === 'alerta'
+                ? l.estadoCalculado === 'proximo' || l.estadoCalculado === 'vencido'
+                : l.estadoCalculado === estadoFiltro);
         }
 
-        // Ordenamiento (S11)
+        // Ordenamiento
         if (orden === 'venc_asc') {
             lotes.sort((a, b) => (a.diasRestantes ?? 99999) - (b.diasRestantes ?? 99999));
         } else if (orden === 'venc_desc') {
@@ -2201,7 +2245,7 @@
                     <td class="text-center"><span class="clay-badge ${badgeClass} uppercase">${badgeTexto}</span></td>
                     <td class="text-center">
                         <div class="flex items-center justify-center gap-1">
-                            <button onclick="abrirModalAjuste(${l.id_producto}, ${l.id_lote})" class="p-1.5 text-amber-600 hover:bg-amber-50 rounded" title="Ajustar o corregir este lote (S06)">
+                            <button onclick="abrirModalAjuste(${l.id_producto}, ${l.id_lote})" class="p-1.5 text-amber-600 hover:bg-amber-50 rounded" title="Ajustar o corregir este lote">
                                 <i data-lucide="sliders" class="w-4 h-4"></i>
                             </button>
                             <button onclick="abrirModalIngresoRapido(${l.id_producto})" class="p-1.5 text-blue-600 hover:bg-blue-50 rounded" title="Ingresar mercadería con este producto">
@@ -2214,6 +2258,17 @@
         }).join('');
 
         if (window.lucide) window.lucide.createIcons();
+    }
+
+    function mostrarLotesEnAlerta() {
+        const filtroEstado = document.getElementById('filtroLotesEstado');
+        const busqueda = document.getElementById('filtroLotesSearch');
+        const tabla = document.getElementById('tablaLotesBody');
+
+        if (filtroEstado) filtroEstado.value = 'alerta';
+        if (busqueda) busqueda.value = '';
+        renderTablaLotes();
+        tabla?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
 
     let subtabMovimientosActual = 'stock';
@@ -2381,7 +2436,7 @@
                 const pct = (h.porcentaje_aumento !== null && h.porcentaje_aumento !== undefined) ? Number(h.porcentaje_aumento) : null;
                 const pctBadge = pct !== null ? (pct >= 0 ? `<span class="clay-badge clay-badge-success font-black">+${pct.toFixed(2)}%</span>` : `<span class="clay-badge clay-badge-danger font-black">${pct.toFixed(2)}%</span>`) : '<span class="text-slate-400">-</span>';
                 const origenBadge = h.origen === 'aumento_masivo' 
-                    ? '<span class="clay-badge clay-badge-info font-black">Aumento Masivo (P07)</span>' 
+                    ? '<span class="clay-badge clay-badge-info font-black">Aumento Masivo</span>' 
                     : '<span class="clay-badge clay-badge-warning font-black">Manual</span>';
                 const usuario = h.usuario_nombre || 'Sistema';
 
@@ -2966,7 +3021,7 @@
         }
     }
 
-    // Modal Ajuste (S06)
+    // Modal Ajuste
     let modoLoteAjuste = 'existente';
 
     function cambiarModoLoteAjuste(modo) {
@@ -2998,21 +3053,9 @@
         const tipo = document.getElementById('ajusteTipo')?.value || 'aumentar';
         const tabs = document.getElementById('ajusteModoTabs');
         const labelCant = document.getElementById('ajusteCantidadLabel');
-        const msgSinLotes = document.getElementById('msgSinLotesAjuste');
 
         if (labelCant) {
             labelCant.textContent = tipo === 'fijar' ? 'Nueva Cantidad Exacta del Lote' : 'Cantidad';
-        }
-
-        if (msgSinLotes && !msgSinLotes.classList.contains('hidden')) {
-            const prodId = document.getElementById('ajusteProductoSelect')?.value;
-            const producto = productosCache.find(p => String(p.id_producto) === String(prodId));
-            const stockActual = Number(producto?.stock ?? producto?.stock_disponible ?? 0);
-            msgSinLotes.textContent = tipo === 'disminuir'
-                ? `No hay lotes registrados. La disminución se aplicará al stock general (${stockActual} u.), sin asociarse a un lote.`
-                : tipo === 'aumentar'
-                    ? 'Este producto no posee lotes. Para aumentar el stock, registre un Nuevo Lote.'
-                    : 'Este producto no posee lotes registrados para fijar una cantidad exacta.';
         }
 
         if (tipo === 'disminuir' || tipo === 'fijar') {
@@ -3179,15 +3222,8 @@
 
         if (lotes.length === 0) {
             selectLote.innerHTML = '<option value="">-- No hay lotes registrados para este producto --</option>';
+            if (msgSinLotes) msgSinLotes.classList.remove('hidden');
             const tipo = document.getElementById('ajusteTipo')?.value;
-            if (msgSinLotes) {
-                msgSinLotes.textContent = tipo === 'disminuir'
-                    ? `No hay lotes registrados. La disminución se aplicará al stock general (${stockActual} u.), sin asociarse a un lote.`
-                    : tipo === 'aumentar'
-                        ? 'Este producto no posee lotes. Para aumentar el stock, registre un Nuevo Lote.'
-                        : 'Este producto no posee lotes registrados para fijar una cantidad exacta.';
-                msgSinLotes.classList.remove('hidden');
-            }
             if (tipo === 'aumentar') {
                 cambiarModoLoteAjuste('nuevo');
             }
@@ -3305,17 +3341,10 @@
         if (modoLoteAjuste === 'existente') {
             const loteId = document.getElementById('ajusteLoteSelect')?.value;
             if (!loteId) {
-                const selectLote = document.getElementById('ajusteLoteSelect');
-                const hayLotes = Array.from(selectLote?.options || []).some(opcion => opcion.value !== '');
-                if (tipo !== 'disminuir' || hayLotes) {
-                    alert(hayLotes
-                        ? 'Seleccione el lote del que desea descontar.'
-                        : 'Para este ajuste debe seleccionar o crear un lote.');
-                    return;
-                }
-            } else {
-                payload.id_lote = Number(loteId);
+                alert('Debe seleccionar obligatoriamente un lote existente para realizar el ajuste.');
+                return;
             }
+            payload.id_lote = Number(loteId);
         } else {
             const nroLote = document.getElementById('ajusteNroLoteNuevo')?.value.trim();
             if (!nroLote) {
@@ -3349,34 +3378,36 @@
         }
     }
 
-    function actualizarInfoConteo() {
-        const id = document.getElementById('conteoProductoSelect')?.value;
-        const prod = productosCache.find(p => String(p.id_producto) === id);
+    function actualizarStockConteo() {
+        const idLote = document.getElementById('conteoLoteSelect')?.value;
+        const lote = lotesCache.find(l => String(l.id_lote) === idLote);
         const inputSis = document.getElementById('conteoStockSistema');
-        if (inputSis) inputSis.value = prod ? `${prod.stock ?? prod.stock_disponible ?? 0} u.` : '-';
+        if (inputSis) inputSis.value = lote ? `${Number(lote.cantidad_actual ?? 0)} u.` : '-';
         actualizarPreviewConteo();
     }
 
     function actualizarPreviewConteo() {
         const id = document.getElementById('conteoProductoSelect')?.value;
+        const idLote = document.getElementById('conteoLoteSelect')?.value;
         const cantFisicaInput = document.getElementById('conteoCantidadFisica')?.value;
         const box = document.getElementById('conteoPreviewBox');
         const difSpan = document.getElementById('conteoPreviewDif');
         const diagEl = document.getElementById('conteoPreviewDiagnostico');
         if (!box || !difSpan || !diagEl) return;
 
-        if (!id || cantFisicaInput === '' || cantFisicaInput === null || cantFisicaInput === undefined) {
+        if (!id || !idLote || cantFisicaInput === '' || cantFisicaInput === null || cantFisicaInput === undefined) {
             box.classList.add('hidden');
             return;
         }
 
         const prod = productosCache.find(p => String(p.id_producto) === id);
-        if (!prod) {
+        const lote = lotesCache.find(l => String(l.id_lote) === idLote && String(l.id_producto) === id);
+        if (!prod || !lote) {
             box.classList.add('hidden');
             return;
         }
 
-        const stockSis = Number(prod.stock ?? prod.stock_disponible ?? 0);
+        const stockSis = Number(lote.cantidad_actual ?? 0);
         const cantFisica = Number(cantFisicaInput);
         const dif = cantFisica - stockSis;
 
@@ -3385,40 +3416,46 @@
             difSpan.className = 'font-black text-sm text-emerald-600';
             difSpan.textContent = '0 u. (Coincidencia)';
             diagEl.className = 'text-xs font-extrabold text-emerald-700 pt-0.5';
-            diagEl.textContent = '✓ El conteo físico coincide con el stock del sistema. Inventario conciliado.';
+            diagEl.textContent = '✓ El conteo físico coincide con el stock del lote. Inventario conciliado.';
         } else if (dif > 0) {
             difSpan.className = 'font-black text-sm text-blue-600';
             difSpan.textContent = `+${dif} u. (Sobrante)`;
             diagEl.className = 'text-xs font-extrabold text-blue-700 pt-0.5';
-            diagEl.textContent = `▲ Se detectó un sobrante de ${dif} unidad(es) física(s) respecto al stock teórico del sistema.`;
+            diagEl.textContent = `▲ Se detectó un sobrante de ${dif} unidad(es) física(s) respecto al stock teórico del lote.`;
         } else {
             difSpan.className = 'font-black text-sm text-rose-600';
             difSpan.textContent = `${dif} u. (Faltante)`;
             diagEl.className = 'text-xs font-extrabold text-rose-700 pt-0.5';
-            diagEl.textContent = `▼ Se detectó un faltante de ${Math.abs(dif)} unidad(es) física(s) respecto al sistema (inconsistencia).`;
+            diagEl.textContent = `▼ Se detectó un faltante de ${Math.abs(dif)} unidad(es) física(s) respecto al lote (inconsistencia).`;
         }
     }
 
     async function ejecutarConteoFisico(e) {
         e.preventDefault();
         const id = document.getElementById('conteoProductoSelect').value;
+        const idLote = document.getElementById('conteoLoteSelect').value;
         const cantFisica = Number(document.getElementById('conteoCantidadFisica').value);
         const prod = productosCache.find(p => String(p.id_producto) === id);
-        if (!prod) return;
+        const lote = lotesCache.find(l => String(l.id_lote) === idLote && String(l.id_producto) === id);
+        if (!prod || !lote) {
+            alert('Seleccione un producto y un lote registrado antes de procesar el conteo físico.');
+            return;
+        }
 
-        const stockSis = Number(prod.stock ?? prod.stock_disponible ?? 0);
+        const stockSis = Number(lote.cantidad_actual ?? 0);
         const dif = cantFisica - stockSis;
         if (dif === 0) {
-            alert('¡El conteo físico coincide exactamente con el stock del sistema! No se requiere ajuste.');
+            alert('¡El conteo físico coincide exactamente con el stock del lote! No se requiere ajuste.');
             return;
         }
 
         const tipo = dif > 0 ? 'aumentar' : 'disminuir';
         const obs = document.getElementById('conteoObs').value.trim();
-        const motivo = `Conteo Físico (S13): Stock anterior ${stockSis} u., contaron ${cantFisica} u. (Dif: ${dif > 0 ? '+' : ''}${dif} u.). ${obs ? 'Obs: ' + obs : ''}`;
+        const motivo = `Conteo Físico: Stock anterior del lote ${lote.nro_lote}: ${stockSis} u., contaron ${cantFisica} u. (Dif: ${dif > 0 ? '+' : ''}${dif} u.). ${obs ? 'Obs: ' + obs : ''}`;
         const csrf = document.querySelector('meta[name="csrf-token"]').content;
         const payload = {
             id_producto: id,
+            id_lote: Number(lote.id_lote),
             tipo,
             cantidad: Math.abs(dif),
             motivo: motivo
@@ -3432,10 +3469,10 @@
             });
             const data = await res.json();
             if (data.status === 'success') {
-                alert(`¡Conteo físico procesado exitosamente!\nStock de ${prod.nombre} conciliado a ${cantFisica} u. (Diferencia ajustada: ${dif > 0 ? '+' : ''}${dif} u.)`);
+                alert(`¡Conteo físico procesado exitosamente!\nLote ${lote.nro_lote} de ${prod.nombre} conciliado a ${cantFisica} u. (Diferencia ajustada: ${dif > 0 ? '+' : ''}${dif} u.)`);
                 document.getElementById('conteoCantidadFisica').value = '';
                 document.getElementById('conteoObs').value = '';
-                actualizarInfoConteo();
+                actualizarStockConteo();
                 await recargarTodo();
                 await cargarHistorialConteosFisicos();
             } else {
@@ -3697,7 +3734,7 @@
         } catch (err) { alert('Error de conexión'); }
     }
 
-    // Modal Aumento Masivo (P07)
+    // Modal Aumento Masivo
     function abrirModalAumentoMasivo() {
         document.getElementById('modalAumento').classList.remove('hidden');
         const selCat = document.getElementById('aumentoCategoriaSelect');
@@ -3726,7 +3763,6 @@
         const crit = document.getElementById('aumentoCriterio')?.value || 'todos';
         const pctInput = document.getElementById('aumentoPorcentaje')?.value;
         const pct = Number(pctInput) || 0;
-        const reglaRedondeo = document.getElementById('aumentoRedondeo')?.value || 'sin_redondeo';
         const tbody = document.getElementById('aumentoPreviewBody');
         const countSpan = document.getElementById('aumentoPreviewCount');
         if (!tbody) return;
@@ -3749,22 +3785,7 @@
 
         tbody.innerHTML = prods.slice(0, 100).map(p => {
             const actual = Number(p.precio_unitario || 0);
-            const calculado = pct > 0 ? Math.round(actual * (1 + pct / 100) * 100) / 100 : actual;
-            const precioEnCentavos = Math.round(calculado * 100);
-            const unidadPeso = Math.floor(precioEnCentavos / 100);
-            let nuevoEnCentavos = precioEnCentavos;
-
-            if (reglaRedondeo === 'peso_mas_cercano') {
-                nuevoEnCentavos = Math.round(calculado) * 100;
-            } else if (reglaRedondeo === 'peso_superior') {
-                nuevoEnCentavos = Math.ceil(calculado) * 100;
-            } else if (reglaRedondeo === 'terminar_90' || reglaRedondeo === 'terminar_99') {
-                const terminacion = reglaRedondeo === 'terminar_90' ? 90 : 99;
-                const candidato = unidadPeso * 100 + terminacion;
-                nuevoEnCentavos = precioEnCentavos <= candidato ? candidato : (unidadPeso + 1) * 100 + terminacion;
-            }
-
-            const nuevo = (nuevoEnCentavos / 100).toFixed(2);
+            const nuevo = pct > 0 ? (Math.round((actual * (1 + pct / 100)) * 100) / 100).toFixed(2) : actual.toFixed(2);
             return `
                 <tr>
                     <td class="font-extrabold text-slate-700 text-xs">${p.codigo}</td>
@@ -3781,7 +3802,6 @@
         const csrf = document.querySelector('meta[name="csrf-token"]').content;
         const crit = document.getElementById('aumentoCriterio').value;
         const porcentaje = Number(document.getElementById('aumentoPorcentaje').value);
-        const reglaRedondeo = document.getElementById('aumentoRedondeo').value;
 
         if (!porcentaje || porcentaje <= 0) {
             alert('Debe ingresar un porcentaje mayor a 0');
@@ -3791,7 +3811,6 @@
         const payload = {
             tipo_criterio: crit,
             porcentaje: porcentaje,
-            regla_redondeo: reglaRedondeo,
             confirmar: true
         };
         if (crit === 'categoria') payload.id_categoria = document.getElementById('aumentoCategoriaSelect').value;
@@ -3887,8 +3906,8 @@
                 : `Historial de Precios: ${prod.codigo} - ${prod.nombre}`;
         } else {
             tituloEl.textContent = modalHistTabActual === 'auditoria'
-                ? 'Historial Global de Modificaciones y Auditoría de Productos (P04)'
-                : 'Historial Global de Precios y Aumentos Masivos (P08)';
+                ? 'Historial Global de Modificaciones y Auditoría de Productos'
+                : 'Historial Global de Precios y Aumentos Masivos';
         }
     }
 
@@ -3997,7 +4016,7 @@
                     const pct = (h.porcentaje_aumento !== null && h.porcentaje_aumento !== undefined) ? Number(h.porcentaje_aumento) : null;
                     const pctBadge = pct !== null ? (pct >= 0 ? `<span class="clay-badge clay-badge-success font-black">+${pct.toFixed(2)}%</span>` : `<span class="clay-badge clay-badge-danger font-black">${pct.toFixed(2)}%</span>`) : '<span class="text-slate-400">-</span>';
                     const origenBadge = h.origen === 'aumento_masivo' 
-                        ? '<span class="clay-badge clay-badge-info font-black">Aumento Masivo (P07)</span>' 
+                        ? '<span class="clay-badge clay-badge-info font-black">Aumento Masivo</span>' 
                         : '<span class="clay-badge clay-badge-warning font-black">Manual</span>';
                     const usuario = h.usuario_nombre || 'Sistema';
 
@@ -4026,7 +4045,7 @@
         document.getElementById('modalHistorial').classList.add('hidden'); 
     }
 
-    // Modal Categorías (P02)
+    // Modal Categorías
     function abrirModalCategorias() {
         cancelarEdicionCategoria();
         document.getElementById('modalCategoria').classList.remove('hidden');
@@ -4065,10 +4084,10 @@
                 <td class="text-center"><span class="clay-badge clay-badge-info">${c.total_productos ?? 0} prod.</span></td>
                 <td class="text-center">
                     <div class="flex items-center justify-center gap-1">
-                        <button type="button" onclick="editarCategoria(${c.id_categoria}, '${c.nombre.replace(/'/g, "\\'")}')" class="p-1 text-blue-600 hover:bg-blue-50 rounded" title="Editar Categoría (P02)">
+                        <button type="button" onclick="editarCategoria(${c.id_categoria}, '${c.nombre.replace(/'/g, "\\'")}')" class="p-1 text-blue-600 hover:bg-blue-50 rounded" title="Editar Categoría">
                             <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
                         </button>
-                        <button type="button" onclick="eliminarCategoria(${c.id_categoria}, '${c.nombre.replace(/'/g, "\\'")}', ${c.total_productos ?? 0})" class="p-1 text-rose-600 hover:bg-rose-50 rounded" title="Dar de Baja / Eliminar Categoría (P02)">
+                        <button type="button" onclick="eliminarCategoria(${c.id_categoria}, '${c.nombre.replace(/'/g, "\\'")}', ${c.total_productos ?? 0})" class="p-1 text-rose-600 hover:bg-rose-50 rounded" title="Dar de Baja / Eliminar Categoría">
                             <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
                         </button>
                     </div>
@@ -4104,7 +4123,7 @@
     }
     async function eliminarCategoria(id, nombre, totalProductos) {
         if (totalProductos > 0) {
-            alert(`No se puede dar de baja la categoría "${nombre}" porque está siendo utilizada por ${totalProductos} producto(s). (Criterio P02)`);
+            alert(`No se puede dar de baja la categoría "${nombre}" porque está siendo utilizada por ${totalProductos} producto(s).`);
             return;
         }
         if (!confirm(`¿Confirma dar de baja / eliminar la categoría "${nombre}"?`)) return;
@@ -4124,7 +4143,7 @@
         } catch (e) { alert('Error de conexión al eliminar categoría'); }
     }
 
-    // Modal Marcas (P03)
+    // Modal Marcas
     function abrirModalMarcas() {
         cancelarEdicionMarca();
         document.getElementById('modalMarca').classList.remove('hidden');
@@ -4160,10 +4179,10 @@
                 <td class="text-center"><span class="clay-badge clay-badge-info">${m.total_productos ?? 0} prod.</span></td>
                 <td class="text-center">
                     <div class="flex items-center justify-center gap-1">
-                        <button type="button" onclick="editarMarca(${m.id_marca}, '${m.nombre.replace(/'/g, "\\'")}')" class="p-1 text-blue-600 hover:bg-blue-50 rounded" title="Editar Marca (P03)">
+                        <button type="button" onclick="editarMarca(${m.id_marca}, '${m.nombre.replace(/'/g, "\\'")}')" class="p-1 text-blue-600 hover:bg-blue-50 rounded" title="Editar Marca">
                             <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
                         </button>
-                        <button type="button" onclick="eliminarMarca(${m.id_marca}, '${m.nombre.replace(/'/g, "\\'")}', ${m.total_productos ?? 0})" class="p-1 text-rose-600 hover:bg-rose-50 rounded" title="Dar de Baja / Eliminar Marca (P03)">
+                        <button type="button" onclick="eliminarMarca(${m.id_marca}, '${m.nombre.replace(/'/g, "\\'")}', ${m.total_productos ?? 0})" class="p-1 text-rose-600 hover:bg-rose-50 rounded" title="Dar de Baja / Eliminar Marca">
                             <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
                         </button>
                     </div>
@@ -4199,7 +4218,7 @@
     }
     async function eliminarMarca(id, nombre, totalProductos) {
         if (totalProductos > 0) {
-            alert(`No se puede dar de baja la marca "${nombre}" porque está siendo utilizada por ${totalProductos} producto(s). (Criterio P03)`);
+            alert(`No se puede dar de baja la marca "${nombre}" porque está siendo utilizada por ${totalProductos} producto(s).`);
             return;
         }
         if (!confirm(`¿Confirma dar de baja / eliminar la marca "${nombre}"?`)) return;
@@ -4220,7 +4239,7 @@
     }
 
     // ==========================================
-    // MODAL: GESTIÓN DE UBICACIONES (S14)
+    // MODAL: GESTIÓN DE UBICACIONES
     // ==========================================
     function abrirModalUbicaciones() {
         cancelarEdicionUbicacion();
@@ -4271,13 +4290,13 @@
                     </td>
                     <td class="text-center">
                         <div class="flex items-center justify-center gap-1">
-                            <button type="button" onclick="verProductosUbicacion(${u.id_ubicacion}, '${u.descripcion.replace(/'/g, "\\'")}')" class="p-1 text-emerald-600 hover:bg-emerald-50 rounded" title="Ver productos en esta ubicación (S14 Criterio 5)">
+                            <button type="button" onclick="verProductosUbicacion(${u.id_ubicacion}, '${u.descripcion.replace(/'/g, "\\'")}')" class="p-1 text-emerald-600 hover:bg-emerald-50 rounded" title="Ver productos en esta ubicación">
                                 <i data-lucide="eye" class="w-3.5 h-3.5"></i>
                             </button>
-                            <button type="button" onclick="editarUbicacion(${u.id_ubicacion}, '${u.descripcion.replace(/'/g, "\\'")}')" class="p-1 text-blue-600 hover:bg-blue-50 rounded" title="Editar Ubicación (S14)">
+                            <button type="button" onclick="editarUbicacion(${u.id_ubicacion}, '${u.descripcion.replace(/'/g, "\\'")}')" class="p-1 text-blue-600 hover:bg-blue-50 rounded" title="Editar Ubicación">
                                 <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
                             </button>
-                            <button type="button" onclick="eliminarUbicacion(${u.id_ubicacion}, '${u.descripcion.replace(/'/g, "\\'")}', ${count})" class="p-1 text-rose-600 hover:bg-rose-50 rounded" title="Dar de baja / eliminar ubicación (S14 Criterio 6)">
+                            <button type="button" onclick="eliminarUbicacion(${u.id_ubicacion}, '${u.descripcion.replace(/'/g, "\\'")}', ${count})" class="p-1 text-rose-600 hover:bg-rose-50 rounded" title="Dar de baja / eliminar ubicación">
                                 <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
                             </button>
                         </div>
@@ -4342,7 +4361,7 @@
 
     async function eliminarUbicacion(id, descripcion, productosCount) {
         if (productosCount > 0) {
-            alert(`No se puede eliminar la ubicación "${descripcion}" porque tiene ${productosCount} producto(s) asignados. (S14 Criterio 6)`);
+            alert(`No se puede eliminar la ubicación "${descripcion}" porque tiene ${productosCount} producto(s) asignados.`);
             return;
         }
         if (!confirm(`¿Confirma dar de baja / eliminar la ubicación "${descripcion}"?`)) return;
@@ -4363,7 +4382,7 @@
     }
 
     // ==========================================
-    // MODAL: GESTIÓN DE UNIDADES Y EQUIVALENCIAS (S08)
+    // MODAL: GESTIÓN DE UNIDADES Y EQUIVALENCIAS
     // ==========================================
     let productoUnidadSeleccionado = null;
     let unidadesProductoCache = [];
@@ -4568,7 +4587,7 @@
         }
     }
 
-    // Modal Devoluciones (S05)
+    // Modal Devoluciones
     async function abrirModalDevolucion(prodId = null) {
         document.getElementById('modalDevolucion').classList.remove('hidden');
         const sel = document.getElementById('modalDevProductoSelect');
