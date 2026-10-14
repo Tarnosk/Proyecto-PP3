@@ -7,8 +7,11 @@ import { Supplier, Customer, Product, PriceList, User, Purchase } from '../types
 const mockUser: User = {
   id: 'USR-1',
   name: 'Admin Test',
+  username: 'admin_test',
   email: 'admin@distribuidora.com',
   role: 'Administrador',
+  status: 'Activo',
+  phone: '123456789',
 };
 
 const mockSuppliers: Supplier[] = [
@@ -59,7 +62,7 @@ const mockProducts: Product[] = [
     id_producto: 1,
     code: 'HAR-001',
     name: 'Harina 000 1Kg',
-    description: 'Harina de trigo',
+    descripcion: 'Harina de trigo',
     category: 'Alimentos',
     brand: 'Blancaflor',
     cost: 750,
@@ -68,6 +71,7 @@ const mockProducts: Product[] = [
     minStock: 20,
     optimalStock: 150,
     status: 'activo',
+    iva: '21%',
   }
 ];
 const mockPurchases: Purchase[] = [];

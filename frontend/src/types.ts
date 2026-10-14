@@ -8,11 +8,11 @@ export type UserRole = 'Administrador' | 'Repartidor' | 'Preventista' | 'Adminis
 export interface User {
   id: string;
   name: string;
-  username: string;
+  username?: string;
   email: string;
   role: UserRole;
-  status: 'Activo' | 'Inactivo';
-  phone: string;
+  status?: 'Activo' | 'Inactivo';
+  phone?: string;
   lastLogin?: string;
 }
 
@@ -57,7 +57,7 @@ export interface Product {
   precio_unitario?: number;
   precio_mayorista?: number;
   precio_minorista?: number;
-  iva: '10.5%' | '21%' | '0%';
+  iva?: '10.5%' | '21%' | '0%';
   stock: number;
   stock_disponible?: number;
   committedStock?: number;
@@ -81,6 +81,12 @@ export interface Product {
   usuario_modificacion_nombre?: string;
   id_ubicacion?: number;
   ubicacion_nombre?: string;
+  description?: string;
+  brand?: string;
+  status?: string;
+  optimalStock?: number;
+  categoria_id?: number;
+  associatedPromoId?: string;
 }
 
 export interface PriceList {
@@ -186,9 +192,11 @@ export interface Purchase {
   fecha_compra?: string;
   fecha_vencimiento?: string;
   invoiceNumber?: string; // Nro de remito o factura del proveedor
-  status: 'Recibido' | 'Pendiente' | 'Cancelado';
+  status: 'Recibido' | 'Pendiente' | 'Cancelado' | 'Parcial' | string;
   estado?: 'pendiente' | 'parcial' | 'completada' | 'cancelada' | string;
   notes?: string;
+  debtAmount?: number;
+  paidAmount?: number;
 }
 
 export interface Vehicle {

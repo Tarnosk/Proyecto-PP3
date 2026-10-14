@@ -290,10 +290,10 @@ export function PurchasesView({
     setRecepcionError('');
 
     const itemsRecepcion = Object.entries(recepcionCantidades)
-      .filter(([_, cant]) => cant > 0)
+      .filter(([_, cant]) => Number(cant) > 0)
       .map(([idDetalle, cant]) => ({
         id_detalle: Number(idDetalle),
-        cantidad_recibida: cant,
+        cantidad_recibida: Number(cant),
       }));
 
     if (itemsRecepcion.length === 0) {

@@ -72,10 +72,12 @@ export const productosService = {
     descripcion: string;
     precio_unitario: number;
     precio_minorista?: number;
+    precio_mayorista?: number;
     id_categoria: number;
     id_marca: number;
     stock_disponible?: number;
     stock_minimo?: number;
+    id_ubicacion?: number;
   }): Promise<Product> => {
     const res = await apiClient.post<ApiResponse<any>>('/productos', productData);
     const data = res.data || res;
@@ -88,10 +90,12 @@ export const productosService = {
     descripcion: string;
     precio_unitario: number;
     precio_minorista: number;
+    precio_mayorista: number;
     id_categoria: number;
     id_marca: number;
     stock_disponible: number;
     stock_minimo: number;
+    id_ubicacion: number;
   }>): Promise<Product> => {
     const res = await apiClient.patch<ApiResponse<any>>(`/productos/${id}`, productData);
     const data = res.data || res;
