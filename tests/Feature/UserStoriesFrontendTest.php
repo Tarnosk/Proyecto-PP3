@@ -31,7 +31,7 @@ class UserStoriesFrontendTest extends TestCase
         $resDash = $this->get('/');
         $resDash->assertOk();
         $resDash->assertViewIs('dashboard');
-        $resDash->assertSee('Distribuidora Pigüé');
+        $resDash->assertSee('Distribuidora PyB');
         $resDash->assertSee('Stock e Inventario');
         $resDash->assertSee('Compras y Órdenes');
         $resDash->assertSee('Proveedores');

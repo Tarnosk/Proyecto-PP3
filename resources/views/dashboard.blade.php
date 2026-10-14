@@ -1,8 +1,8 @@
 @extends('layouts.app')
 
-@section('title', 'Distribuidora Pigüé - Panel Principal')
+@section('title', 'Distribuidora PyB - Panel Principal')
 @section('page_title', 'Inicio / Panel')
-@section('page_subtitle', 'Distribuidora Pigüé • Sistema de Gestión')
+@section('page_subtitle', 'Distribuidora PyB • Sistema de Gestión')
 
 @section('content')
 <div class="max-w-6xl mx-auto w-full py-2 flex flex-col justify-between gap-8">
@@ -14,8 +14,8 @@
                 <i data-lucide="package" class="w-6 h-6 text-white"></i>
             </div>
             <div class="text-left">
-                <h1 class="text-lg md:text-xl font-black text-slate-800 tracking-tight leading-none">DISTRIBUIDORA PIGÜÉ</h1>
-                <p class="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mt-1">Sistema de Gestión • Grupo 3</p>
+                <h1 class="text-lg md:text-xl font-black text-slate-800 tracking-tight leading-none">DISTRIBUIDORA PyB</h1>
+                <p class="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mt-1">Sistema de Gestión Comercial</p>
             </div>
         </div>
 
@@ -37,10 +37,10 @@
             <!-- Iniciales / Rol -->
             <div class="flex items-center gap-2.5 bg-white/95 border border-slate-200/60 p-1.5 pr-4 rounded-full shadow-sm">
                 <div class="w-9 h-9 rounded-full bg-blue-600 text-white font-black flex items-center justify-center text-sm shadow-md shadow-blue-500/10 shrink-0">
-                    G3
+                    AD
                 </div>
                 <div class="hidden sm:block text-left">
-                    <div class="text-xs font-black text-slate-800 leading-none">Admin General</div>
+                    <div class="text-xs font-black text-slate-800 leading-none">Administrador</div>
                     <div class="text-[9px] font-extrabold text-blue-500 uppercase tracking-wider mt-1">Inventario & Compras</div>
                 </div>
             </div>
@@ -165,7 +165,7 @@
     <!-- FOOTER -->
     <div class="text-center py-4">
         <p class="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">
-            Pigüé ERP © 2026 • Distribuidora Comercial • Grupo 3
+            Distribuidora PyB © 2026 • Sistema de Gestión Comercial
         </p>
     </div>
 
