@@ -147,10 +147,12 @@ Route::patch('ordenes-compra/{orden}/enviar', [OrdenCompraController::class, 'en
 Route::patch('ordenes-compra/{orden}/cambiar-estado', [OrdenCompraController::class, 'cambiarEstado']);
 // destroy queda fuera: la orden se cancela (PC05), no se borra.
 Route::apiResource('ordenes-compra', OrdenCompraController::class)->except(['destroy']);
+Route::apiResource('pedidos-compra', OrdenCompraController::class)->except(['destroy']);
 
 // Productos (P01, P04, P05, P06, P07, P08)
 Route::get('productos/historial', [ProductoController::class, 'historialPreciosGlobal']);
 Route::get('productos/{id}/historial', [ProductoController::class, 'historialPrecios']);
+Route::get('productos/{id}/historial-precios', [ProductoController::class, 'historialPrecios']);
 Route::get('productos/auditoria', [ProductoController::class, 'auditoriaGlobal']);
 Route::get('productos/{id}/auditoria', [ProductoController::class, 'auditoria']);
 // P07 - Aplicar aumento porcentual masivo de precios
@@ -164,8 +166,10 @@ Route::apiResource('productos', ProductoController::class);
 // S01 - Consulta de Stock Disponible
 Route::get('stock', [StockController::class, 'consultaGeneral']);
 
-// S02 - Disponibilidad para Venta (por producto)
+// S02 - Disponibilidad para Venta (por producto) y alias solicitados por G4 y G1
 Route::get('stock/{id}/disponibilidad', [StockController::class, 'disponibilidadParaVenta']);
+Route::get('stock/{id}', [StockController::class, 'disponibilidadParaVenta'])->whereNumber('id');
+Route::get('stock/productos/{id}', [StockController::class, 'disponibilidadParaVenta'])->whereNumber('id');
 
 // S12 - Historial de movimientos de stock de un producto o listado global
 Route::get('stock/movimientos', [StockController::class, 'todosLosMovimientos']);
@@ -174,8 +178,13 @@ Route::get('stock/{id}/historial-movimientos', [StockController::class, 'histori
 // S03 - Registro de Ingreso de Mercadería
 Route::post('stock/ingresos', [IngresoMercaderiaController::class, 'store']);
 
-// S04 - Actualización automática por venta (endpoint interno simple)
+// S04 - Actualización automática por venta (solicitado por G4)
 Route::post('stock/ventas', [VentaStockController::class, 'store']);
+Route::post('stock/descuentos', [VentaStockController::class, 'store']);
+Route::patch('stock/{id}/descontar', function (Request $request, int $id, VentaStockController $controller) {
+    $request->merge(['id_producto' => $id]);
+    return $controller->store($request);
+})->whereNumber('id');
 
 // S05 - Registro de Devoluciones
 Route::post('stock/devoluciones', [DevolucionController::class, 'store']);
@@ -196,6 +205,7 @@ Route::prefix('stock/conteos')->group(function () {
 
 // S07 - Alertas de stock mínimo
 Route::get('stock/alertas', [AlertaStockController::class, 'index']);
+Route::get('stock/bajo', [AlertaStockController::class, 'index']);
 Route::patch('stock/alertas/{id}/minimo', [AlertaStockController::class, 'configurarMinimo']);
 Route::post('stock/alertas/recalcular', [AlertaStockController::class, 'recalcular']);
 
