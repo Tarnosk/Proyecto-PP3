@@ -3,30 +3,13 @@
 namespace App\Services\Gateways;
 
 use App\Contracts\SalesGateway;
-use App\Enums\SaleStatus;
 use App\Models\Venta;
 use App\Services\ReportData;
-use Carbon\CarbonInterface;
 use Illuminate\Support\Collection;
 
 class LocalSalesGateway implements SalesGateway
 {
     public function __construct(private ReportData $data) {}
-
-    public function dailySales(CarbonInterface $date): Collection
-    {
-        $sales = Venta::query()
-            ->with('cliente:id,nombre,apellido_razon_social')
-            ->whereDate('fecha', $date->toDateString())
-            ->whereIn('estado', [
-                SaleStatus::CONFIRMADA->value,
-                SaleStatus::PAGADA->value,
-                SaleStatus::FACTURADA->value,
-            ])
-            ->orderBy('fecha')->orderBy('id')->get();
-
-        return $this->data->sales($sales->map(fn (Venta $sale): array => $this->saleData($sale))->all());
-    }
 
     public function clientHistory(int $clientId, ?string $from, ?string $to): Collection
     {

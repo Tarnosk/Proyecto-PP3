@@ -7,6 +7,7 @@ use App\Http\Requests\Clientes\SearchClienteRequest;
 use App\Http\Requests\Clientes\StoreClienteRequest;
 use App\Http\Requests\Clientes\UpdateClienteRequest;
 use App\Models\Cliente;
+use App\Services\Gateways\ExternalFinanceGateway;
 use App\Services\ReportService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -46,7 +47,7 @@ class ClienteController extends Controller
         return view('clientes.create');
     }
 
-    public function show(Request $request, Cliente $cliente, ReportService $reports): View
+    public function show(Request $request, Cliente $cliente, ReportService $reports, ExternalFinanceGateway $finance): View
     {
         Gate::authorize('view', $cliente);
         $filters = $request->validate([
@@ -56,7 +57,10 @@ class ClienteController extends Controller
 
         return view('clientes.show', [
             'cliente' => $cliente,
-            'cobros' => $cliente->cobros()->with('usuario:id,nombre')->latest('fecha')->get(),
+            'saldoDisponible' => $finance->isConfigured('balances'),
+            'saldo' => $finance->isConfigured('balances') ? $finance->clientBalance($cliente->id)['saldo'] : null,
+            'cobrosDisponibles' => $finance->isConfigured('billing'),
+            'cobros' => $finance->isConfigured('billing') ? $finance->clientPayments($cliente->id) : [],
             'ventas' => $reports->clientSales($cliente, $filters['desde'] ?? null, $filters['hasta'] ?? null),
             'desde' => $filters['desde'] ?? '',
             'hasta' => $filters['hasta'] ?? '',

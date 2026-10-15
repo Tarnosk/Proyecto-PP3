@@ -6,10 +6,11 @@ use App\Enums\SaleStatus;
 use App\Http\Requests\Reports\ClientHistoryRequest;
 use App\Models\Cliente;
 use App\Models\Producto;
+use App\Services\Gateways\ExternalFinanceGateway;
 use App\Services\ReportService;
-use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
@@ -18,30 +19,6 @@ class ReportController extends Controller
     public function index(): View
     {
         return view('reports.index');
-    }
-
-    public function dailySales(Request $request, ReportService $reports): View
-    {
-        $validated = $request->validate(['fecha' => ['nullable', 'date']]);
-        $date = CarbonImmutable::parse($validated['fecha'] ?? today()->toDateString());
-        $sales = $reports->dailySales($date);
-
-        return view('reports.daily-sales', [
-            'fecha' => $date->toDateString(),
-            'ventas' => $sales,
-            'totalFacturado' => $sales->sum(fn ($sale) => (float) $sale->total),
-        ]);
-    }
-
-    public function lowStock(Request $request, ReportService $reports): View
-    {
-        $validated = $request->validate(['orden' => ['nullable', 'in:asc,desc']]);
-        $order = $validated['orden'] ?? 'asc';
-
-        return view('reports.low-stock', [
-            'productos' => $reports->lowStock($order),
-            'orden' => $order,
-        ]);
     }
 
     public function clientHistory(ClientHistoryRequest $request, ReportService $reports): View
@@ -97,6 +74,72 @@ class ReportController extends Controller
             'clientes' => $clientes,
             'totalClientes' => $totalClientes,
             'porcentaje' => $porcentaje,
+        ]);
+    }
+
+    public function debtors(Request $request, ExternalFinanceGateway $finance): View
+    {
+        $filters = $request->validate([
+            'orden' => ['nullable', 'in:mayor,menor'],
+            'page' => ['nullable', 'integer', 'min:1'],
+        ]);
+        $ready = $finance->isConfigured('balances') && $finance->isConfigured('billing');
+        $debtors = collect();
+
+        if ($ready) {
+            $balances = collect($finance->debtorBalances())->keyBy('cliente_id');
+            $clients = Cliente::query()->whereIn('id', $balances->keys())->get()->keyBy('id');
+            $invoices = collect($finance->pendingInvoices())->groupBy('cliente_id');
+            $debtors = $balances->map(function (array $balance) use ($clients, $invoices): ?array {
+                $id = (int) $balance['cliente_id'];
+                $client = $clients->get($id);
+                if (! $client) {
+                    return null;
+                }
+
+                return [
+                    'cliente' => $client,
+                    'saldo' => $balance['saldo'],
+                    'facturas' => $invoices->get($id, collect()),
+                ];
+            })->filter()->sortBy('saldo', SORT_NUMERIC, ($filters['orden'] ?? 'mayor') === 'mayor')->values();
+        }
+
+        $page = (int) ($filters['page'] ?? 1);
+        $debtors = new LengthAwarePaginator($debtors->forPage($page, 20), $debtors->count(), 20, $page, [
+            'path' => route('reports.debtors'), 'query' => $request->query(),
+        ]);
+
+        return view('reports.debtors', [
+            'ready' => $ready,
+            'debtors' => $debtors,
+            'orden' => $filters['orden'] ?? 'mayor',
+        ]);
+    }
+
+    public function productRanking(Request $request, ExternalFinanceGateway $finance): View
+    {
+        $filters = $request->validate([
+            'desde' => ['nullable', 'date'],
+            'hasta' => ['nullable', 'date', 'after_or_equal:desde'],
+            'page' => ['nullable', 'integer', 'min:1'],
+        ]);
+        $ready = $finance->isConfigured('sales');
+        $ranking = $ready
+            ? collect($finance->productRanking($filters['desde'] ?? null, $filters['hasta'] ?? null))
+                ->sortByDesc('cantidad_vendida')->values()
+            : collect();
+
+        $page = (int) ($filters['page'] ?? 1);
+        $ranking = new LengthAwarePaginator($ranking->forPage($page, 20), $ranking->count(), 20, $page, [
+            'path' => route('reports.product-ranking'), 'query' => $request->query(),
+        ]);
+
+        return view('reports.product-ranking', [
+            'ready' => $ready,
+            'ranking' => $ranking,
+            'desde' => $filters['desde'] ?? '',
+            'hasta' => $filters['hasta'] ?? '',
         ]);
     }
 }

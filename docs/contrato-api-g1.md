@@ -1,6 +1,6 @@
 # Contrato HTTP/JSON de G1
 
-Este documento describe las rutas implementadas en `routes/api.php` bajo `/api/v1`. Los valores de los ejemplos son ilustrativos; IDs, fechas, tokens y datos dependen de la base. Las rutas de reportes `/reportes`, `/ventas` y `/stock` son pantallas web, no forman parte de esta API. Los endpoints de Ventas e Inventario que G1 consume de otros grupos tampoco son endpoints publicados por G1.
+Este documento describe las rutas implementadas en `routes/api.php` bajo `/api/v1`. Los valores de los ejemplos son ilustrativos; IDs, fechas, tokens y datos dependen de la base. Las rutas de reportes `/reportes`, `/ventas` y `/stock` son pantallas web, no forman parte de esta API. G1 consume ventas y saldos de G4, cobros y facturas de G2; no consume alertas de stock. Los contratos de Sprint 4 aun requieren acuerdo con esos grupos.
 
 ## Convenciones
 
@@ -25,7 +25,7 @@ Este documento describe las rutas implementadas en `routes/api.php` bajo `/api/v
 | `429 Too Many Requests` | Limite de peticiones excedido: login 5/minuto por origen, demas rutas 60/minuto | Error JSON de Laravel; volver a intentar despues del limite |
 | `500 Internal Server Error` | Fallo no controlado, por ejemplo una base de datos indisponible | Laravel lo genera, pero G1 **no define hoy un cuerpo 500 propio ni estable**. Con `APP_DEBUG=true` puede exponer detalles tecnicos; en produccion debe usarse `APP_DEBUG=false`. |
 
-`400`, `409`, `502` y `503` no tienen manejadores/contratos especificos en estas rutas de G1. Un metodo HTTP no permitido puede producir `405` por Laravel. Los `502`/`503` mencionados en la integracion de Ventas/Inventario pertenecen al consumo remoto en pantallas y reportes web, no son respuestas definidas para estos 16 endpoints. No se debe interpretar un `500` como una validacion de negocio.
+`400`, `409`, `502` y `503` no tienen manejadores/contratos especificos en estas rutas de G1. Un metodo HTTP no permitido puede producir `405` por Laravel. Los `502`/`503` mencionados en la integracion de Ventas pertenecen al consumo remoto en el historial de clientes, no son respuestas definidas para estos 16 endpoints. No se debe interpretar un `500` como una validacion de negocio.
 
 Ejemplos de errores:
 
@@ -41,7 +41,7 @@ El segundo ejemplo ilustra la estructura de `422`, no garantiza ese idioma ni es
 
 ## Esquemas reutilizados
 
-**Cliente:** `id`, `nombre`, `apellido_razon_social`, `dni_cuit`, `telefono`, `email`, `direccion`, `localidad` (nullable), `zona_id` (nullable), `condicion_iva` (nullable), `tipo_cliente` (`minorista`/`mayorista`), `estado` (`activo`/`inactivo`) y `saldo` (decimal en cadena). `saldo` y `creado_por` no son editables por esta API; `creado_por` tampoco se expone en el JSON.
+**Cliente:** `id`, `nombre`, `apellido_razon_social`, `dni_cuit`, `telefono`, `email`, `direccion`, `localidad` (nullable), `zona_id` (nullable), `condicion_iva` (nullable), `tipo_cliente` (`minorista`/`mayorista`) y `estado` (`activo`/`inactivo`). `saldo` ya no se expone en la ficha de G1: se consulta por su ruta especifica, delegada a G4. `saldo` y `creado_por` no son editables por esta API.
 
 **Reclamo:** `id`, `cliente_id`, `usuario_id`, `asunto`, `descripcion`, `prioridad` (`baja`/`media`/`alta`), `estado` (`abierto`/`en_proceso`/`cerrado`), `created_at`, `updated_at`.
 
@@ -113,7 +113,7 @@ En `PATCH` debe enviarse al menos un campo. Los campos desconocidos en escritura
 - Exito: `200`, orden por ID ascendente.
 
 ```json
-{"data":[{"id":12,"nombre":"Ana","apellido_razon_social":"Comercial Norte","dni_cuit":"20-12345678-9","telefono":"11-4444-5555","email":"ana@example.com","direccion":"Calle Principal 123","localidad":"San Isidro","zona_id":3,"condicion_iva":"Responsable Inscripto","tipo_cliente":"mayorista","estado":"activo","saldo":"12500.00"}],"meta":{"current_page":1,"last_page":8,"per_page":20,"total":150}}
+{"data":[{"id":12,"nombre":"Ana","apellido_razon_social":"Comercial Norte","dni_cuit":"20-12345678-9","telefono":"11-4444-5555","email":"ana@example.com","direccion":"Calle Principal 123","localidad":"San Isidro","zona_id":3,"condicion_iva":"Responsable Inscripto","tipo_cliente":"mayorista","estado":"activo"}],"meta":{"current_page":1,"last_page":8,"per_page":20,"total":150}}
 ```
 
 - Errores aplicables: `401`, `403`, `422` (filtros invalidos), `429`, `500`.
@@ -122,10 +122,10 @@ En `PATCH` debe enviarse al menos un campo. Los campos desconocidos en escritura
 
 - Acceso: solo usuario administrativo; token interno no permitido.
 - Body obligatorio/opcional: ver tabla **Campos de escritura de cliente**. No lleva query ni ID.
-- Exito: `201`, cabecera `Location` con la URL del cliente nuevo. `saldo` nace en `0.00`, `estado` en `activo` y `creado_por` es el administrador autenticado.
+- Exito: `201`, cabecera `Location` con la URL del cliente nuevo. `estado` nace en `activo` y `creado_por` es el administrador autenticado. G4 es dueno del saldo.
 
 ```json
-{"data":{"id":12,"nombre":"Ana","apellido_razon_social":"Comercial Norte","dni_cuit":"20-12345678-9","telefono":"11-4444-5555","email":"ana@example.com","direccion":"Calle Principal 123","localidad":null,"zona_id":null,"condicion_iva":null,"tipo_cliente":"mayorista","estado":"activo","saldo":"0.00"}}
+{"data":{"id":12,"nombre":"Ana","apellido_razon_social":"Comercial Norte","dni_cuit":"20-12345678-9","telefono":"11-4444-5555","email":"ana@example.com","direccion":"Calle Principal 123","localidad":null,"zona_id":null,"condicion_iva":null,"tipo_cliente":"mayorista","estado":"activo"}}
 ```
 
 - Errores aplicables: `401`, `403`, `422` (incluye duplicados de DNI/CUIT o email), `429`, `500`.
@@ -137,7 +137,7 @@ En `PATCH` debe enviarse al menos un campo. Los campos desconocidos en escritura
 - Exito: `200`.
 
 ```json
-{"data":{"id":12,"nombre":"Ana","apellido_razon_social":"Comercial Norte","dni_cuit":"20-12345678-9","telefono":"11-4444-5555","email":"ana@example.com","direccion":"Calle Principal 123","localidad":"San Isidro","zona_id":3,"condicion_iva":"Responsable Inscripto","tipo_cliente":"mayorista","estado":"activo","saldo":"12500.00"}}
+{"data":{"id":12,"nombre":"Ana","apellido_razon_social":"Comercial Norte","dni_cuit":"20-12345678-9","telefono":"11-4444-5555","email":"ana@example.com","direccion":"Calle Principal 123","localidad":"San Isidro","zona_id":3,"condicion_iva":"Responsable Inscripto","tipo_cliente":"mayorista","estado":"activo"}}
 ```
 
 - Errores aplicables: `401`, `403`, `404`, `429`, `500`.
@@ -149,7 +149,7 @@ En `PATCH` debe enviarse al menos un campo. Los campos desconocidos en escritura
 - Exito: `200`, ficha actualizada completa.
 
 ```json
-{"data":{"id":12,"nombre":"Ana","apellido_razon_social":"Comercial Norte","dni_cuit":"20-12345678-9","telefono":"11-4444-5555","email":"ana@example.com","direccion":"Calle Principal 123","localidad":null,"zona_id":null,"condicion_iva":null,"tipo_cliente":"mayorista","estado":"inactivo","saldo":"12500.00"}}
+{"data":{"id":12,"nombre":"Ana","apellido_razon_social":"Comercial Norte","dni_cuit":"20-12345678-9","telefono":"11-4444-5555","email":"ana@example.com","direccion":"Calle Principal 123","localidad":null,"zona_id":null,"condicion_iva":null,"tipo_cliente":"mayorista","estado":"inactivo"}}
 ```
 
 - Errores aplicables: `401`, `403`, `404`, `422`, `429`, `500`.
@@ -161,7 +161,7 @@ En `PATCH` debe enviarse al menos un campo. Los campos desconocidos en escritura
 - Exito: `200`, ficha completa luego del cambio, aunque solo se haya enviado un campo.
 
 ```json
-{"data":{"id":12,"nombre":"Ana","apellido_razon_social":"Comercial Norte","dni_cuit":"20-12345678-9","telefono":"11-5555-6666","email":"ana@example.com","direccion":"Calle Principal 123","localidad":"San Isidro","zona_id":3,"condicion_iva":"Responsable Inscripto","tipo_cliente":"mayorista","estado":"activo","saldo":"12500.00"}}
+{"data":{"id":12,"nombre":"Ana","apellido_razon_social":"Comercial Norte","dni_cuit":"20-12345678-9","telefono":"11-5555-6666","email":"ana@example.com","direccion":"Calle Principal 123","localidad":"San Isidro","zona_id":3,"condicion_iva":"Responsable Inscripto","tipo_cliente":"mayorista","estado":"activo"}}
 ```
 
 - Errores aplicables: `401`, `403`, `404`, `422` (tambien body vacio), `429`, `500`.
@@ -176,21 +176,23 @@ En `PATCH` debe enviarse al menos un campo. Los campos desconocidos en escritura
 {"data":{"cliente_id":12,"saldo":"12500.00","moneda":"ARS"}}
 ```
 
-- Errores aplicables: `401`, `403`, `404`, `429`, `500`.
+La respuesta proviene de G4, no de `clientes.saldo` local. Sin integracion configurada o disponible, `503`; respuesta externa fallida o invalida, `502`.
+
+- Errores aplicables: `401`, `403`, `404`, `429`, `502`, `503`, `500`.
 
 ### `GET /api/v1/clientes/{id}/cobros`
 
 - Acceso: token interno, administrativo o repartidor.
-- Ruta obligatoria: `{id}` numerico existente. Query opcional: `page`, `per_page` (1-100). Body: ninguno. Solo incluye cobros `confirmado`.
-- Exito: `200`, orden por `fecha` y luego ID descendentes.
+- Ruta obligatoria: `{id}` numerico existente. Body y query: ninguno. G1 consulta G2 y devuelve sus cobros asociados al cliente.
+- Exito: `200`, lista provista por G2.
 
 ```json
-{"data":[{"id":7,"cliente_id":12,"fecha":"2026-10-06T10:00:00-03:00","monto_total":"2500.00","medio_pago":"transferencia","comprobante_nro":"TR-123","observaciones":null,"usuario_id":4,"usuario_nombre":"Operador"}],"meta":{"current_page":1,"last_page":1,"per_page":20,"total":1}}
+{"data":[{"id":7,"cliente_id":12,"fecha":"2026-10-06T10:00:00-03:00","monto_total":"2500.00","medio_pago":"transferencia","comprobante_nro":"TR-123","observaciones":null}]}
 ```
 
 `medio_pago` puede ser `efectivo`, `transferencia`, `tarjeta`, `cheque` u `otro`; `comprobante_nro` y `observaciones` pueden ser `null`.
 
-- Errores aplicables: `401`, `403`, `404`, `422` (`per_page` invalido), `429`, `500`.
+- Errores aplicables: `401`, `403`, `404`, `429`, `502`, `503`, `500`.
 
 ## Zonas
 

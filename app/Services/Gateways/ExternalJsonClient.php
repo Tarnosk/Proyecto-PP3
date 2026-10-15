@@ -33,7 +33,7 @@ class ExternalJsonClient
         }
 
         $body = $response->json();
-        if (! is_array($body) || Validator::make($body, ['data' => ['required', 'array']])->fails()) {
+        if (! is_array($body) || Validator::make($body, ['data' => ['present', 'array']])->fails()) {
             abort(502, 'El servicio externo devolvio datos invalidos.');
         }
 

@@ -740,7 +740,8 @@ textarea:focus {
     border-top: 1px solid var(--border);
 }
 
-.report-menu a {
+.report-menu > a,
+.report-menu > .report-menu-external {
     display: grid;
     gap: 7px;
     min-height: 130px;
@@ -754,6 +755,14 @@ textarea:focus {
 .report-menu a:hover,
 .report-menu a:focus {
     background: var(--primary-soft);
+}
+
+.report-menu-external {
+    color: var(--muted);
+}
+
+.report-menu-external strong {
+    color: var(--muted);
 }
 
 .report-menu strong {

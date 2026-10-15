@@ -45,10 +45,13 @@ return [
         'token' => env('SALES_SERVICE_TOKEN'),
     ],
 
-    'inventory' => [
-        'driver' => env('INVENTORY_SERVICE_DRIVER', 'local'),
-        'url' => env('INVENTORY_SERVICE_URL'),
-        'token' => env('INVENTORY_SERVICE_TOKEN'),
+    'billing' => [
+        'url' => env('BILLING_SERVICE_URL'),
+        'token' => env('BILLING_SERVICE_TOKEN'),
     ],
 
+    'balances' => [
+        'url' => env('BALANCE_SERVICE_URL'),
+        'token' => env('BALANCE_SERVICE_TOKEN'),
+    ],
 ];

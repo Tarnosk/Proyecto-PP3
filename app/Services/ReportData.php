@@ -42,30 +42,6 @@ class ReportData
         ]);
     }
 
-    public function products(array $rows): Collection
-    {
-        $this->validate($rows, [
-            '*' => ['array'],
-            '*.codigo' => ['required', 'string'],
-            '*.nombre' => ['required', 'string'],
-            '*.stock' => ['required', 'integer'],
-            '*.stock_minimo' => ['required', 'integer'],
-            '*.categoria' => ['nullable', 'array'],
-            '*.categoria.nombre' => ['sometimes', 'required', 'string'],
-            '*.marca' => ['nullable', 'array'],
-            '*.marca.nombre' => ['sometimes', 'required', 'string'],
-        ]);
-
-        return collect($rows)->map(fn (array $row): object => (object) [
-            'codigo' => $row['codigo'],
-            'nombre' => $row['nombre'],
-            'stock' => (int) $row['stock'],
-            'stock_minimo' => (int) $row['stock_minimo'],
-            'categoria' => isset($row['categoria']) ? (object) $row['categoria'] : null,
-            'marca' => isset($row['marca']) ? (object) $row['marca'] : null,
-        ]);
-    }
-
     private function validate(array $rows, array $rules): void
     {
         if (Validator::make($rows, $rules)->fails()) {

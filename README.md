@@ -1,6 +1,6 @@
 # ERP Juan23
 
-Sistema web de gestión comercial en Laravel. Incluye autenticación segura, recuperación de contraseña por email, permisos por rol, clientes, reclamos, pagos parciales, cuentas corrientes y reportes de ventas y stock exportables.
+Sistema web de gestión comercial en Laravel. Incluye autenticación segura, recuperación de contraseña por email, permisos por rol, clientes, reclamos y reportes. Los cobros y facturas pertenecen a G2; los saldos y ventas, a G4.
 
 ## Requisitos
 
@@ -110,6 +110,8 @@ Los usuarios sembrados usan direcciones `example.com`. Deben reemplazarse por em
 
 ## Permisos
 
+Los reportes Sprint 4 de deudores y ranking estan preparados para consumir JSON de G2/G4. Hasta que esos grupos confirmen y publiquen las APIs, muestran integracion pendiente. Ver [contratos-sprint4-g1.md](docs/contratos-sprint4-g1.md) para rutas, campos y variables `BILLING_SERVICE_*`, `BALANCE_SERVICE_*` y `SALES_SERVICE_*`.
+
 | Funcionalidad | Administrativo | Repartidor | Contador |
 | --- | --- | --- | --- |
 | Panel propio | Sí | Sí | Sí |
@@ -117,10 +119,10 @@ Los usuarios sembrados usan direcciones `example.com`. Deben reemplazarse por em
 | Crear y editar clientes | Sí | No | No |
 | Crear y listar reclamos | Sí | Sí | No |
 | Ver historial de clientes | Sí | Sí | No |
-| Registrar pagos y actualizar saldo | Sí | No | No |
-| Reportes de ventas, stock e historial | Sí | No | Sí |
-| Exportar reportes a PDF y Excel | Sí | No | Sí |
-| Consulta operativa de ventas y stock | Sí | Sí | No |
+| Consultar cobros y saldos de otros módulos | Sí | Sí | No |
+| Reportes de clientes y ranking comercial | Sí | No | Sí |
+| Exportar historial de clientes a PDF y Excel | Sí | No | Sí |
+| Secciones de ventas y stock sin consultas de G1 | Sí | Sí | No |
 | Configurar emails de usuarios | Sí | No | No |
 
 ## Seguridad de acceso
@@ -176,7 +178,7 @@ C:\xampp\php\php.exe artisan route:list --except-vendor
 C:\xampp\php\php.exe vendor\bin\pint --test
 ```
 
-La suite incluye pruebas de seguridad, clientes, reclamos, pagos, saldos, reportes y exportaciones.
+La suite incluye pruebas de seguridad, clientes, reclamos, integración de cobros y saldos, reportes y exportaciones.
 
 ## Estructura principal
 

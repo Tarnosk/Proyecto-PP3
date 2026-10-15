@@ -3,11 +3,11 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Enums\ClientStatus;
-use App\Enums\PaymentStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\ClientWriteRequest;
 use App\Http\Resources\ClientResource;
 use App\Models\Cliente;
+use App\Services\Gateways\ExternalFinanceGateway;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -80,41 +80,13 @@ class ClientController extends Controller
         return response()->json(['data' => (new ClientResource($cliente))->toArray($request)]);
     }
 
-    public function balance(Cliente $cliente): JsonResponse
+    public function balance(Cliente $cliente, ExternalFinanceGateway $finance): JsonResponse
     {
-        return response()->json(['data' => [
-            'cliente_id' => $cliente->id,
-            'saldo' => $cliente->saldo,
-            'moneda' => 'ARS',
-        ]]);
+        return response()->json(['data' => $finance->clientBalance($cliente->id)]);
     }
 
-    public function payments(Request $request, Cliente $cliente): JsonResponse
+    public function payments(Cliente $cliente, ExternalFinanceGateway $finance): JsonResponse
     {
-        $filters = $request->validate(['per_page' => ['nullable', 'integer', 'between:1,100']]);
-        $payments = $cliente->cobros()->with('usuario:id,nombre')
-            ->where('estado', PaymentStatus::CONFIRMADO->value)
-            ->orderByDesc('fecha')->orderByDesc('id')
-            ->paginate($filters['per_page'] ?? 20);
-
-        return response()->json([
-            'data' => $payments->getCollection()->map(fn ($payment) => [
-                'id' => $payment->id,
-                'cliente_id' => $payment->cliente_id,
-                'fecha' => $payment->fecha->toIso8601String(),
-                'monto_total' => $payment->monto_total,
-                'medio_pago' => $payment->medio_pago->value,
-                'comprobante_nro' => $payment->comprobante_nro,
-                'observaciones' => $payment->observaciones,
-                'usuario_id' => $payment->usuario_id,
-                'usuario_nombre' => $payment->usuario->nombre,
-            ]),
-            'meta' => [
-                'current_page' => $payments->currentPage(),
-                'last_page' => $payments->lastPage(),
-                'per_page' => $payments->perPage(),
-                'total' => $payments->total(),
-            ],
-        ]);
+        return response()->json(['data' => $finance->clientPayments($cliente->id)]);
     }
 }

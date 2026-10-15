@@ -92,7 +92,7 @@ class ApiAuthAndClientWriteTest extends TestCase
         $created = $this->postJson('/api/v1/clientes', $this->clientData())
             ->assertCreated()
             ->assertJsonPath('data.estado', 'activo')
-            ->assertJsonPath('data.saldo', '0.00');
+            ->assertJsonMissingPath('data.saldo');
         $id = $created->json('data.id');
         $this->assertDatabaseHas('clientes', ['id' => $id, 'creado_por' => $admin->id]);
 

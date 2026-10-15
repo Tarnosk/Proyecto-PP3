@@ -119,8 +119,8 @@
                 <article class="action-panel"><div><h2>Seguridad de sesión</h2><p>Sesión única por cuenta y expiración automática por inactividad.</p></div></article>
             </section>
             <section class="panel-grid sprint-grid" aria-label="Accesos de sprint tres">
-                <article class="action-panel"><div><h2>Pagos y saldos</h2><p>Consultar cuentas corrientes y registrar pagos parciales.</p></div><a class="button button-primary" href="{{ route('clientes.index') }}">Ver cuentas</a></article>
-                <article class="action-panel"><div><h2>Reportes</h2><p>Ventas diarias, stock bajo e historial por cliente.</p></div><a class="button button-primary" href="{{ route('reports.index') }}">Abrir reportes</a></article>
+                <article class="action-panel"><div><h2>Pagos y saldos</h2><p>Consultar cuentas corrientes e historial informado por otros modulos.</p></div><a class="button button-primary" href="{{ route('clientes.index') }}">Ver cuentas</a></article>
+                <article class="action-panel"><div><h2>Reportes</h2><p>Historial y análisis de clientes.</p></div><a class="button button-primary" href="{{ route('reports.index') }}">Abrir reportes</a></article>
             </section>
         @elseif (auth()->user()->rol === App\Enums\UserRole::REPARTIDOR)
             <section class="erp-heading"><div><p class="eyebrow">Panel repartidor</p><h1>Bienvenido, {{ auth()->user()->nombre }}</h1><p>Accesos comerciales para consultar clientes, crear reclamos, revisar ventas y ver stock.</p></div></section>
@@ -128,12 +128,12 @@
                 <article class="action-panel"><div><h2>Clientes</h2><p>Buscar y consultar clientes registrados.</p></div><a class="button button-primary" href="{{ route('clientes.index') }}">Ver clientes</a></article>
                 <article class="action-panel"><div><h2>Ventas y Pedidos</h2><p>Acceso operativo para próximas cargas de pedidos.</p></div><a class="button button-primary" href="{{ route('ventas.index') }}">Abrir</a></article>
                 <article class="action-panel"><div><h2>Reclamos</h2><p>Cargar reclamos asociados a clientes registrados.</p></div><a class="button button-primary" href="{{ route('reclamos.create') }}">Crear reclamo</a></article>
-                <article class="action-panel"><div><h2>Inventario y Stock</h2><p>Consulta del estado de productos y existencias.</p></div><a class="button button-primary" href="{{ route('stock.index') }}">Abrir</a></article>
+                <article class="action-panel"><div><h2>Inventario y Stock</h2><p>Módulo de G3.</p></div><a class="button button-primary" href="{{ route('stock.index') }}">Abrir</a></article>
             </section>
         @else
             <section class="erp-heading"><div><p class="eyebrow">Panel contador</p><h1>Bienvenido, {{ auth()->user()->nombre }}</h1><p>Acceso contable preparado para reportes, finanzas y tesorería.</p></div></section>
             <section class="panel-grid" aria-label="Accesos de contador">
-                <article class="action-panel"><div><h2>Reportes contables</h2><p>Consultar ventas diarias, stock bajo e historial de clientes.</p></div><a class="button button-primary" href="{{ route('reports.index') }}">Abrir reportes</a></article>
+                <article class="action-panel"><div><h2>Reportes de clientes</h2><p>Consultar historial y compras por producto.</p></div><a class="button button-primary" href="{{ route('reports.index') }}">Abrir reportes</a></article>
                 <article class="action-panel"><div><h2>Finanzas y Tesorería</h2><p>Consultar información operativa para el seguimiento contable.</p></div><a class="button button-secondary" href="{{ route('reports.client-history') }}">Consultar</a></article>
             </section>
         @endif

@@ -16,36 +16,19 @@ class ReportsTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_daily_sales_report_filters_by_date_and_ignores_cancelled_or_pending_sales(): void
+    public function test_sales_report_routes_are_unavailable(): void
     {
         $admin = User::factory()->create(['rol' => UserRole::ADMINISTRATIVO]);
-        $client = Cliente::factory()->create(['creado_por' => $admin->id]);
-        Venta::factory()->create(['cliente_id' => $client->id, 'usuario_id' => $admin->id, 'fecha' => '2026-09-20 10:00:00', 'total' => 1500, 'numero_factura' => 'OK-1']);
-        Venta::factory()->create(['cliente_id' => $client->id, 'usuario_id' => $admin->id, 'fecha' => '2026-09-20 12:00:00', 'total' => 900, 'estado' => SaleStatus::CANCELADA, 'numero_factura' => 'NO-1']);
-        Venta::factory()->create(['cliente_id' => $client->id, 'usuario_id' => $admin->id, 'fecha' => '2026-09-21 10:00:00', 'total' => 500, 'numero_factura' => 'NO-2']);
-
-        $this->signInAs($admin)->get(route('reports.daily-sales', ['fecha' => '2026-09-20']))
-            ->assertOk()
-            ->assertSeeText('OK-1')
-            ->assertSeeText('$1.500,00')
-            ->assertDontSeeText('NO-1')
-            ->assertDontSeeText('NO-2');
+        $this->signInAs($admin)->get('/reportes/ventas-diarias')->assertNotFound();
+        $this->get('/reportes/ventas-diarias/exportar/pdf')->assertNotFound();
     }
 
-    public function test_low_stock_report_only_lists_products_below_minimum_in_requested_order(): void
+    public function test_stock_report_routes_are_unavailable(): void
     {
         $admin = User::factory()->create(['rol' => UserRole::ADMINISTRATIVO]);
-        Producto::factory()->create(['nombre' => 'Stock dos', 'stock' => 2, 'stock_minimo' => 10]);
-        Producto::factory()->create(['nombre' => 'Stock ocho', 'stock' => 8, 'stock_minimo' => 10]);
-        Producto::factory()->create(['nombre' => 'Stock justo', 'stock' => 10, 'stock_minimo' => 10]);
+        $this->signInAs($admin)->get('/reportes/stock-bajo')->assertNotFound();
+        $this->get('/reportes/stock-bajo/exportar/xlsx')->assertNotFound();
 
-        $response = $this->signInAs($admin)->get(route('reports.low-stock', ['orden' => 'asc']))
-            ->assertOk()
-            ->assertSeeText('Stock dos')
-            ->assertSeeText('Stock ocho')
-            ->assertDontSeeText('Stock justo');
-
-        $response->assertSeeInOrder(['Stock dos', 'Stock ocho']);
     }
 
     public function test_client_history_filters_dates_and_displays_products_and_amounts(): void
@@ -152,36 +135,43 @@ class ReportsTest extends TestCase
         $contador = User::factory()->create(['rol' => UserRole::CONTADOR]);
         $repartidor = User::factory()->create(['rol' => UserRole::REPARTIDOR]);
 
-        $this->signInAs($contador)->get(route('reports.index'))->assertOk();
+        $this->signInAs($contador)->get(route('reports.index'))
+            ->assertOk()
+            ->assertSeeText('Historial de clientes')
+            ->assertSeeText('Clientes por producto')
+            ->assertSeeText('Reportes de ventas')
+            ->assertSeeText('Reportes de stock');
         $this->signInAs($repartidor)->get(route('reports.index'))->assertRedirect(route('dashboard'));
     }
 
-    public function test_repartidor_can_use_operational_sales_and_stock_views_without_exports(): void
+    public function test_repartidor_sees_sales_and_stock_placeholders_without_report_data(): void
     {
         $repartidor = User::factory()->create(['rol' => UserRole::REPARTIDOR]);
 
+        Producto::factory()->create(['nombre' => 'Stock dos', 'stock' => 2, 'stock_minimo' => 10]);
+
         $this->signInAs($repartidor)->get(route('ventas.index'))
             ->assertOk()
-            ->assertSeeText('Ventas diarias')
-            ->assertDontSeeText('Excel');
+            ->assertSeeText('Ventas y pedidos')
+            ->assertDontSeeText('Consultar');
         $this->get(route('stock.index'))
             ->assertOk()
-            ->assertSeeText('Productos con stock bajo')
-            ->assertDontSeeText('Excel');
+            ->assertSeeText('Inventario y stock')
+            ->assertDontSeeText('Stock dos');
     }
 
-    public function test_reports_can_be_exported_to_pdf_and_excel(): void
+    public function test_client_history_can_be_exported_to_pdf_and_excel(): void
     {
         $admin = User::factory()->create(['rol' => UserRole::ADMINISTRATIVO]);
         $client = Cliente::factory()->create(['creado_por' => $admin->id]);
         Venta::factory()->create(['cliente_id' => $client->id, 'usuario_id' => $admin->id, 'fecha' => '2026-09-20 10:00:00']);
         $this->signInAs($admin);
 
-        $this->get(route('reports.daily-sales.export', ['format' => 'pdf', 'fecha' => '2026-09-20']))
+        $this->get(route('reports.client-history.export', ['format' => 'pdf', 'cliente_id' => $client->id]))
             ->assertOk()
             ->assertHeader('content-type', 'application/pdf');
 
-        $this->get(route('reports.daily-sales.export', ['format' => 'xlsx', 'fecha' => '2026-09-20']))
+        $this->get(route('reports.client-history.export', ['format' => 'xlsx', 'cliente_id' => $client->id]))
             ->assertOk()
             ->assertHeader('content-type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     }

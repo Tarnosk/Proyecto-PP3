@@ -1,6 +1,6 @@
 # Mapa de APIs entre grupos - Sprints 3 y 4
 
-Relevamiento al 6 de octubre de 2026 para responder a la [issue #190 (APIs)](https://github.com/rapiriz/ERP-Juan23/issues/190). La issue pide que cada grupo especifique que datos y operaciones necesita de Ventas, Saldos y Promociones. Este documento cruza las historias de los milestones Sprint 3 y Sprint 4, el codigo local de G1 y las rutas visibles en las ramas `develop-g2`, `develop-g3` y `develop-g4`. No se pudo consultar el tablero visual de GitHub Projects con una sesion autenticada; las historias se relevaron a traves de sus issues y milestones publicos.
+Relevamiento historico del 6 de octubre de 2026 para responder a la [issue #190 (APIs)](https://github.com/rapiriz/ERP-Juan23/issues/190). Las propuestas de titularidad de este archivo quedaron superadas para Sprint 4: G2 es dueno de cobros y facturas, G4 de saldos y ventas. G1 implementa las pantallas de #113 y #114; #120 queda pendiente. El contrato vigente propuesto para estas integraciones esta en [contratos-sprint4-g1.md](contratos-sprint4-g1.md). Las secciones de ventas generales y stock siguen sin consultas ni exportaciones de G1.
 
 **Estados usados aqui:** `implementado en G1` significa que la ruta existe en el proyecto local; `ruta visible en rama` significa que figura en `routes/api.php` del otro grupo, sin afirmar que la integracion funcione de extremo a extremo; `propuesto` significa que todavia hay que acordar e implementar el contrato. Las URLs propuestas son nombres de trabajo, no compromisos de los otros grupos.
 
@@ -20,8 +20,8 @@ Todas estas rutas usan el prefijo `/api/v1`. Salvo el login, requieren `Authoriz
 | GET | `/clientes/{id}` | Obtener ficha y estado del cliente | G2, G4 |
 | PUT | `/clientes/{id}` | Reemplazar ficha editable completa | G1, administrativo |
 | PATCH | `/clientes/{id}` | Actualizar parcialmente la ficha | G1, administrativo |
-| GET | `/clientes/{id}/saldo` | Obtener saldo actual en ARS | G2, G4 mientras G1 conserve la propiedad del saldo |
-| GET | `/clientes/{id}/cobros` | Listar cobros confirmados | G2, G4 mientras G1 conserve la propiedad de cobros |
+| GET | `/clientes/{id}/saldo` | Consultar saldo de G4 en ARS | G1 publica un proxy a G4 |
+| GET | `/clientes/{id}/cobros` | Consultar cobros de G2 | G1 publica un proxy a G2 |
 | GET | `/zonas` | Listar zonas | G2 Entregas, G4 filtros |
 | GET | `/reclamos` | Listar y filtrar reclamos | G1 |
 | GET | `/reclamos/{id}` | Consultar un reclamo | G1 |
@@ -33,7 +33,7 @@ Estas son las 16 rutas definidas en `routes/api.php`. El token de G1 es **opaco 
 
 ## APIs que G1 podria publicar
 
-Son propuestas derivadas de las dependencias entre grupos; ninguna esta implementada en G1. Hay que decidir primero la propiedad de saldos y cobros antes de implementar las operaciones monetarias.
+Las propuestas historicas de abajo se conservan como contexto. La propiedad de saldos y cobros ya se definio: G4 y G2, respectivamente. Las operaciones monetarias no se escriben en G1.
 
 | Ruta propuesta | Para que se necesita | Grupo consumidor |
 | --- | --- | --- |
@@ -65,47 +65,33 @@ G2 trabaja en Cobros, Caja, Rendiciones, Entregas, Conciliacion y analiza Factur
 | `GET /api/v1/facturas/proximas-vencer?dias=7` | Propuesto | Reporte de vencimientos, Sprint 4 [#116](https://github.com/rapiriz/ERP-Juan23/issues/116) |
 | `GET /api/v1/transferencias?estado=pendiente` | Propuesto | Cruzar avisos de G1 con conciliacion bancaria; propiedad a definir |
 
-El historial de cobros que G1 ya publica puede cubrir [#104](https://github.com/rapiriz/ERP-Juan23/issues/104) por ahora. La historia de facturacion de G2 [#188](https://github.com/rapiriz/ERP-Juan23/issues/188) es un analisis de backlog; no hay que tratar sus endpoints sugeridos como disponibles. G2 tambien tiene historias de anulacion y pago parcial en Sprint 4 ([#3](https://github.com/rapiriz/ERP-Juan23/issues/3), [#4](https://github.com/rapiriz/ERP-Juan23/issues/4)), que necesitan una sola fuente de saldo.
+El historial de cobros de G1 ahora depende de la API de G2. La historia de facturacion de G2 [#188](https://github.com/rapiriz/ERP-Juan23/issues/188) es un analisis de backlog; no hay que tratar sus endpoints sugeridos como disponibles. G2 tambien tiene historias de anulacion y pago parcial en Sprint 4 ([#3](https://github.com/rapiriz/ERP-Juan23/issues/3), [#4](https://github.com/rapiriz/ERP-Juan23/issues/4)), que requieren coordinarse con el saldo de G4.
 
 ## Lo que G1 necesita de G3
 
-G3 gestiona Productos y Stock. La [rama develop-g3](https://github.com/rapiriz/ERP-Juan23/blob/develop-g3/routes/api.php) expone rutas `/api/...`, sin el prefijo `/v1` que G1 espera hoy.
+G1 ya no consulta alertas ni genera reportes de stock. El contrato de `GET /api/v1/productos/stock-bajo` y su consumidor fueron retirados. La historia historica [#115](https://github.com/rapiriz/ERP-Juan23/issues/115) debe resolverse en el modulo de G3, no en los reportes de G1.
 
-| Ruta visible en G3 | Uso en G1 |
-| --- | --- |
-| `GET /api/stock/alertas` | Reporte de stock bajo, Sprint 3 [#115](https://github.com/rapiriz/ERP-Juan23/issues/115) |
-| `GET /api/stock` | Consulta general de inventario |
-| `GET /api/stock/{id}/disponibilidad` | Disponibilidad y precio de un producto |
-| `GET /api/productos/{id}` | Ficha de producto |
-| `GET /api/stock/{id}/historial-movimientos` | Historial de entradas, salidas y ajustes |
-| `GET /api/stock/lotes-por-vencer` | Lotes proximos al vencimiento |
-
-**Desacuerdo concreto:** G1 consume actualmente `GET /api/v1/productos/stock-bajo?orden=asc|desc` cuando `INVENTORY_SERVICE_DRIVER=http`; G3 ofrece `GET /api/stock/alertas`. La forma JSON tampoco coincide: G1 espera `nombre`, `stock`, `categoria` y `marca`; la alerta de G3 devuelve `descripcion`, `stock_disponible`, `categoria_nombre` y `marca_nombre`, dentro de `{"status":"success","data":[...]}`. Hace falta adaptar el consumidor de G1 o acordar un endpoint compatible. El estado de GitHub de la historia [#115](https://github.com/rapiriz/ERP-Juan23/issues/115) no prueba que este intercambio HTTP ya funcione.
+El reporte de **clientes por producto** todavia ofrece un selector basado en la tabla local `productos`. Cuando ese catalogo pase a ser propiedad exclusiva de G3, G1 necesitara consultar al menos `GET /api/productos` (ID y nombre, con busqueda o paginacion) y `GET /api/productos/{id}` para validar el producto seleccionado. La [rama develop-g3](https://github.com/rapiriz/ERP-Juan23/blob/develop-g3/routes/api.php) ya declara esas rutas, pero aun no estan conectadas con el reporte de G1.
 
 ## Lo que G1 necesita de G4
 
-G4 tiene historias de Ventas, Saldos y Promociones. En la [rama develop-g4](https://github.com/rapiriz/ERP-Juan23/tree/develop-g4) revisada no habia `routes/api.php`; la pantalla de ventas usaba productos de ejemplo y las promociones eran un placeholder. Las siguientes rutas son **propuestas**, no APIs disponibles.
+G4 tiene historias de Ventas, Saldos y Promociones. La [rama develop-g4](https://github.com/rapiriz/ERP-Juan23/blob/develop-g4/routes/api.php) ya declara `GET /api/ventas`, pero su controlador devuelve HTML, no el JSON requerido por el historial de G1. Las rutas siguientes son contratos **propuestos**, no APIs listas para integrar.
 
 | Ruta propuesta | Necesidad de G1 |
 | --- | --- |
-| `GET /api/v1/ventas?fecha=YYYY-MM-DD` | Ventas diarias, Sprint 3 [#119](https://github.com/rapiriz/ERP-Juan23/issues/119) |
 | `GET /api/v1/ventas?cliente_id=12&desde=...&hasta=...` | Historial del cliente, Sprint 3 [#118](https://github.com/rapiriz/ERP-Juan23/issues/118) |
-| `GET /api/v1/ventas/{id}` | Detalle completo de una operacion y sus productos |
-| `GET /api/v1/ventas/ranking-productos?desde=...&hasta=...` | Ranking comercial, Sprint 4 [#113](https://github.com/rapiriz/ERP-Juan23/issues/113) |
-| `GET /api/v1/promociones` | Listado de promociones de G4 |
-| `GET /api/v1/promociones/activas?fecha=...` | Promociones vigentes |
-| `GET /api/v1/promociones/aplicables?cliente_id=12&producto_id=8` | Promociones para cliente/producto, pensando en Catalogo/Recomendaciones de Sprint 5 |
+| `GET /api/v1/ventas/clientes-por-producto?producto_id=8` | Cantidad e IDs paginados de clientes distintos que compraron el producto; G1 calcula el porcentaje sobre todos sus clientes |
 
-Para [#119](https://github.com/rapiriz/ERP-Juan23/issues/119) y [#118](https://github.com/rapiriz/ERP-Juan23/issues/118), G1 ya preparo un consumidor HTTP que espera `GET /api/v1/ventas` con `{"data":[...]}` e informacion de fecha, estado, total, cliente y detalles con productos. El contrato preciso esta en [integracion-microservicios.md](integracion-microservicios.md#json-requerido-de-ventas). El modo local lee las tablas de este proyecto; ese fallback no confirma integracion con la base de G4. Para ranking, el servicio de G4 podria entregar ventas detalladas completas y G1 calcular el ranking, o publicar un agregado: conviene elegir un solo contrato y asegurar que no haya paginacion incompleta.
+Para [#118](https://github.com/rapiriz/ERP-Juan23/issues/118), G1 ya preparo un consumidor HTTP que espera `GET /api/v1/ventas` con `{"data":[...]}` e informacion de fecha, estado, total, cliente y detalles con productos. El contrato preciso esta en [integracion-microservicios.md](integracion-microservicios.md#json-requerido-de-ventas). El modo local lee las tablas de este proyecto; ese fallback no confirma integracion con la base de G4. El reporte de clientes por producto aun no usa HTTP y responde `503` en modo remoto hasta definir un contrato con G4. Ranking comercial [#113](https://github.com/rapiriz/ERP-Juan23/issues/113) ahora tiene pantalla y consumidor HTTP preparado; Ventas diarias [#119](https://github.com/rapiriz/ERP-Juan23/issues/119) no se implementa en G1.
 
-Las promociones de G4 ([#162](https://github.com/rapiriz/ERP-Juan23/issues/162) a [#165](https://github.com/rapiriz/ERP-Juan23/issues/165)) no son requisito directo de los Sprint 3 y 4 de G1, pero pueden alimentar las historias futuras de Catalogo y Recomendaciones. Las historias de G4 [#153](https://github.com/rapiriz/ERP-Juan23/issues/153), [#154](https://github.com/rapiriz/ERP-Juan23/issues/154) y [#156](https://github.com/rapiriz/ERP-Juan23/issues/156) tambien hablan de deuda y pagos; no deben crear un tercer saldo independiente.
+Promociones de G4 no son una dependencia de los reportes de clientes actuales. Las historias de G4 [#153](https://github.com/rapiriz/ERP-Juan23/issues/153), [#154](https://github.com/rapiriz/ERP-Juan23/issues/154) y [#156](https://github.com/rapiriz/ERP-Juan23/issues/156) tambien hablan de deuda y pagos; no deben crear un tercer saldo independiente.
 
 ## Decisiones que hay que cerrar con los grupos
 
-1. **Propiedad de saldo y cobros.** Hoy G1 guarda `clientes.saldo` y `cobros`; G2 tiene su propio modulo Cobros y G4 historias de Saldos. Como objetivo de microservicios se puede asignar Clientes/Usuarios/Reclamos a G1, Cobros/Cuenta corriente/Caja a G2, Productos/Stock a G3 y Ventas/Promociones a G4. Esa distribucion es una **recomendacion**, no un acuerdo confirmado. Hasta migrar, G1 debe seguir siendo la fuente de verdad de los saldos que expone.
+1. **Propiedad de saldo y cobros.** G2 es dueno de cobros y facturas; G4 de saldos y ventas. Las tablas locales historicas `clientes.saldo` y `cobros` de G1 ya no se consultan ni se escriben desde los flujos activos. Los proxies y reportes requieren las APIs acordadas.
 2. **Eventos monetarios.** Acordar quien registra el cargo de una venta, quien registra o anula un cobro, como se relaciona con una factura y como se evitan duplicados al reintentar peticiones. Nunca actualizar el mismo saldo por separado en G1, G2 y G4.
 3. **Autenticacion entre servicios.** La documentacion general de arquitectura menciona JWT, mientras G1 entrega un token opaco. Acordar introspeccion o un estandar comun y definir roles, vencimiento y credenciales de servicio.
-4. **Version y forma de los JSON.** G1 usa `/api/v1` y respuestas con `data`; G3 publica `/api` y agrega `status`. G2 mezcla respuestas propias. Antes de conectar `SALES_SERVICE_DRIVER=http` o `INVENTORY_SERVICE_DRIVER=http`, acordar URL, campos, errores, paginacion, moneda y zona horaria.
+4. **Version y forma de los JSON.** G1 usa `/api/v1` y respuestas con `data`; G3 publica `/api` y agrega `status`. G2 mezcla respuestas propias. Antes de conectar `SALES_SERVICE_DRIVER=http` o el futuro catalogo de G3, acordar URL, campos, errores, paginacion, moneda y zona horaria.
 5. **Facturacion.** Definir quien publica facturas pendientes y vencimientos, y si G2 asume la titularidad despues de su analisis [#188](https://github.com/rapiriz/ERP-Juan23/issues/188).
 
 ## Fuentes
@@ -113,4 +99,4 @@ Las promociones de G4 ([#162](https://github.com/rapiriz/ERP-Juan23/issues/162) 
 - [Issue #190: APIs](https://github.com/rapiriz/ERP-Juan23/issues/190).
 - [Historias de G1 en Sprint 3](https://github.com/rapiriz/ERP-Juan23/issues?q=is%3Aissue+milestone%3A%22Sprint+3%22+%22%5BG1%5D%22) y [Sprint 4](https://github.com/rapiriz/ERP-Juan23/issues?q=is%3Aissue+milestone%3A%22Sprint+4%22+%22%5BG1%5D%22).
 - [Rutas de G2](https://github.com/rapiriz/ERP-Juan23/blob/develop-g2/routes/api.php), [rutas de G3](https://github.com/rapiriz/ERP-Juan23/blob/develop-g3/routes/api.php) y [rama de G4](https://github.com/rapiriz/ERP-Juan23/tree/develop-g4).
-- Codigo local de G1: `routes/api.php`, `app/Services/Gateways/HttpSalesGateway.php` y `app/Services/Gateways/HttpInventoryGateway.php`.
+- Codigo local de G1: `routes/api.php` y `app/Services/Gateways/HttpSalesGateway.php`.

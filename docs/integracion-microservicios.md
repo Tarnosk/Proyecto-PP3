@@ -36,8 +36,8 @@ curl -H "Authorization: Bearer TU_TOKEN" -H "Accept: application/json" http://lo
 | GET | `/api/v1/clientes/{id}` | Ninguno | Ficha de cliente |
 | PUT | `/api/v1/clientes/{id}` | Ficha editable completa; token de administrador | Cliente reemplazado (`200`) |
 | PATCH | `/api/v1/clientes/{id}` | Uno o mas campos editables; token de administrador | Cliente modificado (`200`) |
-| GET | `/api/v1/clientes/{id}/saldo` | Ninguno | Saldo y moneda |
-| GET | `/api/v1/clientes/{id}/cobros` | `page`, `per_page` | Cobros confirmados, del mas reciente al mas antiguo |
+| GET | `/api/v1/clientes/{id}/saldo` | Ninguno | Saldo de G4 y moneda; `503` sin integracion |
+| GET | `/api/v1/clientes/{id}/cobros` | Ninguno | Cobros de G2; `503` sin integracion |
 | GET | `/api/v1/zonas` | Ninguno | Zonas ordenadas por nombre |
 | GET | `/api/v1/reclamos` | `cliente_id`, `estado`, `page`, `per_page` | Reclamos y `meta` |
 | GET | `/api/v1/reclamos/{id}` | Ninguno | Reclamo |
@@ -113,7 +113,7 @@ Content-Type: application/json
 {"telefono":"11-5555-6666","localidad":null}
 ```
 
-`saldo` y `creado_por` no son campos editables por estos endpoints: el saldo se reduce mediante cobros y el creador se fija en el alta. La comunicacion de cargos desde Ventas sigue pendiente de acuerdo entre grupos. Si se envian esos campos, la API responde `422`.
+`saldo` y `creado_por` no son campos editables por estos endpoints. El saldo pertenece a G4 y el creador se fija en el alta. Si se envian esos campos, la API responde `422`.
 
 Ejemplo de cliente:
 
@@ -131,13 +131,12 @@ Ejemplo de cliente:
     "zona_id": 3,
     "condicion_iva": "Responsable Inscripto",
     "tipo_cliente": "mayorista",
-    "estado": "activo",
-    "saldo": "12500.00"
+    "estado": "activo"
   }
 }
 ```
 
-`GET /clientes/{id}/saldo` devuelve `data: {"cliente_id": 12, "saldo": "12500.00", "moneda": "ARS"}`. Los cobros incluyen `id`, `cliente_id`, `fecha`, `monto_total`, `medio_pago`, `comprobante_nro`, `observaciones`, `usuario_id` y `usuario_nombre`.
+`GET /clientes/{id}/saldo` consulta a G4 y devuelve `data: {"cliente_id": 12, "saldo": "12500.00", "moneda": "ARS"}`. `GET /clientes/{id}/cobros` consulta a G2 y devuelve `data` con `id`, `cliente_id`, `fecha`, `monto_total`, `medio_pago`, `comprobante_nro` y `observaciones`. G1 ya no registra cobros ni calcula el saldo. Sin URL/token responde `503`; ante error o JSON invalido del proveedor responde `502`.
 
 Para crear un reclamo:
 
@@ -155,17 +154,13 @@ El cliente debe estar activo y el usuario debe ser administrativo o repartidor a
 
 ## JSON requerido de Ventas
 
-El Grupo 1 consulta `GET /api/v1/ventas?fecha=YYYY-MM-DD` para ventas diarias y `GET /api/v1/ventas?cliente_id=12&desde=YYYY-MM-DD&hasta=YYYY-MM-DD` para el historial. Los filtros `desde` y `hasta` son opcionales. Ambas consultas responden `{ "data": [...] }` sin paginacion; el resultado debe contener **todas** las operaciones del filtro. Se espera orden ascendente por fecha en ventas diarias y descendente en historial.
+El Grupo 1 consulta `GET /api/v1/ventas?cliente_id=12&desde=YYYY-MM-DD&hasta=YYYY-MM-DD` para el historial de un cliente. Los filtros `desde` y `hasta` son opcionales. La respuesta `{ "data": [...] }` debe contener todas las operaciones del filtro, ordenadas por fecha descendente.
 
-Cada elemento debe tener `fecha` (ISO 8601), `numero_factura` (cadena o `null`), `total` (decimal), `estado` (`pendiente`, `confirmada`, `pagada`, `facturada` o `cancelada`), `cliente` con `nombre` y `apellido_razon_social`, y `detalles` como lista de `{ cantidad, subtotal, producto: { nombre } }`. Para ventas diarias se muestran solamente `confirmada`, `pagada` y `facturada`; el proveedor debe aplicar ese filtro. Para historial deben venir todos los estados.
+Cada elemento debe tener `fecha` (ISO 8601), `numero_factura` (cadena o `null`), `total` (decimal), `estado` (`pendiente`, `confirmada`, `pagada`, `facturada` o `cancelada`), `cliente` con `nombre` y `apellido_razon_social`, y `detalles` como lista de `{ cantidad, subtotal, producto: { nombre } }`. Deben venir todos los estados.
 
 Ejemplo listo para usar: [ventas.json](contracts/ventas.json).
 
-## JSON requerido de Inventario
-
-El Grupo 1 consulta `GET /api/v1/productos/stock-bajo?orden=asc` o `orden=desc`. La respuesta `{ "data": [...] }` debe incluir todos los productos con `stock < stock_minimo`, ordenados por `stock`. Cada producto tiene `codigo`, `nombre`, `stock`, `stock_minimo`, `categoria` y `marca`; las dos ultimas pueden ser `null` o `{ "nombre": "..." }`.
-
-Ejemplo listo para usar: [stock-bajo.json](contracts/stock-bajo.json).
+G1 ya no consume alertas de stock ni genera reportes de ventas generales o inventario. Las secciones de Ventas y Stock permanecen visibles sin consultas desde G1. El reporte de clientes por producto usa actualmente productos y ventas locales; con Ventas remotas responde `503` hasta acordar con G4 un contrato de compradores por producto. El catalogo de productos remoto tambien debera acordarse con G3 antes de sustituir el selector local.
 
 ## Configuracion local y remota
 
@@ -174,13 +169,8 @@ INTERNAL_API_TOKEN=valor_aleatorio_largo
 SALES_SERVICE_DRIVER=local
 SALES_SERVICE_URL=http://ventas:8000
 SALES_SERVICE_TOKEN=token_del_servicio_ventas
-INVENTORY_SERVICE_DRIVER=local
-INVENTORY_SERVICE_URL=http://inventario:8000
-INVENTORY_SERVICE_TOKEN=token_del_servicio_inventario
 ```
 
-Con `local`, reportes y exportaciones leen las tablas actuales `ventas` y `productos`. Con `http`, consultan exclusivamente los endpoints JSON especificados. Tras cambiar `.env`, ejecutar `php artisan config:clear`. No se crea un registro local alternativo si el servicio remoto falla: se devuelve `502` o `503` para que el error sea visible.
+Con `SALES_SERVICE_DRIVER=local`, el historial de clientes lee las ventas locales. Con `http`, consulta el JSON de G4 especificado arriba. Tras cambiar `.env`, ejecutar `php artisan config:clear`. No se crea un registro local alternativo si el servicio remoto falla: se devuelve `502` o `503` para que el error sea visible.
 
-Los cobros y el saldo pertenecen a G1. En modo local un cobro tambien se distribuye entre ventas locales en `cobro_ventas`. En modo HTTP el cobro se registra en la cuenta del cliente, sin escribir en la base de ventas externa. La conciliacion a nivel de venta entre servicios requiere acordar un endpoint de aplicacion de cobros antes de mover definitivamente la propiedad de las ventas.
-
-Ademas, el alta de una venta externa debe comunicar el cargo al servicio G1 para incrementar `clientes.saldo`. Ese mensaje y su mecanismo de idempotencia todavia no forman parte del contrato y deben acordarse con el grupo de Ventas antes de operar con ventas reales en bases separadas. Los reportes de lectura ya pueden cambiarse al modo HTTP de forma independiente.
+G2 es dueno de cobros y facturas; G4, de saldos y ventas. Las tablas locales historicas `cobros` y `clientes.saldo` se conservan sin borrar datos, pero ya no se usan en pantallas, reportes ni escrituras. Los nuevos contratos propuestos para Sprint 4 estan en [contratos-sprint4-g1.md](contratos-sprint4-g1.md). No se considera integrada una API hasta que el otro grupo confirme su ruta y estructura.

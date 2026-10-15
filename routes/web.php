@@ -3,7 +3,6 @@
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\PasswordRecoveryController;
 use App\Http\Controllers\ClienteController;
-use App\Http\Controllers\CobroController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ReclamoController;
 use App\Http\Controllers\ReportController;
@@ -58,27 +57,23 @@ Route::middleware(['auth', 'session.current'])->group(function (): void {
         Route::post('/clientes', [ClienteController::class, 'store'])->name('clientes.store');
         Route::get('/clientes/{cliente}/editar', [ClienteController::class, 'edit'])->whereNumber('cliente')->name('clientes.edit');
         Route::put('/clientes/{cliente}', [ClienteController::class, 'update'])->whereNumber('cliente')->name('clientes.update');
-        Route::get('/clientes/{cliente}/cobros/nuevo', [CobroController::class, 'create'])->whereNumber('cliente')->name('cobros.create');
-        Route::post('/clientes/{cliente}/cobros', [CobroController::class, 'store'])->whereNumber('cliente')->name('cobros.store');
         Route::get('/usuarios', [UserController::class, 'index'])->name('users.index');
         Route::put('/usuarios/{user}/email', [UserController::class, 'updateEmail'])->name('users.email.update');
     });
 
     Route::middleware('role:administrativo,contador')->prefix('reportes')->name('reports.')->group(function (): void {
         Route::get('/', [ReportController::class, 'index'])->name('index');
-        Route::get('/ventas-diarias', [ReportController::class, 'dailySales'])->name('daily-sales');
-        Route::get('/stock-bajo', [ReportController::class, 'lowStock'])->name('low-stock');
         Route::get('/historial-clientes', [ReportController::class, 'clientHistory'])->name('client-history');
         Route::get('/clientes-por-producto', [ReportController::class, 'clientProductReach'])->name('client-product-reach');
-        Route::get('/ventas-diarias/exportar/{format}', [ReportExportController::class, 'dailySales'])->name('daily-sales.export');
-        Route::get('/stock-bajo/exportar/{format}', [ReportExportController::class, 'lowStock'])->name('low-stock.export');
+        Route::get('/clientes-deudores', [ReportController::class, 'debtors'])->name('debtors');
+        Route::get('/ranking-comercial', [ReportController::class, 'productRanking'])->name('product-ranking');
         Route::get('/historial-clientes/exportar/{format}', [ReportExportController::class, 'clientHistory'])->name('client-history.export');
     });
 
-    Route::get('/ventas', [ReportController::class, 'dailySales'])
+    Route::view('/ventas', 'reports.external-module', ['module' => 'Ventas y pedidos', 'group' => 'G4'])
         ->middleware('role:administrativo,repartidor')
         ->name('ventas.index');
-    Route::get('/stock', [ReportController::class, 'lowStock'])
+    Route::view('/stock', 'reports.external-module', ['module' => 'Inventario y stock', 'group' => 'G3'])
         ->middleware('role:administrativo,repartidor')
         ->name('stock.index');
 });

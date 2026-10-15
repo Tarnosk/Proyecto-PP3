@@ -4,10 +4,10 @@ namespace Tests\Feature;
 
 use App\Enums\UserRole;
 use App\Models\Cliente;
-use App\Models\Cobro;
 use App\Models\User;
 use App\Models\Zona;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
 class InternalApiTest extends TestCase
@@ -31,7 +31,7 @@ class InternalApiTest extends TestCase
         $this->getJson('/api/v1/health')->assertUnauthorized();
     }
 
-    public function test_clients_are_searchable_paginated_and_have_balance_and_payment_history(): void
+    public function test_clients_are_searchable_and_financial_routes_proxy_owner_services(): void
     {
         $admin = User::factory()->create(['rol' => UserRole::ADMINISTRATIVO]);
         $zone = Zona::query()->create(['nombre' => 'Norte']);
@@ -42,19 +42,29 @@ class InternalApiTest extends TestCase
             'saldo' => 750,
         ]);
         Cliente::factory()->create(['creado_por' => $admin->id, 'apellido_razon_social' => 'Comercial Sur']);
-        Cobro::factory()->create(['cliente_id' => $client->id, 'usuario_id' => $admin->id, 'monto_total' => 250]);
+        config()->set('services.balances', ['url' => 'https://saldos.example.test', 'token' => 'g4-token']);
+        config()->set('services.billing', ['url' => 'https://facturas.example.test', 'token' => 'g2-token']);
+        Http::preventStrayRequests();
+        Http::fake([
+            'saldos.example.test/api/v1/clientes/*/saldo' => Http::response(['data' => [
+                'cliente_id' => $client->id, 'saldo' => '500.00', 'moneda' => 'ARS',
+            ]]),
+            'facturas.example.test/api/v1/cobros*' => Http::response(['data' => [[
+                'id' => 8, 'cliente_id' => $client->id, 'fecha' => '2026-10-14T10:00:00-03:00',
+                'monto_total' => '250.00', 'medio_pago' => 'transferencia',
+            ]]]),
+        ]);
         $this->withToken('test-internal-token');
 
         $this->getJson('/api/v1/clientes?buscar=Norte&per_page=1')
             ->assertOk()->assertJsonPath('meta.total', 1)
             ->assertJsonPath('data.0.id', $client->id)
-            ->assertJsonPath('data.0.saldo', '750.00');
+            ->assertJsonMissingPath('data.0.saldo');
         $this->getJson("/api/v1/clientes/{$client->id}/saldo")
-            ->assertOk()->assertJsonPath('data.saldo', '750.00')
+            ->assertOk()->assertJsonPath('data.saldo', '500.00')
             ->assertJsonPath('data.moneda', 'ARS');
         $this->getJson("/api/v1/clientes/{$client->id}/cobros")
-            ->assertOk()->assertJsonPath('meta.total', 1)
-            ->assertJsonPath('data.0.usuario_id', $admin->id)
+            ->assertOk()
             ->assertJsonPath('data.0.monto_total', '250.00');
         $this->getJson('/api/v1/zonas')->assertOk()->assertJsonPath('data.0.nombre', 'Norte');
         $this->getJson('/api/v1/clientes/999999')->assertNotFound();
