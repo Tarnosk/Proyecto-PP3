@@ -140,24 +140,13 @@ class RecepcionController extends Controller
                         throw new RuntimeException("El producto con ID {$idProducto} no existe o no está activo.");
                     }
 
-                    // S09 / S03: Si viene número de lote y fecha de vencimiento, crear Lote
                     $idLote = null;
-                    if ($it['nro_lote'] !== '' && !empty($it['fecha_vencimiento'])) {
-                        $lote = \App\Modules\Stock\Models\Lote::create([
-                            'id_producto' => $idProducto,
-                            'nro_lote' => $it['nro_lote'],
-                            'cantidad_inicial' => $cantidadRecibida,
-                            'cantidad_actual' => $cantidadRecibida,
-                            'fecha_vencimiento' => $it['fecha_vencimiento'],
-                        ]);
-                        $idLote = $lote->id_lote;
-                    }
 
                     // Registrar detalle de recepción.
                     DetalleRecepcion::create([
                         'id_recepcion' => $recepcion->id_recepcion,
                         'id_producto' => $idProducto,
-                        'id_lote' => $idLote,
+                        'id_lote' => null,
                         'id_unidad' => $detalle->id_unidad,
                         'cantidad_recibida' => $cantidadRecibida,
                     ]);
@@ -204,8 +193,8 @@ class RecepcionController extends Controller
                         'descripcion' => $producto->descripcion,
                         'cantidad_recibida' => $cantidadRecibida,
                         'cantidad_pendiente' => max(0, $pendiente - $cantidadRecibida),
-                        'id_lote' => $idLote,
-                        'nro_lote' => $it['nro_lote'] ?: null,
+                        'id_lote' => null,
+                        'nro_lote' => null,
                     ];
                 }
 

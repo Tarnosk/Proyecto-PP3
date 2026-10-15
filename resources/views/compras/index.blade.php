@@ -2,7 +2,7 @@
 
 @section('title', 'Compras y Órdenes - Distribuidora Pigüé')
 @section('page_title', 'Compras y Órdenes de Compra')
-@section('page_subtitle', 'Gestión de Compras a Proveedores, Recepciones de Lotes, Órdenes de Reposición y Control de Deudas')
+@section('page_subtitle', 'Gestión de Compras a Proveedores, Recepción de Mercadería, Órdenes de Reposición y Control de Deudas')
 
 @section('content')
 <div class="space-y-6">
@@ -264,7 +264,7 @@
                 </div>
                 <div>
                     <h3 class="text-base font-black text-slate-800">Motor de Sugerencias de Reposición</h3>
-                    <p class="text-xs text-slate-500 font-bold">Detección de stock crítico/mínimo, cálculo de lote óptimo y asignación del mejor proveedor</p>
+                    <p class="text-xs text-slate-500 font-bold">Detección de stock crítico/mínimo, cálculo de cantidad óptima y asignación del mejor proveedor</p>
                 </div>
             </div>
 
@@ -509,7 +509,7 @@
         <div class="flex items-center justify-between pb-3 border-b border-slate-100">
             <div>
                 <h3 class="text-base font-black text-slate-800">Registrar Recepción de Mercadería</h3>
-                <p id="recepcionSubtituloCompra" class="text-xs text-slate-500 font-bold">Ingreso a stock con lote y vencimiento</p>
+                <p id="recepcionSubtituloCompra" class="text-xs text-slate-500 font-bold">Ingreso directo de mercadería a stock</p>
             </div>
             <button onclick="cerrarModalRecepcion()" class="p-1 text-slate-400 hover:text-slate-600 rounded-lg">
                 <i data-lucide="x" class="w-5 h-5"></i>
@@ -528,7 +528,7 @@
             <div class="border border-slate-200/80 rounded-2xl overflow-hidden bg-slate-50/50">
                 <div class="p-3 bg-slate-100/60 font-black text-xs text-slate-700 flex justify-between">
                     <span>Productos de la Compra a Recepcionar</span>
-                    <span class="text-[11px] text-slate-500 font-normal">Complete cantidad, n° lote y vencimiento para cada ítem</span>
+                    <span class="text-[11px] text-slate-500 font-normal">Complete la cantidad recibida para cada ítem</span>
                 </div>
                 <div class="overflow-x-auto max-h-72">
                     <table class="clay-table">
@@ -539,13 +539,11 @@
                                 <th class="text-center">Recibido</th>
                                 <th class="text-center">Pendiente</th>
                                 <th class="w-28 text-center">Cant. a Recibir</th>
-                                <th class="w-36">N° Lote</th>
-                                <th class="w-36">Vencimiento</th>
                             </tr>
                         </thead>
                         <tbody id="recepcionItemsBody">
                             <tr>
-                                <td colspan="7" class="text-center py-4 text-slate-400 font-bold">Cargando productos de la compra...</td>
+                                <td colspan="5" class="text-center py-4 text-slate-400 font-bold">Cargando productos de la compra...</td>
                             </tr>
                         </tbody>
                     </table>
@@ -1466,12 +1464,8 @@
             const detalles = json.data.detalles || [];
             itemsRecepcionModal = detalles;
 
-            const hoy = new Date();
-            const vencDefecto = new Date(hoy.setMonth(hoy.getMonth() + 6)).toISOString().split('T')[0];
-
             tbody.innerHTML = detalles.map((d, idx) => {
                 const pend = d.cantidad_pendiente !== undefined ? d.cantidad_pendiente : Math.max(0, d.cantidad - (d.cantidad_recibida || 0));
-                const loteSugerido = `LOTE-${d.id_producto}-${Date.now().toString().slice(-4)}`;
                 const disabled = pend <= 0 ? 'disabled' : '';
 
                 return `
@@ -1486,14 +1480,6 @@
                         <td class="text-center">
                             <input type="number" min="0" max="${pend}" value="${pend > 0 ? pend : 0}" id="rec_cant_${idx}" 
                                    ${disabled} class="clay-input w-20 py-1 text-center font-black text-xs">
-                        </td>
-                        <td>
-                            <input type="text" value="${pend > 0 ? loteSugerido : ''}" id="rec_lote_${idx}" 
-                                   ${disabled} placeholder="LOTE-001" class="clay-input w-full py-1 text-xs font-bold uppercase">
-                        </td>
-                        <td>
-                            <input type="date" value="${pend > 0 ? vencDefecto : ''}" id="rec_venc_${idx}" 
-                                   ${disabled} class="clay-input w-full py-1 text-xs font-bold">
                         </td>
                     </tr>
                 `;
@@ -1516,17 +1502,13 @@
         const itemsToSend = [];
         for (let i = 0; i < itemsRecepcionModal.length; i++) {
             const cantInput = document.getElementById(`rec_cant_${i}`);
-            const loteInput = document.getElementById(`rec_lote_${i}`);
-            const vencInput = document.getElementById(`rec_venc_${i}`);
             if (!cantInput) continue;
 
             const cant = Number(cantInput.value || 0);
             if (cant > 0) {
                 itemsToSend.push({
                     id_producto: itemsRecepcionModal[i].id_producto,
-                    cantidad_recibida: cant,
-                    numero_lote: loteInput ? loteInput.value.trim() : null,
-                    fecha_vencimiento: vencInput ? vencInput.value : null
+                    cantidad_recibida: cant
                 });
             }
         }
@@ -1548,7 +1530,7 @@
             const data = await res.json();
             if (data.status === 'success') {
                 cerrarModalRecepcion();
-                mostrarNotificacion('Recepción registrada exitosamente. El stock y los lotes han sido actualizados.', 'success');
+                mostrarNotificacion('Recepción registrada exitosamente. El stock ha sido actualizado.', 'success');
                 await Promise.all([cargarCompras(), cargarOrdenes(), cargarDeudas()]);
             } else {
                 mostrarNotificacion(data.message || 'Error al procesar la recepción.', 'error');

@@ -31,7 +31,7 @@ class GeneradorSugerenciasReposicionService
 {
     public function __construct(
         private SugerenciaCompraRepository $sugerencias,
-        private LoteVencimientoRepository $lotes
+        private ?LoteVencimientoRepository $lotes = null
     ) {
     }
 
@@ -77,19 +77,6 @@ class GeneradorSugerenciasReposicionService
 
         if ($stock <= $minimo) {
             $motivos['bajo_stock'] = [null, 'Stock por debajo del mínimo permitido'];
-        }
-
-        // LOTE.cantidad es la cantidad ingresada y no se descuenta con las ventas;
-        // por eso lo "en riesgo" nunca puede superar el stock real del producto.
-        $enRiesgo = min(
-            $this->lotes->cantidadEnRiesgoPorProducto(
-                $producto->id_producto,
-                (int) config('reposicion.umbral_proximo_vencer_dias', 15)
-            ),
-            $stock
-        );
-        if ($enRiesgo > 0) {
-            $motivos['proximo_vencer'] = [$enRiesgo, "Reemplazar {$enRiesgo} unidades próximas a vencer"];
         }
 
         $dias = $this->calcularDiasHastaAgotamiento($stock, $velocidad);

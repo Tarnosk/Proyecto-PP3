@@ -43,7 +43,6 @@ class UserStoriesFrontendTest extends TestCase
         $resInv->assertSee('Inventario y Stock');
         $resInv->assertSee('Catálogo de Productos');
         $resInv->assertSee('Stock y Alertas');
-        $resInv->assertSee('Lotes y Vencimientos');
         $resInv->assertSee('Movimientos');
         $resInv->assertSee('Conteo Físico');
         $resInv->assertSee('Devoluciones');
@@ -55,7 +54,7 @@ class UserStoriesFrontendTest extends TestCase
         $resComp->assertSee('Compras y Órdenes de Compra');
         $resComp->assertSee('Compras Realizadas');
         $resComp->assertSee('Órdenes de Compra');
-        $resComp->assertSee('Sugerencias de Reposición (PC07)');
+        $resComp->assertSee('Sugerencias de Reposición');
 
         // 4. Módulo Proveedores
         $resProv = $this->get('/proveedores');
@@ -66,7 +65,7 @@ class UserStoriesFrontendTest extends TestCase
         $resProv->assertSee('Plazo de Entrega Promedio');
 
         // 5. Subvistas Especializadas (Vencimientos S11 y Sugerencias PC07)
-        $this->get('/vencimientos')->assertOk();
+        $this->get('/vencimientos')->assertRedirect('/inventario');
         $this->get('/sugerencias-reposicion')->assertOk();
         $this->get('/dashboard-reposicion')->assertOk();
     }
@@ -258,11 +257,6 @@ class UserStoriesFrontendTest extends TestCase
         $viewRes->assertSee('modalAumento');
         $viewRes->assertSee('aumentoCriterio');
         $viewRes->assertSee('aumentoPorcentaje');
-        $viewRes->assertSee('aumentoRedondeo');
-        $viewRes->assertSee('peso_mas_cercano');
-        $viewRes->assertSee('peso_superior');
-        $viewRes->assertSee('terminar_90');
-        $viewRes->assertSee('terminar_99');
         $viewRes->assertSee('cambiarEstadoProducto');
 
         $producto = Producto::where('estado', 'activo')->first();
@@ -419,29 +413,23 @@ class UserStoriesFrontendTest extends TestCase
     }
 
     /**
-     * S03, S09 - Registro de Ingreso de Mercadería con Lotes y Vencimientos.
+     * S03 - Registro de Ingreso de Mercadería en Stock General.
      */
     public function test_s03_s09_ingreso_mercaderia_con_lotes_y_vencimientos(): void
     {
         $viewRes = $this->get('/inventario');
         $viewRes->assertOk();
         $viewRes->assertSee('modalIngreso');
-        $viewRes->assertSee('modalNuevoLote');
         $viewRes->assertSee('ingresoProveedorSelect');
         $viewRes->assertSee('ingresoProductoSelect');
         $viewRes->assertSee('ingresoCantidad');
-        $viewRes->assertSee('ingresoNroLote');
-        $viewRes->assertSee('ingresoVencimiento');
-        $viewRes->assertSee('ingresoLoteExistenteSelect');
-        $viewRes->assertSee('btnModoLoteExistente');
 
         $proveedor = Proveedor::where('estado', 'activo')->first();
         $producto = Producto::where('estado', 'activo')->first();
         $this->assertNotNull($proveedor);
         $this->assertNotNull($producto);
 
-        $loteNum = 'LOTE-TEST-' . uniqid();
-        $fechaVenc = now()->addMonths(6)->toDateString();
+        $stockAntes1 = (int) $producto->fresh()->stock;
 
         $ingresoRes = $this->postJson('/api/stock/ingresos', [
             'id_proveedor' => $proveedor->id_proveedor,
@@ -449,14 +437,13 @@ class UserStoriesFrontendTest extends TestCase
                 [
                     'id_producto' => $producto->id_producto,
                     'cantidad' => 15,
-                    'nro_lote' => $loteNum,
-                    'fecha_vencimiento' => $fechaVenc,
                 ]
             ],
-            'observaciones' => 'Ingreso de prueba test S03/S09',
+            'observaciones' => 'Ingreso de prueba test S03',
         ]);
         $ingresoRes->assertStatus(201);
         $this->assertTrue($ingresoRes->json('status') === 'success');
+        $this->assertEquals($stockAntes1 + 15, (int) $producto->fresh()->stock);
 
         // Verificar que el producto quedó asociado automáticamente al proveedor
         $this->assertTrue(ProductoProveedor::where('id_producto', $producto->id_producto)
@@ -465,47 +452,27 @@ class UserStoriesFrontendTest extends TestCase
             ->exists());
 
         // Test flat payload ingreso directo (compatibilidad formulario web)
-        $loteNumFlat = 'LOTE-FLAT-' . uniqid();
+        $stockAntes2 = (int) $producto->fresh()->stock;
         $flatRes = $this->postJson('/api/stock/ingresos', [
             'id_proveedor' => $proveedor->id_proveedor,
             'id_producto' => $producto->id_producto,
             'cantidad' => 10,
-            'nro_lote' => $loteNumFlat,
-            'fecha_vencimiento' => $fechaVenc,
         ]);
         $flatRes->assertStatus(201);
         $this->assertTrue($flatRes->json('status') === 'success');
+        $this->assertEquals($stockAntes2 + 10, (int) $producto->fresh()->stock);
 
-        // Test ingreso seleccionando un lote existente ya cargado en el sistema
-        $loteExistente = \App\Modules\Stock\Models\Lote::where('id_producto', $producto->id_producto)->first();
-        $this->assertNotNull($loteExistente);
-        $cantLoteAntes = $loteExistente->cantidad_actual;
-
-        $ingresoLoteExistenteRes = $this->postJson('/api/stock/ingresos', [
-            'id_proveedor' => $proveedor->id_proveedor,
-            'id_producto' => $producto->id_producto,
-            'id_lote' => $loteExistente->id_lote,
-            'nro_lote' => $loteExistente->nro_lote,
-            'cantidad' => 5,
-            'fecha_vencimiento' => $loteExistente->fecha_vencimiento ? \Carbon\Carbon::parse($loteExistente->fecha_vencimiento)->toDateString() : $fechaVenc,
-        ]);
-        $ingresoLoteExistenteRes->assertStatus(201);
-        $loteExistente->refresh();
-        $this->assertEquals($cantLoteAntes + 5, $loteExistente->cantidad_actual);
-
-        // Verificar que el lote quedó registrado (S09)
-        $lotesRes = $this->getJson('/api/stock/lotes');
-        $lotesRes->assertOk();
-
-        // Verificar consulta de lotes por producto para selector de existentes
-        $lotesProdRes = $this->getJson("/api/stock/productos/{$producto->id_producto}/lotes");
-        $lotesProdRes->assertOk();
-        $this->assertArrayHasKey('lotes', $lotesProdRes->json('data'));
-
-        // Verificar que el movimiento quedó registrado en el Kardex (S12)
+        // Verificar que el movimiento quedó registrado en el Kardex (S12) con id_lote nulo
         $movsRes = $this->getJson('/api/stock/movimientos');
         $movsRes->assertOk();
         $this->assertNotEmpty($movsRes->json('data'));
+
+        $movIngreso = MovimientoStock::where('id_producto', $producto->id_producto)
+            ->where('tipo', 'ingreso')
+            ->latest('id_movimiento')
+            ->first();
+        $this->assertNotNull($movIngreso);
+        $this->assertNull($movIngreso->id_lote);
     }
 
     /**
@@ -536,7 +503,7 @@ class UserStoriesFrontendTest extends TestCase
     }
 
     /**
-     * S05 - Registro de Devoluciones con asignación y actualización de lotes.
+     * S05 - Registro de Devoluciones en Stock General.
      */
     public function test_s05_registro_devoluciones(): void
     {
@@ -546,104 +513,56 @@ class UserStoriesFrontendTest extends TestCase
         $viewRes->assertSee('modalDevolucion');
         $viewRes->assertSee('devTipo');
         $viewRes->assertSee('devProductoSelect');
-        $viewRes->assertSee('devLoteSelect');
-        $viewRes->assertSee('modalDevLoteSelect');
         $viewRes->assertSee('devCantidad');
         $viewRes->assertSee('devMotivo');
 
         $producto = Producto::where('estado', 'activo')->first();
         $this->assertNotNull($producto);
 
-        // 1. Devolución de cliente sin lote específico
+        // 1. Devolución de cliente: incrementa stock del producto
+        $stockProdAntes = (int) $producto->fresh()->stock_disponible;
         $devRes = $this->postJson('/api/stock/devoluciones', [
             'id_producto' => $producto->id_producto,
             'tipo_devolucion' => 'cliente',
             'cantidad' => 3,
-            'motivo' => 'Producto con empaque dañado',
+            'motivo' => 'Producto con empaque dañado devuelto por cliente',
         ]);
         $devRes->assertStatus(201);
         $this->assertTrue($devRes->json('status') === 'success');
+        $this->assertEquals($stockProdAntes + 3, (int) $producto->fresh()->stock_disponible);
 
-        // 2. Devolución de cliente CON LOTE: incrementa stock del producto y del lote
-        $lote = Lote::create([
-            'id_producto' => $producto->id_producto,
-            'nro_lote' => 'LOT-DEV-' . uniqid(),
-            'cantidad_inicial' => 20,
-            'cantidad_actual' => 10,
-            'fecha_vencimiento' => now()->addDays(60)->toDateString(),
-        ]);
-
-        $stockProdAntes = (int) $producto->fresh()->stock_disponible;
-        $stockLoteAntes = (int) $lote->fresh()->cantidad_actual;
-
-        $devClienteLoteRes = $this->postJson('/api/stock/devoluciones', [
-            'id_producto' => $producto->id_producto,
-            'id_lote' => $lote->id_lote,
-            'tipo_devolucion' => 'cliente',
-            'cantidad' => 5,
-            'motivo' => 'Devolución de cliente por sobrante de evento',
-        ]);
-        $devClienteLoteRes->assertStatus(201);
-        $this->assertEquals('success', $devClienteLoteRes->json('status'));
-        $this->assertEquals($lote->id_lote, $devClienteLoteRes->json('data.id_lote'));
-        $this->assertEquals($stockLoteAntes + 5, $devClienteLoteRes->json('data.lote_cantidad_actual'));
-
-        // Verificar persistencia en base de datos
-        $this->assertEquals($stockProdAntes + 5, (int) $producto->fresh()->stock_disponible);
-        $this->assertEquals($stockLoteAntes + 5, (int) $lote->fresh()->cantidad_actual);
-
-        // Verificar que el movimiento en Kardex se vinculó al lote
+        // Verificar que el movimiento en Kardex se registró con id_lote null
         $mov = MovimientoStock::where('id_producto', $producto->id_producto)
             ->where('tipo', 'devolucion')
-            ->where('id_lote', $lote->id_lote)
             ->latest('id_movimiento')
             ->first();
         $this->assertNotNull($mov);
-        $this->assertEquals($lote->id_lote, $mov->id_lote);
+        $this->assertNull($mov->id_lote);
 
-        // 3. Devolución a proveedor CON LOTE: decrementa stock del producto y del lote
+        // 2. Devolución a proveedor: decrementa stock del producto
         $stockProdAntesProv = (int) $producto->fresh()->stock_disponible;
-        $stockLoteAntesProv = (int) $lote->fresh()->cantidad_actual;
-
-        $devProvLoteRes = $this->postJson('/api/stock/devoluciones', [
+        $devProvRes = $this->postJson('/api/stock/devoluciones', [
             'id_producto' => $producto->id_producto,
-            'id_lote' => $lote->id_lote,
             'tipo_devolucion' => 'proveedor',
-            'cantidad' => 4,
+            'cantidad' => 2,
             'motivo' => 'Devolución a proveedor por falla de fábrica',
         ]);
-        $devProvLoteRes->assertStatus(201);
-        $this->assertEquals('success', $devProvLoteRes->json('status'));
-        $this->assertEquals($stockProdAntesProv - 4, (int) $producto->fresh()->stock_disponible);
-        $this->assertEquals($stockLoteAntesProv - 4, (int) $lote->fresh()->cantidad_actual);
+        $devProvRes->assertStatus(201);
+        $this->assertEquals('success', $devProvRes->json('status'));
+        $this->assertEquals($stockProdAntesProv - 2, (int) $producto->fresh()->stock_disponible);
 
-        // 4. Intentar devolver a proveedor más unidades que las disponibles en el lote -> Error 400
+        // 3. Intentar devolver a proveedor más unidades que el stock disponible -> Error 400
         $devExcesoRes = $this->postJson('/api/stock/devoluciones', [
             'id_producto' => $producto->id_producto,
-            'id_lote' => $lote->id_lote,
             'tipo_devolucion' => 'proveedor',
-            'cantidad' => 9999,
+            'cantidad' => 99999,
             'motivo' => 'Intento excedente',
         ]);
         $devExcesoRes->assertStatus(400);
 
-        // 5. Intentar devolver con un lote perteneciente a otro producto -> Error 400
-        $otroProducto = Producto::where('id_producto', '!=', $producto->id_producto)->first();
-        if ($otroProducto) {
-            $devOtroProdLoteRes = $this->postJson('/api/stock/devoluciones', [
-                'id_producto' => $otroProducto->id_producto,
-                'id_lote' => $lote->id_lote,
-                'tipo_devolucion' => 'cliente',
-                'cantidad' => 1,
-                'motivo' => 'Lote cruzado inválido',
-            ]);
-            $devOtroProdLoteRes->assertStatus(400);
-        }
-
-        // 6. Devolución en unidades individuales con id_unidad = 0 o null (integridad FK)
+        // 4. Devolución en unidades individuales con id_unidad = 0 o null (integridad FK)
         $devUnidadCeroRes = $this->postJson('/api/stock/devoluciones', [
             'id_producto' => $producto->id_producto,
-            'id_lote' => $lote->id_lote,
             'tipo_devolucion' => 'proveedor',
             'cantidad' => 1,
             'id_unidad' => 0,
@@ -655,7 +574,6 @@ class UserStoriesFrontendTest extends TestCase
 
         $devUnidadNullRes = $this->postJson('/api/stock/devoluciones', [
             'id_producto' => $producto->id_producto,
-            'id_lote' => $lote->id_lote,
             'tipo_devolucion' => 'cliente',
             'cantidad' => 1,
             'id_unidad' => null,
@@ -667,7 +585,7 @@ class UserStoriesFrontendTest extends TestCase
     }
 
     /**
-     * S06 - Ajustes Manuales de Inventario con asignación y actualización de lotes.
+     * S06 - Ajustes Manuales de Inventario en Stock General.
      */
     public function test_s06_ajustes_manuales_de_inventario(): void
     {
@@ -677,194 +595,65 @@ class UserStoriesFrontendTest extends TestCase
         $viewRes->assertSee('ajusteProductoSelect');
         $viewRes->assertSee('ajusteTipo');
         $viewRes->assertSee('ajusteCantidad');
-        $viewRes->assertSee('ajusteLoteSelect');
-        $viewRes->assertSee('ajusteModoTabs');
-        $viewRes->assertSee('ajusteNroLoteNuevo');
-        $viewRes->assertSee('La disminución se aplicará al stock general');
 
         $producto = Producto::where('estado', 'activo')->first();
         $this->assertNotNull($producto);
+        $producto->stock = 20;
+        $producto->save();
 
-        // Permitir disminuir del stock general cuando no existen lotes.
-        $productoSinLotes = $producto->replicate();
-        $productoSinLotes->codigo = 'TEST-AJU-SIN-LOTE-' . uniqid();
-        $productoSinLotes->stock = 12;
-        $productoSinLotes->save();
-
-        $ajusteSinLoteRes = $this->postJson('/api/stock/ajustes', [
-            'id_producto' => $productoSinLotes->id_producto,
-            'tipo' => 'disminuir',
-            'cantidad' => 3,
-            'motivo' => 'Merma sin lote asociado',
-        ]);
-        $ajusteSinLoteRes->assertStatus(201)
-            ->assertJsonPath('data.id_lote', null)
-            ->assertJsonPath('data.stock_disponible', 9);
-        $this->assertSame(0, Lote::where('id_producto', $productoSinLotes->id_producto)->count());
-        $this->assertSame(9, (int) $productoSinLotes->fresh()->stock_disponible);
-        $movimientoSinLote = MovimientoStock::where('id_producto', $productoSinLotes->id_producto)
-            ->where('tipo', 'ajuste')
-            ->latest('id_movimiento')
-            ->first();
-        $this->assertNotNull($movimientoSinLote);
-        $this->assertNull($movimientoSinLote->id_lote);
-
-        $ajusteExcesoSinLoteRes = $this->postJson('/api/stock/ajustes', [
-            'id_producto' => $productoSinLotes->id_producto,
-            'tipo' => 'disminuir',
-            'cantidad' => 10,
-            'motivo' => 'Intento de descuento excedente sin lote',
-        ]);
-        $ajusteExcesoSinLoteRes->assertStatus(400);
-        $this->assertSame(9, (int) $productoSinLotes->fresh()->stock_disponible);
-
-        // Aumentar sin lote debe seguir rechazándose para evitar desincronizar el inventario.
-        $ajusteSinLoteRes = $this->postJson('/api/stock/ajustes', [
-            'id_producto' => $producto->id_producto,
-            'tipo' => 'aumentar',
-            'cantidad' => 5,
-            'motivo' => 'Intento de ajuste sin lote',
-        ]);
-        $ajusteSinLoteRes->assertStatus(400);
-        $this->assertEquals('error', $ajusteSinLoteRes->json('status'));
-
-        // 1.b Ajuste de aumento creando un NUEVO lote (nro_lote) sincroniza producto y nuevo lote
-        $nroNuevoLote = 'LOT-NUEVO-' . uniqid();
-        $stockProdAntesNuevo = (int) $producto->fresh()->stock_disponible;
-        $ajusteNuevoLoteRes = $this->postJson('/api/stock/ajustes', [
-            'id_producto' => $producto->id_producto,
-            'nro_lote' => $nroNuevoLote,
-            'tipo' => 'aumentar',
-            'cantidad' => 6,
-            'motivo' => 'Ingreso de nuevo lote encontrado',
-            'fecha_vencimiento' => now()->addMonths(6)->toDateString(),
-        ]);
-        $ajusteNuevoLoteRes->assertStatus(201);
-        $this->assertEquals('success', $ajusteNuevoLoteRes->json('status'));
-        $this->assertEquals($stockProdAntesNuevo + 6, (int) $producto->fresh()->stock_disponible);
-        $loteCreado = Lote::where('id_producto', $producto->id_producto)->where('nro_lote', $nroNuevoLote)->first();
-        $this->assertNotNull($loteCreado);
-        $this->assertEquals(6, (int) $loteCreado->cantidad_actual);
-
-        // 2. Ajuste manual de AUMENTO (+) con asignación de lote
-        $lote = Lote::create([
-            'id_producto' => $producto->id_producto,
-            'nro_lote' => 'LOT-AJU-' . uniqid(),
-            'cantidad_inicial' => 20,
-            'cantidad_actual' => 10,
-            'fecha_vencimiento' => now()->addDays(90)->toDateString(),
-        ]);
-
-        $stockProdAntes = (int) $producto->fresh()->stock_disponible;
-        $stockLoteAntes = (int) $lote->fresh()->cantidad_actual;
-
-        $ajusteAumRes = $this->postJson('/api/stock/ajustes', [
-            'id_producto' => $producto->id_producto,
-            'id_lote' => $lote->id_lote,
-            'tipo' => 'aumentar',
-            'cantidad' => 7,
-            'motivo' => 'Recuperación de mercadería extraviada',
-        ]);
-        $ajusteAumRes->assertStatus(201);
-        $this->assertEquals('success', $ajusteAumRes->json('status'));
-        $this->assertEquals($lote->id_lote, $ajusteAumRes->json('data.id_lote'));
-        $this->assertEquals($stockLoteAntes + 7, $ajusteAumRes->json('data.lote_cantidad_actual'));
-
-        // Verificar persistencia en base de datos
-        $this->assertEquals($stockProdAntes + 7, (int) $producto->fresh()->stock_disponible);
-        $this->assertEquals($stockLoteAntes + 7, (int) $lote->fresh()->cantidad_actual);
-
-        // Verificar que el movimiento en Kardex se vinculó al lote
-        $movAum = MovimientoStock::where('id_producto', $producto->id_producto)
-            ->where('tipo', 'ajuste')
-            ->where('id_lote', $lote->id_lote)
-            ->latest('id_movimiento')
-            ->first();
-        $this->assertNotNull($movAum);
-        $this->assertEquals($lote->id_lote, $movAum->id_lote);
-
-        // 3. Ajuste manual de DISMINUCIÓN (-) con asignación de lote
-        $stockProdAntesDis = (int) $producto->fresh()->stock_disponible;
-        $stockLoteAntesDis = (int) $lote->fresh()->cantidad_actual;
-
+        // 1. Ajuste manual de DISMINUCIÓN (-)
         $ajusteDisRes = $this->postJson('/api/stock/ajustes', [
             'id_producto' => $producto->id_producto,
-            'id_lote' => $lote->id_lote,
             'tipo' => 'disminuir',
-            'cantidad' => 4,
-            'motivo' => 'Rotura de mercadería en depósito',
+            'cantidad' => 3,
+            'motivo' => 'Merma de depósito',
         ]);
-        $ajusteDisRes->assertStatus(201);
-        $this->assertEquals('success', $ajusteDisRes->json('status'));
-        $this->assertEquals($stockProdAntesDis - 4, (int) $producto->fresh()->stock_disponible);
-        $this->assertEquals($stockLoteAntesDis - 4, (int) $lote->fresh()->cantidad_actual);
+        $ajusteDisRes->assertStatus(201)
+            ->assertJsonPath('data.id_lote', null)
+            ->assertJsonPath('data.stock_disponible', 17);
+        $this->assertSame(17, (int) $producto->fresh()->stock_disponible);
 
-        // 4. Intentar disminuir más unidades que las disponibles en el lote -> Error 400
+        $movimientoDis = MovimientoStock::where('id_producto', $producto->id_producto)
+            ->where('tipo', 'ajuste')
+            ->latest('id_movimiento')
+            ->first();
+        $this->assertNotNull($movimientoDis);
+        $this->assertNull($movimientoDis->id_lote);
+
+        // 2. Intentar disminuir más unidades que las disponibles en stock -> Error 400
         $ajusteExcesoRes = $this->postJson('/api/stock/ajustes', [
             'id_producto' => $producto->id_producto,
-            'id_lote' => $lote->id_lote,
             'tipo' => 'disminuir',
             'cantidad' => 9999,
             'motivo' => 'Intento de merma excedente',
         ]);
         $ajusteExcesoRes->assertStatus(400);
+        $this->assertSame(17, (int) $producto->fresh()->stock_disponible);
 
-        // 5. Intentar ajustar con un lote perteneciente a otro producto -> Error 400
-        $otroProducto = Producto::where('id_producto', '!=', $producto->id_producto)->first();
-        if ($otroProducto) {
-            $ajusteOtroProdRes = $this->postJson('/api/stock/ajustes', [
-                'id_producto' => $otroProducto->id_producto,
-                'id_lote' => $lote->id_lote,
-                'tipo' => 'disminuir',
-                'cantidad' => 1,
-                'motivo' => 'Lote cruzado inválido',
-            ]);
-            $ajusteOtroProdRes->assertStatus(400);
-        }
-
-        // 6. Regla de inventario estricta: Si se descuenta o aumenta del lote, se actualiza OBLIGATORIAMENTE el producto
-        $stockProdAntes6 = (int) $producto->fresh()->stock_disponible;
-        $stockLoteAntes6 = (int) $lote->fresh()->cantidad_actual;
-        $ajusteLoteProdRes = $this->postJson('/api/stock/ajustes', [
+        // 3. Ajuste manual de AUMENTO (+)
+        $ajusteAumRes = $this->postJson('/api/stock/ajustes', [
             'id_producto' => $producto->id_producto,
-            'id_lote' => $lote->id_lote,
             'tipo' => 'aumentar',
-            'cantidad' => 3,
-            'motivo' => 'Ajuste obligatorio en lote y producto',
+            'cantidad' => 5,
+            'motivo' => 'Recuperación de mercadería extraviada',
         ]);
-        $ajusteLoteProdRes->assertStatus(201);
-        $this->assertEquals('success', $ajusteLoteProdRes->json('status'));
-        // Tanto el producto como el lote deben haber aumentado en 3
-        $this->assertEquals($stockProdAntes6 + 3, (int) $producto->fresh()->stock_disponible);
-        $this->assertEquals($stockLoteAntes6 + 3, (int) $lote->fresh()->cantidad_actual);
+        $ajusteAumRes->assertStatus(201)
+            ->assertJsonPath('data.id_lote', null)
+            ->assertJsonPath('data.stock_disponible', 22);
+        $this->assertSame(22, (int) $producto->fresh()->stock_disponible);
 
-        // 7. Fijar cantidad exacta del lote ('fijar') actualiza el lote y aplica el delta neto al producto
-        $stockProdAntes7 = (int) $producto->fresh()->stock_disponible;
-        $stockLoteAntes7 = (int) $lote->fresh()->cantidad_actual;
-        $nuevoValorLote = 25;
-        $deltaEsperado = $nuevoValorLote - $stockLoteAntes7;
-
+        // 4. Fijar cantidad exacta del stock ('fijar')
+        $nuevoValor = 30;
         $ajusteFijarRes = $this->postJson('/api/stock/ajustes', [
             'id_producto' => $producto->id_producto,
-            'id_lote' => $lote->id_lote,
             'tipo' => 'fijar',
-            'cantidad' => $nuevoValorLote,
-            'motivo' => 'Conteo físico exacto del lote',
+            'cantidad' => $nuevoValor,
+            'motivo' => 'Conteo físico exacto',
         ]);
-        $ajusteFijarRes->assertStatus(201);
-        $this->assertEquals($nuevoValorLote, (int) $lote->fresh()->cantidad_actual);
-        $this->assertEquals($stockProdAntes7 + $deltaEsperado, (int) $producto->fresh()->stock_disponible);
-
-        // 8. Sincronizar automáticamente el stock general con la suma de todos los lotes
-        $sumaEsperada = (int) Lote::where('id_producto', $producto->id_producto)->sum('cantidad_actual');
-        $sincroRes = $this->postJson('/api/stock/ajustes', [
-            'id_producto' => $producto->id_producto,
-            'alcance' => 'sincronizar_producto',
-            'motivo' => 'Reconciliación automática con lotes físicos',
-        ]);
-        $sincroRes->assertStatus(200);
-        $this->assertEquals($sumaEsperada, (int) $producto->fresh()->stock_disponible);
-        $this->assertEquals(0, $sincroRes->json('data.diferencia'));
+        $ajusteFijarRes->assertStatus(201)
+            ->assertJsonPath('data.id_lote', null)
+            ->assertJsonPath('data.stock_disponible', $nuevoValor);
+        $this->assertSame($nuevoValor, (int) $producto->fresh()->stock_disponible);
     }
 
     /**
@@ -979,9 +768,6 @@ class UserStoriesFrontendTest extends TestCase
         $viewRes->assertSee('ingresoUnidadSelect');
         $viewRes->assertSee('ingresoEquivalenciaBox');
         $viewRes->assertSee('onProductoIngresoChange', false);
-        $viewRes->assertSee('nuevoLoteUnidadSelect');
-        $viewRes->assertSee('nuevoLoteEquivalenciaBox');
-        $viewRes->assertSee('onProductoNuevoLoteChange', false);
         $viewRes->assertSee('ajusteUnidadSelect');
         $viewRes->assertSee('ajusteEquivalenciaBox');
         $viewRes->assertSee('onProductoAjusteChange', false);
@@ -1017,7 +803,6 @@ class UserStoriesFrontendTest extends TestCase
 
         // 1. Ingreso de Mercadería con unidad activa
         $stockAntesIngreso = (int) $producto->fresh()->stock_disponible;
-        $loteNum = 'LOT-EQ-' . uniqid();
         $ingresoRes = $this->postJson('/api/stock/ingresos', [
             'id_proveedor' => $proveedor->id_proveedor,
             'items' => [
@@ -1025,8 +810,6 @@ class UserStoriesFrontendTest extends TestCase
                     'id_producto' => $prodId,
                     'cantidad' => 5, // 5 Displays = 5 * $eq unidades base
                     'id_unidad' => $idUnidad,
-                    'nro_lote' => $loteNum,
-                    'fecha_vencimiento' => now()->addMonths(6)->toDateString(),
                 ]
             ],
             'observaciones' => 'Ingreso de 5 cajas con unidad activa',
@@ -1038,16 +821,10 @@ class UserStoriesFrontendTest extends TestCase
         $this->assertStringContainsString("{$cantIngresoEsperada} u. individuales", $ingresoRes->json('message'));
         $this->assertEquals($stockAntesIngreso + $cantIngresoEsperada, (int) $producto->fresh()->stock_disponible);
 
-        $lote = Lote::where('id_producto', $prodId)->where('nro_lote', $loteNum)->first();
-        $this->assertNotNull($lote);
-        $this->assertEquals($cantIngresoEsperada, (int) $lote->cantidad_actual);
-
         // 2. Ajuste Manual de Inventario con unidad activa
         $stockAntesAjuste = (int) $producto->fresh()->stock_disponible;
-        $loteStockAntes = (int) $lote->fresh()->cantidad_actual;
         $ajusteRes = $this->postJson('/api/stock/ajustes', [
             'id_producto' => $prodId,
-            'id_lote' => $lote->id_lote,
             'tipo' => 'aumentar',
             'cantidad' => 2, // 2 Displays = 2 * $eq u. base
             'id_unidad' => $idUnidad,
@@ -1059,14 +836,11 @@ class UserStoriesFrontendTest extends TestCase
         $this->assertStringContainsString("{$cantAjusteEsperada} u. individuales", $ajusteRes->json('data.equivalencia_texto'));
         $this->assertStringContainsString('[Equivalencia:', $ajusteRes->json('message'));
         $this->assertEquals($stockAntesAjuste + $cantAjusteEsperada, (int) $producto->fresh()->stock_disponible);
-        $this->assertEquals($loteStockAntes + $cantAjusteEsperada, (int) $lote->fresh()->cantidad_actual);
 
         // 3. Devolución de Cliente con unidad activa
         $stockAntesDev = (int) $producto->fresh()->stock_disponible;
-        $loteStockAntesDev = (int) $lote->fresh()->cantidad_actual;
         $devClienteRes = $this->postJson('/api/stock/devoluciones', [
             'id_producto' => $prodId,
-            'id_lote' => $lote->id_lote,
             'tipo_devolucion' => 'cliente',
             'cantidad' => 1, // 1 Display = 1 * $eq u. base
             'id_unidad' => $idUnidad,
@@ -1077,14 +851,11 @@ class UserStoriesFrontendTest extends TestCase
         $this->assertEquals($nombreUnidad, $devClienteRes->json('data.nombre_unidad'));
         $this->assertStringContainsString('[Equivalencia:', $devClienteRes->json('message'));
         $this->assertEquals($stockAntesDev + $cantDevEsperada, (int) $producto->fresh()->stock_disponible);
-        $this->assertEquals($loteStockAntesDev + $cantDevEsperada, (int) $lote->fresh()->cantidad_actual);
 
         // 4. Devolución a Proveedor con unidad activa
         $stockAntesDevProv = (int) $producto->fresh()->stock_disponible;
-        $loteStockAntesDevProv = (int) $lote->fresh()->cantidad_actual;
         $devProvRes = $this->postJson('/api/stock/devoluciones', [
             'id_producto' => $prodId,
-            'id_lote' => $lote->id_lote,
             'tipo_devolucion' => 'proveedor',
             'cantidad' => 1, // 1 Display = 1 * $eq u. base
             'id_unidad' => $idUnidad,
@@ -1093,7 +864,6 @@ class UserStoriesFrontendTest extends TestCase
         $devProvRes->assertStatus(201);
         $this->assertEquals($cantDevEsperada, $devProvRes->json('data.cantidad_base'));
         $this->assertEquals($stockAntesDevProv - $cantDevEsperada, (int) $producto->fresh()->stock_disponible);
-        $this->assertEquals($loteStockAntesDevProv - $cantDevEsperada, (int) $lote->fresh()->cantidad_actual);
 
         // S08: Impedir eliminar la unidad porque ya está referenciada en movimientos de stock (integridad Kardex)
         $delFailRes = $this->deleteJson("/api/productos/{$prodId}/unidades/{$idUnidad}");
@@ -1108,24 +878,19 @@ class UserStoriesFrontendTest extends TestCase
     }
 
     /**
-     * S10, S11 - Alerta y Consulta de Productos Próximos a Vencer.
+     * S10, S11 - Compatibilidad y Redirección de Rutas de Vencimientos.
      */
     public function test_s10_s11_consulta_lotes_vencimientos_y_criticidad(): void
     {
         $viewRes = $this->get('/inventario');
         $viewRes->assertOk();
-        $viewRes->assertSee('tabBtn-lotes');
-        $viewRes->assertSee('pestana-lotes');
-        $viewRes->assertSee('bannerAlertaVencimientos');
-        $viewRes->assertSee('filtroLotesSearch');
-        $viewRes->assertSee('filtroLotesEstado');
-        $viewRes->assertSee('filtroLotesOrden');
+        $viewRes->assertDontSee('tabBtn-lotes');
+        $viewRes->assertDontSee('pestana-lotes');
 
-        $viewVenc = $this->get('/vencimientos');
-        $viewVenc->assertOk();
-        $viewVenc->assertSee('Consulta de Productos Próximos a Vencer');
+        // /vencimientos redirige ordenadamente a /inventario
+        $this->get('/vencimientos')->assertRedirect('/inventario');
 
-        // Endpoints S11
+        // Endpoints S11 responden neutro/vacío sin error 500
         $proxRes = $this->getJson('/api/vencimientos/proximos');
         $proxRes->assertOk();
 
@@ -1718,14 +1483,13 @@ class UserStoriesFrontendTest extends TestCase
         $this->assertEquals('pendiente', $estadoRes->json('data.estado'));
 
         // C06: Recepción Parcial (5 de 10)
+        $stockAntesRecep = (int) $producto->fresh()->stock_actual;
         $recepRes = $this->postJson("/api/compras/{$compraId}/recepciones", [
             'fecha_recepcion' => now()->toDateString(),
             'items' => [
                 [
                     'id_producto' => $producto->id_producto,
                     'cantidad_recibida' => 5,
-                    'numero_lote' => 'LOTE-REC-' . uniqid(),
-                    'fecha_vencimiento' => now()->addMonths(8)->toDateString(),
                 ]
             ]
         ]);
@@ -1736,12 +1500,12 @@ class UserStoriesFrontendTest extends TestCase
         $estadoPostRes->assertOk();
         $this->assertEquals('parcialmente_recibida', $estadoPostRes->json('data.estado'));
 
-        // S09: Verificar que se generó el lote en el catálogo de lotes
-        $idLote = $recepRes->json('data.items.0.id_lote') ?? $recepRes->json('data.recibidos.0.id_lote');
-        $this->assertNotNull($idLote);
-        $this->assertDatabaseHas('LOTE', [
-            'id_lote' => $idLote,
+        // Verificar incremento directo en stock y detalle_recepcion con id_lote null
+        $this->assertEquals($stockAntesRecep + 5, (int) $producto->fresh()->stock_actual);
+        $this->assertDatabaseHas('DETALLE_RECEPCION', [
             'id_producto' => $producto->id_producto,
+            'cantidad_recibida' => 5,
+            'id_lote' => null,
         ]);
     }
 
@@ -1978,33 +1742,22 @@ class UserStoriesFrontendTest extends TestCase
         $compraId = $compraRes->json('data.id_compra');
         $this->assertEquals(18000.00, (float)$compraRes->json('data.importe_total'));
 
-        // 5. RECEPCIÓN & STOCK (C06, S03, S09): Recepción total con Lote y Fecha de Vencimiento
-        $nroLote = 'LOT-DIST-' . uniqid();
-        $vtoLote = now()->addMonths(12)->toDateString();
+        // 5. RECEPCIÓN & STOCK (C06, S03): Recepción total directa a stock del producto
         $recepRes = $this->postJson("/api/compras/{$compraId}/recepciones", [
             'fecha_recepcion' => now()->toDateString(),
             'items' => [
                 [
                     'id_producto' => $producto->id_producto,
                     'cantidad_recibida' => 15,
-                    'numero_lote' => $nroLote,
-                    'fecha_vencimiento' => $vtoLote,
                 ]
             ]
         ]);
         $recepRes->assertStatus(201);
         $this->assertEquals('completada', $recepRes->json('data.estado_compra'));
 
-        // 6. Verificar actualización del Stock y creación del Lote
+        // 6. Verificar actualización del Stock directo del producto
         $producto->refresh();
         $this->assertEquals($stockInicial + 15, (int)$producto->stock_actual);
-
-        $idLote = $recepRes->json('data.items.0.id_lote') ?? $recepRes->json('data.recibidos.0.id_lote');
-        $this->assertNotNull($idLote);
-        $loteDb = Lote::find($idLote);
-        $this->assertNotNull($loteDb);
-        $this->assertEquals($nroLote, $loteDb->nro_lote);
-        $this->assertEquals(15, (int)$loteDb->cantidad_actual);
 
         // 7. Verificar que la orden vinculada avanzó automáticamente a completada (PC06)
         $ordenDb = OrdenCompra::find($ordenId);

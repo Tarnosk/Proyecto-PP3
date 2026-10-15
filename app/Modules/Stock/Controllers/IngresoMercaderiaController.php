@@ -30,30 +30,6 @@ class IngresoMercaderiaController extends Controller
     {
         // Normalización si el cliente envía un ítem plano en vez del array items
         if (!$request->has('items') && $request->filled('id_producto')) {
-            $idLote = $request->input('id_lote');
-            $loteExistente = null;
-            if ($idLote) {
-                $loteExistente = Lote::where('id_producto', (int) $request->input('id_producto'))
-                    ->where('id_lote', (int) $idLote)
-                    ->first();
-            }
-
-            $nroLote = trim((string) $request->input('nro_lote'));
-            if ($nroLote === '' && $loteExistente) {
-                $nroLote = $loteExistente->nro_lote;
-            }
-            if ($nroLote === '') {
-                $nroLote = 'LOTE-' . date('Ymd') . '-' . substr(uniqid(), -4);
-            }
-
-            $venc = $request->input('fecha_vencimiento');
-            if (!$venc && $loteExistente && $loteExistente->fecha_vencimiento) {
-                $venc = \Carbon\Carbon::parse($loteExistente->fecha_vencimiento)->toDateString();
-            }
-            if (!$venc) {
-                $venc = \Carbon\Carbon::now()->addMonths(6)->toDateString();
-            }
-
             $request->merge([
                 'items' => [
                     [
@@ -61,30 +37,9 @@ class IngresoMercaderiaController extends Controller
                         'cantidad' => (int) $request->input('cantidad'),
                         'id_unidad' => (!empty($request->input('id_unidad')) && (int)$request->input('id_unidad') > 0) ? (int)$request->input('id_unidad') : null,
                         'motivo' => $request->input('motivo', 'Ingreso de mercadería'),
-                        'id_lote' => $idLote ? (int) $idLote : null,
-                        'nro_lote' => $nroLote,
-                        'fecha_vencimiento' => $venc,
                     ],
                 ],
             ]);
-        }
-
-        $items = $request->input('items', []);
-        if (is_array($items)) {
-            $modified = false;
-            foreach ($items as $idx => $item) {
-                if (empty($item['nro_lote'])) {
-                    $items[$idx]['nro_lote'] = 'LOTE-' . date('Ymd') . '-' . substr(uniqid(), -4);
-                    $modified = true;
-                }
-                if (empty($item['fecha_vencimiento'])) {
-                    $items[$idx]['fecha_vencimiento'] = \Carbon\Carbon::now()->addMonths(6)->toDateString();
-                    $modified = true;
-                }
-            }
-            if ($modified) {
-                $request->merge(['items' => $items]);
-            }
         }
 
         $validator = Validator::make($request->all(), [
@@ -104,10 +59,10 @@ class IngresoMercaderiaController extends Controller
             'items.*.id_producto' => 'required|integer|exists:PRODUCTO,id_producto',
             'items.*.cantidad' => 'required|integer|min:1',
             'items.*.id_unidad' => 'nullable|integer|exists:UNIDAD_MEDIDA,id_unidad',
-            'items.*.id_lote' => 'nullable|integer|exists:LOTE,id_lote',
+            'items.*.id_lote' => 'nullable|integer',
             'items.*.motivo' => 'nullable|string|max:255',
-            'items.*.nro_lote' => 'required|string|max:100',
-            'items.*.fecha_vencimiento' => 'required|date',
+            'items.*.nro_lote' => 'nullable|string|max:100',
+            'items.*.fecha_vencimiento' => 'nullable|date',
         ], [
             'id_proveedor.required' => 'Debe seleccionar un proveedor.',
             'id_proveedor.exists' => 'El proveedor seleccionado no existe.',
@@ -117,10 +72,6 @@ class IngresoMercaderiaController extends Controller
             'items.*.id_producto.exists' => 'Uno de los productos seleccionados no existe.',
             'items.*.cantidad.required' => 'Cada ítem debe indicar la cantidad ingresada.',
             'items.*.cantidad.min' => 'La cantidad ingresada debe ser mayor a cero.',
-            'items.*.nro_lote.required' => 'Cada producto ingresado debe estar asociado obligatoriamente a un número de lote.',
-            'items.*.nro_lote.max' => 'El número de lote no puede superar los 100 caracteres.',
-            'items.*.fecha_vencimiento.required' => 'Debe indicar la fecha de vencimiento del lote para cada producto ingresado.',
-            'items.*.fecha_vencimiento.date' => 'La fecha de vencimiento del lote debe ser una fecha válida.',
         ]);
 
         if ($validator->fails()) {
@@ -165,12 +116,6 @@ class IngresoMercaderiaController extends Controller
                     ], 400);
                 }
 
-                // S09: si el item trae lote, el movimiento y el LOTE se registran
-                // en la misma transaccion (se anida como savepoint).
-                $idLote = isset($item['id_lote']) ? (int) $item['id_lote'] : null;
-                $nroLote = isset($item['nro_lote']) ? trim((string) $item['nro_lote']) : null;
-                $vence = $item['fecha_vencimiento'] ?? null;
-
                 $fechaIngreso = null;
                 if ($fecha !== null && $fecha !== '') {
                     try {
@@ -187,19 +132,15 @@ class IngresoMercaderiaController extends Controller
                 }
                 $cantidadBase = StockService::cantidadEnUnidadBase($cantidad, $idUnidad);
 
-                $resultado = DB::transaction(function () use (
+                DB::transaction(function () use (
                     $producto,
                     $cantidad,
-                    $cantidadBase,
                     $motivo,
                     $idUsuario,
                     $idUnidad,
-                    $idLote,
-                    $nroLote,
-                    $vence,
                     $fechaIngreso
                 ) {
-                    $movimiento = $this->stockService->registrarMovimiento(
+                    $this->stockService->registrarMovimiento(
                         $producto,
                         'ingreso',
                         $cantidad,
@@ -210,41 +151,6 @@ class IngresoMercaderiaController extends Controller
                         null,
                         $fechaIngreso
                     );
-
-                    $loteExistente = null;
-                    if ($idLote) {
-                        $loteExistente = Lote::where('id_producto', $producto->id_producto)
-                            ->where('id_lote', $idLote)
-                            ->first();
-                    }
-                    if (!$loteExistente && $nroLote) {
-                        $loteExistente = Lote::where('id_producto', $producto->id_producto)
-                            ->where('nro_lote', $nroLote)
-                            ->first();
-                    }
-
-                    if ($loteExistente) {
-                        $loteExistente->cantidad_inicial += $cantidadBase;
-                        $loteExistente->cantidad_actual += $cantidadBase;
-                        if ($vence) {
-                            $loteExistente->fecha_vencimiento = $vence;
-                        }
-                        $loteExistente->save();
-                        $lote = $loteExistente;
-                    } else {
-                        $lote = Lote::create([
-                            'id_producto' => $producto->id_producto,
-                            'nro_lote' => $nroLote ?: ('LOTE-' . date('YmdHis')),
-                            'cantidad_inicial' => $cantidadBase,
-                            'cantidad_actual' => $cantidadBase,
-                            'fecha_vencimiento' => $vence,
-                        ]);
-                    }
-
-                    $movimiento->update(['id_lote' => $lote->id_lote]);
-                    $loteId = $lote->id_lote;
-
-                    return $loteId;
                 });
 
                 // PV05: Asociar automáticamente el producto al proveedor al ingresar mercadería si no está asociado
@@ -296,9 +202,9 @@ class IngresoMercaderiaController extends Controller
                     'nombre_unidad' => $unidadObj ? $nombreUnidad : 'u.',
                     'cantidad_base' => $cantidadBase,
                     'equivalencia_texto' => $equivalenciaTexto,
-                    'id_lote' => $resultado,
-                    'nro_lote' => $nroLote,
-                    'fecha_vencimiento' => $vence,
+                    'id_lote' => null,
+                    'nro_lote' => null,
+                    'fecha_vencimiento' => null,
                     'stock_disponible' => $producto->stock_disponible,
                     'estado_alerta' => $producto->estado_alerta,
                 ];
