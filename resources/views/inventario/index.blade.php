@@ -30,11 +30,6 @@
                 <i data-lucide="clipboard-list" class="w-4 h-4"></i>
                 <span>Conteo Físico</span>
             </button>
-            <button onclick="cambiarPestana('devoluciones')" id="tabBtn-devoluciones" 
-                    class="tab-btn px-4 py-2.5 rounded-xl font-black text-xs flex items-center gap-2 transition-all cursor-pointer text-slate-600 hover:text-slate-900">
-                <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
-                <span>Devoluciones</span>
-            </button>
         </div>
 
         <div class="flex items-center gap-2 px-2">
@@ -166,7 +161,7 @@
                             <th>Producto / Descripción</th>
                             <th>Categoría</th>
                             <th>Marca</th>
-                            <th class="text-right">Precio Unitario</th>
+                            <th class="text-center">Precio Unitario</th>
                             <th class="text-center">Stock Actual</th>
                             <th class="text-center">Estado</th>
                             <th class="text-center">Acciones</th>
@@ -304,6 +299,7 @@
                             <th>Código</th>
                             <th>Producto / Descripción</th>
                             <th>Ubicación Física</th>
+                            <th class="text-center">Formato de Venta</th>
                             <th class="text-center">Stock Físico</th>
                             <th class="text-center">Comprometido</th>
                             <th class="text-center bg-blue-50/50">Disponible Venta</th>
@@ -314,7 +310,7 @@
                     </thead>
                     <tbody id="tablaStockCompletoBody">
                         <tr>
-                            <td colspan="9" class="text-center py-6 text-slate-400 font-bold">Cargando inventario de stock...</td>
+                            <td colspan="10" class="text-center py-6 text-slate-400 font-bold">Cargando inventario de stock...</td>
                         </tr>
                     </tbody>
                 </table>
@@ -577,66 +573,6 @@
         </div>
     </div>
 
-    <!-- ========================================================= -->
-    <!-- PESTAÑA 6: DEVOLUCIONES                                  -->
-    <!-- ========================================================= -->
-    <div id="pestana-devoluciones" class="pestana-content hidden space-y-4">
-        <div class="clay-card p-6 max-w-2xl mx-auto space-y-4">
-            <div>
-                <h3 class="text-base font-black text-slate-800">Registro de Devoluciones</h3>
-                <p class="text-xs text-slate-500 font-bold">Ingreso de mercadería devuelta por clientes o egreso por devolución a proveedores</p>
-            </div>
-
-            <form onsubmit="ejecutarDevolucion(event, 'tab')" class="space-y-4">
-                <div class="grid grid-cols-12 gap-3">
-                    <div class="col-span-12 sm:col-span-4">
-                        <label class="block text-xs font-extrabold text-slate-600 uppercase mb-1">Tipo de Devolución</label>
-                        <select id="devTipo" onchange="onTipoDevolucionChange('tab')" class="clay-input w-full text-sm font-bold">
-                            <option value="cliente">Cliente (Suma stock)</option>
-                            <option value="proveedor">Proveedor (Resta stock)</option>
-                        </select>
-                    </div>
-                    <div class="col-span-12 sm:col-span-4">
-                        <label id="lblDevCantidad" class="block text-xs font-extrabold text-slate-600 uppercase mb-1">Cantidad Devuelta</label>
-                        <input type="number" id="devCantidad" min="1" value="1" oninput="actualizarEquivalenciaDevolucion('tab')" required class="clay-input w-full font-black text-slate-800">
-                    </div>
-                    <div class="col-span-12 sm:col-span-4">
-                        <label class="block text-xs font-extrabold text-slate-600 uppercase mb-1">Unidad</label>
-                        <select id="devUnidadSelect" onchange="actualizarEquivalenciaDevolucion('tab')" class="clay-input w-full text-sm font-bold bg-white">
-                            <option value="">Unidades (u.)</option>
-                        </select>
-                    </div>
-                </div>
-
-                <!-- Banner de Equivalencia para Devolución en Tab -->
-                <div id="devEquivalenciaBox" class="hidden p-2.5 rounded-xl bg-indigo-50/80 border border-indigo-200/80 text-xs text-indigo-950 font-bold flex items-center justify-between shadow-xs">
-                    <div class="flex items-center gap-2">
-                        <i data-lucide="info" class="w-4 h-4 text-indigo-600 shrink-0"></i>
-                        <span id="devEquivalenciaTexto">Equivalencia: 1 Caja x12 = 12 unidades individuales (u.)</span>
-                    </div>
-                    <span class="clay-badge clay-badge-success text-[10px] font-black shrink-0">✓ Unidad Activa</span>
-                </div>
-
-                <div>
-                    <label class="block text-xs font-extrabold text-slate-600 uppercase mb-1">Producto</label>
-                    <select id="devProductoSelect" onchange="onProductoDevolucionChange('tab')" required class="clay-input w-full text-sm font-bold">
-                        <option value="">Seleccione el producto devuelto...</option>
-                    </select>
-                </div>
-
-
-                <div>
-                    <label class="block text-xs font-extrabold text-slate-600 uppercase mb-1">Motivo / Causa</label>
-                    <input type="text" id="devMotivo" required placeholder="Ej: Envase dañado en transporte / Vencido" class="clay-input w-full text-sm">
-                </div>
-
-                <button type="submit" class="clay-btn-primary w-full py-3 text-sm font-black shadow-lg">
-                    Asentar Devolución en Stock
-                </button>
-            </form>
-        </div>
-    </div>
-
 </div>
 @endsection
 
@@ -701,6 +637,37 @@
                 </div>
             </div>
 
+            <div class="p-3 bg-slate-50/90 rounded-xl border border-slate-200/80 space-y-2">
+                <div class="flex items-center justify-between">
+                    <label class="block text-[11px] font-black text-slate-700 uppercase tracking-wide flex items-center gap-1.5">
+                        <i data-lucide="package" class="w-3.5 h-3.5 text-indigo-600"></i>
+                        <span>Presentación Comercial / Bulto (Opcional)</span>
+                    </label>
+                    <span class="text-[10px] text-slate-400 font-bold">Referencia para depósito</span>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-[10px] font-extrabold text-slate-500 uppercase mb-1">Formato de Presentación</label>
+                        <select id="prodFormatoBulto" onchange="actualizarPreviewBultoProducto()" class="clay-input w-full text-xs font-bold">
+                            <option value="Unidad">Unidad (Suelto / Individual)</option>
+                            <option value="Caja">Caja</option>
+                            <option value="Pack">Pack</option>
+                            <option value="Pallet">Pallet</option>
+                            <option value="Display">Display</option>
+                            <option value="Bulto">Bulto Cerrado</option>
+                            <option value="Botella">Botella</option>
+                            <option value="Lata">Lata</option>
+                            <option value="Otro">Otro</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-extrabold text-slate-500 uppercase mb-1">Unidades por Bulto</label>
+                        <input type="number" min="1" id="prodUnidadesPorBulto" value="1" oninput="actualizarPreviewBultoProducto()" class="clay-input w-full font-bold text-xs" placeholder="1 por defecto">
+                    </div>
+                </div>
+                <p id="prodBultoPreview" class="text-[11px] text-indigo-700 font-bold hidden"></p>
+            </div>
+
             <div class="flex items-center justify-between gap-2 pt-3 border-t border-slate-100">
                 <button type="button" id="btnVerHistorialDesdeModalProd" onclick="abrirHistorialDesdeProducto()" class="clay-btn-secondary px-3 py-2 text-xs font-bold hidden flex items-center gap-1.5 text-blue-600 hover:text-blue-800" title="Ver modificaciones registradas de este producto">
                     <i data-lucide="history" class="w-4 h-4"></i>
@@ -738,29 +705,27 @@
 
             <div class="space-y-3">
                 <div class="grid grid-cols-12 gap-3">
-                    <div class="col-span-12 sm:col-span-6">
-                        <label class="block text-[11px] font-extrabold text-slate-600 uppercase mb-1">Producto</label>
+                    <div class="col-span-12 sm:col-span-8">
+                        <label class="block text-[11px] font-extrabold text-slate-600 uppercase mb-1">Producto *</label>
                         <select id="ingresoProductoSelect" onchange="onProductoIngresoChange()" required class="clay-input w-full text-xs font-bold"></select>
+                        <div id="ingresoPresentacionAyuda" class="text-[11px] text-indigo-700 font-bold mt-1.5 hidden flex items-center gap-1.5"></div>
                     </div>
-                    <div class="col-span-12 sm:col-span-3">
-                        <label id="lblIngresoCantidad" class="block text-[11px] font-extrabold text-slate-600 uppercase mb-1">Cantidad Ingresada</label>
-                        <input type="number" id="ingresoCantidad" min="1" value="10" oninput="actualizarEquivalenciaIngreso()" required class="clay-input w-full font-black text-sm">
+                    <div class="col-span-12 sm:col-span-4">
+                        <label id="lblIngresoCantidad" class="block text-[11px] font-extrabold text-slate-600 uppercase mb-1">Cantidad a Ingresar (u.) *</label>
+                        <input type="number" id="ingresoCantidad" min="1" value="10" oninput="actualizarEquivalenciaIngreso()" required class="clay-input w-full font-black text-sm" placeholder="Cantidad en unidades">
                     </div>
-                    <div class="col-span-12 sm:col-span-3">
-                        <label class="block text-[11px] font-extrabold text-slate-600 uppercase mb-1">Unidad de Medida</label>
-                        <select id="ingresoUnidadSelect" onchange="actualizarEquivalenciaIngreso()" class="clay-input w-full text-xs font-bold bg-white">
-                            <option value="">Unidades (u.)</option>
-                        </select>
-                    </div>
+                    <!-- Select oculto para mantener compatibilidad de tests y endpoints internos -->
+                    <select id="ingresoUnidadSelect" onchange="actualizarEquivalenciaIngreso()" class="hidden">
+                        <option value="">Unidades (u.)</option>
+                    </select>
                 </div>
 
-                <!-- Banner de Equivalencia a Unidades Individuales -->
+                <!-- Banner de referencia si el producto tiene bulto configurado -->
                 <div id="ingresoEquivalenciaBox" class="hidden p-2.5 rounded-xl bg-indigo-50/80 border border-indigo-200/80 text-xs text-indigo-950 font-bold flex items-center justify-between shadow-xs">
                     <div class="flex items-center gap-2">
                         <i data-lucide="info" class="w-4 h-4 text-indigo-600 shrink-0"></i>
-                        <span id="ingresoEquivalenciaTexto">Equivalencia: 10 Cajas x12 = 120 unidades individuales (u.)</span>
+                        <span id="ingresoEquivalenciaTexto"></span>
                     </div>
-                    <span class="clay-badge clay-badge-success text-[10px] font-black shrink-0" id="ingresoEquivalenciaBadge">✓ Unidad Activa</span>
                 </div>
             </div>
 
@@ -1468,25 +1433,44 @@
         } catch (e) { console.error('Error productos', e); }
     }
 
+    function obtenerTextoPresentacion(p) {
+        const eq = Number(p?.unidades_por_bulto || p?.equivalencia_unidad || 1);
+        let formato = (p?.formato_bulto || p?.unidad_medida || 'Unidad').trim();
+
+        if (!formato || formato === 'Unidad' || formato === 'u.') {
+            return eq > 1 ? `Pack x ${eq} u.` : 'Unidad (u.)';
+        }
+
+        // Si el formato ya termina con el número de equivalencia (ej: "Caja x 12" o "Caja x12" o "Caja 12")
+        const regexX = new RegExp(`[\\s_xX]+${eq}\\s*(u\\.?|unidades)?$`, 'i');
+        if (regexX.test(formato)) {
+            return `${formato.replace(/\s*u\.?$/i, '')} u.`;
+        }
+
+        if (eq > 1) {
+            return `${formato} x ${eq} u.`;
+        }
+
+        return formato;
+    }
+
+    function renderColumnaFormatoVenta(p, cantStock) {
+        const eq = Number(p?.unidades_por_bulto || p?.equivalencia_unidad || 1);
+        const texto = obtenerTextoPresentacion(p);
+        if (eq > 1) {
+            const bultos = (cantStock / eq).toLocaleString('es-AR', { maximumFractionDigits: 1 });
+            return `<div class="font-extrabold text-slate-800 text-xs">${texto}</div><div class="text-[10px] text-indigo-600 font-black tracking-tight">≈ ${bultos} bultos</div>`;
+        }
+        return `<span class="text-slate-400 font-bold text-xs">${texto}</span>`;
+    }
+
     function formatoCantidadProducto(cant, p) {
         const num = Number(cant || 0);
-        const eq = Number(p?.equivalencia_unidad || 1);
-        const nom = p?.unidad_medida || 'u.';
-        if (eq > 1 && nom !== 'u.') {
-            const cantConvertida = (num / eq).toLocaleString('es-AR', { maximumFractionDigits: 2 });
-            return `<span title="${num} u. individuales">${cantConvertida} ${nom}</span><span class="block text-[10px] text-slate-400 font-semibold">(${num} u.)</span>`;
-        }
         return `${num} u.`;
     }
 
     function formatoCantidadProductoCorta(cant, p) {
         const num = Number(cant || 0);
-        const eq = Number(p?.equivalencia_unidad || 1);
-        const nom = p?.unidad_medida || 'u.';
-        if (eq > 1 && nom !== 'u.') {
-            const cantConvertida = (num / eq).toLocaleString('es-AR', { maximumFractionDigits: 2 });
-            return `${cantConvertida} ${nom} (${num} u.)`;
-        }
         return `${num} u.`;
     }
 
@@ -1571,17 +1555,18 @@
                     <td class="font-extrabold text-slate-800">${p.codigo}</td>
                     <td>
                         <div class="font-black text-slate-800 text-sm leading-tight">${p.nombre}</div>
-                        <div class="text-[11px] text-slate-400 flex items-center gap-1.5 mt-0.5">
+                        <div class="text-[11px] text-slate-400 flex flex-wrap items-center gap-1.5 mt-0.5">
                             <span>${p.descripcion || '-'}</span>
                             <span class="text-slate-300">•</span>
                             <span class="text-slate-500 font-bold flex items-center gap-0.5" title="Ubicación en depósito"><i data-lucide="map-pin" class="w-3 h-3 text-slate-400"></i>${ubicacionTexto}</span>
+                            ${Number(p.unidades_por_bulto || p.equivalencia_unidad || 1) > 1 ? `<span class="text-slate-300">•</span><span class="text-indigo-600 font-extrabold flex items-center gap-0.5" title="Presentación"><i data-lucide="package" class="w-3 h-3"></i>${obtenerTextoPresentacion(p)}</span>` : ''}
                         </div>
                     </td>
                     <td><span class="text-xs font-bold text-slate-600">${p.categoria?.nombre || p.categoria_nombre || '-'}</span></td>
                     <td><span class="text-xs font-bold text-slate-600">${p.marca?.nombre || p.marca_nombre || '-'}</span></td>
-                    <td class="text-right font-black text-slate-800">${precioUnitario}</td>
+                    <td class="text-center font-black text-slate-800">${precioUnitario}</td>
                     <td class="text-center">
-                        <div class="font-black text-slate-800 text-xs">${formatoCantidadProducto(cantStock, p)}</div>
+                        <div class="font-black text-slate-800 text-xs">${cantStock} u.</div>
                         <div class="mt-0.5">${semaforoBadge}</div>
                     </td>
                     <td class="text-center">
@@ -1589,9 +1574,6 @@
                     </td>
                     <td class="text-center">
                         <div class="flex items-center justify-center gap-1.5">
-                            <button onclick="abrirModalUnidades(${p.id_producto})" class="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg" title="Unidades y Equivalencias">
-                                <i data-lucide="layers" class="w-4 h-4"></i>
-                            </button>
                             <button onclick="abrirHistorialPrecios(${p.id_producto})" class="p-1.5 text-amber-600 hover:bg-amber-50 rounded-lg" title="Historial de Precios">
                                 <i data-lucide="history" class="w-4 h-4"></i>
                             </button>
@@ -1698,10 +1680,11 @@
                             ${ubicacionTexto}
                         </span>
                     </td>
-                    <td class="text-center font-bold text-slate-700 text-xs">${formatoCantidadProducto(stockFisico, p)}</td>
-                    <td class="text-center font-bold text-slate-400 text-xs">${formatoCantidadProducto(comprometido, p)}</td>
-                    <td class="text-center font-black text-blue-700 bg-blue-50/40 text-xs">${formatoCantidadProducto(disponibleVenta, p)}</td>
-                    <td class="text-center font-bold text-slate-600 text-xs">${formatoCantidadProducto(stockMin, p)}</td>
+                    <td class="text-center">${renderColumnaFormatoVenta(p, stockFisico)}</td>
+                    <td class="text-center font-black text-slate-800 text-xs">${stockFisico} u.</td>
+                    <td class="text-center font-bold text-slate-400 text-xs">${comprometido} u.</td>
+                    <td class="text-center font-black text-blue-700 bg-blue-50/40 text-xs">${disponibleVenta} u.</td>
+                    <td class="text-center font-bold text-slate-600 text-xs">${stockMin} u.</td>
                     <td class="text-center">${semaforoBadge}</td>
                     <td class="text-center">
                         <div class="flex items-center justify-center gap-1">
@@ -1711,9 +1694,6 @@
                             </button>
                             <button onclick="abrirModalDevolucion(${p.id_producto})" class="p-1 text-purple-600 hover:bg-purple-50 rounded" title="Registrar Devolución">
                                 <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
-                            </button>
-                            <button onclick="abrirModalUnidades(${p.id_producto})" class="p-1 text-indigo-600 hover:bg-indigo-50 rounded" title="Unidades de Medida">
-                                <i data-lucide="layers" class="w-3.5 h-3.5"></i>
                             </button>
                         </div>
                     </td>
@@ -2003,6 +1983,21 @@
         }
     }
 
+    function actualizarPreviewBultoProducto() {
+        const formato = document.getElementById('prodFormatoBulto')?.value || 'Unidad';
+        const unidades = Math.max(1, parseInt(document.getElementById('prodUnidadesPorBulto')?.value || '1', 10));
+        const preview = document.getElementById('prodBultoPreview');
+        if (!preview) return;
+
+        if (formato !== 'Unidad' && unidades > 1) {
+            preview.textContent = `💡 Presentación comercial: ${formato} x ${unidades} unidades individuales.`;
+            preview.classList.remove('hidden');
+        } else {
+            preview.textContent = '';
+            preview.classList.add('hidden');
+        }
+    }
+
     // --- ACCIONES Y MODALES ---
     function abrirModalProducto() {
         document.getElementById('modalProductoTitulo').textContent = 'Nuevo Producto';
@@ -2015,6 +2010,9 @@
         document.getElementById('prodPrecioUnitario').value = '';
         document.getElementById('prodStockMin').value = '10';
         document.getElementById('prodUbicacion').value = '';
+        document.getElementById('prodFormatoBulto').value = 'Unidad';
+        document.getElementById('prodUnidadesPorBulto').value = '1';
+        actualizarPreviewBultoProducto();
         const btnHist = document.getElementById('btnVerHistorialDesdeModalProd');
         if (btnHist) btnHist.classList.add('hidden');
         document.getElementById('modalProducto').classList.remove('hidden');
@@ -2034,6 +2032,9 @@
         document.getElementById('prodPrecioUnitario').value = prod.precio_unitario ?? prod.precio_minorista ?? '';
         document.getElementById('prodStockMin').value = prod.stock_minimo || 10;
         document.getElementById('prodUbicacion').value = prod.id_ubicacion || '';
+        document.getElementById('prodFormatoBulto').value = prod.formato_bulto || 'Unidad';
+        document.getElementById('prodUnidadesPorBulto').value = prod.unidades_por_bulto || 1;
+        actualizarPreviewBultoProducto();
         const btnHist = document.getElementById('btnVerHistorialDesdeModalProd');
         if (btnHist) btnHist.classList.remove('hidden');
         document.getElementById('modalProducto').classList.remove('hidden');
@@ -2054,6 +2055,9 @@
         e.preventDefault();
         const id = document.getElementById('prodId').value;
         const precioUnitario = Number(document.getElementById('prodPrecioUnitario').value);
+        const formatoBulto = document.getElementById('prodFormatoBulto')?.value || 'Unidad';
+        const unidadesPorBulto = Math.max(1, parseInt(document.getElementById('prodUnidadesPorBulto')?.value || '1', 10));
+
         const payload = {
             codigo: document.getElementById('prodCodigo').value.trim(),
             nombre: document.getElementById('prodNombre').value.trim(),
@@ -2064,7 +2068,9 @@
             precio_minorista: precioUnitario,
             precio_mayorista: precioUnitario,
             stock_minimo: Number(document.getElementById('prodStockMin').value || 10),
-            id_ubicacion: document.getElementById('prodUbicacion').value || null
+            id_ubicacion: document.getElementById('prodUbicacion').value || null,
+            formato_bulto: formatoBulto,
+            unidades_por_bulto: unidadesPorBulto
         };
 
         const csrf = document.querySelector('meta[name="csrf-token"]').content;
@@ -2138,45 +2144,42 @@
     function poblarUnidadesIngreso() {
         const prodId = document.getElementById('ingresoProductoSelect')?.value;
         const selectUnidad = document.getElementById('ingresoUnidadSelect');
-        if (!selectUnidad) return;
-
-        const info = obtenerInfoUnidadProducto(prodId);
-        let options = '<option value="">Unidades Individuales (u.)</option>';
-
-        if (info.tieneActiva) {
-            options = `<option value="${info.id_unidad}">${info.nombre} (Activa - Eq: ${info.equivalencia} u.)</option>` + options;
+        if (selectUnidad) {
+            selectUnidad.value = '';
         }
 
-        selectUnidad.innerHTML = options;
-        if (info.tieneActiva) {
-            selectUnidad.value = String(info.id_unidad);
-        } else {
-            selectUnidad.value = '';
+        const prod = productosCache.find(p => String(p.id_producto) === String(prodId));
+        const ayuda = document.getElementById('ingresoPresentacionAyuda');
+        if (ayuda) {
+            if (prod && Number(prod.unidades_por_bulto || prod.equivalencia_unidad || 1) > 1) {
+                const presTexto = obtenerTextoPresentacion(prod);
+                ayuda.innerHTML = `<i data-lucide="package" class="w-3.5 h-3.5"></i> Presentación: ${presTexto} (el ingreso se carga en unidades físicas)`;
+                ayuda.classList.remove('hidden');
+            } else {
+                ayuda.classList.add('hidden');
+            }
         }
     }
 
     function actualizarEquivalenciaIngreso() {
         const prodId = document.getElementById('ingresoProductoSelect')?.value;
         const cant = Number(document.getElementById('ingresoCantidad')?.value || 0);
-        const selectUnidad = document.getElementById('ingresoUnidadSelect');
+        const prod = productosCache.find(p => String(p.id_producto) === String(prodId));
         const box = document.getElementById('ingresoEquivalenciaBox');
         const texto = document.getElementById('ingresoEquivalenciaTexto');
-        const badge = document.getElementById('ingresoEquivalenciaBadge');
         const lblCant = document.getElementById('lblIngresoCantidad');
 
-        const info = obtenerInfoUnidadProducto(prodId);
-        const idUnidadSeleccionada = selectUnidad?.value;
+        if (lblCant) lblCant.textContent = 'Cantidad a Ingresar (u.) *';
 
-        if (idUnidadSeleccionada && info.tieneActiva && String(idUnidadSeleccionada) === String(info.id_unidad)) {
-            const cantBase = Math.round(cant * info.equivalencia);
-            if (lblCant) lblCant.textContent = `Cantidad (${info.nombre})`;
+        const eq = Number(prod?.unidades_por_bulto || prod?.equivalencia_unidad || 1);
+        if (prod && eq > 1 && cant > 0) {
+            const presTexto = obtenerTextoPresentacion(prod);
+            const bultos = (cant / eq).toLocaleString('es-AR', { maximumFractionDigits: 1 });
             if (box && texto) {
-                texto.innerHTML = `Equivalencia: <strong>${cant} ${info.nombre}</strong> equivalen a <strong>${cantBase} unidades individuales (u.)</strong> que se sumarán al stock.`;
-                if (badge) badge.textContent = '✓ Unidad Activa';
+                texto.innerHTML = `Presentación: <strong>${presTexto}</strong>. ${cant} unidades equivalen a aprox. <strong>${bultos} bultos</strong>.`;
                 box.classList.remove('hidden');
             }
         } else {
-            if (lblCant) lblCant.textContent = 'Cantidad Ingresada (u.)';
             if (box) box.classList.add('hidden');
         }
         if (window.lucide) window.lucide.createIcons();
