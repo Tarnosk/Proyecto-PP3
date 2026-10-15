@@ -33,6 +33,7 @@ class Producto extends Model
         'unidad_medida',
         'equivalencia_unidad',
         'id_unidad_activa',
+        'presentacion_texto',
     ];
 
     protected $fillable = [
@@ -46,6 +47,8 @@ class Producto extends Model
         'stock',
         'stock_minimo',
         'dias_alerta_vencimiento',
+        'formato_bulto',
+        'unidades_por_bulto',
         'estado',
         'fecha_alta',
         'fecha_modificacion',
@@ -62,6 +65,7 @@ class Producto extends Model
         'stock' => 'integer',
         'stock_minimo' => 'integer',
         'dias_alerta_vencimiento' => 'integer',
+        'unidades_por_bulto' => 'integer',
         'id_categoria' => 'integer',
         'id_marca' => 'integer',
         'id_usuario_carga' => 'integer',
@@ -237,7 +241,17 @@ class Producto extends Model
         $u = $this->relationLoaded('unidades')
             ? $this->unidades->firstWhere('es_base', 1)
             : $this->unidades()->where('es_base', 1)->first();
-        return $u ? $u->nombre_unidad : 'u.';
+        if ($u) {
+            return $u->nombre_unidad;
+        }
+
+        $formato = $this->attributes['formato_bulto'] ?? null;
+        $unidades = (int) ($this->attributes['unidades_por_bulto'] ?? 1);
+        if ($formato && $formato !== 'Unidad' && $unidades > 1) {
+            return "{$formato} x {$unidades}";
+        }
+
+        return 'u.';
     }
 
     public function getEquivalenciaUnidadAttribute(): float
@@ -245,7 +259,23 @@ class Producto extends Model
         $u = $this->relationLoaded('unidades')
             ? $this->unidades->firstWhere('es_base', 1)
             : $this->unidades()->where('es_base', 1)->first();
-        return $u ? (float) $u->equivalencia_base : 1.0;
+        if ($u) {
+            return (float) $u->equivalencia_base;
+        }
+
+        return (float) max(1, (int) ($this->attributes['unidades_por_bulto'] ?? 1));
+    }
+
+    public function getPresentacionTextoAttribute(): string
+    {
+        $formato = $this->attributes['formato_bulto'] ?? 'Unidad';
+        $unidades = (int) ($this->attributes['unidades_por_bulto'] ?? 1);
+
+        if ($formato && $formato !== 'Unidad' && $unidades > 1) {
+            return "{$formato} x {$unidades} u.";
+        }
+
+        return 'Unidad individual (u.)';
     }
 
     public function getIdUnidadActivaAttribute(): ?int

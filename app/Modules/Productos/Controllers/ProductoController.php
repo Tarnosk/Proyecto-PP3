@@ -95,6 +95,8 @@ class ProductoController extends Controller
             'id_marca' => 'required|integer|exists:MARCA,id_marca',
             'stock_disponible' => 'nullable|integer|min:0',
             'stock_minimo' => 'nullable|integer|min:0',
+            'formato_bulto' => 'nullable|string|max:50',
+            'unidades_por_bulto' => 'nullable|integer|min:1',
         ], [
             'codigo.required' => 'El código del producto es obligatorio.',
             'codigo.unique' => "El código ':input' ya se encuentra registrado.",
@@ -106,6 +108,7 @@ class ProductoController extends Controller
             'id_categoria.exists' => 'La categoría seleccionada no existe.',
             'id_marca.required' => 'Debe seleccionar una marca.',
             'id_marca.exists' => 'La marca seleccionada no existe.',
+            'unidades_por_bulto.min' => 'Las unidades por bulto deben ser al menos 1.',
         ]);
 
         if ($validator->fails()) {
@@ -119,6 +122,8 @@ class ProductoController extends Controller
             $now = Carbon::now()->toDateTimeString();
             $stockInicial = (int) ($request->input('stock_disponible', 0));
             $stockMinimo = (int) ($request->input('stock_minimo', 5));
+            $formatoBulto = trim((string) $request->input('formato_bulto', 'Unidad')) ?: 'Unidad';
+            $unidadesPorBulto = max(1, (int) $request->input('unidades_por_bulto', 1));
             $idUsuario = UsuarioActual::id($request);
             $precioUnitario = (float) ($request->input('precio_unitario') ?? $request->input('precioMay') ?? 0.0);
             $descripcion = trim($request->input('descripcion'));
@@ -126,7 +131,7 @@ class ProductoController extends Controller
                 ? trim((string) $request->input('nombre'))
                 : $descripcion;
 
-            $producto = DB::transaction(function () use ($request, $now, $stockInicial, $stockMinimo, $idUsuario, $precioUnitario, $descripcion, $nombre) {
+            $producto = DB::transaction(function () use ($request, $now, $stockInicial, $stockMinimo, $formatoBulto, $unidadesPorBulto, $idUsuario, $precioUnitario, $descripcion, $nombre) {
                 // 1. Crear Producto (P01). El stock queda embebido en PRODUCTO (OB3).
                 $prod = Producto::create([
                     'codigo' => trim($request->input('codigo')),
@@ -137,6 +142,8 @@ class ProductoController extends Controller
                     'stock' => $stockInicial,
                     'stock_minimo' => $stockMinimo,
                     'dias_alerta_vencimiento' => 30,
+                    'formato_bulto' => $formatoBulto,
+                    'unidades_por_bulto' => $unidadesPorBulto,
                     'estado' => 'activo',
                     'fecha_alta' => $now,
                     'fecha_modificacion' => $now,
@@ -256,6 +263,9 @@ class ProductoController extends Controller
                 'unidad_medida' => $producto->unidad_medida,
                 'equivalencia_unidad' => $producto->equivalencia_unidad,
                 'id_unidad_activa' => $producto->id_unidad_activa,
+                'formato_bulto' => $producto->formato_bulto,
+                'unidades_por_bulto' => (int) ($producto->unidades_por_bulto ?? 1),
+                'presentacion_texto' => $producto->presentacion_texto,
                 'historial_precios' => $producto->historialPrecios,
             ],
         ]);
@@ -284,6 +294,8 @@ class ProductoController extends Controller
             'id_categoria' => 'required|integer|exists:CATEGORIA,id_categoria',
             'id_marca' => 'required|integer|exists:MARCA,id_marca',
             'stock_minimo' => 'nullable|integer|min:0',
+            'formato_bulto' => 'nullable|string|max:50',
+            'unidades_por_bulto' => 'nullable|integer|min:1',
         ], [
             'codigo.required' => 'El código del producto es obligatorio.',
             'codigo.unique' => "El código ':input' ya está siendo utilizado por otro producto.",
@@ -295,6 +307,7 @@ class ProductoController extends Controller
             'id_categoria.exists' => 'La categoría seleccionada no existe.',
             'id_marca.required' => 'Debe seleccionar una marca.',
             'id_marca.exists' => 'La marca seleccionada no existe.',
+            'unidades_por_bulto.min' => 'Las unidades por bulto deben ser al menos 1.',
         ]);
 
         if ($validator->fails()) {
@@ -354,8 +367,7 @@ class ProductoController extends Controller
                     ]);
                 }
 
-                // Actualizar producto
-                $producto->update([
+                $datosUpdate = [
                     'codigo' => trim($request->input('codigo')),
                     'nombre' => $nombre,
                     'descripcion' => $descripcion,
@@ -364,7 +376,17 @@ class ProductoController extends Controller
                     'id_marca' => (int) $request->input('id_marca'),
                     'fecha_modificacion' => $now,
                     'id_usuario_modificacion' => $idUsuario,
-                ]);
+                ];
+
+                if ($request->has('formato_bulto')) {
+                    $datosUpdate['formato_bulto'] = trim((string) $request->input('formato_bulto', 'Unidad')) ?: 'Unidad';
+                }
+                if ($request->has('unidades_por_bulto')) {
+                    $datosUpdate['unidades_por_bulto'] = max(1, (int) $request->input('unidades_por_bulto', 1));
+                }
+
+                // Actualizar producto
+                $producto->update($datosUpdate);
 
                 // Actualizar stock mínimo si se envió
                 if ($request->has('stock_minimo')) {
