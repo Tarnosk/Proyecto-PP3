@@ -16,8 +16,7 @@ class ExternalGatewaysTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        config()->set('services.sales', [
-            'driver' => 'http',
+        config()->set('services.sales', [...config('services.sales'),
             'url' => 'https://ventas.example.test',
             'token' => 'ventas-token',
         ]);
@@ -65,15 +64,19 @@ class ExternalGatewaysTest extends TestCase
         $this->get(route('reports.client-history', ['cliente_id' => $client->id]))->assertStatus(502);
 
         config()->set('services.sales.token', null);
-        $this->get(route('reports.client-history', ['cliente_id' => $client->id]))->assertStatus(503);
+        $this->get(route('reports.client-history', ['cliente_id' => $client->id]))
+            ->assertOk()->assertSeeText('G4 publique su API de ventas');
+        $this->get(route('reports.client-history.export', [
+            'format' => 'pdf', 'cliente_id' => $client->id,
+        ]))->assertServiceUnavailable();
     }
 
     public function test_client_page_uses_g2_and_g4_without_local_financial_data(): void
     {
         $admin = User::factory()->create(['rol' => UserRole::ADMINISTRATIVO]);
         $client = Cliente::factory()->create(['creado_por' => $admin->id, 'saldo' => 100]);
-        config()->set('services.billing', ['url' => 'https://facturas.example.test', 'token' => 'g2-token']);
-        config()->set('services.balances', ['url' => 'https://saldos.example.test', 'token' => 'g4-token']);
+        config()->set('services.billing', [...config('services.billing'), 'url' => 'https://facturas.example.test', 'token' => 'g2-token']);
+        config()->set('services.balances', [...config('services.balances'), 'url' => 'https://saldos.example.test', 'token' => 'g4-token']);
         Http::fake([
             'facturas.example.test/api/v1/cobros*' => Http::response(['data' => []]),
             'saldos.example.test/api/v1/clientes/*/saldo' => Http::response(['data' => [

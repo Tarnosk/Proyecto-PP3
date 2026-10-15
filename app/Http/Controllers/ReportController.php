@@ -2,16 +2,13 @@
 
 namespace App\Http\Controllers;
 
-use App\Enums\SaleStatus;
 use App\Http\Requests\Reports\ClientHistoryRequest;
 use App\Models\Cliente;
-use App\Models\Producto;
+use App\Services\Gateways\ExternalCatalogGateway;
 use App\Services\Gateways\ExternalFinanceGateway;
 use App\Services\ReportService;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
-use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class ReportController extends Controller
@@ -29,35 +26,37 @@ class ReportController extends Controller
         return view('reports.client-history', [
             'clientes' => Cliente::query()->orderBy('apellido_razon_social')->orderBy('nombre')->get(),
             'cliente' => $client,
-            'ventas' => $client ? $reports->clientSales($client, $data['desde'] ?? null, $data['hasta'] ?? null) : collect(),
+            'salesReady' => $reports->salesAvailable(),
+            'ventas' => $client && $reports->salesAvailable()
+                ? $reports->clientSales($client, $data['desde'] ?? null, $data['hasta'] ?? null)
+                : collect(),
             'desde' => $data['desde'] ?? '',
             'hasta' => $data['hasta'] ?? '',
         ]);
     }
 
-    public function clientProductReach(Request $request): View
+    public function clientProductReach(Request $request, ExternalCatalogGateway $catalog, ReportService $reports): View
     {
-        abort_unless(config('services.sales.driver') === 'local', 503, 'El informe requiere un contrato de ventas por cliente y producto con G4.');
-
         $filters = $request->validate([
-            'producto_id' => ['nullable', 'integer', Rule::exists('productos', 'id')],
+            'producto_id' => ['nullable', 'integer', 'min:1'],
+            'page' => ['nullable', 'integer', 'min:1'],
         ]);
+        $ready = $catalog->isConfigured() && $reports->salesAvailable();
+        $productos = $ready ? $catalog->products() : collect();
         $producto = isset($filters['producto_id'])
-            ? Producto::query()->findOrFail($filters['producto_id'])
+            ? $productos->firstWhere('id', (int) $filters['producto_id'])
             : null;
+        if ($ready && isset($filters['producto_id'])) {
+            abort_unless($producto, 404);
+        }
         $totalClientes = Cliente::query()->count();
         $clientes = null;
         $porcentaje = null;
 
-        if ($producto) {
+        if ($ready && $producto) {
+            $buyerIds = $reports->productBuyerIds($producto->id);
             $clientes = Cliente::query()
-                ->whereHas('ventas', function (Builder $ventas) use ($producto): void {
-                    $ventas->whereIn('estado', [
-                        SaleStatus::CONFIRMADA->value,
-                        SaleStatus::PAGADA->value,
-                        SaleStatus::FACTURADA->value,
-                    ])->whereHas('detalles', fn (Builder $detalles) => $detalles->where('producto_id', $producto->id));
-                })
+                ->whereIn('id', $buyerIds)
                 ->orderBy('apellido_razon_social')
                 ->orderBy('nombre')
                 ->paginate(20)
@@ -69,7 +68,8 @@ class ReportController extends Controller
         }
 
         return view('reports.client-product-reach', [
-            'productos' => Producto::query()->orderBy('nombre')->get(['id', 'codigo', 'nombre']),
+            'ready' => $ready,
+            'productos' => $productos,
             'producto' => $producto,
             'clientes' => $clientes,
             'totalClientes' => $totalClientes,

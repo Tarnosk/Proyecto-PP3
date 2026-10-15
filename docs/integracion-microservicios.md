@@ -136,7 +136,7 @@ Ejemplo de cliente:
 }
 ```
 
-`GET /clientes/{id}/saldo` consulta a G4 y devuelve `data: {"cliente_id": 12, "saldo": "12500.00", "moneda": "ARS"}`. `GET /clientes/{id}/cobros` consulta a G2 y devuelve `data` con `id`, `cliente_id`, `fecha`, `monto_total`, `medio_pago`, `comprobante_nro` y `observaciones`. G1 ya no registra cobros ni calcula el saldo. Sin URL/token responde `503`; ante error o JSON invalido del proveedor responde `502`.
+`GET /clientes/{id}/saldo` consulta a G4 y devuelve `data: {"cliente_id": 12, "saldo": "12500.00", "moneda": "ARS"}`. `GET /clientes/{id}/cobros` consulta a G2 y devuelve `data` con `id`, `cliente_id`, `fecha`, `monto_total`, `medio_pago`, `comprobante_nro` y `observaciones`, ordenados por fecha descendente en G1. G1 ya no registra cobros ni calcula el saldo. Sin URL/token responde `503`; ante error o JSON invalido del proveedor responde `502`.
 
 Para crear un reclamo:
 
@@ -152,25 +152,48 @@ Para crear un reclamo:
 
 El cliente debe estar activo y el usuario debe ser administrativo o repartidor activo. El reclamo nace en `abierto`. Prioridades: `baja`, `media`, `alta`. Estados: `abierto`, `en_proceso`, `cerrado`. El cliente y usuario que se envian quedan registrados como autor y asociado del reclamo; cada consumidor debe enviar IDs verificables.
 
+## Dependencias que consume G1
+
+| Grupo | Consulta desde G1 | Pantalla o ruta G1 | Estado del contrato |
+| --- | --- | --- | --- |
+| G2 | Cobros por `cliente_id` | Ficha del cliente y `GET /api/v1/clientes/{id}/cobros` | Pendiente de endpoint de listado |
+| G2 | Facturas pendientes | Reporte de clientes deudores | Pendiente de endpoint |
+| G3 | Catalogo de productos | Selector del reporte clientes por producto | `GET /api/v1/productos` visible en rama G3; falta configurar y probar conexion |
+| G4 | Ventas por cliente | Ficha, historial y exportaciones | Pendiente de contrato JSON compatible |
+| G4 | Clientes compradores por producto | Porcentaje de clientes por producto | Pendiente de endpoint |
+| G4 | Ranking de productos | Reporte ranking comercial | Pendiente de endpoint |
+| G4 | Saldo por cliente y lista de deudores | Ficha, API de saldo y reporte de deudores | Pendiente de endpoints |
+
+Un endpoint visible en una rama no implica integracion operativa. G1 no consulta ventas, productos, cobros ni saldos de sus tablas locales para estos flujos. La issue de transferencias #120 sigue fuera de alcance.
+
 ## JSON requerido de Ventas
 
 El Grupo 1 consulta `GET /api/v1/ventas?cliente_id=12&desde=YYYY-MM-DD&hasta=YYYY-MM-DD` para el historial de un cliente. Los filtros `desde` y `hasta` son opcionales. La respuesta `{ "data": [...] }` debe contener todas las operaciones del filtro, ordenadas por fecha descendente.
 
 Cada elemento debe tener `fecha` (ISO 8601), `numero_factura` (cadena o `null`), `total` (decimal), `estado` (`pendiente`, `confirmada`, `pagada`, `facturada` o `cancelada`), `cliente` con `nombre` y `apellido_razon_social`, y `detalles` como lista de `{ cantidad, subtotal, producto: { nombre } }`. Deben venir todos los estados.
 
-Ejemplo listo para usar: [ventas.json](contracts/ventas.json).
+Ejemplo de contrato (solo documentacion y pruebas, no datos cargados en ejecucion): [ventas.json](contracts/ventas.json).
 
-G1 ya no consume alertas de stock ni genera reportes de ventas generales o inventario. Las secciones de Ventas y Stock permanecen visibles sin consultas desde G1. El reporte de clientes por producto usa actualmente productos y ventas locales; con Ventas remotas responde `503` hasta acordar con G4 un contrato de compradores por producto. El catalogo de productos remoto tambien debera acordarse con G3 antes de sustituir el selector local.
+G1 ya no consume alertas de stock ni genera reportes de ventas generales o inventario. Las secciones de Ventas y Stock permanecen visibles sin consultas desde G1. El historial de clientes solo usa la API de G4. El reporte de clientes por producto usa el catalogo JSON de G3 (`GET /api/v1/productos`, con `id_producto`, `codigo`, `nombre` o `descripcion`) y solicita a G4 `GET /api/v1/reportes/productos/{id}/compradores`, con `data: [{"cliente_id": 12}]`. G4 debe devolver una vez cada cliente con venta confirmada, pagada o facturada, excluyendo pendientes y canceladas. Esta ultima ruta es un contrato **propuesto**, no disponible actualmente en la rama publica de G4. El porcentaje se calcula sobre todos los clientes registrados en G1. Ninguna consulta toma ventas o productos de las tablas locales.
 
-## Configuracion local y remota
+## Configuracion de servicios externos
 
 ```dotenv
 INTERNAL_API_TOKEN=valor_aleatorio_largo
-SALES_SERVICE_DRIVER=local
 SALES_SERVICE_URL=http://ventas:8000
 SALES_SERVICE_TOKEN=token_del_servicio_ventas
+CATALOG_SERVICE_URL=http://productos:8000
+CATALOG_SERVICE_TOKEN=
+BILLING_SERVICE_URL=http://cobros:8000
+BILLING_SERVICE_TOKEN=token_del_servicio_cobros
+BALANCE_SERVICE_URL=http://saldos:8000
+BALANCE_SERVICE_TOKEN=token_del_servicio_saldos
 ```
 
-Con `SALES_SERVICE_DRIVER=local`, el historial de clientes lee las ventas locales. Con `http`, consulta el JSON de G4 especificado arriba. Tras cambiar `.env`, ejecutar `php artisan config:clear`. No se crea un registro local alternativo si el servicio remoto falla: se devuelve `502` o `503` para que el error sea visible.
+Las URL y tokens anteriores son valores ilustrativos: no se deben copiar como servicios reales. G3 puede consultarse sin token mientras su API siga publica; los otros consumidores requieren token. Tras cambiar `.env`, ejecutar `php artisan config:clear`. Sin servicio configurado, las pantallas muestran integracion pendiente y las rutas API/exportaciones devuelven `503`. Un servicio caido devuelve `503`, y un error o JSON invalido devuelve `502`. Nunca se sustituyen los datos externos por tablas locales ni por respuestas simuladas.
+
+Cada ruta externa tambien se puede ajustar con las variables `SALES_HISTORY_PATH`, `SALES_BUYERS_PATH`, `SALES_RANKING_PATH`, `CATALOG_PRODUCTS_PATH`, `BILLING_PAYMENTS_PATH`, `BILLING_INVOICES_PATH`, `BALANCE_CLIENT_PATH` y `BALANCE_DEBTORS_PATH` de `.env.example`. En las rutas de comprador y saldo individual, `{id}` se reemplaza por el ID correspondiente. Cambiar la ruta no adapta automaticamente un JSON distinto: si el otro grupo entrega otra estructura, hay que acordar y actualizar el adaptador y sus pruebas.
+
+Estado verificado en las ramas publicas: G3 publica `GET /api/v1/productos` con `data`; G2 publica alta de cobros y una consulta de saldo propia, pero **no** el historial ni las facturas pendientes aqui esperadas. G4 publica `GET /api/ventas`, que hoy no equivale al contrato JSON de historial, ranking, compradores y saldos requerido por G1. Estas rutas propuestas no deben marcarse como integradas hasta probarlas extremo a extremo.
 
 G2 es dueno de cobros y facturas; G4, de saldos y ventas. Las tablas locales historicas `cobros` y `clientes.saldo` se conservan sin borrar datos, pero ya no se usan en pantallas, reportes ni escrituras. Los nuevos contratos propuestos para Sprint 4 estan en [contratos-sprint4-g1.md](contratos-sprint4-g1.md). No se considera integrada una API hasta que el otro grupo confirme su ruta y estructura.

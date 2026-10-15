@@ -2,6 +2,8 @@
 
 G1 implementa las pantallas de [#113](https://github.com/rapiriz/ERP-Juan23/issues/113) y [#114](https://github.com/rapiriz/ERP-Juan23/issues/114). La issue #120 queda pendiente, sin implementacion. No hay datos de ejemplo ni fallback local en tiempo de ejecucion para estos reportes.
 
+Ademas, el historial de ventas por cliente y el porcentaje de clientes por producto dependen de G4. El selector de productos consulta `GET /api/v1/productos` de G3, ya presente en su rama publica; el endpoint de compradores de G4 sigue pendiente de acuerdo. Ver [integracion-microservicios.md](integracion-microservicios.md#json-requerido-de-ventas).
+
 Las rutas de abajo son **contratos propuestos**, no APIs confirmadas ni publicadas por los otros grupos. G1 envia `Authorization: Bearer <token>` y `Accept: application/json`. Cada respuesta exitosa debe contener `data`. Importes son cadenas decimales en ARS, fechas `YYYY-MM-DD` o ISO 8601. Los IDs de clientes deben coincidir con `clientes.id` de G1. Se deben acordar rutas, autenticacion, filtros, paginacion y semantica de estados antes de conectar entornos productivos.
 
 | Dueno | Metodo y ruta esperada | Uso en G1 | Campos requeridos en `data` |
@@ -14,7 +16,7 @@ Las rutas de abajo son **contratos propuestos**, no APIs confirmadas ni publicad
 
 El ranking debe contabilizar solo ventas validas para facturacion, excluir canceladas y devolver `[]` cuando el periodo no tenga movimientos. G4 debe definir si `desde` y `hasta` son inclusivos; G1 los envia tal cual. El reporte de deudores toma el **saldo total de G4**, no suma las facturas de G2 para calcularlo. Facturas y saldos pueden tener momentos de actualizacion diferentes; G2 y G4 deben acordar consistencia e identificadores.
 
-Configurar `SALES_SERVICE_URL` y `SALES_SERVICE_TOKEN` para G4 (ranking), `BALANCE_SERVICE_URL` y `BALANCE_SERVICE_TOKEN` para G4 (saldos), y `BILLING_SERVICE_URL` y `BILLING_SERVICE_TOKEN` para G2. Las URL son bases, por ejemplo `https://servicio.example`; G1 agrega las rutas anteriores. No guardar tokens reales en el repositorio. Luego ejecutar `php artisan config:clear`.
+Configurar `SALES_SERVICE_URL` y `SALES_SERVICE_TOKEN` para G4 (historial, compradores y ranking), `CATALOG_SERVICE_URL` para G3, `BALANCE_SERVICE_URL` y `BALANCE_SERVICE_TOKEN` para G4 (saldos), y `BILLING_SERVICE_URL` y `BILLING_SERVICE_TOKEN` para G2. Las URL son bases, por ejemplo `https://servicio.example`; G1 agrega las rutas indicadas en `.env.example`, ajustables por variables `*_PATH`. No guardar tokens reales en el repositorio. Luego ejecutar `php artisan config:clear`.
 
 Cuando falta URL o token, la pantalla explica la dependencia pendiente y la API de G1 responde `503`. Si el servicio no responde, `503`; si responde con error o estructura invalida, `502`. Una respuesta `data: []` exitosa representa ausencia real de registros, no un fallo de integracion. No hay mocks en el codigo de produccion; las pruebas usan `Http::fake()` solo para verificar el contrato.
 

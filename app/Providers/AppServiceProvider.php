@@ -8,7 +8,6 @@ use App\Models\Reclamo;
 use App\Policies\ClientePolicy;
 use App\Policies\ReclamoPolicy;
 use App\Services\Gateways\HttpSalesGateway;
-use App\Services\Gateways\LocalSalesGateway;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 
@@ -19,11 +18,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        $this->app->bind(SalesGateway::class, fn ($app) => $app->make(match (config('services.sales.driver')) {
-            'local' => LocalSalesGateway::class,
-            'http' => HttpSalesGateway::class,
-            default => throw new \InvalidArgumentException('SALES_SERVICE_DRIVER debe ser local o http.'),
-        }));
+        $this->app->bind(SalesGateway::class, HttpSalesGateway::class);
 
     }
 

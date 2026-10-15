@@ -184,7 +184,7 @@ La respuesta proviene de G4, no de `clientes.saldo` local. Sin integracion confi
 
 - Acceso: token interno, administrativo o repartidor.
 - Ruta obligatoria: `{id}` numerico existente. Body y query: ninguno. G1 consulta G2 y devuelve sus cobros asociados al cliente.
-- Exito: `200`, lista provista por G2.
+- Exito: `200`, lista provista por G2, ordenada por fecha descendente en G1.
 
 ```json
 {"data":[{"id":7,"cliente_id":12,"fecha":"2026-10-06T10:00:00-03:00","monto_total":"2500.00","medio_pago":"transferencia","comprobante_nro":"TR-123","observaciones":null}]}

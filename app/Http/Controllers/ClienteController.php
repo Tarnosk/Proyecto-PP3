@@ -61,7 +61,10 @@ class ClienteController extends Controller
             'saldo' => $finance->isConfigured('balances') ? $finance->clientBalance($cliente->id)['saldo'] : null,
             'cobrosDisponibles' => $finance->isConfigured('billing'),
             'cobros' => $finance->isConfigured('billing') ? $finance->clientPayments($cliente->id) : [],
-            'ventas' => $reports->clientSales($cliente, $filters['desde'] ?? null, $filters['hasta'] ?? null),
+            'salesReady' => $reports->salesAvailable(),
+            'ventas' => $reports->salesAvailable()
+                ? $reports->clientSales($cliente, $filters['desde'] ?? null, $filters['hasta'] ?? null)
+                : collect(),
             'desde' => $filters['desde'] ?? '',
             'hasta' => $filters['hasta'] ?? '',
         ]);

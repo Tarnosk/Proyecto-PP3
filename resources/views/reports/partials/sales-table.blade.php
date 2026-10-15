@@ -1,5 +1,7 @@
 <section class="table-panel">
-    @if ($ventas->isEmpty())
+    @if (isset($salesReady) && ! $salesReady)
+        <p class="empty-state">El historial estara disponible cuando G4 publique su API de ventas.</p>
+    @elseif ($ventas->isEmpty())
         <p class="empty-state">No hay ventas para los filtros seleccionados.</p>
     @else
         <div class="table-scroll">

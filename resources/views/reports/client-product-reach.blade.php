@@ -23,7 +23,9 @@
         </div>
     </form>
 
-    @if ($productos->isEmpty())
+    @if (! $ready)
+        <section class="table-panel"><p class="empty-state">Este reporte estara disponible cuando G3 publique el catalogo y G4 publique los compradores por producto.</p></section>
+    @elseif ($productos->isEmpty())
         <section class="table-panel"><p class="empty-state">No hay productos registrados.</p></section>
     @elseif ($producto)
         <section class="product-reach-summary" aria-label="Porcentaje de clientes">

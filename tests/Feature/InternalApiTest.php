@@ -42,14 +42,17 @@ class InternalApiTest extends TestCase
             'saldo' => 750,
         ]);
         Cliente::factory()->create(['creado_por' => $admin->id, 'apellido_razon_social' => 'Comercial Sur']);
-        config()->set('services.balances', ['url' => 'https://saldos.example.test', 'token' => 'g4-token']);
-        config()->set('services.billing', ['url' => 'https://facturas.example.test', 'token' => 'g2-token']);
+        config()->set('services.balances', [...config('services.balances'), 'url' => 'https://saldos.example.test', 'token' => 'g4-token']);
+        config()->set('services.billing', [...config('services.billing'), 'url' => 'https://facturas.example.test', 'token' => 'g2-token']);
         Http::preventStrayRequests();
         Http::fake([
             'saldos.example.test/api/v1/clientes/*/saldo' => Http::response(['data' => [
                 'cliente_id' => $client->id, 'saldo' => '500.00', 'moneda' => 'ARS',
             ]]),
             'facturas.example.test/api/v1/cobros*' => Http::response(['data' => [[
+                'id' => 9, 'cliente_id' => $client->id, 'fecha' => '2026-10-01T10:00:00-03:00',
+                'monto_total' => '100.00', 'medio_pago' => 'efectivo',
+            ], [
                 'id' => 8, 'cliente_id' => $client->id, 'fecha' => '2026-10-14T10:00:00-03:00',
                 'monto_total' => '250.00', 'medio_pago' => 'transferencia',
             ]]]),
@@ -65,6 +68,7 @@ class InternalApiTest extends TestCase
             ->assertJsonPath('data.moneda', 'ARS');
         $this->getJson("/api/v1/clientes/{$client->id}/cobros")
             ->assertOk()
+            ->assertJsonPath('data.0.id', 8)
             ->assertJsonPath('data.0.monto_total', '250.00');
         $this->getJson('/api/v1/zonas')->assertOk()->assertJsonPath('data.0.nombre', 'Norte');
         $this->getJson('/api/v1/clientes/999999')->assertNotFound();

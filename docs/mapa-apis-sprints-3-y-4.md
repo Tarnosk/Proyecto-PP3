@@ -71,7 +71,7 @@ El historial de cobros de G1 ahora depende de la API de G2. La historia de factu
 
 G1 ya no consulta alertas ni genera reportes de stock. El contrato de `GET /api/v1/productos/stock-bajo` y su consumidor fueron retirados. La historia historica [#115](https://github.com/rapiriz/ERP-Juan23/issues/115) debe resolverse en el modulo de G3, no en los reportes de G1.
 
-El reporte de **clientes por producto** todavia ofrece un selector basado en la tabla local `productos`. Cuando ese catalogo pase a ser propiedad exclusiva de G3, G1 necesitara consultar al menos `GET /api/productos` (ID y nombre, con busqueda o paginacion) y `GET /api/productos/{id}` para validar el producto seleccionado. La [rama develop-g3](https://github.com/rapiriz/ERP-Juan23/blob/develop-g3/routes/api.php) ya declara esas rutas, pero aun no estan conectadas con el reporte de G1.
+El reporte de **clientes por producto** consulta el catalogo de G3 mediante `GET /api/v1/productos`; no usa la tabla local `productos`. La [rama develop-g3](https://github.com/rapiriz/ERP-Juan23/blob/develop-g3/routes/api.php) declara esa ruta. La respuesta de G3 usa `id_producto`, `codigo`, `nombre` y `descripcion`; G1 adapta esos campos para el selector. El listado de compradores por producto aun requiere un endpoint nuevo de G4.
 
 ## Lo que G1 necesita de G4
 
@@ -82,7 +82,7 @@ G4 tiene historias de Ventas, Saldos y Promociones. La [rama develop-g4](https:/
 | `GET /api/v1/ventas?cliente_id=12&desde=...&hasta=...` | Historial del cliente, Sprint 3 [#118](https://github.com/rapiriz/ERP-Juan23/issues/118) |
 | `GET /api/v1/ventas/clientes-por-producto?producto_id=8` | Cantidad e IDs paginados de clientes distintos que compraron el producto; G1 calcula el porcentaje sobre todos sus clientes |
 
-Para [#118](https://github.com/rapiriz/ERP-Juan23/issues/118), G1 ya preparo un consumidor HTTP que espera `GET /api/v1/ventas` con `{"data":[...]}` e informacion de fecha, estado, total, cliente y detalles con productos. El contrato preciso esta en [integracion-microservicios.md](integracion-microservicios.md#json-requerido-de-ventas). El modo local lee las tablas de este proyecto; ese fallback no confirma integracion con la base de G4. El reporte de clientes por producto aun no usa HTTP y responde `503` en modo remoto hasta definir un contrato con G4. Ranking comercial [#113](https://github.com/rapiriz/ERP-Juan23/issues/113) ahora tiene pantalla y consumidor HTTP preparado; Ventas diarias [#119](https://github.com/rapiriz/ERP-Juan23/issues/119) no se implementa en G1.
+Para [#118](https://github.com/rapiriz/ERP-Juan23/issues/118), G1 tiene un consumidor HTTP que espera `GET /api/v1/ventas` con `{"data":[...]}` e informacion de fecha, estado, total, cliente y detalles con productos. El contrato esta en [integracion-microservicios.md](integracion-microservicios.md#json-requerido-de-ventas). No existe fallback a ventas locales. El reporte de clientes por producto requiere el catalogo de G3 y un endpoint de compradores de G4 todavia no publicado. Ranking comercial [#113](https://github.com/rapiriz/ERP-Juan23/issues/113) tiene pantalla y consumidor HTTP preparado; Ventas diarias [#119](https://github.com/rapiriz/ERP-Juan23/issues/119) no se implementa en G1.
 
 Promociones de G4 no son una dependencia de los reportes de clientes actuales. Las historias de G4 [#153](https://github.com/rapiriz/ERP-Juan23/issues/153), [#154](https://github.com/rapiriz/ERP-Juan23/issues/154) y [#156](https://github.com/rapiriz/ERP-Juan23/issues/156) tambien hablan de deuda y pagos; no deben crear un tercer saldo independiente.
 
@@ -91,7 +91,7 @@ Promociones de G4 no son una dependencia de los reportes de clientes actuales. L
 1. **Propiedad de saldo y cobros.** G2 es dueno de cobros y facturas; G4 de saldos y ventas. Las tablas locales historicas `clientes.saldo` y `cobros` de G1 ya no se consultan ni se escriben desde los flujos activos. Los proxies y reportes requieren las APIs acordadas.
 2. **Eventos monetarios.** Acordar quien registra el cargo de una venta, quien registra o anula un cobro, como se relaciona con una factura y como se evitan duplicados al reintentar peticiones. Nunca actualizar el mismo saldo por separado en G1, G2 y G4.
 3. **Autenticacion entre servicios.** La documentacion general de arquitectura menciona JWT, mientras G1 entrega un token opaco. Acordar introspeccion o un estandar comun y definir roles, vencimiento y credenciales de servicio.
-4. **Version y forma de los JSON.** G1 usa `/api/v1` y respuestas con `data`; G3 publica `/api` y agrega `status`. G2 mezcla respuestas propias. Antes de conectar `SALES_SERVICE_DRIVER=http` o el futuro catalogo de G3, acordar URL, campos, errores, paginacion, moneda y zona horaria.
+4. **Version y forma de los JSON.** G1 usa `/api/v1` y respuestas con `data`; G3 publica `/api/v1` y `/api`, y agrega `status`. G2 mezcla respuestas propias. Antes de conectar entornos reales, acordar URL, campos, autenticacion, errores, paginacion, moneda y zona horaria.
 5. **Facturacion.** Definir quien publica facturas pendientes y vencimientos, y si G2 asume la titularidad despues de su analisis [#188](https://github.com/rapiriz/ERP-Juan23/issues/188).
 
 ## Fuentes

@@ -2,6 +2,7 @@
 
 namespace App\Services\Gateways;
 
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Validator;
 
 class ExternalFinanceGateway
@@ -10,14 +11,13 @@ class ExternalFinanceGateway
 
     public function isConfigured(string $service): bool
     {
-        return filter_var(config("services.{$service}.url"), FILTER_VALIDATE_URL) !== false
-            && is_string(config("services.{$service}.token"))
-            && config("services.{$service}.token") !== '';
+        return $this->client->isConfigured($service);
     }
 
     public function clientBalance(int $clientId): array
     {
-        $row = $this->client->get('balances', "/api/v1/clientes/{$clientId}/saldo");
+        $path = str_replace('{id}', (string) $clientId, config('services.balances.client_path'));
+        $row = $this->client->get('balances', $path);
         $this->validate($row, [
             'cliente_id' => ['required', 'integer'],
             'saldo' => ['required', 'numeric', 'min:0'],
@@ -33,7 +33,7 @@ class ExternalFinanceGateway
 
     public function clientPayments(int $clientId): array
     {
-        $rows = $this->client->get('billing', '/api/v1/cobros', ['cliente_id' => $clientId]);
+        $rows = $this->client->get('billing', config('services.billing.payments_path'), ['cliente_id' => $clientId]);
         $this->requireList($rows);
         $this->validate($rows, [
             '*' => ['array'],
@@ -50,12 +50,12 @@ class ExternalFinanceGateway
             abort(502, 'El servicio de cobros devolvio otro cliente.');
         }
 
-        return $rows;
+        return collect($rows)->sortByDesc(fn (array $row) => Carbon::parse($row['fecha'])->timestamp)->values()->all();
     }
 
     public function debtorBalances(): array
     {
-        $rows = $this->client->get('balances', '/api/v1/clientes/deudores');
+        $rows = $this->client->get('balances', config('services.balances.debtors_path'));
         $this->requireList($rows);
         $this->validate($rows, [
             '*' => ['array'],
@@ -68,7 +68,7 @@ class ExternalFinanceGateway
 
     public function pendingInvoices(): array
     {
-        $rows = $this->client->get('billing', '/api/v1/facturas/pendientes');
+        $rows = $this->client->get('billing', config('services.billing.invoices_path'));
         $this->requireList($rows);
         $this->validate($rows, [
             '*' => ['array'],
@@ -84,7 +84,7 @@ class ExternalFinanceGateway
 
     public function productRanking(?string $from, ?string $to): array
     {
-        $rows = $this->client->get('sales', '/api/v1/reportes/ranking-productos', array_filter([
+        $rows = $this->client->get('sales', config('services.sales.ranking_path'), array_filter([
             'desde' => $from,
             'hasta' => $to,
         ], fn ($value) => $value !== null));

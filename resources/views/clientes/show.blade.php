@@ -38,8 +38,13 @@
         </article>
         <article>
             <span>Ventas mostradas</span>
-            <strong>{{ $ventas->count() }}</strong>
-            <small>Segun el periodo seleccionado</small>
+            @if ($salesReady)
+                <strong>{{ $ventas->count() }}</strong>
+                <small>Segun el periodo seleccionado</small>
+            @else
+                <strong>--</strong>
+                <small>Esperando API de ventas de G4</small>
+            @endif
         </article>
     </section>
 

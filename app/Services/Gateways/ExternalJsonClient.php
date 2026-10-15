@@ -8,22 +8,31 @@ use Illuminate\Support\Facades\Validator;
 
 class ExternalJsonClient
 {
+    public function isConfigured(string $service): bool
+    {
+        return filter_var(config("services.{$service}.url"), FILTER_VALIDATE_URL) !== false
+            && (! config("services.{$service}.auth_required", true)
+                || (is_string(config("services.{$service}.token")) && config("services.{$service}.token") !== ''));
+    }
+
     public function get(string $service, string $path, array $query = []): array
     {
         $url = config("services.{$service}.url");
         $token = config("services.{$service}.token");
 
-        if (! is_string($url) || ! filter_var($url, FILTER_VALIDATE_URL) || ! is_string($token) || $token === '') {
+        if (! $this->isConfigured($service)) {
             abort(503, 'El servicio externo no esta configurado.');
         }
 
         try {
-            $response = Http::baseUrl(rtrim($url, '/'))
-                ->withToken($token)
+            $request = Http::baseUrl(rtrim($url, '/'))
                 ->acceptJson()
                 ->connectTimeout(2)
-                ->timeout(5)
-                ->get($path, $query);
+                ->timeout(5);
+            if (is_string($token) && $token !== '') {
+                $request = $request->withToken($token);
+            }
+            $response = $request->get($path, $query);
         } catch (ConnectionException) {
             abort(503, 'El servicio externo no esta disponible.');
         }

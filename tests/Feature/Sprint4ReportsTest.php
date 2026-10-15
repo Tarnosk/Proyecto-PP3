@@ -132,8 +132,8 @@ class Sprint4ReportsTest extends TestCase
 
     private function configureServices(): void
     {
-        config()->set('services.sales', ['url' => 'https://ventas.example.test', 'token' => 'ventas-token', 'driver' => 'http']);
-        config()->set('services.billing', ['url' => 'https://facturas.example.test', 'token' => 'facturas-token']);
-        config()->set('services.balances', ['url' => 'https://saldos.example.test', 'token' => 'saldos-token']);
+        config()->set('services.sales', [...config('services.sales'), 'url' => 'https://ventas.example.test', 'token' => 'ventas-token']);
+        config()->set('services.billing', [...config('services.billing'), 'url' => 'https://facturas.example.test', 'token' => 'facturas-token']);
+        config()->set('services.balances', [...config('services.balances'), 'url' => 'https://saldos.example.test', 'token' => 'saldos-token']);
     }
 }
