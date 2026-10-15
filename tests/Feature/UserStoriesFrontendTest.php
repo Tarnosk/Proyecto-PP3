@@ -509,12 +509,13 @@ class UserStoriesFrontendTest extends TestCase
     {
         $viewRes = $this->get('/inventario');
         $viewRes->assertOk();
-        $viewRes->assertSee('tabBtn-devoluciones');
+        $viewRes->assertDontSee('tabBtn-devoluciones');
         $viewRes->assertSee('modalDevolucion');
-        $viewRes->assertSee('devTipo');
-        $viewRes->assertSee('devProductoSelect');
-        $viewRes->assertSee('devCantidad');
-        $viewRes->assertSee('devMotivo');
+        $viewRes->assertSee('abrirModalDevolucion');
+        $viewRes->assertSee('modalDevTipo');
+        $viewRes->assertSee('modalDevProductoSelect');
+        $viewRes->assertSee('modalDevCantidad');
+        $viewRes->assertSee('modalDevMotivo');
 
         $producto = Producto::where('estado', 'activo')->first();
         $this->assertNotNull($producto);
@@ -755,6 +756,81 @@ class UserStoriesFrontendTest extends TestCase
         // S08: Eliminar unidad creada
         $delRes = $this->deleteJson("/api/productos/{$prodId}/unidades/{$idUnidad}");
         $delRes->assertOk();
+    }
+
+    /**
+     * S08 Rediseñada - Presentación comercial y formato de bulto directo en producto (opcional) y visualización en stock.
+     */
+    public function test_s08_presentacion_bulto_directa_en_producto_y_visualizacion_stock(): void
+    {
+        $viewRes = $this->get('/inventario');
+        $viewRes->assertOk();
+        $viewRes->assertSee('prodFormatoBulto');
+        $viewRes->assertSee('prodUnidadesPorBulto');
+        $viewRes->assertSee('actualizarPreviewBultoProducto');
+
+        $categoria = \App\Modules\Productos\Models\Categoria::first();
+        $marca = \App\Modules\Productos\Models\Marca::first();
+        $this->assertNotNull($categoria);
+        $this->assertNotNull($marca);
+
+        // 1. Alta con campos opcionales omitidos (debe tomar Unidad y 1 por defecto)
+        $cod1 = 'TEST-BULTO-DEF-' . uniqid();
+        $resDef = $this->postJson('/api/productos', [
+            'codigo' => $cod1,
+            'nombre' => 'Producto Suelto Test',
+            'descripcion' => 'Producto sin bulto configurado',
+            'precio_unitario' => 150.00,
+            'id_categoria' => $categoria->id_categoria,
+            'id_marca' => $marca->id_marca,
+            'stock_disponible' => 50,
+        ]);
+        $resDef->assertStatus(201);
+        $this->assertEquals('Unidad', $resDef->json('data.formato_bulto'));
+        $this->assertEquals(1, $resDef->json('data.unidades_por_bulto'));
+
+        // 2. Alta con presentación comercial explícita (Caja x 12)
+        $cod2 = 'TEST-BULTO-CAJA-' . uniqid();
+        $resCaja = $this->postJson('/api/productos', [
+            'codigo' => $cod2,
+            'nombre' => 'Alfajores Artesanales Caja',
+            'descripcion' => 'Caja de alfajores x 12',
+            'precio_unitario' => 1200.00,
+            'id_categoria' => $categoria->id_categoria,
+            'id_marca' => $marca->id_marca,
+            'stock_disponible' => 120, // 120 unidades = 10 cajas
+            'formato_bulto' => 'Caja',
+            'unidades_por_bulto' => 12,
+        ]);
+        $resCaja->assertStatus(201);
+        $idProdCaja = $resCaja->json('data.id_producto');
+        $this->assertEquals('Caja', $resCaja->json('data.formato_bulto'));
+        $this->assertEquals(12, $resCaja->json('data.unidades_por_bulto'));
+        $this->assertEquals('Caja x 12 u.', $resCaja->json('data.presentacion_texto'));
+        $this->assertEquals(120, $resCaja->json('data.stock'));
+
+        // 3. Edición de presentación de producto
+        $updateRes = $this->putJson("/api/productos/{$idProdCaja}", [
+            'codigo' => $cod2,
+            'nombre' => 'Alfajores Artesanales Display',
+            'descripcion' => 'Display de alfajores x 24',
+            'precio_unitario' => 1200.00,
+            'id_categoria' => $categoria->id_categoria,
+            'id_marca' => $marca->id_marca,
+            'formato_bulto' => 'Display',
+            'unidades_por_bulto' => 24,
+        ]);
+        $updateRes->assertOk();
+        $this->assertEquals('Display', $updateRes->json('data.formato_bulto'));
+        $this->assertEquals(24, $updateRes->json('data.unidades_por_bulto'));
+        $this->assertEquals('Display x 24 u.', $updateRes->json('data.presentacion_texto'));
+
+        // 4. Consulta individual del producto
+        $getRes = $this->getJson("/api/productos/{$idProdCaja}");
+        $getRes->assertOk();
+        $this->assertEquals('Display', $getRes->json('data.formato_bulto'));
+        $this->assertEquals(24, $getRes->json('data.unidades_por_bulto'));
+        $this->assertEquals('Display x 24 u.', $getRes->json('data.presentacion_texto'));
     }
 
     /**
