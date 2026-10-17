@@ -2,7 +2,7 @@
 
 @section('title', 'Compras y Órdenes - Distribuidora Pigüé')
 @section('page_title', 'Compras y Órdenes de Compra')
-@section('page_subtitle', 'Gestión de Compras a Proveedores, Recepciones de Lotes, Órdenes de Reposición y Control de Deudas')
+@section('page_subtitle', 'Gestión de Compras a Proveedores, Recepción de Mercadería, Órdenes de Reposición y Control de Deudas')
 
 @section('content')
 <div class="space-y-6">
@@ -23,12 +23,12 @@
             <button onclick="cambiarPestanaCompras('sugerencias')" id="tabBtn-sugerencias" 
                     class="tab-btn-comp px-4 py-2.5 rounded-xl font-black text-xs flex items-center gap-2 transition-all cursor-pointer text-slate-600 hover:text-slate-900">
                 <i data-lucide="sparkles" class="w-4 h-4 text-violet-500"></i>
-                <span>Sugerencias de Reposición (PC07)</span>
+                <span>Sugerencias de Reposición</span>
             </button>
             <button onclick="cambiarPestanaCompras('deudas')" id="tabBtn-deudas" 
                     class="tab-btn-comp px-4 py-2.5 rounded-xl font-black text-xs flex items-center gap-2 transition-all cursor-pointer text-slate-600 hover:text-slate-900">
                 <i data-lucide="wallet" class="w-4 h-4 text-emerald-600"></i>
-                <span>Deudas con Proveedores (C09)</span>
+                <span>Deudas con Proveedores</span>
             </button>
         </div>
 
@@ -117,7 +117,7 @@
             <div class="shrink-0">
                 <button onclick="abrirModalNuevaCompra()" class="clay-btn-primary px-5 py-2.5 text-xs font-black flex items-center gap-2 shadow-md">
                     <i data-lucide="plus" class="w-4 h-4"></i>
-                    <span>Nueva Compra (C01)</span>
+                    <span>Nueva Compra</span>
                 </button>
             </div>
         </div>
@@ -134,7 +134,7 @@
                             <th>Vencimiento</th>
                             <th class="text-right">Monto Total</th>
                             <th class="text-right">Saldo Pendiente</th>
-                            <th class="text-center">Estado (C07)</th>
+                            <th class="text-center">Estado</th>
                             <th class="text-center">Acciones</th>
                         </tr>
                     </thead>
@@ -222,7 +222,7 @@
             <div class="shrink-0">
                 <button onclick="abrirModalNuevaOrden()" class="clay-btn-primary px-5 py-2.5 text-xs font-black flex items-center gap-2 shadow-md">
                     <i data-lucide="plus" class="w-4 h-4"></i>
-                    <span>Emitir Orden de Compra (PC01)</span>
+                    <span>Emitir Orden de Compra</span>
                 </button>
             </div>
         </div>
@@ -237,7 +237,7 @@
                             <th>Fecha Emisión</th>
                             <th>Entrega Estimada</th>
                             <th class="text-right">Total Estimado</th>
-                            <th class="text-center">Estado (PC06)</th>
+                            <th class="text-center">Estado</th>
                             <th class="text-center">Acciones</th>
                         </tr>
                     </thead>
@@ -252,7 +252,7 @@
     </div>
 
     <!-- ========================================================= -->
-    <!-- PESTAÑA 3: SUGERENCIAS DE REPOSICIÓN (PC07)              -->
+    <!-- PESTAÑA 3: SUGERENCIAS DE REPOSICIÓN              -->
     <!-- ========================================================= -->
     <div id="pestana-sugerencias" class="pestana-comp-content hidden space-y-4">
         
@@ -263,8 +263,8 @@
                     <i data-lucide="sparkles" class="w-6 h-6"></i>
                 </div>
                 <div>
-                    <h3 class="text-base font-black text-slate-800">Motor de Sugerencias de Reposición (PC07)</h3>
-                    <p class="text-xs text-slate-500 font-bold">Detección de stock crítico/mínimo, cálculo de lote óptimo y asignación del mejor proveedor (PV05)</p>
+                    <h3 class="text-base font-black text-slate-800">Motor de Sugerencias de Reposición</h3>
+                    <p class="text-xs text-slate-500 font-bold">Detección de stock crítico/mínimo, cálculo de cantidad óptima y asignación del mejor proveedor</p>
                 </div>
             </div>
 
@@ -324,11 +324,11 @@
                             <th>Producto</th>
                             <th class="text-center">Stock / Mínimo</th>
                             <th class="text-center">Cant. Sugerida</th>
-                            <th>Proveedor Asignado (PV05)</th>
+                            <th>Proveedor Asignado</th>
                             <th class="text-right">Precio Unitario</th>
                             <th class="text-right">Costo Estimado</th>
                             <th class="text-center">Motivo</th>
-                            <th class="text-center">Acciones (PC07)</th>
+                            <th class="text-center">Acciones</th>
                         </tr>
                     </thead>
                     <tbody id="tablaSugerenciasBody">
@@ -408,7 +408,7 @@
         <div class="clay-card overflow-hidden">
             <div class="p-4 border-b border-slate-100 flex items-center justify-between">
                 <div>
-                    <h3 class="text-sm font-black text-slate-800">Estado de Cuenta y Vencimientos Próximos (C09)</h3>
+                    <h3 class="text-sm font-black text-slate-800">Estado de Cuenta y Vencimientos Próximos</h3>
                     <p class="text-xs text-slate-500 font-bold">Compras pendientes de pago con fecha de vencimiento y saldo pendiente</p>
                 </div>
             </div>
@@ -421,7 +421,7 @@
                             <th>Fecha Compra</th>
                             <th>Vencimiento Próximo</th>
                             <th class="text-right">Monto Total</th>
-                            <th class="text-right">Pagado (C08)</th>
+                            <th class="text-right">Pagado</th>
                             <th class="text-right">Saldo Adeudado</th>
                             <th class="text-center">Acción</th>
                         </tr>
@@ -441,13 +441,13 @@
 
 @section('modals')
 <!-- ========================================== -->
-<!-- MODAL: REGISTRAR PAGO A COMPRA (C08)       -->
+<!-- MODAL: REGISTRAR PAGO A COMPRA       -->
 <!-- ========================================== -->
 <div id="modalPago" class="clay-modal-backdrop hidden" onclick="if(event.target === this) cerrarModalPago()">
     <div class="clay-modal-content max-w-md p-6 space-y-4" onclick="event.stopPropagation()">
         <div class="flex items-center justify-between pb-3 border-b border-slate-100">
             <div>
-                <h3 class="text-base font-black text-slate-800">Registrar Pago a Proveedor (C08)</h3>
+                <h3 class="text-base font-black text-slate-800">Registrar Pago a Proveedor</h3>
                 <p id="pagoSubtituloCompra" class="text-xs text-slate-500 font-bold">Compra #</p>
             </div>
             <button onclick="cerrarModalPago()" class="p-1 text-slate-400 hover:text-slate-600 rounded-lg">
@@ -508,8 +508,8 @@
     <div class="clay-modal-content max-w-3xl p-6 space-y-4" onclick="event.stopPropagation()">
         <div class="flex items-center justify-between pb-3 border-b border-slate-100">
             <div>
-                <h3 class="text-base font-black text-slate-800">Registrar Recepción de Mercadería (C06)</h3>
-                <p id="recepcionSubtituloCompra" class="text-xs text-slate-500 font-bold">Ingreso a stock con lote y vencimiento</p>
+                <h3 class="text-base font-black text-slate-800">Registrar Recepción de Mercadería</h3>
+                <p id="recepcionSubtituloCompra" class="text-xs text-slate-500 font-bold">Ingreso directo de mercadería a stock</p>
             </div>
             <button onclick="cerrarModalRecepcion()" class="p-1 text-slate-400 hover:text-slate-600 rounded-lg">
                 <i data-lucide="x" class="w-5 h-5"></i>
@@ -528,7 +528,7 @@
             <div class="border border-slate-200/80 rounded-2xl overflow-hidden bg-slate-50/50">
                 <div class="p-3 bg-slate-100/60 font-black text-xs text-slate-700 flex justify-between">
                     <span>Productos de la Compra a Recepcionar</span>
-                    <span class="text-[11px] text-slate-500 font-normal">Complete cantidad, n° lote y vencimiento para cada ítem</span>
+                    <span class="text-[11px] text-slate-500 font-normal">Complete la cantidad recibida para cada ítem</span>
                 </div>
                 <div class="overflow-x-auto max-h-72">
                     <table class="clay-table">
@@ -539,13 +539,11 @@
                                 <th class="text-center">Recibido</th>
                                 <th class="text-center">Pendiente</th>
                                 <th class="w-28 text-center">Cant. a Recibir</th>
-                                <th class="w-36">N° Lote (S09)</th>
-                                <th class="w-36">Vencimiento</th>
                             </tr>
                         </thead>
                         <tbody id="recepcionItemsBody">
                             <tr>
-                                <td colspan="7" class="text-center py-4 text-slate-400 font-bold">Cargando productos de la compra...</td>
+                                <td colspan="5" class="text-center py-4 text-slate-400 font-bold">Cargando productos de la compra...</td>
                             </tr>
                         </tbody>
                     </table>
@@ -575,7 +573,7 @@
     <div class="clay-modal-content max-w-3xl p-6 space-y-4" onclick="event.stopPropagation()">
         <div class="flex items-center justify-between pb-3 border-b border-slate-100">
             <div>
-                <h3 id="modalCompraTitulo" class="text-base font-black text-slate-800">Registrar Compra de Mercadería (C01)</h3>
+                <h3 id="modalCompraTitulo" class="text-base font-black text-slate-800">Registrar Compra de Mercadería</h3>
                 <p id="modalCompraSubtitulo" class="text-xs text-slate-500 font-bold">Selección de proveedor y productos para abastecimiento</p>
             </div>
             <button onclick="cerrarModalNuevaCompra()" class="p-1 text-slate-400 hover:text-slate-600 rounded-lg">
@@ -590,7 +588,7 @@
 
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div class="sm:col-span-1">
-                    <label class="block text-[11px] font-extrabold text-slate-600 uppercase mb-1">Proveedor (PV01)</label>
+                    <label class="block text-[11px] font-extrabold text-slate-600 uppercase mb-1">Proveedor</label>
                     <select id="compraProveedor" required onchange="alCambiarProveedorCompra()" class="clay-input w-full text-xs font-bold">
                         <option value="">Seleccione proveedor activo...</option>
                     </select>
@@ -608,7 +606,7 @@
             </div>
 
             <div>
-                <label class="block text-[11px] font-extrabold text-slate-600 uppercase mb-1">Fecha de Vencimiento de Pago (C09)</label>
+                <label class="block text-[11px] font-extrabold text-slate-600 uppercase mb-1">Fecha de Vencimiento de Pago</label>
                 <input type="date" id="compraVencimiento" class="clay-input w-48 text-xs font-bold">
             </div>
 
@@ -686,7 +684,7 @@
     <div class="clay-modal-content max-w-3xl p-6 space-y-4" onclick="event.stopPropagation()">
         <div class="flex items-center justify-between pb-3 border-b border-slate-100">
             <div>
-                <h3 class="text-base font-black text-slate-800">Detalle de Compra (C03)</h3>
+                <h3 class="text-base font-black text-slate-800">Detalle de Compra</h3>
                 <p id="detalleCompraSubtitulo" class="text-xs font-bold text-slate-500">Compra</p>
             </div>
             <button onclick="cerrarModalDetalleCompra()" class="p-1 text-slate-400 hover:text-slate-600 rounded-lg">
@@ -694,7 +692,7 @@
             </button>
         </div>
 
-        <!-- BARRAS DE PROGRESO DE RECEPCIÓN Y PAGOS (C07) -->
+        <!-- BARRAS DE PROGRESO DE RECEPCIÓN Y PAGOS -->
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div class="p-3 bg-slate-50 rounded-xl border border-slate-200/60 space-y-1">
                 <div class="flex justify-between text-xs font-bold">
@@ -708,7 +706,7 @@
 
             <div class="p-3 bg-slate-50 rounded-xl border border-slate-200/60 space-y-1">
                 <div class="flex justify-between text-xs font-bold">
-                    <span class="text-slate-500">Estado de Pagos (C08):</span>
+                    <span class="text-slate-500">Estado de Pagos:</span>
                     <span id="detallePagoProgresoTexto" class="font-black text-emerald-600">0%</span>
                 </div>
                 <div class="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
@@ -744,7 +742,7 @@
             </div>
 
             <div class="p-3 bg-white rounded-xl border border-slate-200/80">
-                <span class="text-[11px] font-black uppercase text-slate-500 block mb-2">Pagos Realizados (C08)</span>
+                <span class="text-[11px] font-black uppercase text-slate-500 block mb-2">Pagos Realizados</span>
                 <div id="detallePagosHistorial" class="text-xs text-slate-600 space-y-1 max-h-32 overflow-y-auto">
                     <span class="text-slate-400 font-bold">Sin pagos registrados.</span>
                 </div>
@@ -764,7 +762,7 @@
     <div class="clay-modal-content max-w-3xl p-6 space-y-4" onclick="event.stopPropagation()">
         <div class="flex items-center justify-between pb-3 border-b border-slate-100">
             <div>
-                <h3 id="modalOrdenTitulo" class="text-base font-black text-slate-800">Emitir Orden de Compra (PC01)</h3>
+                <h3 id="modalOrdenTitulo" class="text-base font-black text-slate-800">Emitir Orden de Compra</h3>
                 <p id="modalOrdenSubtitulo" class="text-xs text-slate-500 font-bold">Pedido formal de reposición hacia un proveedor</p>
             </div>
             <button onclick="cerrarModalNuevaOrden()" class="p-1 text-slate-400 hover:text-slate-600 rounded-lg">
@@ -778,7 +776,7 @@
 
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div class="sm:col-span-1">
-                    <label class="block text-[11px] font-extrabold text-slate-600 uppercase mb-1">Proveedor (PV01)</label>
+                    <label class="block text-[11px] font-extrabold text-slate-600 uppercase mb-1">Proveedor</label>
                     <select id="ordenProveedor" required onchange="alCambiarProveedorOrden()" class="clay-input w-full text-xs font-bold">
                         <option value="">Seleccione proveedor activo...</option>
                     </select>
@@ -869,7 +867,7 @@
     <div class="clay-modal-content max-w-2xl p-6 space-y-4" onclick="event.stopPropagation()">
         <div class="flex items-center justify-between pb-3 border-b border-slate-100">
             <div>
-                <h3 class="text-base font-black text-slate-800">Detalle de Orden de Compra (PC03)</h3>
+                <h3 class="text-base font-black text-slate-800">Detalle de Orden de Compra</h3>
                 <p id="detalleOrdenSubtitulo" class="text-xs font-bold text-slate-500">Orden</p>
             </div>
             <button onclick="cerrarModalDetalleOrden()" class="p-1 text-slate-400 hover:text-slate-600 rounded-lg">
@@ -910,7 +908,7 @@
     let sugerenciasCache = [];
     let deudasCache = [];
 
-    // Cache de asociaciones proveedor-producto para autocompletar precios acordados (PV05)
+    // Cache de asociaciones proveedor-producto para autocompletar precios acordados
     let productosProveedorCache = {};
 
     document.addEventListener('DOMContentLoaded', () => {
@@ -1012,24 +1010,24 @@
                     <td class="text-center"><span class="clay-badge ${badgeClass} uppercase">${c.estado.replace('_', ' ')}</span></td>
                     <td class="text-center">
                         <div class="flex items-center justify-center gap-1.5">
-                            <button onclick="abrirModalDetalleCompra(${c.id_compra})" class="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-all" title="Ver Detalle (C03)">
+                            <button onclick="abrirModalDetalleCompra(${c.id_compra})" class="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-all" title="Ver Detalle">
                                 <i data-lucide="eye" class="w-4 h-4"></i>
                             </button>
                             ${admiteRecepcion ? `
-                            <button onclick="abrirModalRecepcionCompra(${c.id_compra})" class="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all" title="Registrar Recepción (C06)">
+                            <button onclick="abrirModalRecepcionCompra(${c.id_compra})" class="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all" title="Registrar Recepción">
                                 <i data-lucide="package-check" class="w-4 h-4"></i>
                             </button>
                             ` : ''}
                             ${admitePago ? `
-                            <button onclick="abrirModalPagoCompra(${c.id_compra})" class="p-1.5 text-violet-600 hover:bg-violet-50 rounded-lg transition-all" title="Registrar Pago (C08)">
+                            <button onclick="abrirModalPagoCompra(${c.id_compra})" class="p-1.5 text-violet-600 hover:bg-violet-50 rounded-lg transition-all" title="Registrar Pago">
                                 <i data-lucide="credit-card" class="w-4 h-4"></i>
                             </button>
                             ` : ''}
                             ${esPendiente ? `
-                            <button onclick="abrirModalEditarCompra(${c.id_compra})" class="p-1.5 text-amber-600 hover:bg-amber-50 rounded-lg transition-all" title="Modificar Compra (C04)">
+                            <button onclick="abrirModalEditarCompra(${c.id_compra})" class="p-1.5 text-amber-600 hover:bg-amber-50 rounded-lg transition-all" title="Modificar Compra">
                                 <i data-lucide="edit-3" class="w-4 h-4"></i>
                             </button>
-                            <button onclick="cancelarCompra(${c.id_compra})" class="p-1.5 text-rose-600 hover:bg-rose-50 rounded-lg transition-all" title="Cancelar Compra (C05)">
+                            <button onclick="cancelarCompra(${c.id_compra})" class="p-1.5 text-rose-600 hover:bg-rose-50 rounded-lg transition-all" title="Cancelar Compra">
                                 <i data-lucide="x-circle" class="w-4 h-4"></i>
                             </button>
                             ` : ''}
@@ -1093,7 +1091,7 @@
         }
     }
 
-    // Al seleccionar proveedor en Nueva Compra, cargamos sus productos asociados (PV05)
+    // Al seleccionar proveedor en Nueva Compra, cargamos sus productos asociados
     async function alCambiarProveedorCompra() {
         const idProv = document.getElementById('compraProveedor').value;
         const selProd = document.getElementById('compraItemProducto');
@@ -1119,7 +1117,7 @@
 
             let html = '<option value="">Seleccione producto...</option>';
             if (asociados.length > 0) {
-                html += '<optgroup label="Productos Asociados al Proveedor (PV05)">';
+                html += '<optgroup label="Productos Asociados al Proveedor">';
                 asociados.forEach(a => {
                     const precio = a.precio_acordado !== null ? a.precio_acordado : (a.precio_unitario || 0);
                     html += `<option value="${a.id_producto}" data-precio="${precio}" data-asociado="true">★ ${a.codigo} - ${a.nombre} ($${Number(precio).toFixed(2)})</option>`;
@@ -1164,7 +1162,7 @@
         document.getElementById('compraModoEdicion').value = 'false';
         document.getElementById('compraIdEditar').value = '';
         document.getElementById('compraIdOrden').value = '';
-        document.getElementById('modalCompraTitulo').textContent = 'Registrar Compra de Mercadería (C01)';
+        document.getElementById('modalCompraTitulo').textContent = 'Registrar Compra de Mercadería';
         document.getElementById('modalCompraSubtitulo').textContent = 'Selección de proveedor y productos para abastecimiento';
         document.getElementById('btnGuardarCompraSubmit').textContent = 'Registrar Compra';
         document.getElementById('compraProveedor').disabled = false;
@@ -1191,14 +1189,14 @@
 
             const c = json.data.compra;
             if (c.estado !== 'pendiente') {
-                mostrarNotificacion('Solo se pueden modificar compras en estado pendiente. (C04)', 'warning');
+                mostrarNotificacion('Solo se pueden modificar compras en estado pendiente.', 'warning');
                 return;
             }
 
             document.getElementById('compraModoEdicion').value = 'true';
             document.getElementById('compraIdEditar').value = idCompra;
             document.getElementById('compraIdOrden').value = c.id_orden || '';
-            document.getElementById('modalCompraTitulo').textContent = `Modificar Compra Pendiente #${c.numero_compra || idCompra} (C04)`;
+            document.getElementById('modalCompraTitulo').textContent = `Modificar Compra Pendiente #${c.numero_compra || idCompra}`;
             document.getElementById('modalCompraSubtitulo').textContent = 'Edición de cantidades, precios y productos antes de la recepción';
             document.getElementById('btnGuardarCompraSubmit').textContent = 'Guardar Cambios';
 
@@ -1344,7 +1342,7 @@
     }
 
     async function cancelarCompra(id) {
-        if (!confirm('¿Confirma la cancelación de esta compra pendiente? Esta acción conservará el historial. (C05)')) return;
+        if (!confirm('¿Confirma la cancelación de esta compra pendiente? Esta acción conservará el historial.')) return;
         const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
         try {
             const res = await fetch(`${API_BASE}/compras/${id}/cancelar`, {
@@ -1466,12 +1464,8 @@
             const detalles = json.data.detalles || [];
             itemsRecepcionModal = detalles;
 
-            const hoy = new Date();
-            const vencDefecto = new Date(hoy.setMonth(hoy.getMonth() + 6)).toISOString().split('T')[0];
-
             tbody.innerHTML = detalles.map((d, idx) => {
                 const pend = d.cantidad_pendiente !== undefined ? d.cantidad_pendiente : Math.max(0, d.cantidad - (d.cantidad_recibida || 0));
-                const loteSugerido = `LOTE-${d.id_producto}-${Date.now().toString().slice(-4)}`;
                 const disabled = pend <= 0 ? 'disabled' : '';
 
                 return `
@@ -1486,14 +1480,6 @@
                         <td class="text-center">
                             <input type="number" min="0" max="${pend}" value="${pend > 0 ? pend : 0}" id="rec_cant_${idx}" 
                                    ${disabled} class="clay-input w-20 py-1 text-center font-black text-xs">
-                        </td>
-                        <td>
-                            <input type="text" value="${pend > 0 ? loteSugerido : ''}" id="rec_lote_${idx}" 
-                                   ${disabled} placeholder="LOTE-001" class="clay-input w-full py-1 text-xs font-bold uppercase">
-                        </td>
-                        <td>
-                            <input type="date" value="${pend > 0 ? vencDefecto : ''}" id="rec_venc_${idx}" 
-                                   ${disabled} class="clay-input w-full py-1 text-xs font-bold">
                         </td>
                     </tr>
                 `;
@@ -1516,17 +1502,13 @@
         const itemsToSend = [];
         for (let i = 0; i < itemsRecepcionModal.length; i++) {
             const cantInput = document.getElementById(`rec_cant_${i}`);
-            const loteInput = document.getElementById(`rec_lote_${i}`);
-            const vencInput = document.getElementById(`rec_venc_${i}`);
             if (!cantInput) continue;
 
             const cant = Number(cantInput.value || 0);
             if (cant > 0) {
                 itemsToSend.push({
                     id_producto: itemsRecepcionModal[i].id_producto,
-                    cantidad_recibida: cant,
-                    numero_lote: loteInput ? loteInput.value.trim() : null,
-                    fecha_vencimiento: vencInput ? vencInput.value : null
+                    cantidad_recibida: cant
                 });
             }
         }
@@ -1548,7 +1530,7 @@
             const data = await res.json();
             if (data.status === 'success') {
                 cerrarModalRecepcion();
-                mostrarNotificacion('Recepción registrada exitosamente. El stock y los lotes han sido actualizados.', 'success');
+                mostrarNotificacion('Recepción registrada exitosamente. El stock ha sido actualizado.', 'success');
                 await Promise.all([cargarCompras(), cargarOrdenes(), cargarDeudas()]);
             } else {
                 mostrarNotificacion(data.message || 'Error al procesar la recepción.', 'error');
@@ -1559,7 +1541,7 @@
     }
 
     // =========================================================
-    // PAGOS DE COMPRA (C08)
+    // PAGOS DE COMPRA
     // =========================================================
 
     async function abrirModalPagoCompra(idCompra) {
@@ -1687,22 +1669,22 @@
                     <td class="text-center"><span class="clay-badge ${badgeClass} uppercase">${o.estado.replace('_', ' ')}</span></td>
                     <td class="text-center">
                         <div class="flex items-center justify-center gap-1.5">
-                            <button onclick="abrirModalDetalleOrden(${o.id_orden})" class="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-all" title="Ver Detalle (PC03)">
+                            <button onclick="abrirModalDetalleOrden(${o.id_orden})" class="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-all" title="Ver Detalle">
                                 <i data-lucide="eye" class="w-4 h-4"></i>
                             </button>
                             ${esPendiente ? `
-                            <button onclick="enviarOrden(${o.id_orden})" class="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all" title="Enviar al Proveedor (PC06)">
+                            <button onclick="enviarOrden(${o.id_orden})" class="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all" title="Enviar al Proveedor">
                                 <i data-lucide="send" class="w-4 h-4"></i>
                             </button>
-                            <button onclick="abrirModalEditarOrden(${o.id_orden})" class="p-1.5 text-amber-600 hover:bg-amber-50 rounded-lg transition-all" title="Editar Orden (PC04)">
+                            <button onclick="abrirModalEditarOrden(${o.id_orden})" class="p-1.5 text-amber-600 hover:bg-amber-50 rounded-lg transition-all" title="Editar Orden">
                                 <i data-lucide="edit-3" class="w-4 h-4"></i>
                             </button>
-                            <button onclick="cancelarOrden(${o.id_orden})" class="p-1.5 text-rose-600 hover:bg-rose-50 rounded-lg transition-all" title="Cancelar Orden (PC05)">
+                            <button onclick="cancelarOrden(${o.id_orden})" class="p-1.5 text-rose-600 hover:bg-rose-50 rounded-lg transition-all" title="Cancelar Orden">
                                 <i data-lucide="x-circle" class="w-4 h-4"></i>
                             </button>
                             ` : ''}
                             ${admiteFacturar ? `
-                            <button onclick="convertirOrdenACompra(${o.id_orden})" class="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all" title="Registrar Compra desde Orden (C01)">
+                            <button onclick="convertirOrdenACompra(${o.id_orden})" class="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all" title="Registrar Compra desde Orden">
                                 <i data-lucide="file-check" class="w-4 h-4"></i>
                             </button>
                             ` : ''}
@@ -1722,7 +1704,7 @@
         document.getElementById('kpiCompletadasOrdenes').textContent = ordenesCache.filter(o => o.estado === 'completada').length;
     }
 
-    // Al seleccionar proveedor en Nueva Orden, cargamos sus productos asociados (PV05)
+    // Al seleccionar proveedor en Nueva Orden, cargamos sus productos asociados
     async function alCambiarProveedorOrden() {
         const idProv = document.getElementById('ordenProveedor').value;
         const selProd = document.getElementById('ordenItemProducto');
@@ -1784,7 +1766,7 @@
     function abrirModalNuevaOrden() {
         document.getElementById('ordenModoEdicion').value = 'false';
         document.getElementById('ordenIdEditar').value = '';
-        document.getElementById('modalOrdenTitulo').textContent = 'Emitir Orden de Compra (PC01)';
+        document.getElementById('modalOrdenTitulo').textContent = 'Emitir Orden de Compra';
         document.getElementById('modalOrdenSubtitulo').textContent = 'Pedido formal de reposición hacia un proveedor';
         document.getElementById('btnGuardarOrdenSubmit').textContent = 'Generar Orden';
         document.getElementById('ordenProveedor').disabled = false;
@@ -1810,13 +1792,13 @@
 
             const o = json.data.orden;
             if (o.estado !== 'pendiente') {
-                mostrarNotificacion('Solo se pueden editar órdenes en estado pendiente. (PC04)', 'warning');
+                mostrarNotificacion('Solo se pueden editar órdenes en estado pendiente.', 'warning');
                 return;
             }
 
             document.getElementById('ordenModoEdicion').value = 'true';
             document.getElementById('ordenIdEditar').value = idOrden;
-            document.getElementById('modalOrdenTitulo').textContent = `Editar Orden de Compra #${o.numero_orden || idOrden} (PC04)`;
+            document.getElementById('modalOrdenTitulo').textContent = `Editar Orden de Compra #${o.numero_orden || idOrden}`;
             document.getElementById('modalOrdenSubtitulo').textContent = 'Ajuste de productos, cantidades y entrega antes de enviar al proveedor';
             document.getElementById('btnGuardarOrdenSubmit').textContent = 'Guardar Cambios';
 
@@ -1957,7 +1939,7 @@
     }
 
     async function enviarOrden(id) {
-        if (!confirm('¿Desea marcar esta orden de compra como enviada al proveedor? Una vez enviada ya no podrá ser modificada. (PC04/PC06)')) return;
+        if (!confirm('¿Desea marcar esta orden de compra como enviada al proveedor? Una vez enviada ya no podrá ser modificada.')) return;
         const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
         try {
             const res = await fetch(`${API_BASE}/ordenes-compra/${id}/enviar`, {
@@ -1978,7 +1960,7 @@
     }
 
     async function cancelarOrden(id) {
-        if (!confirm('¿Confirma la cancelación de esta orden de compra? (PC05)')) return;
+        if (!confirm('¿Confirma la cancelación de esta orden de compra?')) return;
         const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
         try {
             const res = await fetch(`${API_BASE}/ordenes-compra/${id}/cancelar`, {
@@ -2057,7 +2039,7 @@
     }
 
     // =========================================================
-    // SUGERENCIAS DE REPOSICIÓN (PC07)
+    // SUGERENCIAS DE REPOSICIÓN
     // =========================================================
 
     async function cargarSugerencias() {
@@ -2117,7 +2099,7 @@
                     <td class="text-center">
                         ${esPendiente ? `
                         <div class="flex items-center justify-center gap-1.5">
-                            <button onclick="generarOrdenDesdeSugerencia(${s.id_sugerencia})" class="clay-btn-primary px-2.5 py-1 text-[11px] font-black shadow-sm" title="Generar Orden de Compra (PC07)">
+                            <button onclick="generarOrdenDesdeSugerencia(${s.id_sugerencia})" class="clay-btn-primary px-2.5 py-1 text-[11px] font-black shadow-sm" title="Generar Orden de Compra">
                                 <i data-lucide="file-plus" class="w-3.5 h-3.5 inline mr-1"></i>Emitir Orden
                             </button>
                             <button onclick="rechazarSugerencia(${s.id_sugerencia})" class="p-1 text-slate-400 hover:text-rose-600 rounded" title="Rechazar">
@@ -2164,7 +2146,7 @@
             });
             const data = await res.json();
             if (data.exito) {
-                mostrarNotificacion('Orden de compra generada exitosamente desde la sugerencia (PC07).', 'success');
+                mostrarNotificacion('Orden de compra generada exitosamente desde la sugerencia.', 'success');
                 await Promise.all([cargarSugerencias(), cargarOrdenes()]);
                 cambiarPestanaCompras('ordenes');
             } else {
@@ -2265,7 +2247,7 @@
                     <td class="text-right font-bold text-emerald-600">${Number(c.total_pagado).toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}</td>
                     <td class="text-right font-black text-rose-600 text-sm">${Number(c.saldo_a_pagar).toLocaleString('es-AR', { style: 'currency', currency: 'ARS' })}</td>
                     <td class="text-center">
-                        <button onclick="abrirModalPagoCompra(${c.id_compra})" class="clay-btn-primary px-3 py-1 text-xs font-black shadow-sm" title="Abonar Deuda (C08)">
+                        <button onclick="abrirModalPagoCompra(${c.id_compra})" class="clay-btn-primary px-3 py-1 text-xs font-black shadow-sm" title="Abonar Deuda">
                             <i data-lucide="credit-card" class="w-3.5 h-3.5 inline mr-1"></i>Pagar
                         </button>
                     </td>

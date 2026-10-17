@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>@yield('title', 'Pigüé ERP - Distribuidora Comercial')</title>
+    <title>@yield('title', 'Distribuidora PyB - Sistema de Gestión Comercial')</title>
 
     <!-- Google Fonts Inter -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -28,13 +28,70 @@
         }
     </script>
 
-    <!-- Estilos Claymorfismo Pigüé -->
+    <!-- Estilos Claymorfismo PyB -->
     <link rel="stylesheet" href="{{ asset('css/pigue-claymorphism.css') }}">
     <link rel="stylesheet" href="{{ asset('css/claymorfismo.css') }}">
 
     <!-- Lucide Icons & FontAwesome -->
     <script src="https://unpkg.com/lucide@latest"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <!-- Script temprano para evitar FOUC (parpadeo) al restaurar sidebar colapsado -->
+    <script>
+        (function() {
+            try {
+                if (localStorage.getItem('pigue_sidebar_collapsed') === 'true') {
+                    document.documentElement.classList.add('sidebar-collapsed-early');
+                }
+            } catch(e) {}
+        })();
+    </script>
+    <style>
+        /* Transición suave para ancho y paddings del sidebar */
+        #desktopSidebar {
+            transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1), padding 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        /* Estado colapsado: ancho compacto de 5rem (80px) */
+        html.sidebar-collapsed-early #desktopSidebar,
+        #desktopSidebar.is-collapsed {
+            width: 5rem !important;
+            padding-left: 0.75rem !important;
+            padding-right: 0.75rem !important;
+        }
+        /* Ocultar textos cuando el sidebar está colapsado */
+        html.sidebar-collapsed-early #desktopSidebar .sidebar-text,
+        #desktopSidebar.is-collapsed .sidebar-text {
+            display: none !important;
+        }
+        /* Centrar los iconos en modo colapsado */
+        html.sidebar-collapsed-early #desktopSidebar .sidebar-link,
+        #desktopSidebar.is-collapsed .sidebar-link {
+            justify-content: center !important;
+            padding-left: 0 !important;
+            padding-right: 0 !important;
+        }
+        /* Adaptar header de logo en modo colapsado */
+        html.sidebar-collapsed-early #desktopSidebar .sidebar-brand-wrapper,
+        #desktopSidebar.is-collapsed .sidebar-brand-wrapper {
+            justify-content: center !important;
+            padding: 0.25rem !important;
+        }
+        /* Ocultar divisor textual en modo colapsado */
+        html.sidebar-collapsed-early #desktopSidebar .sidebar-divider,
+        #desktopSidebar.is-collapsed .sidebar-divider {
+            display: none !important;
+        }
+        /* Adaptar footer de usuario en modo colapsado */
+        html.sidebar-collapsed-early #desktopSidebar .sidebar-user-card,
+        #desktopSidebar.is-collapsed .sidebar-user-card {
+            justify-content: center !important;
+            padding: 0.35rem !important;
+        }
+        html.sidebar-collapsed-early #desktopSidebar .sidebar-user-info,
+        #desktopSidebar.is-collapsed .sidebar-user-info {
+            display: none !important;
+        }
+    </style>
 </head>
 <body class="bg-[#EBF4FC] text-slate-800 font-sans min-h-screen flex flex-col md:flex-row antialiased">
 
@@ -45,8 +102,8 @@
                 <i data-lucide="package" class="w-5 h-5 text-white"></i>
             </div>
             <div class="flex flex-col text-left">
-                <span class="font-black text-base text-slate-800 tracking-tight">Pigüé ERP</span>
-                <span class="text-[9px] font-extrabold text-blue-600 uppercase tracking-wider">Grupo 3 • Inventario</span>
+                <span class="font-black text-base text-slate-800 tracking-tight">Distribuidora PyB</span>
+                <span class="text-[9px] font-extrabold text-blue-600 uppercase tracking-wider">Sistema de Gestión</span>
             </div>
         </div>
         
@@ -67,8 +124,8 @@
                             <i data-lucide="package" class="w-6 h-6"></i>
                         </div>
                         <div>
-                            <div class="font-black text-lg">Pigüé ERP</div>
-                            <div class="text-[10px] text-blue-200 uppercase font-bold tracking-wider">Inventario & Compras</div>
+                            <div class="font-black text-xl tracking-tight leading-tight">PyB</div>
+                            <div class="text-[10px] font-extrabold text-blue-200 uppercase tracking-widest leading-none">Distribuidora</div>
                         </div>
                     </div>
                     <button onclick="document.getElementById('mobileSidebar').classList.add('hidden')" class="text-white/70 hover:text-white">
@@ -82,30 +139,29 @@
             </div>
 
             <div class="pt-6 border-t border-white/10 text-xs text-blue-200/60 text-center font-bold">
-                ERP Grupo 3 • 2026
+                Distribuidora PyB • 2026
             </div>
         </div>
     </div>
 
     <!-- SIDEBAR DESKTOP (Claymorphism Sidebar) -->
-    <aside class="hidden md:flex flex-col justify-between w-64 clay-sidebar text-white shrink-0 min-h-screen sticky top-0 h-screen p-5 z-20">
+    <aside id="desktopSidebar" class="hidden md:flex flex-col justify-between w-64 clay-sidebar text-white shrink-0 min-h-screen sticky top-0 h-screen p-5 z-20">
         <div>
-            <!-- LOGO / BRAND -->
-            <a href="{{ url('/') }}" class="flex items-center gap-3 p-2 rounded-2xl hover:bg-white/5 transition-all text-left">
-                <div class="w-10 h-10 rounded-2xl bg-white/15 border border-white/20 flex items-center justify-center text-white shadow-inner shrink-0">
-                    <i data-lucide="package" class="w-6 h-6 text-white"></i>
-                </div>
-                <div class="flex flex-col">
-                    <span class="font-black text-lg tracking-tight leading-tight">Pigüé ERP</span>
-                    <span class="text-[10px] font-extrabold text-blue-200 uppercase tracking-wider">Distribuidora PyB</span>
-                </div>
-            </a>
+            <!-- LOGO / BRAND & TOGGLE BOTÓN -->
+            <div class="flex items-center justify-between gap-2">
+                <a href="{{ url('/') }}" class="sidebar-brand-wrapper flex items-center gap-3 p-2 rounded-2xl hover:bg-white/5 transition-all text-left flex-1 min-w-0" title="Distribuidora PyB - Inicio">
+                    <div class="w-10 h-10 rounded-2xl bg-white/15 border border-white/20 flex items-center justify-center text-white shadow-inner shrink-0">
+                        <i data-lucide="package" class="w-6 h-6 text-white"></i>
+                    </div>
+                    <div class="sidebar-text flex flex-col min-w-0">
+                        <span class="font-black text-xl tracking-tight leading-tight">PyB</span>
+                        <span class="text-[10px] font-extrabold text-blue-200 uppercase tracking-widest leading-none mt-0.5">Distribuidora</span>
+                    </div>
+                </a>
+            </div>
 
             <!-- NAVEGACIÓN PRINCIPAL -->
             <div class="mt-6">
-                <div class="text-[10px] font-extrabold text-blue-200/70 uppercase tracking-widest px-3 mb-2">
-                    Módulos Grupo 3
-                </div>
                 <nav class="space-y-1.5">
                     @include('partials.sidebar-links')
                 </nav>
@@ -114,15 +170,15 @@
 
         <!-- FOOTER SIDEBAR / USUARIO -->
         <div class="pt-4 border-t border-white/15">
-            <div class="flex items-center gap-3 p-2 rounded-2xl bg-white/10 backdrop-blur-md border border-white/10">
-                <div class="w-9 h-9 rounded-xl bg-blue-400/30 flex items-center justify-center text-white font-black text-sm">
+            <div class="sidebar-user-card flex items-center gap-3 p-2 rounded-2xl bg-white/10 backdrop-blur-md border border-white/10" title="Usuario Administrador">
+                <div class="w-9 h-9 rounded-xl bg-blue-400/30 flex items-center justify-center text-white font-black text-sm shrink-0">
                     AD
                 </div>
-                <div class="flex-1 min-w-0">
+                <div class="sidebar-user-info flex-1 min-w-0">
                     <div class="text-xs font-black text-white truncate">Administrador</div>
-                    <div class="text-[10px] text-blue-200 font-bold truncate">Grupo 3</div>
+                    <div class="text-[10px] text-blue-200 font-bold truncate">Distribuidora PyB</div>
                 </div>
-                <a href="{{ url('/') }}" class="p-1.5 text-white/70 hover:text-white transition-colors" title="Volver al Panel">
+                <a href="{{ url('/') }}" class="sidebar-user-info p-1.5 text-white/70 hover:text-white transition-colors" title="Volver al Panel">
                     <i data-lucide="home" class="w-4 h-4"></i>
                 </a>
             </div>
@@ -135,8 +191,13 @@
         <!-- TOPBAR DESKTOP -->
         <header class="hidden md:flex items-center justify-between px-8 py-4 bg-white/40 backdrop-blur-md border-b border-slate-200/50 sticky top-0 z-10">
             <div class="flex items-center gap-4">
+                <!-- Botón Toggle Barra Lateral -->
+                <button type="button" onclick="toggleSidebarDesktop()" id="btnToggleSidebar" class="p-2 text-slate-600 hover:text-blue-700 hover:bg-white bg-slate-100/80 rounded-xl border border-slate-200/70 shadow-xs transition-all cursor-pointer flex items-center justify-center" title="Contraer / Expandir Barra Lateral">
+                    <i data-lucide="panel-left-close" class="w-4 h-4" id="iconToggleSidebar"></i>
+                </button>
+
                 <div>
-                    <h2 class="text-lg font-black text-slate-800 leading-tight">@yield('page_title', 'Distribuidora Pigüé')</h2>
+                    <h2 class="text-lg font-black text-slate-800 leading-tight">@yield('page_title', 'Distribuidora PyB')</h2>
                     <p class="text-xs font-bold text-slate-400">@yield('page_subtitle', 'Módulo de Inventario y Gestión de Compras')</p>
                 </div>
             </div>
@@ -152,7 +213,7 @@
                         AD
                     </div>
                     <div class="text-left">
-                        <span class="text-xs font-black text-slate-800 block leading-tight">Admin G3</span>
+                        <span class="text-xs font-black text-slate-800 block leading-tight">Admin</span>
                         <span class="text-[9px] font-extrabold text-blue-600 uppercase tracking-wider">Activo</span>
                     </div>
                 </div>
@@ -212,7 +273,43 @@
         }
         window.mostrarNotificacion = mostrarNotificacion;
 
+        // Control de Barra Lateral Desplegable / Colapsable con Persistencia
+        function aplicarEstadoSidebarDesktop(colapsado) {
+            const sidebar = document.getElementById('desktopSidebar');
+            const icon = document.getElementById('iconToggleSidebar');
+            if (!sidebar) return;
+
+            if (colapsado) {
+                sidebar.classList.add('is-collapsed');
+                if (icon) icon.setAttribute('data-lucide', 'panel-left-open');
+            } else {
+                sidebar.classList.remove('is-collapsed');
+                if (icon) icon.setAttribute('data-lucide', 'panel-left-close');
+            }
+
+            // Quitar clase temprana de HTML una vez montado
+            document.documentElement.classList.remove('sidebar-collapsed-early');
+
+            if (window.lucide) window.lucide.createIcons();
+        }
+
+        function toggleSidebarDesktop() {
+            const sidebar = document.getElementById('desktopSidebar');
+            if (!sidebar) return;
+            const nuevoEstado = !sidebar.classList.contains('is-collapsed');
+            try {
+                localStorage.setItem('pigue_sidebar_collapsed', nuevoEstado ? 'true' : 'false');
+            } catch(e) {}
+            aplicarEstadoSidebarDesktop(nuevoEstado);
+        }
+        window.toggleSidebarDesktop = toggleSidebarDesktop;
+
         document.addEventListener('DOMContentLoaded', () => {
+            try {
+                const guardado = localStorage.getItem('pigue_sidebar_collapsed') === 'true';
+                aplicarEstadoSidebarDesktop(guardado);
+            } catch(e) {}
+
             if (window.lucide) {
                 window.lucide.createIcons();
             }

@@ -1,8 +1,8 @@
 @extends('layouts.app')
 
-@section('title', 'Distribuidora Pigüé - Panel Principal')
+@section('title', 'Distribuidora PyB - Panel Principal')
 @section('page_title', 'Inicio / Panel')
-@section('page_subtitle', 'Distribuidora Pigüé • Sistema de Gestión')
+@section('page_subtitle', 'Distribuidora PyB • Sistema de Gestión')
 
 @section('content')
 <div class="max-w-6xl mx-auto w-full py-2 flex flex-col justify-between gap-8">
@@ -14,8 +14,8 @@
                 <i data-lucide="package" class="w-6 h-6 text-white"></i>
             </div>
             <div class="text-left">
-                <h1 class="text-lg md:text-xl font-black text-slate-800 tracking-tight leading-none">DISTRIBUIDORA PIGÜÉ</h1>
-                <p class="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mt-1">Sistema de Gestión • Grupo 3</p>
+                <h1 class="text-lg md:text-xl font-black text-slate-800 tracking-tight leading-none">DISTRIBUIDORA PyB</h1>
+                <p class="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mt-1">Sistema de Gestión Comercial</p>
             </div>
         </div>
 
@@ -37,10 +37,10 @@
             <!-- Iniciales / Rol -->
             <div class="flex items-center gap-2.5 bg-white/95 border border-slate-200/60 p-1.5 pr-4 rounded-full shadow-sm">
                 <div class="w-9 h-9 rounded-full bg-blue-600 text-white font-black flex items-center justify-center text-sm shadow-md shadow-blue-500/10 shrink-0">
-                    G3
+                    AD
                 </div>
                 <div class="hidden sm:block text-left">
-                    <div class="text-xs font-black text-slate-800 leading-none">Admin General</div>
+                    <div class="text-xs font-black text-slate-800 leading-none">Administrador</div>
                     <div class="text-[9px] font-extrabold text-blue-500 uppercase tracking-wider mt-1">Inventario & Compras</div>
                 </div>
             </div>
@@ -116,28 +116,6 @@
             </div>
         </a>
 
-        <!-- 4. VENCIMIENTOS Y LOTES -->
-        <a href="{{ url('/vencimientos') }}" 
-           class="clay-card clay-card-hover p-6 md:p-8 flex flex-col justify-between items-center text-center cursor-pointer relative overflow-hidden group select-none min-h-[230px] md:min-h-[260px] hover:shadow-amber-500/5">
-            <div class="absolute -right-10 -bottom-10 w-32 h-32 rounded-full bg-slate-100/10 group-hover:scale-150 transition-transform duration-500"></div>
-            
-            <div class="flex flex-col items-center">
-                <div class="w-14 h-14 md:w-16 md:h-16 rounded-2xl flex items-center justify-center shadow-[inset_2px_2px_4px_rgba(255,255,255,0.8)] transition-transform duration-300 group-hover:scale-110 bg-amber-50 text-amber-600 border border-amber-100">
-                    <i data-lucide="calendar" class="w-7 h-7 md:w-8 md:h-8"></i>
-                </div>
-                <h3 class="text-lg md:text-xl font-black text-slate-800 mt-4 md:mt-5 leading-tight tracking-tight">
-                    Lotes y Vencimientos
-                </h3>
-                <p class="text-xs md:text-sm text-slate-500 font-bold mt-2 leading-relaxed px-1 max-w-[260px]">
-                    Semáforo de criticidad y control de productos perecederos.
-                </p>
-            </div>
-
-            <div class="mt-4 md:mt-6 w-10 h-10 md:w-12 md:h-12 rounded-full border border-slate-200/60 bg-white/95 flex items-center justify-center shadow-[2px_2px_5px_rgba(0,0,0,0.05),-2px_-2px_5px_rgba(255,255,255,0.8)] text-slate-500 group-hover:bg-slate-50 group-hover:border-slate-300 group-hover:text-slate-800 transition-all shrink-0">
-                <i data-lucide="chevron-right" class="w-5 h-5 md:w-6 md:h-6 group-hover:translate-x-0.5 transition-transform"></i>
-            </div>
-        </a>
-
         <!-- 5. SUGERENCIAS DE REPOSICIÓN -->
         <a href="{{ url('/sugerencias-reposicion') }}" 
            class="clay-card clay-card-hover p-6 md:p-8 flex flex-col justify-between items-center text-center cursor-pointer relative overflow-hidden group select-none min-h-[230px] md:min-h-[260px] hover:shadow-violet-500/5">
@@ -187,7 +165,7 @@
     <!-- FOOTER -->
     <div class="text-center py-4">
         <p class="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">
-            Pigüé ERP © 2026 • Distribuidora Comercial • Grupo 3
+            Distribuidora PyB © 2026 • Sistema de Gestión Comercial
         </p>
     </div>
 

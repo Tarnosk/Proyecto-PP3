@@ -32,8 +32,8 @@ Route::redirect('/ordenes', '/compras');
 Route::view('/proveedores', 'proveedores.index')->name('proveedores.index');
 Route::redirect('/clientes', '/proveedores')->name('clientes.index');
 
-// Submódulos S11 / PC07
-Route::view('/vencimientos', 'vencimientos')->name('vencimientos.index');
+// Submódulos S11 / PC07 (Vencimientos redirigido a inventario)
+Route::redirect('/vencimientos', '/inventario')->name('vencimientos.index');
 Route::view('/sugerencias-reposicion', 'sugerencias-reposicion')->name('sugerencias-reposicion.index');
 Route::view('/dashboard-reposicion', 'dashboard-reposicion')->name('dashboard-reposicion.index');
 Route::redirect('/reposicion', '/sugerencias-reposicion');

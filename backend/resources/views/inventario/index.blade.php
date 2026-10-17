@@ -2,7 +2,7 @@
 
 @section('title', 'Inventario y Stock - Distribuidora Pigüé')
 @section('page_title', 'Inventario y Stock')
-@section('page_subtitle', 'Catálogo de Productos, Control de Stock, Lotes y Movimientos')
+@section('page_subtitle', 'Catálogo de Productos, Control de Stock y Movimientos')
 
 @section('content')
 <div class="space-y-6">
@@ -20,11 +20,6 @@
                 <i data-lucide="shield-alert" class="w-4 h-4"></i>
                 <span>Stock y Alertas</span>
             </button>
-            <button onclick="cambiarPestana('lotes')" id="tabBtn-lotes" 
-                    class="tab-btn px-4 py-2.5 rounded-xl font-black text-xs flex items-center gap-2 transition-all cursor-pointer text-slate-600 hover:text-slate-900">
-                <i data-lucide="calendar" class="w-4 h-4"></i>
-                <span>Lotes y Vencimientos</span>
-            </button>
             <button onclick="cambiarPestana('movimientos')" id="tabBtn-movimientos" 
                     class="tab-btn px-4 py-2.5 rounded-xl font-black text-xs flex items-center gap-2 transition-all cursor-pointer text-slate-600 hover:text-slate-900">
                 <i data-lucide="history" class="w-4 h-4"></i>
@@ -34,11 +29,6 @@
                     class="tab-btn px-4 py-2.5 rounded-xl font-black text-xs flex items-center gap-2 transition-all cursor-pointer text-slate-600 hover:text-slate-900">
                 <i data-lucide="clipboard-list" class="w-4 h-4"></i>
                 <span>Conteo Físico</span>
-            </button>
-            <button onclick="cambiarPestana('devoluciones')" id="tabBtn-devoluciones" 
-                    class="tab-btn px-4 py-2.5 rounded-xl font-black text-xs flex items-center gap-2 transition-all cursor-pointer text-slate-600 hover:text-slate-900">
-                <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
-                <span>Devoluciones</span>
             </button>
         </div>
 
@@ -119,7 +109,7 @@
                 </select>
 
                 <!-- Filtro Nivel de Stock (S15 / S16) -->
-                <select id="filtroNivelStock" onchange="renderProductos()" class="clay-input py-2 text-xs font-bold text-slate-700 min-w-[145px]" title="Filtrar por Nivel de Stock (S15/S16)">
+                <select id="filtroNivelStock" onchange="renderProductos()" class="clay-input py-2 text-xs font-bold text-slate-700 min-w-[145px]" title="Filtrar por Nivel de Stock">
                     <option value="todos">Todos los Niveles</option>
                     <option value="suficiente">🟢 Stock Suficiente</option>
                     <option value="bajo">🟡 Stock Bajo</option>
@@ -127,8 +117,8 @@
                     <option value="agotado">⚫ Sin Stock (0 u.)</option>
                 </select>
 
-                <!-- Rango de Cantidad de Stock (S15) -->
-                <div class="flex items-center gap-1.5 bg-slate-50 px-2.5 py-1 rounded-xl border border-slate-200 text-xs font-bold" title="Filtrar por Rango de Cantidad de Stock (S15)">
+                <!-- Rango de Cantidad de Stock -->
+                <div class="flex items-center gap-1.5 bg-slate-50 px-2.5 py-1 rounded-xl border border-slate-200 text-xs font-bold" title="Filtrar por Rango de Cantidad de Stock">
                     <span class="text-slate-400 text-[11px] uppercase font-black">Stock:</span>
                     <input type="number" id="filtroStockMinCant" placeholder="Mín" min="0" oninput="renderProductos()" class="w-16 bg-white border border-slate-200 rounded px-1.5 py-0.5 text-center font-bold text-xs">
                     <span class="text-slate-300">-</span>
@@ -142,19 +132,19 @@
                     <i data-lucide="plus" class="w-4 h-4"></i>
                     <span>Nuevo Producto</span>
                 </button>
-                <button onclick="abrirModalAumentoMasivo()" class="clay-btn-secondary px-3.5 py-2.5 text-xs font-bold flex items-center gap-2" title="Aumento Porcentual Masivo (P07)">
+                <button onclick="abrirModalAumentoMasivo()" class="clay-btn-secondary px-3.5 py-2.5 text-xs font-bold flex items-center gap-2" title="Aumento Porcentual Masivo">
                     <i data-lucide="trending-up" class="w-4 h-4 text-blue-600"></i>
                     <span class="hidden sm:inline">Aumento %</span>
                 </button>
-                <button onclick="abrirHistorialPreciosGlobal()" class="clay-btn-secondary px-3.5 py-2.5 text-xs font-bold flex items-center gap-2" title="Historial de Precios y Aumentos Masivos (P08)">
+                <button onclick="abrirHistorialPreciosGlobal()" class="clay-btn-secondary px-3.5 py-2.5 text-xs font-bold flex items-center gap-2" title="Historial de Precios y Aumentos Masivos">
                     <i data-lucide="history" class="w-4 h-4 text-emerald-600"></i>
                     <span class="hidden sm:inline">Historial Precios</span>
                 </button>
-                <button onclick="abrirModalCategorias()" class="clay-btn-secondary px-3.5 py-2.5 text-xs font-bold flex items-center gap-2" title="Administrar Categorías (P02)">
+                <button onclick="abrirModalCategorias()" class="clay-btn-secondary px-3.5 py-2.5 text-xs font-bold flex items-center gap-2" title="Administrar Categorías">
                     <i data-lucide="layers" class="w-4 h-4 text-indigo-600"></i>
                     <span>Categorías</span>
                 </button>
-                <button onclick="abrirModalMarcas()" class="clay-btn-secondary px-3.5 py-2.5 text-xs font-bold flex items-center gap-2" title="Administrar Marcas (P03)">
+                <button onclick="abrirModalMarcas()" class="clay-btn-secondary px-3.5 py-2.5 text-xs font-bold flex items-center gap-2" title="Administrar Marcas">
                     <i data-lucide="tag" class="w-4 h-4 text-amber-600"></i>
                     <span>Marcas</span>
                 </button>
@@ -171,7 +161,7 @@
                             <th>Producto / Descripción</th>
                             <th>Categoría</th>
                             <th>Marca</th>
-                            <th class="text-right">Precio Unitario</th>
+                            <th class="text-center">Precio Unitario</th>
                             <th class="text-center">Stock Actual</th>
                             <th class="text-center">Estado</th>
                             <th class="text-center">Acciones</th>
@@ -222,7 +212,7 @@
                     <i data-lucide="alert-triangle" class="w-5 h-5"></i>
                 </div>
                 <div>
-                    <span class="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block">Bajo / Crítico (S07)</span>
+                    <span class="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block">Bajo / Crítico</span>
                     <span id="kpiStockBajoCritico" class="text-xl font-black text-amber-700">0</span>
                     <span class="text-[11px] text-amber-600 font-bold ml-1">artículos</span>
                 </div>
@@ -260,33 +250,33 @@
                     <option value="agotado">⚫ Sin Existencias (0 u.)</option>
                 </select>
 
-                <!-- Selector de Vista: Todos los Productos vs Solo Alertas Críticas (S07) -->
+                <!-- Selector de Vista: Todos los Productos vs Solo Alertas Críticas -->
                 <div class="bg-slate-100 p-1 rounded-xl flex items-center border border-slate-200/80 text-xs font-black">
                     <button type="button" id="btnSubtabStockTodos" onclick="cambiarSubtabStock('todos')" class="px-3 py-1.5 rounded-lg bg-white shadow-xs text-blue-700 transition-all cursor-pointer">
-                        Todos los Productos (S01/S02)
+                        Todos los Productos
                     </button>
                     <button type="button" id="btnSubtabStockAlertas" onclick="cambiarSubtabStock('alertas')" class="px-3 py-1.5 rounded-lg text-slate-600 hover:text-slate-900 transition-all cursor-pointer flex items-center gap-1.5">
                         <i data-lucide="alert-triangle" class="w-3.5 h-3.5 text-amber-500"></i>
-                        <span>Solo Críticos (S07)</span>
+                        <span>Solo Críticos</span>
                         <span id="badgeContadorAlertasStock" class="clay-badge clay-badge-danger text-[10px] px-1.5 py-0">0</span>
                     </button>
                 </div>
             </div>
 
             <div class="flex items-center gap-2 flex-wrap shrink-0">
-                <button onclick="abrirModalIngreso()" class="clay-btn-primary px-3.5 py-2 text-xs font-bold flex items-center gap-1.5 shadow-md" title="Registrar Ingreso de Mercadería (S03)">
+                <button onclick="abrirModalIngreso()" class="clay-btn-primary px-3.5 py-2 text-xs font-bold flex items-center gap-1.5 shadow-md" title="Registrar Ingreso de Mercadería">
                     <i data-lucide="arrow-down-right" class="w-4 h-4"></i>
                     <span>Ingreso Mercadería</span>
                 </button>
-                <button onclick="abrirModalDevolucion()" class="clay-btn-secondary px-3 py-2 text-xs font-bold flex items-center gap-1.5" title="Registrar Devolución (S05)">
+                <button onclick="abrirModalDevolucion()" class="clay-btn-secondary px-3 py-2 text-xs font-bold flex items-center gap-1.5" title="Registrar Devolución">
                     <i data-lucide="rotate-ccw" class="w-4 h-4 text-purple-600"></i>
                     <span>Devolución</span>
                 </button>
-                <button onclick="abrirModalAjuste()" class="clay-btn-secondary px-3 py-2 text-xs font-bold flex items-center gap-1.5" title="Ajuste Manual de Inventario (S06)">
+                <button onclick="abrirModalAjuste()" class="clay-btn-secondary px-3 py-2 text-xs font-bold flex items-center gap-1.5" title="Ajuste Manual de Inventario">
                     <i data-lucide="sliders" class="w-4 h-4 text-amber-600"></i>
                     <span>Ajuste Manual</span>
                 </button>
-                <button onclick="abrirModalUbicaciones()" class="clay-btn-secondary px-3 py-2 text-xs font-bold flex items-center gap-1.5" title="Gestión de Ubicaciones Físicas (S14)">
+                <button onclick="abrirModalUbicaciones()" class="clay-btn-secondary px-3 py-2 text-xs font-bold flex items-center gap-1.5" title="Gestión de Ubicaciones Físicas">
                     <i data-lucide="map-pin" class="w-4 h-4 text-slate-600"></i>
                     <span>Ubicaciones</span>
                 </button>
@@ -298,7 +288,7 @@
             <div class="p-3.5 border-b border-slate-100 flex items-center justify-between">
                 <span class="text-xs font-black text-slate-700 uppercase tracking-wider flex items-center gap-2">
                     <i data-lucide="package-check" class="w-4 h-4 text-blue-600"></i>
-                    Inventario Completo y Disponibilidad para Venta en Tiempo Real (S01 / S02)
+                    Inventario Completo y Disponibilidad para Venta en Tiempo Real
                 </span>
                 <span id="totalStockProductosTag" class="text-xs font-bold text-slate-500">0 artículos</span>
             </div>
@@ -308,25 +298,26 @@
                         <tr>
                             <th>Código</th>
                             <th>Producto / Descripción</th>
-                            <th>Ubicación Física (S14)</th>
+                            <th>Ubicación Física</th>
+                            <th class="text-center">Formato de Venta</th>
                             <th class="text-center">Stock Físico</th>
                             <th class="text-center">Comprometido</th>
-                            <th class="text-center bg-blue-50/50">Disponible Venta (S02)</th>
-                            <th class="text-center">Stock Mínimo (S07)</th>
-                            <th class="text-center">Nivel Semáforo (S16)</th>
+                            <th class="text-center bg-blue-50/50">Disponible Venta</th>
+                            <th class="text-center">Stock Mínimo</th>
+                            <th class="text-center">Nivel Semáforo</th>
                             <th class="text-center">Acciones</th>
                         </tr>
                     </thead>
                     <tbody id="tablaStockCompletoBody">
                         <tr>
-                            <td colspan="9" class="text-center py-6 text-slate-400 font-bold">Cargando inventario de stock...</td>
+                            <td colspan="10" class="text-center py-6 text-slate-400 font-bold">Cargando inventario de stock...</td>
                         </tr>
                     </tbody>
                 </table>
             </div>
         </div>
 
-        <!-- VISTA 2: TABLA DE ALERTAS DE STOCK MÍNIMO Y CRÍTICO (S07) -->
+        <!-- VISTA 2: TABLA DE ALERTAS DE STOCK MÍNIMO Y CRÍTICO -->
         <div id="contenedorStockAlertas" class="clay-card overflow-hidden hidden">
             <div class="p-4 border-b border-slate-100 flex items-center justify-between">
                 <span class="text-xs font-extrabold text-slate-700 uppercase tracking-wider flex items-center gap-2">
@@ -360,100 +351,13 @@
     </div>
 
     <!-- ========================================================= -->
-    <!-- PESTAÑA 3: LOTES Y VENCIMIENTOS (S09, S10, S11)           -->
-    <!-- ========================================================= -->
-    <div id="pestana-lotes" class="pestana-content hidden space-y-4">
-        <div class="clay-card p-5 flex items-center justify-between flex-wrap gap-4">
-            <div>
-                <h3 class="text-base font-black text-slate-800">Lotes y Vencimientos de Mercadería (S09 / S11)</h3>
-                <p class="text-xs text-slate-500 font-bold">Monitoreo de lotes individuales, cantidades remanentes y fechas de expiración</p>
-            </div>
-            <div class="flex items-center gap-2">
-                <button onclick="abrirModalNuevoLote()" class="clay-btn-primary px-4 py-2 text-xs font-black flex items-center gap-2 shadow-md">
-                    <i data-lucide="plus" class="w-4 h-4"></i>
-                    <span>Nuevo Lote</span>
-                </button>
-                <a href="{{ url('/vencimientos') }}" class="clay-btn-secondary px-4 py-2 text-xs font-bold flex items-center gap-2" title="Semáforo de vencimientos (S10/S11)">
-                    <i data-lucide="calendar" class="w-4 h-4 text-blue-600"></i>
-                    <span>Ver Semáforo Completo (S11)</span>
-                </a>
-            </div>
-        </div>
-
-        <!-- BANNER DE ALERTA: PRODUCTOS PRÓXIMOS A VENCER (S10) -->
-        <div id="bannerAlertaVencimientos" class="p-4 rounded-2xl bg-amber-50/80 border border-amber-200/90 flex items-center justify-between flex-wrap gap-3 hidden">
-            <div class="flex items-center gap-3">
-                <div class="p-2.5 bg-amber-100 text-amber-700 rounded-xl">
-                    <i data-lucide="alert-triangle" class="w-5 h-5"></i>
-                </div>
-                <div>
-                    <h4 class="text-xs font-black text-amber-900">Alerta de Lotes Próximos a Vencer (S10)</h4>
-                    <p id="textoAlertaVencimientos" class="text-xs text-amber-800 font-bold">Se detectaron lotes con fecha de vencimiento crítica o cercana a 30 días.</p>
-                </div>
-            </div>
-            <a href="{{ url('/vencimientos') }}" class="clay-btn-primary px-3.5 py-1.5 text-xs font-black shadow-xs">
-                Gestionar Vencimientos
-            </a>
-        </div>
-
-        <!-- BARRA DE FILTROS Y ORDENAMIENTO DE LOTES (S11) -->
-        <div class="clay-card p-4 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
-            <div class="flex items-center flex-1 gap-2.5 flex-wrap">
-                <div class="relative flex-1 min-w-[200px]">
-                    <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-2.5"></i>
-                    <input type="text" id="filtroLotesSearch" placeholder="Buscar por N° lote o producto..." 
-                           class="clay-input pl-9 pr-3 py-1.5 w-full text-xs font-bold text-slate-700"
-                           oninput="renderTablaLotes()">
-                </div>
-                <select id="filtroLotesEstado" onchange="renderTablaLotes()" class="clay-input py-1.5 px-3 text-xs font-bold text-slate-700 min-w-[150px]">
-                    <option value="todos">Todos los Estados</option>
-                    <option value="vigente">🟢 Vigentes (> 30 días)</option>
-                    <option value="proximo">🟡 Próximos a Vencer (≤ 30 días)</option>
-                    <option value="vencido">🔴 Vencidos</option>
-                    <option value="consumido">⚪ Consumidos (Stock 0)</option>
-                </select>
-                <select id="filtroLotesOrden" onchange="renderTablaLotes()" class="clay-input py-1.5 px-3 text-xs font-bold text-slate-700 min-w-[170px]">
-                    <option value="venc_asc">📅 Vencimiento: Más Próximo</option>
-                    <option value="venc_desc">📅 Vencimiento: Más Lejano</option>
-                    <option value="stock_desc">📦 Mayor Stock Actual</option>
-                </select>
-            </div>
-            <span id="totalLotesTag" class="text-xs font-extrabold text-slate-500">0 lotes</span>
-        </div>
-
-        <div class="clay-card overflow-hidden">
-            <div class="overflow-x-auto">
-                <table class="clay-table">
-                    <thead>
-                        <tr>
-                            <th>N° Lote</th>
-                            <th>Producto Asociado</th>
-                            <th class="text-center">Cantidad Inicial</th>
-                            <th class="text-center">Stock en Lote</th>
-                            <th class="text-center">Fecha Vencimiento</th>
-                            <th class="text-center">Plazo / Días</th>
-                            <th class="text-center">Estado (S10)</th>
-                            <th class="text-center">Acción</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tablaLotesBody">
-                        <tr>
-                            <td colspan="8" class="text-center py-6 text-slate-400 font-bold">Cargando lotes...</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-
-    <!-- ========================================================= -->
-    <!-- PESTAÑA 4: MOVIMIENTOS E HISTORIALES                      -->
+    <!-- PESTAÑA: MOVIMIENTOS E HISTORIALES                        -->
     <!-- ========================================================= -->
     <div id="pestana-movimientos" class="pestana-content hidden space-y-4">
         <div class="clay-card p-5 flex flex-col sm:flex-row items-center justify-between gap-4">
             <div>
                 <h3 class="text-base font-black text-slate-800">Historiales y Auditoría del Sistema</h3>
-                <p class="text-xs text-slate-500 font-bold">Registro cronológico de movimientos de stock (Kardex - S12), variaciones de precios (P08) y modificaciones de productos (P04)</p>
+                <p class="text-xs text-slate-500 font-bold">Registro cronológico de movimientos de stock (Kardex), variaciones de precios y modificaciones de productos</p>
             </div>
             <div class="flex items-center gap-2 flex-wrap">
                 <!-- Segmented Control para elegir entre Stock, Precios y Auditoría -->
@@ -462,10 +366,10 @@
                         Movimientos Stock
                     </button>
                     <button type="button" id="btnSubtabMovPrecios" onclick="cambiarSubtabMovimientos('precios')" class="px-3 py-1.5 rounded-lg text-slate-600 hover:text-slate-900 transition-all cursor-pointer">
-                        Historial Precios (P08)
+                        Historial Precios
                     </button>
                     <button type="button" id="btnSubtabMovAuditoria" onclick="cambiarSubtabMovimientos('auditoria')" class="px-3 py-1.5 rounded-lg text-slate-600 hover:text-slate-900 transition-all cursor-pointer">
-                        Modificaciones Productos (P04)
+                        Modificaciones Productos
                     </button>
                 </div>
                 <button type="button" onclick="recargarHistorialActual()" class="clay-btn-secondary px-3 py-1.5 text-xs font-bold flex items-center gap-1.5">
@@ -475,20 +379,20 @@
             </div>
         </div>
 
-        <!-- SUBTAB 1: MOVIMIENTOS DE STOCK (Kardex - S12) -->
+        <!-- SUBTAB 1: MOVIMIENTOS DE STOCK (Kardex) -->
         <div id="contenedorMovimientosStock" class="clay-card overflow-hidden">
             <div class="p-4 border-b border-slate-100 flex items-center justify-between flex-wrap gap-2">
                 <span class="text-xs font-black text-slate-700 uppercase tracking-wider flex items-center gap-2">
                     <i data-lucide="arrow-left-right" class="w-4 h-4 text-blue-600"></i>
-                    Libro Diario de Movimientos de Inventario (Kardex - S12)
+                    Libro Diario de Movimientos de Inventario (Kardex)
                 </span>
                 <div class="flex items-center gap-2 flex-wrap">
                     <select id="filtroTipoMovStock" onchange="cargarMovimientos()" class="clay-input py-1 px-2.5 text-xs font-bold">
                         <option value="">Todos los Tipos</option>
-                        <option value="ingreso">🟢 Ingresos (S03)</option>
-                        <option value="venta">🔵 Ventas (S04)</option>
-                        <option value="ajuste">🟠 Ajustes Manuales (S06)</option>
-                        <option value="devolucion">🟣 Devoluciones (S05)</option>
+                        <option value="ingreso">🟢 Ingresos</option>
+                        <option value="venta">🔵 Ventas</option>
+                        <option value="ajuste">🟠 Ajustes Manuales</option>
+                        <option value="devolucion">🟣 Devoluciones</option>
                     </select>
                     <select id="filtroProdMovStock" onchange="cargarMovimientos()" class="clay-input py-1 px-2.5 text-xs font-bold min-w-[180px]">
                         <option value="">Todos los Productos</option>
@@ -516,7 +420,7 @@
             </div>
         </div>
 
-        <!-- SUBTAB 2: HISTORIAL DE PRECIOS Y AUMENTOS MASIVOS (P08) -->
+        <!-- SUBTAB 2: HISTORIAL DE PRECIOS Y AUMENTOS MASIVOS -->
         <div id="contenedorHistorialPrecios" class="clay-card overflow-hidden hidden">
             <div class="p-4 border-b border-slate-100 flex items-center justify-between flex-wrap gap-2">
                 <span class="text-xs font-black text-slate-700 uppercase tracking-wider flex items-center gap-2">
@@ -526,7 +430,7 @@
                 <div class="flex items-center gap-2">
                     <select id="filtroOrigenMovPrecios" onchange="cargarMovimientosPrecios()" class="clay-input py-1 px-2.5 text-xs font-bold">
                         <option value="">Todos los Orígenes</option>
-                        <option value="aumento_masivo">Solo Aumentos Masivos (P07)</option>
+                        <option value="aumento_masivo">Solo Aumentos Masivos</option>
                         <option value="manual">Solo Modificación Manual</option>
                     </select>
                 </div>
@@ -553,12 +457,12 @@
             </div>
         </div>
 
-        <!-- SUBTAB 3: AUDITORÍA DE MODIFICACIONES DE PRODUCTOS (P04) -->
+        <!-- SUBTAB 3: AUDITORÍA DE MODIFICACIONES DE PRODUCTOS -->
         <div id="contenedorMovimientosAuditoria" class="clay-card overflow-hidden hidden">
             <div class="p-4 border-b border-slate-100 flex items-center justify-between flex-wrap gap-2">
                 <span class="text-xs font-black text-slate-700 uppercase tracking-wider flex items-center gap-2">
                     <i data-lucide="clipboard-check" class="w-4 h-4 text-indigo-600"></i>
-                    Historial de Modificaciones y Auditoría de Productos (P04)
+                    Historial de Modificaciones y Auditoría de Productos
                 </span>
                 <div class="flex items-center gap-2">
                     <select id="filtroProdMovAuditoria" onchange="cargarMovimientosAuditoria()" class="clay-input py-1 px-2.5 text-xs font-bold">
@@ -588,26 +492,26 @@
     </div>
 
     <!-- ========================================================= -->
-    <!-- PESTAÑA 5: CONTEO FÍSICO E INCONSISTENCIAS (S13)          -->
+    <!-- PESTAÑA 5: CONTEO FÍSICO E INCONSISTENCIAS          -->
     <!-- ========================================================= -->
     <div id="pestana-conteo" class="pestana-content hidden space-y-4">
         <div class="clay-card p-6 max-w-2xl mx-auto space-y-4">
             <div>
-                <h3 class="text-base font-black text-slate-800">Sesión de Conteo Físico e Inventario (S13)</h3>
+                <h3 class="text-base font-black text-slate-800">Sesión de Conteo Físico e Inventario</h3>
                 <p class="text-xs text-slate-500 font-bold">Ingresá la cantidad real contada en depósito para detectar diferencias y conciliar inconsistencias</p>
             </div>
 
             <form onsubmit="ejecutarConteoFisico(event)" class="space-y-4">
                 <div>
                     <label class="block text-xs font-extrabold text-slate-600 uppercase mb-1">Producto a Conciliar *</label>
-                    <select id="conteoProductoSelect" onchange="actualizarInfoConteo()" required class="clay-input w-full text-sm font-bold">
+                    <select id="conteoProductoSelect" onchange="actualizarStockConteo()" required class="clay-input w-full text-sm font-bold">
                         <option value="">Seleccione un producto...</option>
                     </select>
                 </div>
 
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-xs font-extrabold text-slate-500 uppercase mb-1">Stock Registrado en Sistema</label>
+                        <label class="block text-xs font-extrabold text-slate-500 uppercase mb-1">Stock Teórico en Sistema</label>
                         <input type="text" id="conteoStockSistema" readonly value="-" class="clay-input w-full bg-slate-50 font-black text-slate-600">
                     </div>
                     <div>
@@ -616,7 +520,7 @@
                     </div>
                 </div>
 
-                <!-- Diagnóstico y Comparativa en Vivo (S13) -->
+                <!-- Diagnóstico y Comparativa en Vivo -->
                 <div id="conteoPreviewBox" class="p-3.5 rounded-xl border border-slate-200 bg-slate-50 hidden space-y-1">
                     <div class="flex items-center justify-between">
                         <span class="text-xs font-bold text-slate-600">Diferencia Detectada:</span>
@@ -631,17 +535,17 @@
                 </div>
 
                 <button type="submit" class="clay-btn-primary w-full py-3 text-sm font-black shadow-lg">
-                    Registrar y Conciliar Diferencia (Ajuste S06)
+                    Registrar y Conciliar Diferencia
                 </button>
             </form>
         </div>
 
-        <!-- TABLA: RESUMEN DE INCONSISTENCIAS Y CONTEOS FÍSICOS (S13) -->
+        <!-- TABLA: RESUMEN DE INCONSISTENCIAS Y CONTEOS FÍSICOS -->
         <div class="clay-card overflow-hidden">
             <div class="p-4 border-b border-slate-100 flex items-center justify-between">
                 <span class="text-xs font-black text-slate-700 uppercase tracking-wider flex items-center gap-2">
                     <i data-lucide="clipboard-check" class="w-4 h-4 text-emerald-600"></i>
-                    Resumen de Inconsistencias y Conteos Físicos Realizados (S13)
+                    Resumen de Inconsistencias y Conteos Físicos Realizados
                 </span>
                 <span id="totalConteosTag" class="text-xs font-bold text-slate-500">Historial de conciliaciones</span>
             </div>
@@ -666,74 +570,6 @@
                     </tbody>
                 </table>
             </div>
-        </div>
-    </div>
-
-    <!-- ========================================================= -->
-    <!-- PESTAÑA 6: DEVOLUCIONES                                  -->
-    <!-- ========================================================= -->
-    <div id="pestana-devoluciones" class="pestana-content hidden space-y-4">
-        <div class="clay-card p-6 max-w-2xl mx-auto space-y-4">
-            <div>
-                <h3 class="text-base font-black text-slate-800">Registro de Devoluciones</h3>
-                <p class="text-xs text-slate-500 font-bold">Ingreso de mercadería devuelta por clientes o egreso por devolución a proveedores</p>
-            </div>
-
-            <form onsubmit="ejecutarDevolucion(event, 'tab')" class="space-y-4">
-                <div class="grid grid-cols-12 gap-3">
-                    <div class="col-span-12 sm:col-span-4">
-                        <label class="block text-xs font-extrabold text-slate-600 uppercase mb-1">Tipo de Devolución</label>
-                        <select id="devTipo" onchange="onTipoDevolucionChange('tab')" class="clay-input w-full text-sm font-bold">
-                            <option value="cliente">Cliente (Suma stock)</option>
-                            <option value="proveedor">Proveedor (Resta stock)</option>
-                        </select>
-                    </div>
-                    <div class="col-span-12 sm:col-span-4">
-                        <label id="lblDevCantidad" class="block text-xs font-extrabold text-slate-600 uppercase mb-1">Cantidad Devuelta</label>
-                        <input type="number" id="devCantidad" min="1" value="1" oninput="actualizarEquivalenciaDevolucion('tab')" required class="clay-input w-full font-black text-slate-800">
-                    </div>
-                    <div class="col-span-12 sm:col-span-4">
-                        <label class="block text-xs font-extrabold text-slate-600 uppercase mb-1">Unidad</label>
-                        <select id="devUnidadSelect" onchange="actualizarEquivalenciaDevolucion('tab')" class="clay-input w-full text-sm font-bold bg-white">
-                            <option value="">Unidades (u.)</option>
-                        </select>
-                    </div>
-                </div>
-
-                <!-- Banner de Equivalencia para Devolución en Tab -->
-                <div id="devEquivalenciaBox" class="hidden p-2.5 rounded-xl bg-indigo-50/80 border border-indigo-200/80 text-xs text-indigo-950 font-bold flex items-center justify-between shadow-xs">
-                    <div class="flex items-center gap-2">
-                        <i data-lucide="info" class="w-4 h-4 text-indigo-600 shrink-0"></i>
-                        <span id="devEquivalenciaTexto">Equivalencia: 1 Caja x12 = 12 unidades individuales (u.)</span>
-                    </div>
-                    <span class="clay-badge clay-badge-success text-[10px] font-black shrink-0">✓ Unidad Activa</span>
-                </div>
-
-                <div>
-                    <label class="block text-xs font-extrabold text-slate-600 uppercase mb-1">Producto</label>
-                    <select id="devProductoSelect" onchange="onProductoDevolucionChange('tab')" required class="clay-input w-full text-sm font-bold">
-                        <option value="">Seleccione el producto devuelto...</option>
-                    </select>
-                </div>
-
-                <div>
-                    <label class="block text-xs font-extrabold text-slate-600 uppercase mb-1">Lote del Producto (Asignación de Lote)</label>
-                    <select id="devLoteSelect" onchange="onLoteDevolucionChange('tab')" class="clay-input w-full text-sm font-bold">
-                        <option value="">(Sin lote específico - Stock general)</option>
-                    </select>
-                    <div id="devLoteInfo" class="mt-1 hidden"></div>
-                    <p class="text-[11px] text-slate-500 font-medium mt-1">Si selecciona un lote, se actualizará directamente el stock del lote además del producto.</p>
-                </div>
-
-                <div>
-                    <label class="block text-xs font-extrabold text-slate-600 uppercase mb-1">Motivo / Causa</label>
-                    <input type="text" id="devMotivo" required placeholder="Ej: Envase dañado en transporte / Vencido" class="clay-input w-full text-sm">
-                </div>
-
-                <button type="submit" class="clay-btn-primary w-full py-3 text-sm font-black shadow-lg">
-                    Asentar Devolución en Stock
-                </button>
-            </form>
         </div>
     </div>
 
@@ -801,6 +637,37 @@
                 </div>
             </div>
 
+            <div class="p-3 bg-slate-50/90 rounded-xl border border-slate-200/80 space-y-2">
+                <div class="flex items-center justify-between">
+                    <label class="block text-[11px] font-black text-slate-700 uppercase tracking-wide flex items-center gap-1.5">
+                        <i data-lucide="package" class="w-3.5 h-3.5 text-indigo-600"></i>
+                        <span>Presentación Comercial / Bulto (Opcional)</span>
+                    </label>
+                    <span class="text-[10px] text-slate-400 font-bold">Referencia para depósito</span>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-[10px] font-extrabold text-slate-500 uppercase mb-1">Formato de Presentación</label>
+                        <select id="prodFormatoBulto" onchange="actualizarPreviewBultoProducto()" class="clay-input w-full text-xs font-bold">
+                            <option value="Unidad">Unidad (Suelto / Individual)</option>
+                            <option value="Caja">Caja</option>
+                            <option value="Pack">Pack</option>
+                            <option value="Pallet">Pallet</option>
+                            <option value="Display">Display</option>
+                            <option value="Bulto">Bulto Cerrado</option>
+                            <option value="Botella">Botella</option>
+                            <option value="Lata">Lata</option>
+                            <option value="Otro">Otro</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-extrabold text-slate-500 uppercase mb-1">Unidades por Bulto</label>
+                        <input type="number" min="1" id="prodUnidadesPorBulto" value="1" oninput="actualizarPreviewBultoProducto()" class="clay-input w-full font-bold text-xs" placeholder="1 por defecto">
+                    </div>
+                </div>
+                <p id="prodBultoPreview" class="text-[11px] text-indigo-700 font-bold hidden"></p>
+            </div>
+
             <div class="flex items-center justify-between gap-2 pt-3 border-t border-slate-100">
                 <button type="button" id="btnVerHistorialDesdeModalProd" onclick="abrirHistorialDesdeProducto()" class="clay-btn-secondary px-3 py-2 text-xs font-bold hidden flex items-center gap-1.5 text-blue-600 hover:text-blue-800" title="Ver modificaciones registradas de este producto">
                     <i data-lucide="history" class="w-4 h-4"></i>
@@ -823,7 +690,7 @@
         <div class="flex items-center justify-between pb-3 border-b border-slate-100">
             <div>
                 <h3 class="text-base font-black text-slate-800">Registrar Ingreso de Mercadería</h3>
-                <p class="text-[11px] text-slate-500 font-bold">Ingreso de stock con asignación y creación de lote (S03/S09)</p>
+                <p class="text-[11px] text-slate-500 font-bold">Ingreso directo de mercadería al inventario</p>
             </div>
             <button onclick="cerrarModalIngreso()" class="p-1 text-slate-400 hover:text-slate-600 rounded-lg">
                 <i data-lucide="x" class="w-5 h-5"></i>
@@ -838,69 +705,31 @@
 
             <div class="space-y-3">
                 <div class="grid grid-cols-12 gap-3">
-                    <div class="col-span-12 sm:col-span-6">
-                        <label class="block text-[11px] font-extrabold text-slate-600 uppercase mb-1">Producto</label>
+                    <div class="col-span-12 sm:col-span-8">
+                        <label class="block text-[11px] font-extrabold text-slate-600 uppercase mb-1">Producto *</label>
                         <select id="ingresoProductoSelect" onchange="onProductoIngresoChange()" required class="clay-input w-full text-xs font-bold"></select>
+                        <div id="ingresoPresentacionAyuda" class="text-[11px] text-indigo-700 font-bold mt-1.5 hidden flex items-center gap-1.5"></div>
                     </div>
-                    <div class="col-span-12 sm:col-span-3">
-                        <label id="lblIngresoCantidad" class="block text-[11px] font-extrabold text-slate-600 uppercase mb-1">Cantidad Ingresada</label>
-                        <input type="number" id="ingresoCantidad" min="1" value="10" oninput="actualizarEquivalenciaIngreso()" required class="clay-input w-full font-black text-sm">
+                    <div class="col-span-12 sm:col-span-4">
+                        <label id="lblIngresoCantidad" class="block text-[11px] font-extrabold text-slate-600 uppercase mb-1">Cantidad a Ingresar (u.) *</label>
+                        <input type="number" id="ingresoCantidad" min="1" value="10" oninput="actualizarEquivalenciaIngreso()" required class="clay-input w-full font-black text-sm" placeholder="Cantidad en unidades">
                     </div>
-                    <div class="col-span-12 sm:col-span-3">
-                        <label class="block text-[11px] font-extrabold text-slate-600 uppercase mb-1">Unidad de Medida</label>
-                        <select id="ingresoUnidadSelect" onchange="actualizarEquivalenciaIngreso()" class="clay-input w-full text-xs font-bold bg-white">
-                            <option value="">Unidades (u.)</option>
-                        </select>
-                    </div>
+                    <!-- Select oculto para mantener compatibilidad de tests y endpoints internos -->
+                    <select id="ingresoUnidadSelect" onchange="actualizarEquivalenciaIngreso()" class="hidden">
+                        <option value="">Unidades (u.)</option>
+                    </select>
                 </div>
 
-                <!-- Banner de Equivalencia a Unidades Individuales -->
+                <!-- Banner de referencia si el producto tiene bulto configurado -->
                 <div id="ingresoEquivalenciaBox" class="hidden p-2.5 rounded-xl bg-indigo-50/80 border border-indigo-200/80 text-xs text-indigo-950 font-bold flex items-center justify-between shadow-xs">
                     <div class="flex items-center gap-2">
                         <i data-lucide="info" class="w-4 h-4 text-indigo-600 shrink-0"></i>
-                        <span id="ingresoEquivalenciaTexto">Equivalencia: 10 Cajas x12 = 120 unidades individuales (u.)</span>
+                        <span id="ingresoEquivalenciaTexto"></span>
                     </div>
-                    <span class="clay-badge clay-badge-success text-[10px] font-black shrink-0" id="ingresoEquivalenciaBadge">✓ Unidad Activa</span>
                 </div>
             </div>
 
-            <div class="bg-blue-50/60 p-3.5 rounded-2xl border border-blue-100/80 space-y-2.5">
-                <div class="flex items-center justify-between">
-                    <div class="flex items-center gap-2 text-blue-900 font-extrabold text-xs">
-                        <i data-lucide="calendar" class="w-4 h-4 text-blue-600"></i>
-                        <span>Trazabilidad de Lote y Vencimiento</span>
-                    </div>
-                    <div class="inline-flex p-0.5 bg-white/90 rounded-xl border border-blue-100 text-[11px] font-bold">
-                        <button type="button" id="btnModoLoteNuevo" onclick="cambiarModoLoteIngreso('nuevo')" class="px-2.5 py-1 rounded-lg bg-blue-600 text-white font-extrabold transition-all shadow-xs">
-                            Nuevo Lote
-                        </button>
-                        <button type="button" id="btnModoLoteExistente" onclick="cambiarModoLoteIngreso('existente')" class="px-2.5 py-1 rounded-lg text-slate-600 hover:text-blue-600 font-bold transition-all">
-                            Elegir Lote Existente
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Selector de Lote Existente (visible si modo == existente) -->
-                <div id="contenedorLoteExistente" class="hidden space-y-1">
-                    <label class="block text-[11px] font-extrabold text-blue-900 uppercase">Lote Registrado en el Sistema</label>
-                    <select id="ingresoLoteExistenteSelect" onchange="seleccionarLoteExistente()" class="clay-input w-full text-xs font-bold bg-white">
-                        <option value="">Seleccione un lote existente...</option>
-                    </select>
-                    <p id="msgSinLotesExistentes" class="hidden text-[11px] text-amber-700 font-bold">Este producto no posee lotes registrados aún. Podés crear uno con la opción "Nuevo Lote".</p>
-                </div>
-
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label id="lblNroLote" class="block text-[11px] font-extrabold text-slate-600 uppercase mb-1">N° de Lote</label>
-                        <input type="text" id="ingresoNroLote" placeholder="LOTE-001" required class="clay-input w-full uppercase font-bold text-sm bg-white">
-                    </div>
-                    <div>
-                        <label class="block text-[11px] font-extrabold text-slate-600 uppercase mb-1">Fecha de Vencimiento</label>
-                        <input type="date" id="ingresoVencimiento" required class="clay-input w-full font-bold text-sm bg-white">
-                    </div>
-                </div>
-                <p id="ingresoLoteAyuda" class="text-[11px] text-slate-500 font-medium">Al confirmar, se incrementa el stock actual del producto, se asigna al lote seleccionado y queda registrado en el historial de Movimientos (Kardex).</p>
-            </div>
+            <p class="text-[11px] text-slate-500 font-medium">Al confirmar, se incrementa el stock actual del producto en el depósito y queda registrado en el historial de Movimientos (Kardex).</p>
 
             <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
                 <button type="button" onclick="cerrarModalIngreso()" class="clay-btn-secondary px-4 py-2 text-xs font-bold">Cancelar</button>
@@ -911,71 +740,7 @@
 </div>
 
 <!-- ========================================== -->
-<!-- MODAL: REGISTRAR NUEVO LOTE               -->
-<!-- ========================================== -->
-<div id="modalNuevoLote" class="clay-modal-backdrop hidden" onclick="if(event.target === this) cerrarModalNuevoLote()">
-    <div class="clay-modal-content max-w-lg p-6 space-y-4" onclick="event.stopPropagation()">
-        <div class="flex items-center justify-between pb-3 border-b border-slate-100">
-            <div>
-                <h3 class="text-base font-black text-slate-800">Registrar Nuevo Lote</h3>
-                <p class="text-[11px] text-slate-500 font-bold">Creación directa de lote con control de vencimiento (S09)</p>
-            </div>
-            <button onclick="cerrarModalNuevoLote()" class="p-1 text-slate-400 hover:text-slate-600 rounded-lg">
-                <i data-lucide="x" class="w-5 h-5"></i>
-            </button>
-        </div>
 
-        <form onsubmit="guardarNuevoLote(event)" class="space-y-4">
-            <div>
-                <label class="block text-[11px] font-extrabold text-slate-600 uppercase mb-1">Producto</label>
-                <select id="nuevoLoteProductoSelect" onchange="onProductoNuevoLoteChange()" required class="clay-input w-full text-xs font-bold"></select>
-            </div>
-
-            <div class="grid grid-cols-12 gap-3">
-                <div class="col-span-12 sm:col-span-5">
-                    <label class="block text-[11px] font-extrabold text-slate-600 uppercase mb-1">N° de Lote</label>
-                    <input type="text" id="nuevoLoteNro" placeholder="LOTE-001" required class="clay-input w-full uppercase font-bold text-sm">
-                </div>
-                <div class="col-span-12 sm:col-span-3">
-                    <label id="lblNuevoLoteCantidad" class="block text-[11px] font-extrabold text-slate-600 uppercase mb-1">Cantidad del Lote</label>
-                    <input type="number" id="nuevoLoteCantidad" min="1" value="10" oninput="actualizarEquivalenciaNuevoLote()" required class="clay-input w-full font-black text-sm">
-                </div>
-                <div class="col-span-12 sm:col-span-4">
-                    <label class="block text-[11px] font-extrabold text-slate-600 uppercase mb-1">Unidad</label>
-                    <select id="nuevoLoteUnidadSelect" onchange="actualizarEquivalenciaNuevoLote()" class="clay-input w-full text-xs font-bold bg-white">
-                        <option value="">Unidades (u.)</option>
-                    </select>
-                </div>
-            </div>
-
-            <!-- Banner de Equivalencia para Nuevo Lote -->
-            <div id="nuevoLoteEquivalenciaBox" class="hidden p-2.5 rounded-xl bg-indigo-50/80 border border-indigo-200/80 text-xs text-indigo-950 font-bold flex items-center justify-between shadow-xs">
-                <div class="flex items-center gap-2">
-                    <i data-lucide="info" class="w-4 h-4 text-indigo-600 shrink-0"></i>
-                    <span id="nuevoLoteEquivalenciaTexto">Equivalencia: 10 Cajas x12 = 120 unidades individuales (u.)</span>
-                </div>
-                <span class="clay-badge clay-badge-success text-[10px] font-black shrink-0">✓ Unidad Activa</span>
-            </div>
-
-            <div>
-                <label class="block text-[11px] font-extrabold text-slate-600 uppercase mb-1">Fecha de Vencimiento</label>
-                <input type="date" id="nuevoLoteVencimiento" required class="clay-input w-full font-bold text-sm">
-            </div>
-
-            <div class="flex items-center gap-2 p-3 bg-blue-50/50 rounded-xl border border-blue-100/60">
-                <input type="checkbox" id="nuevoLoteAsociarIngreso" checked class="rounded border-slate-300 text-blue-600">
-                <label for="nuevoLoteAsociarIngreso" class="text-xs font-bold text-slate-700 cursor-pointer">
-                    Sumar esta cantidad al stock actual del producto y asentar el movimiento (Kardex)
-                </label>
-            </div>
-
-            <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
-                <button type="button" onclick="cerrarModalNuevoLote()" class="clay-btn-secondary px-4 py-2 text-xs font-bold">Cancelar</button>
-                <button type="submit" class="clay-btn-primary px-5 py-2 text-xs font-black shadow-md">Crear Lote</button>
-            </div>
-        </form>
-    </div>
-</div>
 
 <!-- ========================================== -->
 <!-- MODAL: AJUSTE MANUAL DE STOCK              -->
@@ -1029,46 +794,7 @@
                 <span class="clay-badge clay-badge-success text-[10px] font-black shrink-0">✓ Unidad Activa</span>
             </div>
 
-            <!-- Asignación Obligatoria de Lote -->
-            <div class="space-y-2 p-3 bg-blue-50/60 rounded-xl border border-blue-100">
-                <div class="flex items-center justify-between">
-                    <label class="block text-[11px] font-extrabold text-blue-950 uppercase">Lote para el ajuste</label>
-                    <div id="ajusteModoTabs" class="inline-flex p-0.5 bg-white/90 rounded-lg border border-blue-200 text-[10px] font-bold">
-                        <button type="button" id="btnAjusteModoExistente" onclick="cambiarModoLoteAjuste('existente')" class="px-2 py-0.5 rounded bg-blue-600 text-white font-extrabold shadow-xs transition-all">
-                            Lote Existente
-                        </button>
-                        <button type="button" id="btnAjusteModoNuevo" onclick="cambiarModoLoteAjuste('nuevo')" class="px-2 py-0.5 rounded text-slate-600 hover:text-blue-600 font-bold transition-all">
-                            Nuevo Lote
-                        </button>
-                    </div>
-                </div>
 
-                <!-- Selector de Lote Existente -->
-                <div id="contenedorAjusteLoteExistente" class="space-y-1">
-                    <select id="ajusteLoteSelect" onchange="onLoteAjusteChange()" class="clay-input w-full text-xs font-bold bg-white">
-                        <option value="">-- Seleccione un lote si corresponde --</option>
-                    </select>
-                    <div id="ajusteLoteInfo" class="mt-1 hidden"></div>
-                    <p id="msgSinLotesAjuste" class="hidden text-[11px] text-amber-700 font-bold"></p>
-                </div>
-
-                <!-- Formulario Nuevo Lote (sólo disponible al aumentar) -->
-                <div id="contenedorAjusteLoteNuevo" class="hidden space-y-2">
-                    <div class="grid grid-cols-2 gap-2">
-                        <div>
-                            <label class="block text-[10px] font-extrabold text-slate-600 uppercase mb-0.5">N° de Lote *</label>
-                            <input type="text" id="ajusteNroLoteNuevo" placeholder="LOT-001" class="clay-input w-full uppercase font-bold text-xs bg-white">
-                        </div>
-                        <div>
-                            <label class="block text-[10px] font-extrabold text-slate-600 uppercase mb-0.5">Fecha de Vencimiento</label>
-                            <input type="date" id="ajusteVencimientoNuevo" class="clay-input w-full font-bold text-xs bg-white">
-                        </div>
-                    </div>
-                    <p class="text-[10px] text-blue-700 font-medium">Se creará este nuevo lote y se incrementará simultáneamente el stock general del producto.</p>
-                </div>
-
-                <p class="text-[10px] text-slate-500 font-bold">Si el producto tiene lotes, seleccione uno. Si no tiene lotes, puede disminuir directamente del stock general.</p>
-            </div>
 
             <div>
                 <label class="block text-[11px] font-extrabold text-slate-600 uppercase mb-1">Motivo / Causa</label>
@@ -1084,14 +810,14 @@
 </div>
 
 <!-- ========================================== -->
-<!-- MODAL: AUMENTO MASIVO DE PRECIOS (P07)     -->
+<!-- MODAL: AUMENTO MASIVO DE PRECIOS     -->
 <!-- ========================================== -->
 <div id="modalAumento" class="clay-modal-backdrop hidden" onclick="if(event.target === this) cerrarModalAumentoMasivo()">
     <div class="clay-modal-content max-w-xl p-6 space-y-4" onclick="event.stopPropagation()">
         <div class="flex items-center justify-between pb-3 border-b border-slate-100">
             <div>
-                <h3 class="text-base font-black text-slate-800">Aumento Masivo de Precios (P07)</h3>
-                <p class="text-[11px] font-bold text-slate-500">Configurá cómo redondear los nuevos precios</p>
+                <h3 class="text-base font-black text-slate-800">Aumento Masivo de Precios</h3>
+                <p class="text-[11px] font-bold text-slate-500">Actualización porcentual directa sin regla de redondeo</p>
             </div>
             <button onclick="cerrarModalAumentoMasivo()" class="p-1 text-slate-400 hover:text-slate-600 rounded-lg">
                 <i data-lucide="x" class="w-5 h-5"></i>
@@ -1124,17 +850,6 @@
                     <input type="number" step="0.1" min="0.1" id="aumentoPorcentaje" required class="clay-input w-full font-black text-sm pr-8" placeholder="15.0" oninput="actualizarVistaPreviaAumento()">
                     <span class="absolute right-3 top-2.5 text-xs font-black text-slate-400">%</span>
                 </div>
-            </div>
-
-            <div>
-                <label for="aumentoRedondeo" class="block text-[11px] font-extrabold text-slate-600 uppercase mb-1">Regla de Redondeo</label>
-                <select id="aumentoRedondeo" class="clay-input w-full text-xs font-bold" onchange="actualizarVistaPreviaAumento()">
-                    <option value="sin_redondeo">Sin redondeo (mantener centavos)</option>
-                    <option value="peso_mas_cercano">Al peso más cercano</option>
-                    <option value="peso_superior">Siempre hacia arriba al peso</option>
-                    <option value="terminar_90">Terminar en .90 (hacia arriba)</option>
-                    <option value="terminar_99">Terminar en .99 (hacia arriba)</option>
-                </select>
             </div>
 
             <!-- Vista Previa de Productos Afectados (Criterio P07) -->
@@ -1181,7 +896,7 @@
     <div class="clay-modal-content max-w-4xl p-6 space-y-4" onclick="event.stopPropagation()">
         <div class="flex items-center justify-between pb-3 border-b border-slate-100">
             <div>
-                <h3 class="text-base font-black text-slate-800">Historial y Auditoría de Productos (P08 / P04)</h3>
+                <h3 class="text-base font-black text-slate-800">Historial y Auditoría de Productos</h3>
                 <p id="historialProductoTitulo" class="text-xs font-bold text-slate-500">Historial Global de Precios y Modificaciones</p>
             </div>
             <button onclick="cerrarModalHistorial()" class="p-1 text-slate-400 hover:text-slate-600 rounded-lg">
@@ -1193,11 +908,11 @@
         <div class="flex items-center gap-2 border-b border-slate-100 pb-2">
             <button type="button" id="modalHistTabBtn-precios" onclick="cambiarModalHistTab('precios')" class="px-3.5 py-1.5 rounded-xl font-black text-xs bg-white text-blue-600 shadow-xs border border-slate-200/80 transition-all cursor-pointer flex items-center gap-1.5">
                 <i data-lucide="trending-up" class="w-3.5 h-3.5 text-blue-600"></i>
-                <span>Historial de Precios (P08)</span>
+                <span>Historial de Precios</span>
             </button>
             <button type="button" id="modalHistTabBtn-auditoria" onclick="cambiarModalHistTab('auditoria')" class="px-3.5 py-1.5 rounded-xl font-bold text-xs text-slate-600 hover:text-slate-900 transition-all cursor-pointer flex items-center gap-1.5">
                 <i data-lucide="clipboard-check" class="w-3.5 h-3.5 text-slate-500"></i>
-                <span>Historial de Modificaciones / Auditoría (P04)</span>
+                <span>Historial de Modificaciones / Auditoría</span>
             </button>
         </div>
 
@@ -1212,7 +927,7 @@
             <div id="historialFiltroOrigenGrupo" class="flex items-center gap-2">
                 <select id="historialFiltroOrigen" onchange="cambiarFiltroHistorialModal()" class="clay-input py-1 px-2.5 text-xs font-bold">
                     <option value="">Todos los Orígenes</option>
-                    <option value="aumento_masivo">Aumentos Masivos (P07)</option>
+                    <option value="aumento_masivo">Aumentos Masivos</option>
                     <option value="manual">Modificación Manual</option>
                 </select>
             </div>
@@ -1238,7 +953,7 @@
             </table>
         </div>
 
-        <!-- VISTA 2: TABLA MODIFICACIONES Y AUDITORÍA (P04) -->
+        <!-- VISTA 2: TABLA MODIFICACIONES Y AUDITORÍA -->
         <div id="contenedorModalHistAuditoria" class="overflow-x-auto max-h-80 border border-slate-100 rounded-xl hidden">
             <table class="clay-table">
                 <thead>
@@ -1265,13 +980,13 @@
 
 <!-- ========================================== -->
 <!-- ========================================== -->
-<!-- MODAL: GESTIÓN DE CATEGORÍAS (P02)        -->
+<!-- MODAL: GESTIÓN DE CATEGORÍAS        -->
 <!-- ========================================== -->
 <div id="modalCategoria" class="clay-modal-backdrop hidden" onclick="if(event.target === this) cerrarModalCategorias()">
     <div class="clay-modal-content max-w-lg p-6 space-y-4" onclick="event.stopPropagation()">
         <div class="flex items-center justify-between pb-3 border-b border-slate-100">
             <div>
-                <h3 class="text-base font-black text-slate-800">Administrar Categorías (P02)</h3>
+                <h3 class="text-base font-black text-slate-800">Administrar Categorías</h3>
                 <p class="text-[11px] font-bold text-slate-500">Alta, modificación y baja controlada de categorías</p>
             </div>
             <button onclick="cerrarModalCategorias()" class="p-1 text-slate-400 hover:text-slate-600 rounded-lg">
@@ -1322,13 +1037,13 @@
 </div>
 
 <!-- ========================================== -->
-<!-- MODAL: GESTIÓN DE MARCAS (P03)            -->
+<!-- MODAL: GESTIÓN DE MARCAS            -->
 <!-- ========================================== -->
 <div id="modalMarca" class="clay-modal-backdrop hidden" onclick="if(event.target === this) cerrarModalMarcas()">
     <div class="clay-modal-content max-w-lg p-6 space-y-4" onclick="event.stopPropagation()">
         <div class="flex items-center justify-between pb-3 border-b border-slate-100">
             <div>
-                <h3 class="text-base font-black text-slate-800">Administrar Marcas (P03)</h3>
+                <h3 class="text-base font-black text-slate-800">Administrar Marcas</h3>
                 <p class="text-[11px] font-bold text-slate-500">Alta, modificación y baja controlada de marcas comerciales</p>
             </div>
             <button onclick="cerrarModalMarcas()" class="p-1 text-slate-400 hover:text-slate-600 rounded-lg">
@@ -1380,13 +1095,13 @@
 
 <!-- ========================================== -->
 <!-- ========================================== -->
-<!-- MODAL: GESTIÓN DE UBICACIONES (S14)       -->
+<!-- MODAL: GESTIÓN DE UBICACIONES       -->
 <!-- ========================================== -->
 <div id="modalUbicaciones" class="clay-modal-backdrop hidden" onclick="if(event.target === this) cerrarModalUbicaciones()">
     <div class="clay-modal-content max-w-xl p-6 space-y-4" onclick="event.stopPropagation()">
         <div class="flex items-center justify-between pb-3 border-b border-slate-100">
             <div>
-                <h3 class="text-base font-black text-slate-800">Ubicaciones de Almacenamiento (S14)</h3>
+                <h3 class="text-base font-black text-slate-800">Ubicaciones de Almacenamiento</h3>
                 <p class="text-[11px] font-bold text-slate-500">Pasillos, estantes, niveles y góndolas del depósito</p>
             </div>
             <button onclick="cerrarModalUbicaciones()" class="p-1 text-slate-400 hover:text-slate-600 rounded-lg">
@@ -1449,13 +1164,13 @@
 </div>
 
 <!-- ========================================== -->
-<!-- MODAL: GESTIÓN DE UNIDADES Y EQUIVALENCIAS (S08) -->
+<!-- MODAL: GESTIÓN DE UNIDADES Y EQUIVALENCIAS -->
 <!-- ========================================== -->
 <div id="modalUnidades" class="clay-modal-backdrop hidden" onclick="if(event.target === this) cerrarModalUnidades()">
     <div class="clay-modal-content max-w-xl p-6 space-y-4" onclick="event.stopPropagation()">
         <div class="flex items-center justify-between pb-3 border-b border-slate-100">
             <div>
-                <h3 class="text-base font-black text-slate-800">Unidades de Medida y Equivalencias (S08)</h3>
+                <h3 class="text-base font-black text-slate-800">Unidades de Medida y Equivalencias</h3>
                 <p id="modalUnidadProdTitulo" class="text-xs font-extrabold text-blue-600">Configuración para el producto seleccionado</p>
             </div>
             <button onclick="cerrarModalUnidades()" class="p-1 text-slate-400 hover:text-slate-600 rounded-lg">
@@ -1531,12 +1246,12 @@
 </div>
 
 <!-- ========================================== -->
-<!-- MODAL: REGISTRAR DEVOLUCIÓN (S05)         -->
+<!-- MODAL: REGISTRAR DEVOLUCIÓN         -->
 <!-- ========================================== -->
 <div id="modalDevolucion" class="clay-modal-backdrop hidden" onclick="if(event.target === this) cerrarModalDevolucion()">
     <div class="clay-modal-content max-w-md p-6 space-y-4" onclick="event.stopPropagation()">
         <div class="flex items-center justify-between pb-3 border-b border-slate-100">
-            <h3 class="text-base font-black text-slate-800">Registrar Devolución (S05)</h3>
+            <h3 class="text-base font-black text-slate-800">Registrar Devolución</h3>
             <button onclick="cerrarModalDevolucion()" class="p-1 text-slate-400 hover:text-slate-600 rounded-lg">
                 <i data-lucide="x" class="w-5 h-5"></i>
             </button>
@@ -1577,14 +1292,6 @@
                 <span class="clay-badge clay-badge-success text-[10px] font-black shrink-0">✓ Unidad Activa</span>
             </div>
 
-            <div>
-                <label class="block text-[11px] font-extrabold text-slate-600 uppercase mb-1">Lote del Producto (Asignación de Lote)</label>
-                <select id="modalDevLoteSelect" onchange="onLoteDevolucionChange('modal')" class="clay-input w-full text-xs font-bold">
-                    <option value="">(Sin lote específico - Stock general)</option>
-                </select>
-                <div id="modalDevLoteInfo" class="mt-1 hidden"></div>
-                <p class="text-[10px] text-slate-500 font-medium mt-1">Si selecciona un lote, se actualizará directamente el stock del lote además del producto.</p>
-            </div>
 
             <div>
                 <label class="block text-[11px] font-extrabold text-slate-600 uppercase mb-1">Motivo</label>
@@ -1613,6 +1320,9 @@
 
     document.addEventListener('DOMContentLoaded', () => {
         recargarTodo();
+        if (new URLSearchParams(window.location.search).get('tab') === 'lotes') {
+            cambiarPestana('lotes');
+        }
     });
 
     async function recargarTodo() {
@@ -1622,7 +1332,6 @@
             cargarUbicaciones(),
             cargarProveedores(),
             cargarProductos(),
-            cargarLotes(),
             cargarMovimientos(),
             cargarMovimientosPrecios(),
             cargarHistorialConteosFisicos()
@@ -1646,8 +1355,6 @@
         }
         if (id === 'movimientos') {
             recargarHistorialActual();
-        } else if (id === 'devoluciones') {
-            actualizarLotesDevolucion('tab');
         }
         if (window.lucide) window.lucide.createIcons();
     }
@@ -1726,25 +1433,44 @@
         } catch (e) { console.error('Error productos', e); }
     }
 
+    function obtenerTextoPresentacion(p) {
+        const eq = Number(p?.unidades_por_bulto || p?.equivalencia_unidad || 1);
+        let formato = (p?.formato_bulto || p?.unidad_medida || 'Unidad').trim();
+
+        if (!formato || formato === 'Unidad' || formato === 'u.') {
+            return eq > 1 ? `Pack x ${eq} u.` : 'Unidad (u.)';
+        }
+
+        // Si el formato ya termina con el número de equivalencia (ej: "Caja x 12" o "Caja x12" o "Caja 12")
+        const regexX = new RegExp(`[\\s_xX]+${eq}\\s*(u\\.?|unidades)?$`, 'i');
+        if (regexX.test(formato)) {
+            return `${formato.replace(/\s*u\.?$/i, '')} u.`;
+        }
+
+        if (eq > 1) {
+            return `${formato} x ${eq} u.`;
+        }
+
+        return formato;
+    }
+
+    function renderColumnaFormatoVenta(p, cantStock) {
+        const eq = Number(p?.unidades_por_bulto || p?.equivalencia_unidad || 1);
+        const texto = obtenerTextoPresentacion(p);
+        if (eq > 1) {
+            const bultos = (cantStock / eq).toLocaleString('es-AR', { maximumFractionDigits: 1 });
+            return `<div class="font-extrabold text-slate-800 text-xs">${texto}</div><div class="text-[10px] text-indigo-600 font-black tracking-tight">≈ ${bultos} bultos</div>`;
+        }
+        return `<span class="text-slate-400 font-bold text-xs">${texto}</span>`;
+    }
+
     function formatoCantidadProducto(cant, p) {
         const num = Number(cant || 0);
-        const eq = Number(p?.equivalencia_unidad || 1);
-        const nom = p?.unidad_medida || 'u.';
-        if (eq > 1 && nom !== 'u.') {
-            const cantConvertida = (num / eq).toLocaleString('es-AR', { maximumFractionDigits: 2 });
-            return `<span title="${num} u. individuales">${cantConvertida} ${nom}</span><span class="block text-[10px] text-slate-400 font-semibold">(${num} u.)</span>`;
-        }
         return `${num} u.`;
     }
 
     function formatoCantidadProductoCorta(cant, p) {
         const num = Number(cant || 0);
-        const eq = Number(p?.equivalencia_unidad || 1);
-        const nom = p?.unidad_medida || 'u.';
-        if (eq > 1 && nom !== 'u.') {
-            const cantConvertida = (num / eq).toLocaleString('es-AR', { maximumFractionDigits: 2 });
-            return `${cantConvertida} ${nom} (${num} u.)`;
-        }
         return `${num} u.`;
     }
 
@@ -1810,7 +1536,7 @@
             const cantStock = Number(p.stock ?? p.stock_disponible ?? 0);
             const stockMin = Number(p.stock_minimo || 5);
 
-            // Semáforo visual (S16)
+            // Semáforo visual
             let semaforoBadge = '';
             if (cantStock === 0) {
                 semaforoBadge = '<span class="clay-badge clay-badge-danger font-black"><span class="w-1.5 h-1.5 rounded-full bg-red-600 inline-block mr-1"></span>Agotado</span>';
@@ -1829,17 +1555,18 @@
                     <td class="font-extrabold text-slate-800">${p.codigo}</td>
                     <td>
                         <div class="font-black text-slate-800 text-sm leading-tight">${p.nombre}</div>
-                        <div class="text-[11px] text-slate-400 flex items-center gap-1.5 mt-0.5">
+                        <div class="text-[11px] text-slate-400 flex flex-wrap items-center gap-1.5 mt-0.5">
                             <span>${p.descripcion || '-'}</span>
                             <span class="text-slate-300">•</span>
-                            <span class="text-slate-500 font-bold flex items-center gap-0.5" title="Ubicación en depósito (S14)"><i data-lucide="map-pin" class="w-3 h-3 text-slate-400"></i>${ubicacionTexto}</span>
+                            <span class="text-slate-500 font-bold flex items-center gap-0.5" title="Ubicación en depósito"><i data-lucide="map-pin" class="w-3 h-3 text-slate-400"></i>${ubicacionTexto}</span>
+                            ${Number(p.unidades_por_bulto || p.equivalencia_unidad || 1) > 1 ? `<span class="text-slate-300">•</span><span class="text-indigo-600 font-extrabold flex items-center gap-0.5" title="Presentación"><i data-lucide="package" class="w-3 h-3"></i>${obtenerTextoPresentacion(p)}</span>` : ''}
                         </div>
                     </td>
                     <td><span class="text-xs font-bold text-slate-600">${p.categoria?.nombre || p.categoria_nombre || '-'}</span></td>
                     <td><span class="text-xs font-bold text-slate-600">${p.marca?.nombre || p.marca_nombre || '-'}</span></td>
-                    <td class="text-right font-black text-slate-800">${precioUnitario}</td>
+                    <td class="text-center font-black text-slate-800">${precioUnitario}</td>
                     <td class="text-center">
-                        <div class="font-black text-slate-800 text-xs">${formatoCantidadProducto(cantStock, p)}</div>
+                        <div class="font-black text-slate-800 text-xs">${cantStock} u.</div>
                         <div class="mt-0.5">${semaforoBadge}</div>
                     </td>
                     <td class="text-center">
@@ -1847,16 +1574,13 @@
                     </td>
                     <td class="text-center">
                         <div class="flex items-center justify-center gap-1.5">
-                            <button onclick="abrirModalUnidades(${p.id_producto})" class="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg" title="Unidades y Equivalencias (S08)">
-                                <i data-lucide="layers" class="w-4 h-4"></i>
-                            </button>
-                            <button onclick="abrirHistorialPrecios(${p.id_producto})" class="p-1.5 text-amber-600 hover:bg-amber-50 rounded-lg" title="Historial de Precios (P08)">
+                            <button onclick="abrirHistorialPrecios(${p.id_producto})" class="p-1.5 text-amber-600 hover:bg-amber-50 rounded-lg" title="Historial de Precios">
                                 <i data-lucide="history" class="w-4 h-4"></i>
                             </button>
-                            <button onclick="editarProducto(${p.id_producto})" class="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg" title="Editar Producto (P04)">
+                            <button onclick="editarProducto(${p.id_producto})" class="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg" title="Editar Producto">
                                 <i data-lucide="edit-3" class="w-4 h-4"></i>
                             </button>
-                            <button onclick="cambiarEstadoProducto(${p.id_producto}, '${p.estado}')" class="p-1.5 ${esActivo ? 'text-rose-600 hover:bg-rose-50' : 'text-emerald-600 hover:bg-emerald-50'} rounded-lg" title="${esActivo ? 'Desactivar (P06)' : 'Activar (P06)'}">
+                            <button onclick="cambiarEstadoProducto(${p.id_producto}, '${p.estado}')" class="p-1.5 ${esActivo ? 'text-rose-600 hover:bg-rose-50' : 'text-emerald-600 hover:bg-emerald-50'} rounded-lg" title="${esActivo ? 'Desactivar' : 'Activar'}">
                                 <i data-lucide="${esActivo ? 'power' : 'check'}" class="w-4 h-4"></i>
                             </button>
                         </div>
@@ -1951,27 +1675,25 @@
                         <div class="text-[11px] text-slate-400">${p.categoria?.nombre || p.categoria_nombre || '-'}</div>
                     </td>
                     <td>
-                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 font-bold text-xs" title="Ubicación física (S14)">
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 font-bold text-xs" title="Ubicación física">
                             <i data-lucide="map-pin" class="w-3 h-3 text-slate-500"></i>
                             ${ubicacionTexto}
                         </span>
                     </td>
-                    <td class="text-center font-bold text-slate-700 text-xs">${formatoCantidadProducto(stockFisico, p)}</td>
-                    <td class="text-center font-bold text-slate-400 text-xs">${formatoCantidadProducto(comprometido, p)}</td>
-                    <td class="text-center font-black text-blue-700 bg-blue-50/40 text-xs">${formatoCantidadProducto(disponibleVenta, p)}</td>
-                    <td class="text-center font-bold text-slate-600 text-xs">${formatoCantidadProducto(stockMin, p)}</td>
+                    <td class="text-center">${renderColumnaFormatoVenta(p, stockFisico)}</td>
+                    <td class="text-center font-black text-slate-800 text-xs">${stockFisico} u.</td>
+                    <td class="text-center font-bold text-slate-400 text-xs">${comprometido} u.</td>
+                    <td class="text-center font-black text-blue-700 bg-blue-50/40 text-xs">${disponibleVenta} u.</td>
+                    <td class="text-center font-bold text-slate-600 text-xs">${stockMin} u.</td>
                     <td class="text-center">${semaforoBadge}</td>
                     <td class="text-center">
                         <div class="flex items-center justify-center gap-1">
-                            <button onclick="abrirModalIngresoRapido(${p.id_producto})" class="clay-btn-primary px-2 py-1 text-[11px] font-bold" title="Reponer Stock (S03)">Reponer</button>
-                            <button onclick="abrirModalAjuste(${p.id_producto})" class="p-1 text-amber-600 hover:bg-amber-50 rounded" title="Ajuste Manual de Inventario (S06)">
+                            <button onclick="abrirModalIngresoRapido(${p.id_producto})" class="clay-btn-primary px-2 py-1 text-[11px] font-bold" title="Reponer Stock">Reponer</button>
+                            <button onclick="abrirModalAjuste(${p.id_producto})" class="p-1 text-amber-600 hover:bg-amber-50 rounded" title="Ajuste Manual de Inventario">
                                 <i data-lucide="sliders" class="w-3.5 h-3.5"></i>
                             </button>
-                            <button onclick="abrirModalDevolucion(${p.id_producto})" class="p-1 text-purple-600 hover:bg-purple-50 rounded" title="Registrar Devolución (S05)">
+                            <button onclick="abrirModalDevolucion(${p.id_producto})" class="p-1 text-purple-600 hover:bg-purple-50 rounded" title="Registrar Devolución">
                                 <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
-                            </button>
-                            <button onclick="abrirModalUnidades(${p.id_producto})" class="p-1 text-indigo-600 hover:bg-indigo-50 rounded" title="Unidades de Medida (S08)">
-                                <i data-lucide="layers" class="w-3.5 h-3.5"></i>
                             </button>
                         </div>
                     </td>
@@ -2058,7 +1780,6 @@
         const modalSelectDev = document.getElementById('modalDevProductoSelect');
         const selectIngreso = document.getElementById('ingresoProductoSelect');
         const selectAjuste = document.getElementById('ajusteProductoSelect');
-        const selectNuevoLote = document.getElementById('nuevoLoteProductoSelect');
 
         const options = '<option value="">Seleccione un producto...</option>' + 
             productosCache.filter(p => p.estado === 'activo').map(p => `<option value="${p.id_producto}">${p.codigo} - ${p.nombre} (Stock: ${formatoCantidadProductoCorta(p.stock ?? p.stock_disponible ?? 0, p)})</option>`).join('');
@@ -2068,153 +1789,12 @@
         if (modalSelectDev) modalSelectDev.innerHTML = options;
         if (selectIngreso) selectIngreso.innerHTML = options;
         if (selectAjuste) selectAjuste.innerHTML = options;
-        if (selectNuevoLote) selectNuevoLote.innerHTML = options;
+        actualizarStockConteo();
     }
 
-    async function cargarLotes() {
-        try {
-            const res = await fetch(`${API_BASE}/stock/lotes`);
-            const json = await res.json();
-            lotesCache = json.data || [];
-            renderTablaLotes();
-        } catch (e) { console.error('Error lotes', e); }
-    }
-
-    function renderTablaLotes() {
-        const search = document.getElementById('filtroLotesSearch')?.value.toLowerCase().trim() || '';
-        const estadoFiltro = document.getElementById('filtroLotesEstado')?.value || 'todos';
-        const orden = document.getElementById('filtroLotesOrden')?.value || 'venc_asc';
-
-        const hoy = new Date();
-        hoy.setHours(0, 0, 0, 0);
-
-        let lotes = Array.isArray(lotesCache) ? [...lotesCache] : [];
-
-        // Evaluar días restantes y clasificación
-        lotes = lotes.map(l => {
-            const cant = Number(l.cantidad_actual ?? 0);
-            let diasRestantes = null;
-            let estadoCalculado = 'vigente';
-
-            if (l.fecha_vencimiento) {
-                const fVenc = new Date(l.fecha_vencimiento.substring(0, 10));
-                fVenc.setHours(0, 0, 0, 0);
-                const diffTime = fVenc.getTime() - hoy.getTime();
-                diasRestantes = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-                if (cant === 0) {
-                    estadoCalculado = 'consumido';
-                } else if (diasRestantes < 0) {
-                    estadoCalculado = 'vencido';
-                } else if (diasRestantes <= 30) {
-                    estadoCalculado = 'proximo';
-                } else {
-                    estadoCalculado = 'vigente';
-                }
-            } else if (cant === 0) {
-                estadoCalculado = 'consumido';
-            }
-
-            return { ...l, diasRestantes, estadoCalculado };
-        });
-
-        // Banner de Alerta S10 (próximos a vencer ≤ 30 días con stock > 0)
-        const lotesCriticos = lotes.filter(l => (l.estadoCalculado === 'proximo' || l.estadoCalculado === 'vencido') && Number(l.cantidad_actual) > 0);
-        const banner = document.getElementById('bannerAlertaVencimientos');
-        const txtBanner = document.getElementById('textoAlertaVencimientos');
-        if (banner && txtBanner) {
-            if (lotesCriticos.length > 0) {
-                banner.classList.remove('hidden');
-                txtBanner.textContent = `Se detectaron ${lotesCriticos.length} lote(s) con vencimiento crítico (≤ 30 días o vencidos) con existencia física en depósito.`;
-            } else {
-                banner.classList.add('hidden');
-            }
-        }
-
-        // Filtro texto
-        if (search) {
-            lotes = lotes.filter(l => {
-                const nro = (l.nro_lote || '').toLowerCase();
-                const prod = (l.producto?.nombre || l.producto_nombre || '').toLowerCase();
-                return nro.includes(search) || prod.includes(search);
-            });
-        }
-
-        // Filtro estado
-        if (estadoFiltro !== 'todos') {
-            lotes = lotes.filter(l => l.estadoCalculado === estadoFiltro);
-        }
-
-        // Ordenamiento (S11)
-        if (orden === 'venc_asc') {
-            lotes.sort((a, b) => (a.diasRestantes ?? 99999) - (b.diasRestantes ?? 99999));
-        } else if (orden === 'venc_desc') {
-            lotes.sort((a, b) => (b.diasRestantes ?? -99999) - (a.diasRestantes ?? -99999));
-        } else if (orden === 'stock_desc') {
-            lotes.sort((a, b) => Number(b.cantidad_actual) - Number(a.cantidad_actual));
-        }
-
-        const tagTotal = document.getElementById('totalLotesTag');
-        if (tagTotal) tagTotal.textContent = `${lotes.length} lotes`;
-
-        const tbody = document.getElementById('tablaLotesBody');
-        if (!tbody) return;
-
-        if (lotes.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="8" class="text-center py-6 text-slate-400 font-bold">No se encontraron lotes que coincidan con la búsqueda.</td></tr>`;
-            return;
-        }
-
-        tbody.innerHTML = lotes.map(l => {
-            const vence = l.fecha_vencimiento ? l.fecha_vencimiento.substring(0, 10) : '-';
-            const estado = l.estadoCalculado;
-            let badgeClass = 'clay-badge-success';
-            let badgeTexto = 'Vigente';
-            let plazoTexto = '';
-
-            if (estado === 'vencido') {
-                badgeClass = 'clay-badge-danger font-black';
-                badgeTexto = 'Vencido';
-                plazoTexto = `<span class="text-rose-600 font-black text-xs">Venció hace ${Math.abs(l.diasRestantes)} d.</span>`;
-            } else if (estado === 'proximo') {
-                badgeClass = 'clay-badge-warning font-black';
-                badgeTexto = 'Próximo a Vencer';
-                plazoTexto = `<span class="text-amber-600 font-black text-xs">${l.diasRestantes} días rest.</span>`;
-            } else if (estado === 'consumido') {
-                badgeClass = 'clay-badge-info';
-                badgeTexto = 'Consumido';
-                plazoTexto = '<span class="text-slate-400 text-xs font-bold">Sin stock</span>';
-            } else {
-                badgeClass = 'clay-badge-success font-bold';
-                badgeTexto = 'Vigente';
-                plazoTexto = `<span class="text-emerald-600 font-bold text-xs">${l.diasRestantes !== null ? `${l.diasRestantes} días` : '-'}</span>`;
-            }
-
-            return `
-                <tr>
-                    <td class="font-black text-slate-800">${l.nro_lote}</td>
-                    <td class="font-bold text-slate-700">${l.producto?.nombre || l.producto_nombre || `Producto #${l.id_producto}`}</td>
-                    <td class="text-center font-bold text-slate-500">${l.cantidad_inicial || l.cantidad_actual} u.</td>
-                    <td class="text-center font-black text-blue-700">${l.cantidad_actual} u.</td>
-                    <td class="text-center font-bold text-slate-700">${vence}</td>
-                    <td class="text-center">${plazoTexto}</td>
-                    <td class="text-center"><span class="clay-badge ${badgeClass} uppercase">${badgeTexto}</span></td>
-                    <td class="text-center">
-                        <div class="flex items-center justify-center gap-1">
-                            <button onclick="abrirModalAjuste(${l.id_producto}, ${l.id_lote})" class="p-1.5 text-amber-600 hover:bg-amber-50 rounded" title="Ajustar o corregir este lote (S06)">
-                                <i data-lucide="sliders" class="w-4 h-4"></i>
-                            </button>
-                            <button onclick="abrirModalIngresoRapido(${l.id_producto})" class="p-1.5 text-blue-600 hover:bg-blue-50 rounded" title="Ingresar mercadería con este producto">
-                                <i data-lucide="plus-circle" class="w-4 h-4"></i>
-                            </button>
-                        </div>
-                    </td>
-                </tr>
-            `;
-        }).join('');
-
-        if (window.lucide) window.lucide.createIcons();
-    }
+    async function cargarLotes() {}
+    function renderTablaLotes() {}
+    function mostrarLotesEnAlerta() {}
 
     let subtabMovimientosActual = 'stock';
 
@@ -2381,7 +1961,7 @@
                 const pct = (h.porcentaje_aumento !== null && h.porcentaje_aumento !== undefined) ? Number(h.porcentaje_aumento) : null;
                 const pctBadge = pct !== null ? (pct >= 0 ? `<span class="clay-badge clay-badge-success font-black">+${pct.toFixed(2)}%</span>` : `<span class="clay-badge clay-badge-danger font-black">${pct.toFixed(2)}%</span>`) : '<span class="text-slate-400">-</span>';
                 const origenBadge = h.origen === 'aumento_masivo' 
-                    ? '<span class="clay-badge clay-badge-info font-black">Aumento Masivo (P07)</span>' 
+                    ? '<span class="clay-badge clay-badge-info font-black">Aumento Masivo</span>' 
                     : '<span class="clay-badge clay-badge-warning font-black">Manual</span>';
                 const usuario = h.usuario_nombre || 'Sistema';
 
@@ -2403,6 +1983,21 @@
         }
     }
 
+    function actualizarPreviewBultoProducto() {
+        const formato = document.getElementById('prodFormatoBulto')?.value || 'Unidad';
+        const unidades = Math.max(1, parseInt(document.getElementById('prodUnidadesPorBulto')?.value || '1', 10));
+        const preview = document.getElementById('prodBultoPreview');
+        if (!preview) return;
+
+        if (formato !== 'Unidad' && unidades > 1) {
+            preview.textContent = `💡 Presentación comercial: ${formato} x ${unidades} unidades individuales.`;
+            preview.classList.remove('hidden');
+        } else {
+            preview.textContent = '';
+            preview.classList.add('hidden');
+        }
+    }
+
     // --- ACCIONES Y MODALES ---
     function abrirModalProducto() {
         document.getElementById('modalProductoTitulo').textContent = 'Nuevo Producto';
@@ -2415,6 +2010,9 @@
         document.getElementById('prodPrecioUnitario').value = '';
         document.getElementById('prodStockMin').value = '10';
         document.getElementById('prodUbicacion').value = '';
+        document.getElementById('prodFormatoBulto').value = 'Unidad';
+        document.getElementById('prodUnidadesPorBulto').value = '1';
+        actualizarPreviewBultoProducto();
         const btnHist = document.getElementById('btnVerHistorialDesdeModalProd');
         if (btnHist) btnHist.classList.add('hidden');
         document.getElementById('modalProducto').classList.remove('hidden');
@@ -2434,6 +2032,9 @@
         document.getElementById('prodPrecioUnitario').value = prod.precio_unitario ?? prod.precio_minorista ?? '';
         document.getElementById('prodStockMin').value = prod.stock_minimo || 10;
         document.getElementById('prodUbicacion').value = prod.id_ubicacion || '';
+        document.getElementById('prodFormatoBulto').value = prod.formato_bulto || 'Unidad';
+        document.getElementById('prodUnidadesPorBulto').value = prod.unidades_por_bulto || 1;
+        actualizarPreviewBultoProducto();
         const btnHist = document.getElementById('btnVerHistorialDesdeModalProd');
         if (btnHist) btnHist.classList.remove('hidden');
         document.getElementById('modalProducto').classList.remove('hidden');
@@ -2454,6 +2055,9 @@
         e.preventDefault();
         const id = document.getElementById('prodId').value;
         const precioUnitario = Number(document.getElementById('prodPrecioUnitario').value);
+        const formatoBulto = document.getElementById('prodFormatoBulto')?.value || 'Unidad';
+        const unidadesPorBulto = Math.max(1, parseInt(document.getElementById('prodUnidadesPorBulto')?.value || '1', 10));
+
         const payload = {
             codigo: document.getElementById('prodCodigo').value.trim(),
             nombre: document.getElementById('prodNombre').value.trim(),
@@ -2464,7 +2068,9 @@
             precio_minorista: precioUnitario,
             precio_mayorista: precioUnitario,
             stock_minimo: Number(document.getElementById('prodStockMin').value || 10),
-            id_ubicacion: document.getElementById('prodUbicacion').value || null
+            id_ubicacion: document.getElementById('prodUbicacion').value || null,
+            formato_bulto: formatoBulto,
+            unidades_por_bulto: unidadesPorBulto
         };
 
         const csrf = document.querySelector('meta[name="csrf-token"]').content;
@@ -2516,9 +2122,6 @@
     async function abrirModalIngreso(idProducto = null) {
         poblarSelectsProductos();
         document.getElementById('ingresoCantidad').value = '10';
-        if (!lotesCache || lotesCache.length === 0) {
-            await cargarLotes();
-        }
         if (idProducto) {
             document.getElementById('ingresoProductoSelect').value = String(idProducto);
         } else {
@@ -2527,8 +2130,6 @@
                 selectProd.selectedIndex = 1;
             }
         }
-        await cambiarModoLoteIngreso('nuevo');
-        await actualizarLotesExistentesIngreso();
         poblarUnidadesIngreso();
         actualizarEquivalenciaIngreso();
         document.getElementById('modalIngreso').classList.remove('hidden');
@@ -2536,7 +2137,6 @@
     }
 
     function onProductoIngresoChange() {
-        actualizarLotesExistentesIngreso();
         poblarUnidadesIngreso();
         actualizarEquivalenciaIngreso();
     }
@@ -2544,45 +2144,42 @@
     function poblarUnidadesIngreso() {
         const prodId = document.getElementById('ingresoProductoSelect')?.value;
         const selectUnidad = document.getElementById('ingresoUnidadSelect');
-        if (!selectUnidad) return;
-
-        const info = obtenerInfoUnidadProducto(prodId);
-        let options = '<option value="">Unidades Individuales (u.)</option>';
-
-        if (info.tieneActiva) {
-            options = `<option value="${info.id_unidad}">${info.nombre} (Activa - Eq: ${info.equivalencia} u.)</option>` + options;
+        if (selectUnidad) {
+            selectUnidad.value = '';
         }
 
-        selectUnidad.innerHTML = options;
-        if (info.tieneActiva) {
-            selectUnidad.value = String(info.id_unidad);
-        } else {
-            selectUnidad.value = '';
+        const prod = productosCache.find(p => String(p.id_producto) === String(prodId));
+        const ayuda = document.getElementById('ingresoPresentacionAyuda');
+        if (ayuda) {
+            if (prod && Number(prod.unidades_por_bulto || prod.equivalencia_unidad || 1) > 1) {
+                const presTexto = obtenerTextoPresentacion(prod);
+                ayuda.innerHTML = `<i data-lucide="package" class="w-3.5 h-3.5"></i> Presentación: ${presTexto} (el ingreso se carga en unidades físicas)`;
+                ayuda.classList.remove('hidden');
+            } else {
+                ayuda.classList.add('hidden');
+            }
         }
     }
 
     function actualizarEquivalenciaIngreso() {
         const prodId = document.getElementById('ingresoProductoSelect')?.value;
         const cant = Number(document.getElementById('ingresoCantidad')?.value || 0);
-        const selectUnidad = document.getElementById('ingresoUnidadSelect');
+        const prod = productosCache.find(p => String(p.id_producto) === String(prodId));
         const box = document.getElementById('ingresoEquivalenciaBox');
         const texto = document.getElementById('ingresoEquivalenciaTexto');
-        const badge = document.getElementById('ingresoEquivalenciaBadge');
         const lblCant = document.getElementById('lblIngresoCantidad');
 
-        const info = obtenerInfoUnidadProducto(prodId);
-        const idUnidadSeleccionada = selectUnidad?.value;
+        if (lblCant) lblCant.textContent = 'Cantidad a Ingresar (u.) *';
 
-        if (idUnidadSeleccionada && info.tieneActiva && String(idUnidadSeleccionada) === String(info.id_unidad)) {
-            const cantBase = Math.round(cant * info.equivalencia);
-            if (lblCant) lblCant.textContent = `Cantidad (${info.nombre})`;
+        const eq = Number(prod?.unidades_por_bulto || prod?.equivalencia_unidad || 1);
+        if (prod && eq > 1 && cant > 0) {
+            const presTexto = obtenerTextoPresentacion(prod);
+            const bultos = (cant / eq).toLocaleString('es-AR', { maximumFractionDigits: 1 });
             if (box && texto) {
-                texto.innerHTML = `Equivalencia: <strong>${cant} ${info.nombre}</strong> equivalen a <strong>${cantBase} unidades individuales (u.)</strong> que se sumarán al lote y al stock.`;
-                if (badge) badge.textContent = '✓ Unidad Activa';
+                texto.innerHTML = `Presentación: <strong>${presTexto}</strong>. ${cant} unidades equivalen a aprox. <strong>${bultos} bultos</strong>.`;
                 box.classList.remove('hidden');
             }
         } else {
-            if (lblCant) lblCant.textContent = 'Cantidad Ingresada (u.)';
             if (box) box.classList.add('hidden');
         }
         if (window.lucide) window.lucide.createIcons();
@@ -2596,163 +2193,11 @@
         document.getElementById('modalIngreso').classList.add('hidden'); 
     }
 
-    async function cambiarModoLoteIngreso(modo) {
-        modoLoteActual = modo;
-        const btnNuevo = document.getElementById('btnModoLoteNuevo');
-        const btnExistente = document.getElementById('btnModoLoteExistente');
-        const contExistente = document.getElementById('contenedorLoteExistente');
-        const inputNro = document.getElementById('ingresoNroLote');
-        const inputVenc = document.getElementById('ingresoVencimiento');
-
-        if (modo === 'nuevo') {
-            btnNuevo.className = 'px-2.5 py-1 rounded-lg bg-blue-600 text-white font-extrabold transition-all shadow-xs';
-            btnExistente.className = 'px-2.5 py-1 rounded-lg text-slate-600 hover:text-blue-600 font-bold transition-all';
-            contExistente.classList.add('hidden');
-            inputNro.readOnly = false;
-            inputNro.value = `LOTE-${Date.now().toString().slice(-4)}`;
-            inputVenc.readOnly = false;
-            inputVenc.value = new Date(Date.now() + 180*24*60*60*1000).toISOString().split('T')[0];
-        } else {
-            btnExistente.className = 'px-2.5 py-1 rounded-lg bg-blue-600 text-white font-extrabold transition-all shadow-xs';
-            btnNuevo.className = 'px-2.5 py-1 rounded-lg text-slate-600 hover:text-blue-600 font-bold transition-all';
-            contExistente.classList.remove('hidden');
-            inputNro.readOnly = true;
-            await actualizarLotesExistentesIngreso();
-        }
-    }
-
-    async function actualizarLotesExistentesIngreso() {
-        const prodId = document.getElementById('ingresoProductoSelect').value;
-        const selectLote = document.getElementById('ingresoLoteExistenteSelect');
-        const msgSinLotes = document.getElementById('msgSinLotesExistentes');
-        if (!selectLote) return;
-
-        // Aseguramos tener los lotes globales del sistema en caché
-        if (!lotesCache || lotesCache.length === 0) {
-            try {
-                const resLotes = await fetch(`${API_BASE}/stock/lotes`);
-                const jsonLotes = await resLotes.json();
-                if (jsonLotes.status === 'success' && Array.isArray(jsonLotes.data)) {
-                    lotesCache = jsonLotes.data;
-                }
-            } catch (e) {
-                console.error('Error cargando lotes del sistema:', e);
-            }
-        }
-
-        let lotesDelProducto = [];
-        if (prodId) {
-            try {
-                const res = await fetch(`${API_BASE}/stock/productos/${prodId}/lotes`);
-                const json = await res.json();
-                if (json.status === 'success' && json.data) {
-                    if (Array.isArray(json.data)) {
-                        lotesDelProducto = json.data;
-                    } else if (Array.isArray(json.data.lotes)) {
-                        lotesDelProducto = json.data.lotes;
-                    }
-                }
-            } catch (e) {
-                console.error('Error cargando lotes del producto:', e);
-            }
-
-            // Respaldo defensivo con lotesCache
-            if (lotesDelProducto.length === 0 && Array.isArray(lotesCache)) {
-                lotesDelProducto = lotesCache.filter(l => String(l.id_producto) === String(prodId));
-            }
-        }
-
-        const otrosLotes = (Array.isArray(lotesCache) ? lotesCache : []).filter(l => !prodId || String(l.id_producto) !== String(prodId));
-
-        if (lotesDelProducto.length === 0 && otrosLotes.length === 0) {
-            selectLote.innerHTML = '<option value="">No hay lotes registrados aún en el sistema</option>';
-            if (msgSinLotes) {
-                msgSinLotes.textContent = 'No hay lotes creados en el sistema. Podés crear uno con la opción "Nuevo Lote".';
-                msgSinLotes.classList.remove('hidden');
-            }
-            if (modoLoteActual === 'existente') {
-                document.getElementById('ingresoNroLote').value = '';
-                document.getElementById('ingresoVencimiento').value = '';
-            }
-            return;
-        }
-
-        if (msgSinLotes) msgSinLotes.classList.add('hidden');
-
-        let html = '<option value="">Seleccione un lote existente...</option>';
-
-        if (lotesDelProducto.length > 0) {
-            const labelGrupo = prodId ? 'Lotes del producto seleccionado' : 'Lotes disponibles';
-            html += `<optgroup label="${labelGrupo}">`;
-            html += lotesDelProducto.map(l => {
-                const venceStr = l.fecha_vencimiento ? l.fecha_vencimiento.substring(0, 10) : '';
-                return `<option value="${l.id_lote}" data-nro="${l.nro_lote}" data-venc="${venceStr}" data-id-producto="${l.id_producto}">
-                    ${l.nro_lote} (Stock en lote: ${l.cantidad_actual} u. ${venceStr ? '- Vence: ' + venceStr : ''})
-                </option>`;
-            }).join('');
-            html += '</optgroup>';
-        } else if (prodId) {
-            html += '<option value="" disabled>⚠️ Este producto no tiene lotes previos aún</option>';
-        }
-
-        if (otrosLotes.length > 0) {
-            html += '<optgroup label="Lotes existentes de otros artículos (asigna el producto)">';
-            html += otrosLotes.map(l => {
-                const venceStr = l.fecha_vencimiento ? l.fecha_vencimiento.substring(0, 10) : '';
-                const prodNombre = l.producto_nombre || (l.producto ? (l.producto.codigo + ' - ' + l.producto.nombre) : `Producto #${l.id_producto}`);
-                return `<option value="${l.id_lote}" data-nro="${l.nro_lote}" data-venc="${venceStr}" data-id-producto="${l.id_producto}">
-                    ${l.nro_lote} [${prodNombre}] (Stock: ${l.cantidad_actual} u. ${venceStr ? '- Vence: ' + venceStr : ''})
-                </option>`;
-            }).join('');
-            html += '</optgroup>';
-        }
-
-        selectLote.innerHTML = html;
-
-        if (modoLoteActual === 'existente') {
-            const primerValido = Array.from(selectLote.options).find(opt => opt.value && !opt.disabled);
-            if (primerValido) {
-                selectLote.value = primerValido.value;
-                seleccionarLoteExistente();
-            }
-        }
-    }
-
-    function seleccionarLoteExistente() {
-        const selectLote = document.getElementById('ingresoLoteExistenteSelect');
-        if (!selectLote) return;
-        const opt = selectLote.selectedOptions[0];
-        if (!opt || !opt.value) {
-            if (modoLoteActual === 'existente') {
-                document.getElementById('ingresoNroLote').value = '';
-                document.getElementById('ingresoVencimiento').value = '';
-            }
-            return;
-        }
-
-        const nro = opt.getAttribute('data-nro');
-        const venc = opt.getAttribute('data-venc');
-        const idProd = opt.getAttribute('data-id-producto');
-
-        if (idProd) {
-            const selectProd = document.getElementById('ingresoProductoSelect');
-            if (selectProd && selectProd.value !== String(idProd)) {
-                selectProd.value = String(idProd);
-            }
-        }
-        if (nro) document.getElementById('ingresoNroLote').value = nro;
-        if (venc) document.getElementById('ingresoVencimiento').value = venc;
-    }
-
     async function guardarIngresoMercaderia(e) {
         e.preventDefault();
         const prodId = document.getElementById('ingresoProductoSelect').value;
         const provId = document.getElementById('ingresoProveedorSelect').value;
         const cant = Number(document.getElementById('ingresoCantidad').value);
-        const nroLote = document.getElementById('ingresoNroLote').value.trim();
-        const fechaVenc = document.getElementById('ingresoVencimiento').value;
-        const selectLote = document.getElementById('ingresoLoteExistenteSelect');
-        const idLote = (modoLoteActual === 'existente' && selectLote && selectLote.value) ? Number(selectLote.value) : null;
 
         if (!prodId) {
             alert('Debe seleccionar un producto.');
@@ -2771,18 +2216,6 @@
             alert('La cantidad ingresada debe ser mayor a cero.');
             return;
         }
-        if (modoLoteActual === 'existente' && !idLote && !nroLote) {
-            alert('Debe seleccionar un lote existente o cambiar a la opción "Nuevo Lote".');
-            return;
-        }
-        if (!nroLote) {
-            alert('Debe ingresar un número de lote.');
-            return;
-        }
-        if (!fechaVenc) {
-            alert('Debe seleccionar la fecha de vencimiento del lote.');
-            return;
-        }
 
         const rawUnidad = document.getElementById('ingresoUnidadSelect')?.value;
         const idUnidad = (rawUnidad && Number(rawUnidad) > 0) ? Number(rawUnidad) : null;
@@ -2795,11 +2228,8 @@
             id_producto: Number(prodId),
             cantidad: cant,
             id_unidad: idUnidad,
-            nro_lote: nroLote,
-            fecha_vencimiento: fechaVenc,
-            motivo: modoLoteActual === 'existente' ? `Ingreso a lote existente ${nroLote}` : `Ingreso nuevo lote ${nroLote}`
+            motivo: 'Ingreso directo de mercadería'
         };
-        if (idLote) item.id_lote = idLote;
 
         const payload = {
             id_proveedor: Number(provId),
@@ -2808,9 +2238,7 @@
             id_producto: Number(prodId),
             cantidad: cant,
             id_unidad: idUnidad,
-            nro_lote: nroLote,
-            fecha_vencimiento: fechaVenc,
-            id_lote: idLote
+            motivo: 'Ingreso directo de mercadería'
         };
 
         try {
@@ -2827,7 +2255,7 @@
                     ? ` (equivalente a ${cantBase} unidades individuales)` 
                     : '';
                 const unidadNom = esUnidadActiva ? ` ${info.nombre}` : ' u.';
-                alert(`¡Ingreso registrado exitosamente!\nSe ingresaron ${cant}${unidadNom}${aclaracionEquiv} asociadas al lote ${nroLote} y se registró el movimiento en el historial (Kardex).`);
+                alert(`¡Ingreso registrado exitosamente!\nSe ingresaron ${cant}${unidadNom}${aclaracionEquiv} y se registró el movimiento en el historial (Kardex).`);
             } else {
                 alert(data.message || 'Error al registrar ingreso');
             }
@@ -2837,201 +2265,21 @@
         }
     }
 
-    // Modal Nuevo Lote Directo
-    function abrirModalNuevoLote() {
-        poblarSelectsProductos();
-        document.getElementById('nuevoLoteNro').value = `LOTE-${Date.now().toString().slice(-4)}`;
-        document.getElementById('nuevoLoteCantidad').value = '10';
-        document.getElementById('nuevoLoteVencimiento').value = new Date(Date.now() + 180*24*60*60*1000).toISOString().split('T')[0];
-        document.getElementById('nuevoLoteAsociarIngreso').checked = true;
-        poblarUnidadesNuevoLote();
-        actualizarEquivalenciaNuevoLote();
-        document.getElementById('modalNuevoLote').classList.remove('hidden');
-        if (window.lucide) window.lucide.createIcons();
-    }
+    function abrirModalNuevoLote() {}
+    function cerrarModalNuevoLote() {}
+    async function guardarNuevoLote(e) { if (e) e.preventDefault(); }
 
-    function onProductoNuevoLoteChange() {
-        poblarUnidadesNuevoLote();
-        actualizarEquivalenciaNuevoLote();
-    }
-
-    function poblarUnidadesNuevoLote() {
-        const prodId = document.getElementById('nuevoLoteProductoSelect')?.value;
-        const selectUnidad = document.getElementById('nuevoLoteUnidadSelect');
-        if (!selectUnidad) return;
-
-        const info = obtenerInfoUnidadProducto(prodId);
-        let options = '<option value="">Unidades Individuales (u.)</option>';
-
-        if (info.tieneActiva) {
-            options = `<option value="${info.id_unidad}">${info.nombre} (Activa - Eq: ${info.equivalencia} u.)</option>` + options;
-        }
-
-        selectUnidad.innerHTML = options;
-        if (info.tieneActiva) {
-            selectUnidad.value = String(info.id_unidad);
-        } else {
-            selectUnidad.value = '';
-        }
-    }
-
-    function actualizarEquivalenciaNuevoLote() {
-        const prodId = document.getElementById('nuevoLoteProductoSelect')?.value;
-        const cant = Number(document.getElementById('nuevoLoteCantidad')?.value || 0);
-        const selectUnidad = document.getElementById('nuevoLoteUnidadSelect');
-        const box = document.getElementById('nuevoLoteEquivalenciaBox');
-        const texto = document.getElementById('nuevoLoteEquivalenciaTexto');
-        const lblCant = document.getElementById('lblNuevoLoteCantidad');
-
-        const info = obtenerInfoUnidadProducto(prodId);
-        const idUnidadSeleccionada = selectUnidad?.value;
-
-        if (idUnidadSeleccionada && info.tieneActiva && String(idUnidadSeleccionada) === String(info.id_unidad)) {
-            const cantBase = Math.round(cant * info.equivalencia);
-            if (lblCant) lblCant.textContent = `Cantidad (${info.nombre})`;
-            if (box && texto) {
-                texto.innerHTML = `Equivalencia: <strong>${cant} ${info.nombre}</strong> equivalen a <strong>${cantBase} unidades individuales (u.)</strong> que conformarán el lote.`;
-                box.classList.remove('hidden');
-            }
-        } else {
-            if (lblCant) lblCant.textContent = 'Cantidad del Lote';
-            if (box) box.classList.add('hidden');
-        }
-        if (window.lucide) window.lucide.createIcons();
-    }
-
-    function cerrarModalNuevoLote() {
-        document.getElementById('modalNuevoLote').classList.add('hidden');
-    }
-
-    async function guardarNuevoLote(e) {
-        e.preventDefault();
-        const prodId = document.getElementById('nuevoLoteProductoSelect').value;
-        if (!prodId) {
-            alert('Debe seleccionar un producto.');
-            return;
-        }
-        const cant = Number(document.getElementById('nuevoLoteCantidad').value);
-        const nroLote = document.getElementById('nuevoLoteNro').value.trim();
-        const fechaVenc = document.getElementById('nuevoLoteVencimiento').value;
-
-        if (!cant || cant <= 0) {
-            alert('La cantidad debe ser mayor a cero.');
-            return;
-        }
-        if (!nroLote) {
-            alert('El número de lote es obligatorio.');
-            return;
-        }
-        if (!fechaVenc) {
-            alert('La fecha de vencimiento es obligatoria.');
-            return;
-        }
-
-        const rawUnidad = document.getElementById('nuevoLoteUnidadSelect')?.value;
-        const idUnidad = (rawUnidad && Number(rawUnidad) > 0) ? Number(rawUnidad) : null;
-        const info = obtenerInfoUnidadProducto(prodId);
-        const esUnidadActiva = Boolean(idUnidad && info.tieneActiva && String(idUnidad) === String(info.id_unidad));
-        const cantBase = esUnidadActiva ? Math.round(cant * info.equivalencia) : cant;
-
-        const csrf = document.querySelector('meta[name="csrf-token"]').content;
-        const payload = {
-            id_producto: Number(prodId),
-            nro_lote: nroLote,
-            cantidad: cant,
-            id_unidad: idUnidad,
-            fecha_vencimiento: fechaVenc,
-            asociar_ingreso: document.getElementById('nuevoLoteAsociarIngreso').checked,
-            motivo: `Alta de lote ${nroLote}`
-        };
-
-        try {
-            const res = await fetch(`${API_BASE}/stock/lotes`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': csrf },
-                body: JSON.stringify(payload)
-            });
-            const data = await res.json();
-            if (data.status === 'success') {
-                cerrarModalNuevoLote();
-                await recargarTodo();
-                const aclaracionEquiv = esUnidadActiva ? ` (${cant} ${info.nombre} = ${cantBase} u. individuales)` : '';
-                alert(`¡Lote ${nroLote} creado exitosamente!${aclaracionEquiv}`);
-            } else {
-                alert(data.message || 'Error al registrar lote');
-            }
-        } catch (err) {
-            console.error('Error nuevo lote:', err);
-            alert('Error de conexión al registrar lote');
-        }
-    }
-
-    // Modal Ajuste (S06)
-    let modoLoteAjuste = 'existente';
-
-    function cambiarModoLoteAjuste(modo) {
-        modoLoteAjuste = modo;
-        const btnExistente = document.getElementById('btnAjusteModoExistente');
-        const btnNuevo = document.getElementById('btnAjusteModoNuevo');
-        const contExistente = document.getElementById('contenedorAjusteLoteExistente');
-        const contNuevo = document.getElementById('contenedorAjusteLoteNuevo');
-
-        if (modo === 'nuevo') {
-            btnNuevo?.classList.add('bg-blue-600', 'text-white', 'font-extrabold', 'shadow-xs');
-            btnNuevo?.classList.remove('text-slate-600');
-            btnExistente?.classList.remove('bg-blue-600', 'text-white', 'font-extrabold', 'shadow-xs');
-            btnExistente?.classList.add('text-slate-600');
-            contExistente?.classList.add('hidden');
-            contNuevo?.classList.remove('hidden');
-        } else {
-            btnExistente?.classList.add('bg-blue-600', 'text-white', 'font-extrabold', 'shadow-xs');
-            btnExistente?.classList.remove('text-slate-600');
-            btnNuevo?.classList.remove('bg-blue-600', 'text-white', 'font-extrabold', 'shadow-xs');
-            btnNuevo?.classList.add('text-slate-600');
-            contExistente?.classList.remove('hidden');
-            contNuevo?.classList.add('hidden');
-        }
-        onLoteAjusteChange();
-    }
-
+    // Modal Ajuste
     function onTipoAjusteChange() {
         const tipo = document.getElementById('ajusteTipo')?.value || 'aumentar';
-        const tabs = document.getElementById('ajusteModoTabs');
         const labelCant = document.getElementById('ajusteCantidadLabel');
-        const msgSinLotes = document.getElementById('msgSinLotesAjuste');
-
         if (labelCant) {
-            labelCant.textContent = tipo === 'fijar' ? 'Nueva Cantidad Exacta del Lote' : 'Cantidad';
+            labelCant.textContent = tipo === 'fijar' ? 'Nueva Cantidad Exacta' : 'Cantidad';
         }
-
-        if (msgSinLotes && !msgSinLotes.classList.contains('hidden')) {
-            const prodId = document.getElementById('ajusteProductoSelect')?.value;
-            const producto = productosCache.find(p => String(p.id_producto) === String(prodId));
-            const stockActual = Number(producto?.stock ?? producto?.stock_disponible ?? 0);
-            msgSinLotes.textContent = tipo === 'disminuir'
-                ? `No hay lotes registrados. La disminución se aplicará al stock general (${stockActual} u.), sin asociarse a un lote.`
-                : tipo === 'aumentar'
-                    ? 'Este producto no posee lotes. Para aumentar el stock, registre un Nuevo Lote.'
-                    : 'Este producto no posee lotes registrados para fijar una cantidad exacta.';
-        }
-
-        if (tipo === 'disminuir' || tipo === 'fijar') {
-            if (tabs) tabs.classList.add('hidden');
-            cambiarModoLoteAjuste('existente');
-        } else {
-            if (tabs) tabs.classList.remove('hidden');
-        }
-        onLoteAjusteChange();
     }
 
-    async function abrirModalAjuste(prodId = null, loteId = null) {
+    async function abrirModalAjuste(prodId = null) {
         document.getElementById('modalAjuste').classList.remove('hidden');
-        cambiarModoLoteAjuste('existente');
-        const inputNroNuevo = document.getElementById('ajusteNroLoteNuevo');
-        const inputVencNuevo = document.getElementById('ajusteVencimientoNuevo');
-        if (inputNroNuevo) inputNroNuevo.value = '';
-        if (inputVencNuevo) inputVencNuevo.value = '';
-
         const sel = document.getElementById('ajusteProductoSelect');
         if (sel) {
             sel.innerHTML = '<option value="">Seleccione un producto...</option>' + 
@@ -3040,7 +2288,6 @@
                 sel.value = String(prodId);
             }
         }
-        await actualizarLotesAjuste(loteId);
         poblarUnidadesAjuste();
         actualizarEquivalenciaAjuste();
         onTipoAjusteChange();
@@ -3048,7 +2295,6 @@
     }
 
     function onProductoAjusteChange() {
-        actualizarLotesAjuste();
         poblarUnidadesAjuste();
         actualizarEquivalenciaAjuste();
     }
@@ -3093,7 +2339,7 @@
                 box.classList.remove('hidden');
             }
         } else {
-            if (lblCant) lblCant.textContent = tipo === 'fijar' ? 'Nueva Cantidad Exacta del Lote' : 'Cantidad';
+            if (lblCant) lblCant.textContent = tipo === 'fijar' ? 'Nueva Cantidad Exacta' : 'Cantidad';
             if (box) box.classList.add('hidden');
         }
         if (window.lucide) window.lucide.createIcons();
@@ -3101,168 +2347,6 @@
 
     function cerrarModalAjuste() { 
         document.getElementById('modalAjuste').classList.add('hidden'); 
-    }
-
-    async function actualizarLotesAjuste(preselectedLoteId = null) {
-        const prodId = document.getElementById('ajusteProductoSelect')?.value;
-        const selectLote = document.getElementById('ajusteLoteSelect');
-        const infoDiv = document.getElementById('ajusteLoteInfo');
-        const resumenDescuadre = document.getElementById('ajusteResumenDescuadre');
-        const msgSinLotes = document.getElementById('msgSinLotesAjuste');
-
-        if (!selectLote) return;
-        if (infoDiv) infoDiv.classList.add('hidden');
-        if (resumenDescuadre) resumenDescuadre.classList.add('hidden');
-        if (msgSinLotes) msgSinLotes.classList.add('hidden');
-
-        if (!prodId) {
-            selectLote.innerHTML = '<option value="">-- Primero seleccione un producto --</option>';
-            return;
-        }
-
-        const prod = productosCache.find(p => String(p.id_producto) === String(prodId));
-        const stockActual = Number(prod?.stock ?? prod?.stock_disponible ?? 0);
-
-        selectLote.innerHTML = '<option value="">Cargando lotes del producto...</option>';
-
-        let lotes = [];
-        try {
-            const res = await fetch(`${API_BASE}/stock/productos/${prodId}/lotes`);
-            const json = await res.json();
-            if (json.status === 'success' && json.data) {
-                if (Array.isArray(json.data)) {
-                    lotes = json.data;
-                } else if (Array.isArray(json.data.lotes)) {
-                    lotes = json.data.lotes;
-                }
-            }
-        } catch (e) {
-            console.error('Error al cargar lotes para ajuste:', e);
-        }
-
-        // Respaldo defensivo con lotesCache
-        if (lotes.length === 0 && Array.isArray(lotesCache)) {
-            lotes = lotesCache.filter(l => String(l.id_producto) === String(prodId));
-        }
-
-        // Evaluar consistencia entre Stock del Producto y Suma de Lotes
-        const sumaLotes = lotes.reduce((acc, l) => acc + Number(l.cantidad_actual ?? 0), 0);
-        if (resumenDescuadre && lotes.length > 0) {
-            if (stockActual !== sumaLotes) {
-                const dif = Math.abs(stockActual - sumaLotes);
-                resumenDescuadre.innerHTML = `
-                    <div class="p-3 bg-amber-50 rounded-xl border border-amber-200/90 text-xs space-y-2">
-                        <div class="flex items-center justify-between gap-2 flex-wrap">
-                            <span class="font-black text-amber-900 flex items-center gap-1.5">
-                                <i data-lucide="alert-triangle" class="w-4 h-4 text-amber-600"></i>
-                                Descuadre Lotes vs Stock General
-                            </span>
-                            <button type="button" onclick="sincronizarStockConLotesDirecto(${prodId})" class="clay-btn-primary px-2.5 py-1 text-[11px] font-black shrink-0 shadow-xs" title="Iguala el stock general a la suma de lotes">
-                                Sincronizar Stock con Lotes
-                            </button>
-                        </div>
-                        <p class="text-amber-800 text-[11px] font-bold">
-                            Stock General: <span class="font-black text-slate-800">${stockActual} u.</span> | Suma de Lotes: <span class="font-black text-slate-800">${sumaLotes} u.</span> (Diferencia: <span class="text-rose-700 font-black">${dif} u.</span>). Si tenés diferencias históricas, podés sincronizarlas con el botón arriba.
-                        </p>
-                    </div>
-                `;
-                resumenDescuadre.classList.remove('hidden');
-            } else {
-                resumenDescuadre.innerHTML = `
-                    <div class="p-2 bg-emerald-50 rounded-lg border border-emerald-200/80 text-[11px] text-emerald-800 font-bold flex items-center justify-between">
-                        <span>✓ Stock general (${stockActual} u.) en perfecta coincidencia con la suma de lotes.</span>
-                    </div>
-                `;
-                resumenDescuadre.classList.remove('hidden');
-            }
-        }
-
-        if (lotes.length === 0) {
-            selectLote.innerHTML = '<option value="">-- No hay lotes registrados para este producto --</option>';
-            const tipo = document.getElementById('ajusteTipo')?.value;
-            if (msgSinLotes) {
-                msgSinLotes.textContent = tipo === 'disminuir'
-                    ? `No hay lotes registrados. La disminución se aplicará al stock general (${stockActual} u.), sin asociarse a un lote.`
-                    : tipo === 'aumentar'
-                        ? 'Este producto no posee lotes. Para aumentar el stock, registre un Nuevo Lote.'
-                        : 'Este producto no posee lotes registrados para fijar una cantidad exacta.';
-                msgSinLotes.classList.remove('hidden');
-            }
-            if (tipo === 'aumentar') {
-                cambiarModoLoteAjuste('nuevo');
-            }
-        } else {
-            let html = '<option value="">-- Seleccione un Lote Existente Obligatorio --</option>';
-            html += lotes.map(l => {
-                const venc = l.fecha_vencimiento ? ` | Vence: ${l.fecha_vencimiento}` : '';
-                return `<option value="${l.id_lote}" data-stock="${l.cantidad_actual}">Lote: ${l.nro_lote} (Stock en lote: ${l.cantidad_actual} u.${venc})</option>`;
-            }).join('');
-            selectLote.innerHTML = html;
-        }
-
-        if (preselectedLoteId) {
-            selectLote.value = String(preselectedLoteId);
-            cambiarModoLoteAjuste('existente');
-        }
-
-        onTipoAjusteChange();
-        if (window.lucide) window.lucide.createIcons();
-    }
-
-    function onLoteAjusteChange() {
-        const selectLote = document.getElementById('ajusteLoteSelect');
-        const infoDiv = document.getElementById('ajusteLoteInfo');
-        const tipoAjuste = document.getElementById('ajusteTipo')?.value;
-
-        if (!selectLote || !infoDiv) return;
-
-        if (modoLoteAjuste === 'nuevo') {
-            infoDiv.classList.add('hidden');
-            return;
-        }
-
-        const selectedOption = selectLote.options[selectLote.selectedIndex];
-        if (selectedOption && selectedOption.dataset.stock !== undefined && selectLote.value) {
-            const stockLote = Number(selectedOption.dataset.stock);
-            const badgeClass = stockLote > 0 ? 'clay-badge-info' : 'clay-badge-danger';
-            
-            let accionTxt = 'Se sumará al lote y obligatoriamente al producto';
-            if (tipoAjuste === 'disminuir') accionTxt = 'Se descontará del lote y obligatoriamente del producto';
-            else if (tipoAjuste === 'fijar') accionTxt = 'Se fijará en el lote y el producto reflejará el cambio neto exacto';
-
-            infoDiv.innerHTML = `<span class="clay-badge ${badgeClass} font-black text-xs">Stock actual en lote: ${stockLote} u. (${accionTxt})</span>`;
-            infoDiv.classList.remove('hidden');
-        } else {
-            infoDiv.classList.add('hidden');
-        }
-    }
-
-    async function sincronizarStockConLotesDirecto(prodId) {
-        if (!confirm('¿Desea sincronizar automáticamente el stock general del producto para que iguale exactamente a la suma de sus lotes físicos?')) {
-            return;
-        }
-        const csrf = document.querySelector('meta[name="csrf-token"]').content;
-        try {
-            const res = await fetch(`${API_BASE}/stock/ajustes`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': csrf },
-                body: JSON.stringify({
-                    id_producto: Number(prodId),
-                    alcance: 'sincronizar_producto',
-                    motivo: 'Sincronización de stock general con la suma de lotes físicos'
-                })
-            });
-            const data = await res.json();
-            if (data.status === 'success') {
-                alert(data.message || 'Stock sincronizado correctamente.');
-                await recargarTodo();
-                await actualizarLotesAjuste();
-            } else {
-                alert(data.message || 'Error al sincronizar stock');
-            }
-        } catch (e) {
-            alert('Error de conexión al sincronizar');
-        }
     }
 
     async function guardarAjusteManual(e) {
@@ -3290,9 +2374,6 @@
 
         const rawUnidad = document.getElementById('ajusteUnidadSelect')?.value;
         const idUnidad = (rawUnidad && Number(rawUnidad) > 0) ? Number(rawUnidad) : null;
-        const info = obtenerInfoUnidadProducto(prodId);
-        const esUnidadActiva = Boolean(idUnidad && info.tieneActiva && String(idUnidad) === String(info.id_unidad));
-        const cantBase = esUnidadActiva ? Math.round(cantidad * info.equivalencia) : cantidad;
 
         const payload = {
             id_producto: Number(prodId),
@@ -3301,33 +2382,6 @@
             id_unidad: idUnidad,
             motivo: motivo
         };
-
-        if (modoLoteAjuste === 'existente') {
-            const loteId = document.getElementById('ajusteLoteSelect')?.value;
-            if (!loteId) {
-                const selectLote = document.getElementById('ajusteLoteSelect');
-                const hayLotes = Array.from(selectLote?.options || []).some(opcion => opcion.value !== '');
-                if (tipo !== 'disminuir' || hayLotes) {
-                    alert(hayLotes
-                        ? 'Seleccione el lote del que desea descontar.'
-                        : 'Para este ajuste debe seleccionar o crear un lote.');
-                    return;
-                }
-            } else {
-                payload.id_lote = Number(loteId);
-            }
-        } else {
-            const nroLote = document.getElementById('ajusteNroLoteNuevo')?.value.trim();
-            if (!nroLote) {
-                alert('Debe ingresar el N° de lote para registrar el nuevo lote.');
-                return;
-            }
-            payload.nro_lote = nroLote;
-            const venc = document.getElementById('ajusteVencimientoNuevo')?.value;
-            if (venc) {
-                payload.fecha_vencimiento = venc;
-            }
-        }
 
         try {
             const res = await fetch(`${API_BASE}/stock/ajustes`, {
@@ -3349,11 +2403,12 @@
         }
     }
 
-    function actualizarInfoConteo() {
+    function actualizarStockConteo() {
         const id = document.getElementById('conteoProductoSelect')?.value;
-        const prod = productosCache.find(p => String(p.id_producto) === id);
+        const prod = productosCache.find(p => String(p.id_producto) === String(id));
         const inputSis = document.getElementById('conteoStockSistema');
-        if (inputSis) inputSis.value = prod ? `${prod.stock ?? prod.stock_disponible ?? 0} u.` : '-';
+        const stockActual = prod ? Number(prod.stock ?? prod.stock_disponible ?? 0) : 0;
+        if (inputSis) inputSis.value = prod ? `${stockActual} u.` : '-';
         actualizarPreviewConteo();
     }
 
@@ -3370,7 +2425,7 @@
             return;
         }
 
-        const prod = productosCache.find(p => String(p.id_producto) === id);
+        const prod = productosCache.find(p => String(p.id_producto) === String(id));
         if (!prod) {
             box.classList.add('hidden');
             return;
@@ -3390,12 +2445,12 @@
             difSpan.className = 'font-black text-sm text-blue-600';
             difSpan.textContent = `+${dif} u. (Sobrante)`;
             diagEl.className = 'text-xs font-extrabold text-blue-700 pt-0.5';
-            diagEl.textContent = `▲ Se detectó un sobrante de ${dif} unidad(es) física(s) respecto al stock teórico del sistema.`;
+            diagEl.textContent = `▲ Se detectó un sobrante de ${dif} unidad(es) física(s) respecto al stock teórico en sistema.`;
         } else {
             difSpan.className = 'font-black text-sm text-rose-600';
             difSpan.textContent = `${dif} u. (Faltante)`;
             diagEl.className = 'text-xs font-extrabold text-rose-700 pt-0.5';
-            diagEl.textContent = `▼ Se detectó un faltante de ${Math.abs(dif)} unidad(es) física(s) respecto al sistema (inconsistencia).`;
+            diagEl.textContent = `▼ Se detectó un faltante de ${Math.abs(dif)} unidad(es) física(s) respecto al stock teórico (inconsistencia).`;
         }
     }
 
@@ -3403,22 +2458,25 @@
         e.preventDefault();
         const id = document.getElementById('conteoProductoSelect').value;
         const cantFisica = Number(document.getElementById('conteoCantidadFisica').value);
-        const prod = productosCache.find(p => String(p.id_producto) === id);
-        if (!prod) return;
+        const prod = productosCache.find(p => String(p.id_producto) === String(id));
+        if (!prod) {
+            alert('Seleccione un producto antes de procesar el conteo físico.');
+            return;
+        }
 
         const stockSis = Number(prod.stock ?? prod.stock_disponible ?? 0);
         const dif = cantFisica - stockSis;
         if (dif === 0) {
-            alert('¡El conteo físico coincide exactamente con el stock del sistema! No se requiere ajuste.');
+            alert('¡El conteo físico coincide exactamente con el stock en sistema! No se requiere ajuste.');
             return;
         }
 
         const tipo = dif > 0 ? 'aumentar' : 'disminuir';
         const obs = document.getElementById('conteoObs').value.trim();
-        const motivo = `Conteo Físico (S13): Stock anterior ${stockSis} u., contaron ${cantFisica} u. (Dif: ${dif > 0 ? '+' : ''}${dif} u.). ${obs ? 'Obs: ' + obs : ''}`;
+        const motivo = `Conteo Físico: Stock anterior: ${stockSis} u., contaron ${cantFisica} u. (Dif: ${dif > 0 ? '+' : ''}${dif} u.). ${obs ? 'Obs: ' + obs : ''}`;
         const csrf = document.querySelector('meta[name="csrf-token"]').content;
         const payload = {
-            id_producto: id,
+            id_producto: Number(id),
             tipo,
             cantidad: Math.abs(dif),
             motivo: motivo
@@ -3432,10 +2490,10 @@
             });
             const data = await res.json();
             if (data.status === 'success') {
-                alert(`¡Conteo físico procesado exitosamente!\nStock de ${prod.nombre} conciliado a ${cantFisica} u. (Diferencia ajustada: ${dif > 0 ? '+' : ''}${dif} u.)`);
+                alert(`¡Conteo físico procesado exitosamente!\n${prod.nombre} conciliado a ${cantFisica} u. (Diferencia ajustada: ${dif > 0 ? '+' : ''}${dif} u.)`);
                 document.getElementById('conteoCantidadFisica').value = '';
                 document.getElementById('conteoObs').value = '';
-                actualizarInfoConteo();
+                actualizarStockConteo();
                 await recargarTodo();
                 await cargarHistorialConteosFisicos();
             } else {
@@ -3487,12 +2545,10 @@
     }
 
     function onTipoDevolucionChange(contexto = 'tab') {
-        onLoteDevolucionChange(contexto);
         actualizarEquivalenciaDevolucion(contexto);
     }
 
     function onProductoDevolucionChange(contexto = 'tab') {
-        actualizarLotesDevolucion(contexto);
         poblarUnidadesDevolucion(contexto);
         actualizarEquivalenciaDevolucion(contexto);
     }
@@ -3562,77 +2618,8 @@
         if (window.lucide) window.lucide.createIcons();
     }
 
-    async function actualizarLotesDevolucion(contexto = 'tab') {
-        const prodId = contexto === 'modal' 
-            ? document.getElementById('modalDevProductoSelect')?.value 
-            : document.getElementById('devProductoSelect')?.value;
-        const selectLote = contexto === 'modal'
-            ? document.getElementById('modalDevLoteSelect')
-            : document.getElementById('devLoteSelect');
-        const infoDiv = contexto === 'modal'
-            ? document.getElementById('modalDevLoteInfo')
-            : document.getElementById('devLoteInfo');
-
-        if (!selectLote) return;
-        if (infoDiv) infoDiv.classList.add('hidden');
-
-        if (!prodId) {
-            selectLote.innerHTML = '<option value="">(Primero seleccione un producto)</option>';
-            return;
-        }
-
-        selectLote.innerHTML = '<option value="">Cargando lotes del producto...</option>';
-
-        let lotes = [];
-        try {
-            const res = await fetch(`${API_BASE}/stock/productos/${prodId}/lotes`);
-            const json = await res.json();
-            if (json.status === 'success' && json.data) {
-                if (Array.isArray(json.data)) {
-                    lotes = json.data;
-                } else if (Array.isArray(json.data.lotes)) {
-                    lotes = json.data.lotes;
-                }
-            }
-        } catch (e) {
-            console.error('Error al cargar lotes para devolución:', e);
-        }
-
-        // Respaldo defensivo con lotesCache
-        if (lotes.length === 0 && Array.isArray(lotesCache)) {
-            lotes = lotesCache.filter(l => String(l.id_producto) === String(prodId));
-        }
-
-        if (lotes.length === 0) {
-            selectLote.innerHTML = '<option value="">(Sin lotes registrados para este producto - Stock general)</option>';
-        } else {
-            let html = '<option value="">(Sin lote específico - Stock general)</option>';
-            html += lotes.map(l => {
-                const venc = l.fecha_vencimiento ? ` | Vence: ${l.fecha_vencimiento}` : '';
-                return `<option value="${l.id_lote}" data-stock="${l.cantidad_actual}">Lote: ${l.nro_lote} (Stock en lote: ${l.cantidad_actual} u.${venc})</option>`;
-            }).join('');
-            selectLote.innerHTML = html;
-        }
-        onLoteDevolucionChange(contexto);
-    }
-
-    function onLoteDevolucionChange(contexto = 'tab') {
-        const selectLote = contexto === 'modal' ? document.getElementById('modalDevLoteSelect') : document.getElementById('devLoteSelect');
-        const infoDiv = contexto === 'modal' ? document.getElementById('modalDevLoteInfo') : document.getElementById('devLoteInfo');
-        const tipoDev = contexto === 'modal' ? document.getElementById('modalDevTipo')?.value : document.getElementById('devTipo')?.value;
-        if (!selectLote || !infoDiv) return;
-
-        const selectedOption = selectLote.options[selectLote.selectedIndex];
-        if (selectedOption && selectedOption.dataset.stock !== undefined && selectLote.value) {
-            const stockLote = Number(selectedOption.dataset.stock);
-            const badgeClass = stockLote > 0 ? 'clay-badge-info' : 'clay-badge-danger';
-            const accionTxt = tipoDev === 'proveedor' ? 'Se descontará del lote' : 'Se repondrá al lote';
-            infoDiv.innerHTML = `<span class="clay-badge ${badgeClass} font-black text-xs">Stock actual en lote: ${stockLote} u. (${accionTxt})</span>`;
-            infoDiv.classList.remove('hidden');
-        } else {
-            infoDiv.classList.add('hidden');
-        }
-    }
+    async function actualizarLotesDevolucion(contexto = 'tab') {}
+    function onLoteDevolucionChange(contexto = 'tab') {}
 
     async function ejecutarDevolucion(e, contexto = 'tab') {
         e.preventDefault();
@@ -3650,9 +2637,6 @@
         const motivo = contexto === 'modal'
             ? document.getElementById('modalDevMotivo')?.value.trim()
             : document.getElementById('devMotivo')?.value.trim();
-        const loteId = contexto === 'modal'
-            ? document.getElementById('modalDevLoteSelect')?.value
-            : document.getElementById('devLoteSelect')?.value;
 
         if (!prodId) {
             alert('Debe seleccionar el producto devuelto.');
@@ -3671,9 +2655,6 @@
             id_unidad: idUnidad,
             motivo: motivo
         };
-        if (loteId) {
-            payload.id_lote = Number(loteId);
-        }
 
         try {
             const res = await fetch(`${API_BASE}/stock/devoluciones`, {
@@ -3689,7 +2670,6 @@
                     cerrarModalDevolucion();
                 } else {
                     document.getElementById('devMotivo').value = '';
-                    await actualizarLotesDevolucion('tab');
                 }
             } else {
                 alert(data.message || 'Error en devolución');
@@ -3697,7 +2677,7 @@
         } catch (err) { alert('Error de conexión'); }
     }
 
-    // Modal Aumento Masivo (P07)
+    // Modal Aumento Masivo
     function abrirModalAumentoMasivo() {
         document.getElementById('modalAumento').classList.remove('hidden');
         const selCat = document.getElementById('aumentoCategoriaSelect');
@@ -3726,7 +2706,6 @@
         const crit = document.getElementById('aumentoCriterio')?.value || 'todos';
         const pctInput = document.getElementById('aumentoPorcentaje')?.value;
         const pct = Number(pctInput) || 0;
-        const reglaRedondeo = document.getElementById('aumentoRedondeo')?.value || 'sin_redondeo';
         const tbody = document.getElementById('aumentoPreviewBody');
         const countSpan = document.getElementById('aumentoPreviewCount');
         if (!tbody) return;
@@ -3749,22 +2728,7 @@
 
         tbody.innerHTML = prods.slice(0, 100).map(p => {
             const actual = Number(p.precio_unitario || 0);
-            const calculado = pct > 0 ? Math.round(actual * (1 + pct / 100) * 100) / 100 : actual;
-            const precioEnCentavos = Math.round(calculado * 100);
-            const unidadPeso = Math.floor(precioEnCentavos / 100);
-            let nuevoEnCentavos = precioEnCentavos;
-
-            if (reglaRedondeo === 'peso_mas_cercano') {
-                nuevoEnCentavos = Math.round(calculado) * 100;
-            } else if (reglaRedondeo === 'peso_superior') {
-                nuevoEnCentavos = Math.ceil(calculado) * 100;
-            } else if (reglaRedondeo === 'terminar_90' || reglaRedondeo === 'terminar_99') {
-                const terminacion = reglaRedondeo === 'terminar_90' ? 90 : 99;
-                const candidato = unidadPeso * 100 + terminacion;
-                nuevoEnCentavos = precioEnCentavos <= candidato ? candidato : (unidadPeso + 1) * 100 + terminacion;
-            }
-
-            const nuevo = (nuevoEnCentavos / 100).toFixed(2);
+            const nuevo = pct > 0 ? (Math.round((actual * (1 + pct / 100)) * 100) / 100).toFixed(2) : actual.toFixed(2);
             return `
                 <tr>
                     <td class="font-extrabold text-slate-700 text-xs">${p.codigo}</td>
@@ -3781,7 +2745,6 @@
         const csrf = document.querySelector('meta[name="csrf-token"]').content;
         const crit = document.getElementById('aumentoCriterio').value;
         const porcentaje = Number(document.getElementById('aumentoPorcentaje').value);
-        const reglaRedondeo = document.getElementById('aumentoRedondeo').value;
 
         if (!porcentaje || porcentaje <= 0) {
             alert('Debe ingresar un porcentaje mayor a 0');
@@ -3791,7 +2754,6 @@
         const payload = {
             tipo_criterio: crit,
             porcentaje: porcentaje,
-            regla_redondeo: reglaRedondeo,
             confirmar: true
         };
         if (crit === 'categoria') payload.id_categoria = document.getElementById('aumentoCategoriaSelect').value;
@@ -3887,8 +2849,8 @@
                 : `Historial de Precios: ${prod.codigo} - ${prod.nombre}`;
         } else {
             tituloEl.textContent = modalHistTabActual === 'auditoria'
-                ? 'Historial Global de Modificaciones y Auditoría de Productos (P04)'
-                : 'Historial Global de Precios y Aumentos Masivos (P08)';
+                ? 'Historial Global de Modificaciones y Auditoría de Productos'
+                : 'Historial Global de Precios y Aumentos Masivos';
         }
     }
 
@@ -3997,7 +2959,7 @@
                     const pct = (h.porcentaje_aumento !== null && h.porcentaje_aumento !== undefined) ? Number(h.porcentaje_aumento) : null;
                     const pctBadge = pct !== null ? (pct >= 0 ? `<span class="clay-badge clay-badge-success font-black">+${pct.toFixed(2)}%</span>` : `<span class="clay-badge clay-badge-danger font-black">${pct.toFixed(2)}%</span>`) : '<span class="text-slate-400">-</span>';
                     const origenBadge = h.origen === 'aumento_masivo' 
-                        ? '<span class="clay-badge clay-badge-info font-black">Aumento Masivo (P07)</span>' 
+                        ? '<span class="clay-badge clay-badge-info font-black">Aumento Masivo</span>' 
                         : '<span class="clay-badge clay-badge-warning font-black">Manual</span>';
                     const usuario = h.usuario_nombre || 'Sistema';
 
@@ -4026,7 +2988,7 @@
         document.getElementById('modalHistorial').classList.add('hidden'); 
     }
 
-    // Modal Categorías (P02)
+    // Modal Categorías
     function abrirModalCategorias() {
         cancelarEdicionCategoria();
         document.getElementById('modalCategoria').classList.remove('hidden');
@@ -4065,10 +3027,10 @@
                 <td class="text-center"><span class="clay-badge clay-badge-info">${c.total_productos ?? 0} prod.</span></td>
                 <td class="text-center">
                     <div class="flex items-center justify-center gap-1">
-                        <button type="button" onclick="editarCategoria(${c.id_categoria}, '${c.nombre.replace(/'/g, "\\'")}')" class="p-1 text-blue-600 hover:bg-blue-50 rounded" title="Editar Categoría (P02)">
+                        <button type="button" onclick="editarCategoria(${c.id_categoria}, '${c.nombre.replace(/'/g, "\\'")}')" class="p-1 text-blue-600 hover:bg-blue-50 rounded" title="Editar Categoría">
                             <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
                         </button>
-                        <button type="button" onclick="eliminarCategoria(${c.id_categoria}, '${c.nombre.replace(/'/g, "\\'")}', ${c.total_productos ?? 0})" class="p-1 text-rose-600 hover:bg-rose-50 rounded" title="Dar de Baja / Eliminar Categoría (P02)">
+                        <button type="button" onclick="eliminarCategoria(${c.id_categoria}, '${c.nombre.replace(/'/g, "\\'")}', ${c.total_productos ?? 0})" class="p-1 text-rose-600 hover:bg-rose-50 rounded" title="Dar de Baja / Eliminar Categoría">
                             <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
                         </button>
                     </div>
@@ -4104,7 +3066,7 @@
     }
     async function eliminarCategoria(id, nombre, totalProductos) {
         if (totalProductos > 0) {
-            alert(`No se puede dar de baja la categoría "${nombre}" porque está siendo utilizada por ${totalProductos} producto(s). (Criterio P02)`);
+            alert(`No se puede dar de baja la categoría "${nombre}" porque está siendo utilizada por ${totalProductos} producto(s).`);
             return;
         }
         if (!confirm(`¿Confirma dar de baja / eliminar la categoría "${nombre}"?`)) return;
@@ -4124,7 +3086,7 @@
         } catch (e) { alert('Error de conexión al eliminar categoría'); }
     }
 
-    // Modal Marcas (P03)
+    // Modal Marcas
     function abrirModalMarcas() {
         cancelarEdicionMarca();
         document.getElementById('modalMarca').classList.remove('hidden');
@@ -4160,10 +3122,10 @@
                 <td class="text-center"><span class="clay-badge clay-badge-info">${m.total_productos ?? 0} prod.</span></td>
                 <td class="text-center">
                     <div class="flex items-center justify-center gap-1">
-                        <button type="button" onclick="editarMarca(${m.id_marca}, '${m.nombre.replace(/'/g, "\\'")}')" class="p-1 text-blue-600 hover:bg-blue-50 rounded" title="Editar Marca (P03)">
+                        <button type="button" onclick="editarMarca(${m.id_marca}, '${m.nombre.replace(/'/g, "\\'")}')" class="p-1 text-blue-600 hover:bg-blue-50 rounded" title="Editar Marca">
                             <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
                         </button>
-                        <button type="button" onclick="eliminarMarca(${m.id_marca}, '${m.nombre.replace(/'/g, "\\'")}', ${m.total_productos ?? 0})" class="p-1 text-rose-600 hover:bg-rose-50 rounded" title="Dar de Baja / Eliminar Marca (P03)">
+                        <button type="button" onclick="eliminarMarca(${m.id_marca}, '${m.nombre.replace(/'/g, "\\'")}', ${m.total_productos ?? 0})" class="p-1 text-rose-600 hover:bg-rose-50 rounded" title="Dar de Baja / Eliminar Marca">
                             <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
                         </button>
                     </div>
@@ -4199,7 +3161,7 @@
     }
     async function eliminarMarca(id, nombre, totalProductos) {
         if (totalProductos > 0) {
-            alert(`No se puede dar de baja la marca "${nombre}" porque está siendo utilizada por ${totalProductos} producto(s). (Criterio P03)`);
+            alert(`No se puede dar de baja la marca "${nombre}" porque está siendo utilizada por ${totalProductos} producto(s).`);
             return;
         }
         if (!confirm(`¿Confirma dar de baja / eliminar la marca "${nombre}"?`)) return;
@@ -4220,7 +3182,7 @@
     }
 
     // ==========================================
-    // MODAL: GESTIÓN DE UBICACIONES (S14)
+    // MODAL: GESTIÓN DE UBICACIONES
     // ==========================================
     function abrirModalUbicaciones() {
         cancelarEdicionUbicacion();
@@ -4271,13 +3233,13 @@
                     </td>
                     <td class="text-center">
                         <div class="flex items-center justify-center gap-1">
-                            <button type="button" onclick="verProductosUbicacion(${u.id_ubicacion}, '${u.descripcion.replace(/'/g, "\\'")}')" class="p-1 text-emerald-600 hover:bg-emerald-50 rounded" title="Ver productos en esta ubicación (S14 Criterio 5)">
+                            <button type="button" onclick="verProductosUbicacion(${u.id_ubicacion}, '${u.descripcion.replace(/'/g, "\\'")}')" class="p-1 text-emerald-600 hover:bg-emerald-50 rounded" title="Ver productos en esta ubicación">
                                 <i data-lucide="eye" class="w-3.5 h-3.5"></i>
                             </button>
-                            <button type="button" onclick="editarUbicacion(${u.id_ubicacion}, '${u.descripcion.replace(/'/g, "\\'")}')" class="p-1 text-blue-600 hover:bg-blue-50 rounded" title="Editar Ubicación (S14)">
+                            <button type="button" onclick="editarUbicacion(${u.id_ubicacion}, '${u.descripcion.replace(/'/g, "\\'")}')" class="p-1 text-blue-600 hover:bg-blue-50 rounded" title="Editar Ubicación">
                                 <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
                             </button>
-                            <button type="button" onclick="eliminarUbicacion(${u.id_ubicacion}, '${u.descripcion.replace(/'/g, "\\'")}', ${count})" class="p-1 text-rose-600 hover:bg-rose-50 rounded" title="Dar de baja / eliminar ubicación (S14 Criterio 6)">
+                            <button type="button" onclick="eliminarUbicacion(${u.id_ubicacion}, '${u.descripcion.replace(/'/g, "\\'")}', ${count})" class="p-1 text-rose-600 hover:bg-rose-50 rounded" title="Dar de baja / eliminar ubicación">
                                 <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
                             </button>
                         </div>
@@ -4342,7 +3304,7 @@
 
     async function eliminarUbicacion(id, descripcion, productosCount) {
         if (productosCount > 0) {
-            alert(`No se puede eliminar la ubicación "${descripcion}" porque tiene ${productosCount} producto(s) asignados. (S14 Criterio 6)`);
+            alert(`No se puede eliminar la ubicación "${descripcion}" porque tiene ${productosCount} producto(s) asignados.`);
             return;
         }
         if (!confirm(`¿Confirma dar de baja / eliminar la ubicación "${descripcion}"?`)) return;
@@ -4363,7 +3325,7 @@
     }
 
     // ==========================================
-    // MODAL: GESTIÓN DE UNIDADES Y EQUIVALENCIAS (S08)
+    // MODAL: GESTIÓN DE UNIDADES Y EQUIVALENCIAS
     // ==========================================
     let productoUnidadSeleccionado = null;
     let unidadesProductoCache = [];
@@ -4568,7 +3530,7 @@
         }
     }
 
-    // Modal Devoluciones (S05)
+    // Modal Devoluciones
     async function abrirModalDevolucion(prodId = null) {
         document.getElementById('modalDevolucion').classList.remove('hidden');
         const sel = document.getElementById('modalDevProductoSelect');
@@ -4579,7 +3541,6 @@
                 sel.value = String(prodId);
             }
         }
-        await actualizarLotesDevolucion('modal');
         poblarUnidadesDevolucion('modal');
         actualizarEquivalenciaDevolucion('modal');
         if (window.lucide) window.lucide.createIcons();

@@ -37,7 +37,7 @@ class DevolucionController extends Controller
             'motivo' => 'required|string|max:255',
             'tipo_devolucion' => 'nullable|string|in:cliente,proveedor',
             'id_unidad' => 'nullable|integer|exists:UNIDAD_MEDIDA,id_unidad',
-            'id_lote' => 'nullable|integer|exists:LOTE,id_lote',
+            'id_lote' => 'nullable|integer',
             'nro_lote' => 'nullable|string|max:100',
             'fecha' => 'nullable|date|before_or_equal:today',
         ], [
@@ -46,7 +46,6 @@ class DevolucionController extends Controller
             'cantidad.min' => 'La cantidad devuelta debe ser mayor a cero.',
             'motivo.required' => 'Debe indicar el motivo de la devolución.',
             'tipo_devolucion.in' => 'El tipo de devolución debe ser cliente o proveedor.',
-            'id_lote.exists' => 'El lote seleccionado no existe en el sistema.',
         ]);
 
         if ($validator->fails()) {
@@ -92,35 +91,6 @@ class DevolucionController extends Controller
                 ], 400);
             }
 
-            // Identificar lote asignado si se especificó
-            $idLote = $request->filled('id_lote') ? (int) $request->input('id_lote') : null;
-            $nroLote = $request->filled('nro_lote') ? trim((string) $request->input('nro_lote')) : null;
-            $lote = null;
-
-            if ($idLote) {
-                $lote = Lote::where('id_producto', $producto->id_producto)
-                    ->where('id_lote', $idLote)
-                    ->first();
-                if (!$lote) {
-                    return response()->json([
-                        'status' => 'error',
-                        'message' => 'El lote seleccionado no pertenece al producto a devolver.',
-                    ], 400);
-                }
-            } elseif ($nroLote) {
-                $lote = Lote::where('id_producto', $producto->id_producto)
-                    ->where('nro_lote', $nroLote)
-                    ->first();
-            }
-
-            // Si es devolución a proveedor con lote especificado, verificar stock del lote
-            if (!$esIncremento && $lote && $lote->cantidad_actual < $cantidadBase) {
-                return response()->json([
-                    'status' => 'error',
-                    'message' => "Stock insuficiente en el lote '{$lote->nro_lote}' para devolver al proveedor. Disponible en lote: {$lote->cantidad_actual} u., solicitado: {$cantidadBase} u.",
-                ], 400);
-            }
-
             $fechaDev = null;
             if ($request->has('fecha') && $request->input('fecha')) {
                 try {
@@ -139,12 +109,9 @@ class DevolucionController extends Controller
             $prefijo = $esIncremento ? '[Devolución Cliente]' : '[Devolución a Proveedor]';
             $motivoRaw = trim((string) $request->input('motivo'));
             $motivoFinal = str_starts_with($motivoRaw, '[Devolución') ? $motivoRaw : "{$prefijo} {$motivoRaw}";
-            if ($lote) {
-                $motivoFinal .= " (Lote: {$lote->nro_lote})";
-            }
 
             // Registrar movimiento en el Kardex y actualizar stock de producto
-            $movimiento = $this->stockService->registrarMovimiento(
+            $this->stockService->registrarMovimiento(
                 $producto,
                 'devolucion',
                 $cantidad,
@@ -157,27 +124,6 @@ class DevolucionController extends Controller
                 $esIncremento
             );
 
-            // Actualizar stock del lote
-            if ($lote) {
-                if ($esIncremento) {
-                    $lote->cantidad_actual += $cantidadBase;
-                } else {
-                    $lote->cantidad_actual -= $cantidadBase;
-                }
-                $lote->save();
-                $movimiento->update(['id_lote' => $lote->id_lote]);
-            } elseif ($esIncremento && $nroLote) {
-                // Si el cliente devuelve con un nro de lote nuevo que no existía
-                $lote = Lote::create([
-                    'id_producto' => $producto->id_producto,
-                    'nro_lote' => $nroLote,
-                    'cantidad_inicial' => $cantidadBase,
-                    'cantidad_actual' => $cantidadBase,
-                    'fecha_vencimiento' => $request->input('fecha_vencimiento'),
-                ]);
-                $movimiento->update(['id_lote' => $lote->id_lote]);
-            }
-
             $producto->refresh();
 
             $unidadObj = $idUnidad ? \App\Modules\Stock\Models\UnidadMedida::find($idUnidad) : null;
@@ -187,10 +133,9 @@ class DevolucionController extends Controller
                 : "{$cantidadBase} u.";
             $unidadMsg = ($unidadObj && (float) $unidadObj->equivalencia_base > 1.0) ? " [Equivalencia: {$equivTexto}]" : "";
 
-            $loteMsg = $lote ? " y actualizado el lote '{$lote->nro_lote}' (Stock en lote: {$lote->cantidad_actual} u.)" : "";
             $mensaje = $esIncremento
-                ? "Devolución de cliente registrada exitosamente (+{$cantidadBase} u. sumadas al stock{$loteMsg}){$unidadMsg}."
-                : "Devolución a proveedor registrada exitosamente (-{$cantidadBase} u. descontadas del stock{$loteMsg}){$unidadMsg}.";
+                ? "Devolución de cliente registrada exitosamente (+{$cantidadBase} u. sumadas al stock){$unidadMsg}."
+                : "Devolución a proveedor registrada exitosamente (-{$cantidadBase} u. descontadas del stock){$unidadMsg}.";
 
             return response()->json([
                 'status' => 'success',
@@ -209,9 +154,9 @@ class DevolucionController extends Controller
                     'motivo' => $motivoFinal,
                     'stock_disponible' => $producto->stock_disponible,
                     'estado_alerta' => $producto->estado_alerta,
-                    'id_lote' => $lote ? $lote->id_lote : null,
-                    'nro_lote' => $lote ? $lote->nro_lote : null,
-                    'lote_cantidad_actual' => $lote ? $lote->cantidad_actual : null,
+                    'id_lote' => null,
+                    'nro_lote' => null,
+                    'lote_cantidad_actual' => null,
                 ],
             ], 201);
         } catch (\Throwable $e) {
