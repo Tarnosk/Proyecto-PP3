@@ -2,6 +2,13 @@
 
 namespace App\Providers;
 
+use App\Contracts\SalesGateway;
+use App\Models\Cliente;
+use App\Models\Reclamo;
+use App\Policies\ClientePolicy;
+use App\Policies\ReclamoPolicy;
+use App\Services\Gateways\HttpSalesGateway;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -11,7 +18,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->bind(SalesGateway::class, HttpSalesGateway::class);
+
     }
 
     /**
@@ -19,6 +27,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        Gate::policy(Cliente::class, ClientePolicy::class);
+        Gate::policy(Reclamo::class, ReclamoPolicy::class);
     }
 }
