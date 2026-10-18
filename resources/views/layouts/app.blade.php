@@ -170,17 +170,20 @@
 
         <!-- FOOTER SIDEBAR / USUARIO -->
         <div class="pt-4 border-t border-white/15">
-            <div class="sidebar-user-card flex items-center gap-3 p-2 rounded-2xl bg-white/10 backdrop-blur-md border border-white/10" title="Usuario Administrador">
-                <div class="w-9 h-9 rounded-xl bg-blue-400/30 flex items-center justify-center text-white font-black text-sm shrink-0">
-                    AD
+            <div class="sidebar-user-card flex items-center gap-3 p-2 rounded-2xl bg-white/10 backdrop-blur-md border border-white/10" title="Usuario Autenticado">
+                <div class="w-9 h-9 rounded-xl bg-blue-400/30 flex items-center justify-center text-white font-black text-sm shrink-0 uppercase">
+                    {{ strtoupper(substr(auth()->user()?->nombre ?? (auth()->user()?->usuario ?? 'US'), 0, 2)) }}
                 </div>
                 <div class="sidebar-user-info flex-1 min-w-0">
-                    <div class="text-xs font-black text-white truncate">Administrador</div>
-                    <div class="text-[10px] text-blue-200 font-bold truncate">Distribuidora PyB</div>
+                    <div class="text-xs font-black text-white truncate">{{ auth()->user()?->nombre ?? (auth()->user()?->usuario ?? 'Usuario') }}</div>
+                    <div class="text-[10px] text-blue-200 font-bold truncate capitalize">{{ auth()->user()?->rol?->value ?? (auth()->user()?->rol ?? 'Rol') }}</div>
                 </div>
-                <a href="{{ url('/') }}" class="sidebar-user-info p-1.5 text-white/70 hover:text-white transition-colors" title="Volver al Panel">
-                    <i data-lucide="home" class="w-4 h-4"></i>
-                </a>
+                <form action="{{ route('logout') }}" method="POST" class="inline m-0 p-0">
+                    @csrf
+                    <button type="submit" class="sidebar-user-info p-1.5 text-white/70 hover:text-red-300 transition-colors cursor-pointer" title="Cerrar sesión">
+                        <i data-lucide="log-out" class="w-4 h-4"></i>
+                    </button>
+                </form>
             </div>
         </div>
     </aside>
@@ -209,12 +212,12 @@
                 </button>
 
                 <div class="flex items-center gap-2 pl-3 border-l border-slate-200/80">
-                    <div class="w-8 h-8 rounded-full bg-blue-600 text-white font-black flex items-center justify-center text-xs shadow-sm">
-                        AD
+                    <div class="w-8 h-8 rounded-full bg-blue-600 text-white font-black flex items-center justify-center text-xs shadow-sm uppercase">
+                        {{ strtoupper(substr(auth()->user()?->nombre ?? (auth()->user()?->usuario ?? 'US'), 0, 2)) }}
                     </div>
                     <div class="text-left">
-                        <span class="text-xs font-black text-slate-800 block leading-tight">Admin</span>
-                        <span class="text-[9px] font-extrabold text-blue-600 uppercase tracking-wider">Activo</span>
+                        <span class="text-xs font-black text-slate-800 block leading-tight">{{ auth()->user()?->nombre ?? (auth()->user()?->usuario ?? 'Usuario') }}</span>
+                        <span class="text-[9px] font-extrabold text-blue-600 uppercase tracking-wider capitalize">{{ auth()->user()?->rol?->value ?? (auth()->user()?->rol ?? 'Activo') }}</span>
                     </div>
                 </div>
             </div>
@@ -222,6 +225,12 @@
 
         <!-- CONTENIDO DE LA PÁGINA -->
         <main class="flex-1 p-4 md:p-8 overflow-y-auto">
+            @if (session('permission_error'))
+                <div class="mb-4 p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 font-bold text-xs flex items-center gap-2 shadow-xs" role="alert">
+                    <i data-lucide="alert-triangle" class="w-4 h-4 text-amber-600 shrink-0"></i>
+                    <span>{{ session('permission_error') }}</span>
+                </div>
+            @endif
             @yield('content')
         </main>
     </div>

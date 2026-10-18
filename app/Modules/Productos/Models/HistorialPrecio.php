@@ -1,15 +1,20 @@
 <?php
+
 declare(strict_types=1);
 
 namespace App\Modules\Productos\Models;
 
+use App\Models\User;
+use App\Models\Usuario;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class HistorialPrecio extends Model
 {
     protected $table = 'HISTORIAL_PRECIO';
+
     protected $primaryKey = 'id_historial';
+
     public $timestamps = false;
 
     protected $fillable = [
@@ -40,6 +45,18 @@ class HistorialPrecio extends Model
 
     public function usuario(): BelongsTo
     {
-        return $this->belongsTo(\App\Models\Usuario::class, 'id_usuario', 'id_usuario');
+        return $this->belongsTo(Usuario::class, 'id_usuario', 'id_usuario');
+    }
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'id_usuario', 'id');
+    }
+
+    public function getNombreUsuarioAttribute(): string
+    {
+        return $this->usuario?->nombre
+            ?: ($this->user?->nombre
+            ?: ($this->id_usuario ? "Usuario #{$this->id_usuario}" : 'Sistema'));
     }
 }

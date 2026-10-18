@@ -2,24 +2,58 @@
 
 namespace Database\Seeders;
 
+use App\Enums\UserRole;
+use App\Enums\UserStatus;
 use App\Models\User;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Schema;
 
 class DatabaseSeeder extends Seeder
 {
-    use WithoutModelEvents;
-
-    /**
-     * Seed the application's database.
-     */
     public function run(): void
     {
-        // User::factory(10)->create();
+        $users = [
+            ['usuario' => 'admin', 'password' => 'Admin1234', 'nombre' => 'Usuario Administrativo', 'email' => 'admin@example.com', 'rol' => UserRole::ADMINISTRATIVO, 'estado' => UserStatus::ACTIVO],
+            ['usuario' => 'repartidor', 'password' => 'Repartidor1234', 'nombre' => 'Usuario Repartidor', 'email' => 'repartidor@example.com', 'rol' => UserRole::REPARTIDOR, 'estado' => UserStatus::ACTIVO],
+            ['usuario' => 'contador', 'password' => 'Contador1234', 'nombre' => 'Usuario Contador', 'email' => 'contador@example.com', 'rol' => UserRole::CONTADOR, 'estado' => UserStatus::ACTIVO],
+            ['usuario' => 'inactivo', 'password' => 'Inactivo1234', 'nombre' => 'Usuario Inactivo', 'email' => 'inactivo@example.com', 'rol' => UserRole::REPARTIDOR, 'estado' => UserStatus::INACTIVO],
+        ];
 
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
-        ]);
+        foreach ($users as $data) {
+            $user = User::query()->updateOrCreate(
+                ['usuario' => $data['usuario']],
+                [
+                    'password_hash' => Hash::make($data['password']),
+                    'nombre' => $data['nombre'],
+                    'email' => $data['email'],
+                    'rol' => $data['rol'],
+                    'estado' => $data['estado'],
+                ],
+            );
+
+            if (Schema::hasTable('usuario')) {
+                $cols = Schema::getColumnListing('usuario');
+                $hash = Hash::make($data['password']);
+                $payload = [
+                    'nombre' => $data['nombre'],
+                    'rol' => $data['rol']->value,
+                    'estado' => $data['estado']->value,
+                ];
+                if (in_array('password_hash', $cols, true)) {
+                    $payload['password_hash'] = $hash;
+                }
+                if (in_array('password', $cols, true)) {
+                    $payload['password'] = $hash;
+                }
+
+                $queryCol = in_array('usuario', $cols, true) ? 'usuario' : 'user';
+                DB::table('usuario')->updateOrInsert(
+                    [$queryCol => $data['usuario']],
+                    $payload
+                );
+            }
+        }
     }
 }

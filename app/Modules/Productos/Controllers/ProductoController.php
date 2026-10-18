@@ -527,7 +527,7 @@ class ProductoController extends Controller
         $idProducto = $request->filled('id_producto') ? (int) $request->input('id_producto') : null;
         $origen = $request->input('origen');
 
-        $query = HistorialPrecio::with(['producto', 'usuario'])
+        $query = HistorialPrecio::with(['producto', 'usuario', 'user'])
             ->orderBy('id_historial', 'desc');
 
         if ($idProducto) {
@@ -559,7 +559,7 @@ class ProductoController extends Controller
                 'origen' => $h->origen,
                 'fecha_cambio' => $h->fecha_cambio ? (is_string($h->fecha_cambio) ? $h->fecha_cambio : $h->fecha_cambio->format('Y-m-d H:i:s')) : null,
                 'id_usuario' => $h->id_usuario,
-                'usuario_nombre' => $h->usuario ? $h->usuario->nombre : ($h->id_usuario ? "Usuario #{$h->id_usuario}" : 'Sistema'),
+                'usuario_nombre' => $h->nombre_usuario,
             ];
         });
 
@@ -582,7 +582,7 @@ class ProductoController extends Controller
             ], 404);
         }
 
-        $registros = HistorialPrecio::with('usuario')
+        $registros = HistorialPrecio::with(['usuario', 'user'])
             ->where('id_producto', $id)
             ->orderBy('id_historial', 'asc')
             ->get();
@@ -617,7 +617,7 @@ class ProductoController extends Controller
                 'origen' => $registro->origen,
                 'fecha_cambio' => $registro->fecha_cambio ? (is_string($registro->fecha_cambio) ? $registro->fecha_cambio : $registro->fecha_cambio->format('Y-m-d H:i:s')) : null,
                 'id_usuario' => $registro->id_usuario,
-                'usuario_nombre' => $registro->usuario ? $registro->usuario->nombre : ($registro->id_usuario ? "Usuario #{$registro->id_usuario}" : 'Sistema'),
+                'usuario_nombre' => $registro->nombre_usuario,
             ];
             $precioAnterior = $precioNuevo;
         }
@@ -636,7 +636,7 @@ class ProductoController extends Controller
     {
         $idProducto = $request->filled('id_producto') ? (int) $request->input('id_producto') : null;
 
-        $query = LogAuditoria::with('usuario')
+        $query = LogAuditoria::with(['usuario', 'user'])
             ->where('tabla_afectada', 'producto')
             ->orderByDesc('fecha_hora')
             ->orderByDesc('id_auditoria');
@@ -670,7 +670,7 @@ class ProductoController extends Controller
         $productos = Producto::pluck('nombre', 'id_producto')->all();
         $codigos = Producto::pluck('codigo', 'id_producto')->all();
 
-        $logs = LogAuditoria::with('usuario')
+        $logs = LogAuditoria::with(['usuario', 'user'])
             ->where('tabla_afectada', 'producto')
             ->where('id_registro', $id)
             ->orderByDesc('fecha_hora')
@@ -749,7 +749,7 @@ class ProductoController extends Controller
             'valores_anteriores' => $ant,
             'valores_nuevos' => $nue,
             'id_usuario' => $log->id_usuario,
-            'usuario_nombre' => $log->usuario ? $log->usuario->nombre : ($log->id_usuario ? "Usuario #{$log->id_usuario}" : 'Sistema'),
+            'usuario_nombre' => $log->nombre_usuario,
             'fecha_hora' => $log->fecha_hora ? $log->fecha_hora->format('Y-m-d H:i:s') : null,
         ];
     }
