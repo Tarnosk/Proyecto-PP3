@@ -2,10 +2,33 @@
 
 namespace Tests\Feature;
 
+use App\Enums\UserRole;
+use App\Enums\UserStatus;
+use App\Models\User;
+use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
 
 class ExampleTest extends TestCase
 {
+    use DatabaseTransactions;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $admin = User::where('usuario', 'admin')->first()
+            ?? User::firstOrCreate(
+                ['usuario' => 'admin'],
+                [
+                    'password_hash' => Hash::make('Admin1234'),
+                    'nombre' => 'Usuario Administrativo',
+                    'rol' => UserRole::ADMINISTRATIVO,
+                    'estado' => UserStatus::ACTIVO,
+                ]
+            );
+        $this->signInAs($admin);
+    }
+
     /**
      * Verifica que las vistas principales de Blade de Grupo 3 respondan correctamente con código 200.
      */

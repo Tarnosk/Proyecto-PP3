@@ -1,13 +1,20 @@
 <?php
+
 declare(strict_types=1);
 
 namespace App\Http\Middleware;
 
+use App\Enums\UserRole;
+use App\Services\ApiTokenService;
+use App\Support\UsuarioActual;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Schema;
 use Symfony\Component\HttpFoundation\Response;
-use App\Support\UsuarioActual;
 
 /**
  * Middleware de identidad (contrato con G1 - autenticación).
@@ -38,7 +45,7 @@ class IdentidadUsuario
     {
         // 1. Token Bearer (G1 / llamadas autenticadas entre módulos)
         $bearer = $request->bearerToken();
-        if (!empty($bearer)) {
+        if (! empty($bearer)) {
             $idToken = $this->resolverTokenG1($bearer);
             if ($idToken !== null) {
                 return $idToken;
@@ -47,7 +54,7 @@ class IdentidadUsuario
 
         // 2. Encabezado directo de ID de usuario
         $headerId = $request->header('X-User-Id');
-        if (!empty($headerId) && is_numeric($headerId) && (int) $headerId > 0) {
+        if (! empty($headerId) && is_numeric($headerId) && (int) $headerId > 0) {
             return (int) $headerId;
         }
 
@@ -57,7 +64,7 @@ class IdentidadUsuario
         $headerName = $headerNameRaw ? urldecode($headerNameRaw) : null;
         $headerRole = $request->header('X-User-Role');
 
-        if (!empty($headerUsername) || !empty($headerName)) {
+        if (! empty($headerUsername) || ! empty($headerName)) {
             $resolvedId = $this->resolverOCrearUsuario($headerUsername, $headerName, $headerRole);
             if ($resolvedId !== null) {
                 return $resolvedId;
@@ -65,14 +72,23 @@ class IdentidadUsuario
         }
 
         // 4. Guard de Laravel configurado
-        $guard = config('auth.guards.proyecto') !== null ? \Illuminate\Support\Facades\Auth::guard('proyecto') : null;
+        $guard = config('auth.guards.proyecto') !== null ? Auth::guard('proyecto') : null;
 
         if ($guard !== null && $guard->check()) {
             return (int) $guard->id();
         }
 
-        if (\Illuminate\Support\Facades\Auth::check()) {
-            return (int) \Illuminate\Support\Facades\Auth::id();
+        if (Auth::check()) {
+            $user = Auth::user();
+            if ($user && ! empty($user->usuario)) {
+                $rolStr = $user->rol instanceof UserRole ? $user->rol->value : (string) ($user->rol ?? 'administrativo');
+                $resolvedId = $this->resolverOCrearUsuario($user->usuario, $user->nombre ?? null, $rolStr);
+                if ($resolvedId !== null) {
+                    return $resolvedId;
+                }
+            }
+
+            return (int) Auth::id();
         }
 
         return null;
@@ -87,7 +103,7 @@ class IdentidadUsuario
      */
     private function resolverTokenG1(?string $token): ?int
     {
-        if (!is_string($token) || trim($token) === '') {
+        if (! is_string($token) || trim($token) === '') {
             return null;
         }
 
@@ -98,16 +114,43 @@ class IdentidadUsuario
                 return 1;
             }
 
-            // B) Token registrado en sesión activa de usuario
-            $hashToken = hash('sha256', $token);
-            $tablaUsuario = \Illuminate\Support\Facades\Schema::hasTable('usuario') ? 'usuario' : (\Illuminate\Support\Facades\Schema::hasTable('users') ? 'users' : null);
+            // B) Token emitido por ApiTokenService (G1)
+            try {
+                $apiTokenService = app(ApiTokenService::class);
+                $authUser = $apiTokenService->resolve($token);
+                if ($authUser !== null) {
+                    $rolStr = $authUser->rol instanceof UserRole ? $authUser->rol->value : (string) ($authUser->rol ?? 'administrativo');
+                    $legacyId = $this->resolverOCrearUsuario($authUser->usuario, $authUser->nombre, $rolStr);
+                    if ($legacyId !== null) {
+                        return $legacyId;
+                    }
 
-            if ($tablaUsuario !== null && \Illuminate\Support\Facades\Schema::hasColumn($tablaUsuario, 'current_session_id')) {
-                $campoId = \Illuminate\Support\Facades\Schema::hasColumn($tablaUsuario, 'id_usuario') ? 'id_usuario' : 'id';
-                $usuarioPorSession = \Illuminate\Support\Facades\DB::table($tablaUsuario)
+                    return (int) $authUser->id;
+                }
+            } catch (\Throwable $e) {
+            }
+
+            // C) Token registrado en sesión activa de usuario (tabla usuarios o usuario)
+            $hashToken = hash('sha256', $token);
+            if (Schema::hasTable('usuarios') && Schema::hasColumn('usuarios', 'current_session_id')) {
+                $userByToken = DB::table('usuarios')->where('current_session_id', $hashToken)->where('estado', 'activo')->first();
+                if ($userByToken) {
+                    $legacyId = $this->resolverOCrearUsuario($userByToken->usuario, $userByToken->nombre ?? null, $userByToken->rol ?? 'administrativo');
+                    if ($legacyId !== null) {
+                        return $legacyId;
+                    }
+
+                    return (int) $userByToken->id;
+                }
+            }
+
+            $tablaUsuario = Schema::hasTable('usuario') ? 'usuario' : (Schema::hasTable('users') ? 'users' : null);
+            if ($tablaUsuario !== null && Schema::hasColumn($tablaUsuario, 'current_session_id')) {
+                $campoId = Schema::hasColumn($tablaUsuario, 'id_usuario') ? 'id_usuario' : 'id';
+                $usuarioPorSession = DB::table($tablaUsuario)
                     ->where('current_session_id', $hashToken)
                     ->where(function ($q) use ($tablaUsuario) {
-                        if (\Illuminate\Support\Facades\Schema::hasColumn($tablaUsuario, 'estado')) {
+                        if (Schema::hasColumn($tablaUsuario, 'estado')) {
                             $q->where('estado', 'activo');
                         }
                     })
@@ -118,12 +161,12 @@ class IdentidadUsuario
                 }
             }
 
-            // C) Desencriptar payload de token si fue emitido con Crypt de Laravel
-            $payloadJson = \Illuminate\Support\Facades\Crypt::decryptString($token);
+            // D) Desencriptar payload de token si fue emitido con Crypt de Laravel
+            $payloadJson = Crypt::decryptString($token);
             $payload = json_decode($payloadJson, true);
 
             if (is_array($payload) && isset($payload['user_id'])) {
-                if (!isset($payload['expires_at']) || (int) $payload['expires_at'] > time()) {
+                if (! isset($payload['expires_at']) || (int) $payload['expires_at'] > time()) {
                     return (int) $payload['user_id'];
                 }
             }
@@ -137,31 +180,32 @@ class IdentidadUsuario
     private function resolverOCrearUsuario(?string $username, ?string $nombre, ?string $rol): ?int
     {
         try {
-            $columnas = \Illuminate\Support\Facades\Schema::getConnection()->getSchemaBuilder()->getColumnListing('usuario');
+            $columnas = Schema::getConnection()->getSchemaBuilder()->getColumnListing('usuario');
             $nombreExiste = in_array('nombre', $columnas, true);
             $campoUsuario = in_array('user', $columnas, true) ? 'user' : 'usuario';
             $campoPassword = in_array('password', $columnas, true) ? 'password' : 'password_hash';
 
-            $query = \Illuminate\Support\Facades\DB::table('usuario');
-            if (!empty($username)) {
+            $query = DB::table('usuario');
+            if (! empty($username)) {
                 $query->where($campoUsuario, $username);
-            } elseif (!empty($nombre) && $nombreExiste) {
+            } elseif (! empty($nombre) && $nombreExiste) {
                 $query->where('nombre', $nombre);
             }
 
             $user = $query->first();
 
             if ($user) {
-                if (!empty($nombre) && $nombreExiste && ($user->nombre === 'Administrador' || empty($user->nombre))) {
-                    \Illuminate\Support\Facades\DB::table('usuario')
+                if (! empty($nombre) && $nombreExiste && ($user->nombre === 'Administrador' || empty($user->nombre))) {
+                    DB::table('usuario')
                         ->where('id_usuario', $user->id_usuario)
                         ->update(['nombre' => $nombre]);
                 }
+
                 return (int) $user->id_usuario;
             }
 
-            if (!empty($nombre) && $nombreExiste) {
-                $userByNombre = \Illuminate\Support\Facades\DB::table('usuario')
+            if (! empty($nombre) && $nombreExiste) {
+                $userByNombre = DB::table('usuario')
                     ->where('nombre', $nombre)
                     ->first();
                 if ($userByNombre) {
@@ -169,10 +213,10 @@ class IdentidadUsuario
                 }
             }
 
-            $nombreFinal = !empty($nombre) ? $nombre : ($username ?: 'Usuario');
-            $userLogin = !empty($username) ? $username : strtolower(preg_replace('/[^a-zA-Z0-9]/', '', $nombreFinal));
+            $nombreFinal = ! empty($nombre) ? $nombre : ($username ?: 'Usuario');
+            $userLogin = ! empty($username) ? $username : strtolower(preg_replace('/[^a-zA-Z0-9]/', '', $nombreFinal));
             if (empty($userLogin)) {
-                $userLogin = 'usr_' . time();
+                $userLogin = 'usr_'.time();
             }
 
             $rolEnum = match (strtolower((string) $rol)) {
@@ -187,7 +231,7 @@ class IdentidadUsuario
                 $campoUsuario => $userLogin,
                 'rol' => $rolEnum,
                 'estado' => 'activo',
-                $campoPassword => \Illuminate\Support\Facades\Hash::make('secret123'),
+                $campoPassword => Hash::make('secret123'),
             ];
 
             if ($nombreExiste) {
@@ -204,21 +248,21 @@ class IdentidadUsuario
 
     private function crearUsuarioConClienteCompatible(array $insertData, string $nombreFinal, string $userLogin): int
     {
-        if (\Illuminate\Support\Facades\Schema::hasTable('cliente')) {
-            $clienteMax = (int) \Illuminate\Support\Facades\DB::table('cliente')->max('id_cliente');
-            $usuarioMax = (int) \Illuminate\Support\Facades\DB::table('usuario')->max('id_usuario');
+        if (Schema::hasTable('cliente')) {
+            $clienteMax = (int) DB::table('cliente')->max('id_cliente');
+            $usuarioMax = (int) DB::table('usuario')->max('id_usuario');
             $proximoId = max($clienteMax, $usuarioMax) + 1;
             $insertData['id_usuario'] = $proximoId;
 
-            \Illuminate\Support\Facades\DB::table('cliente')->insertOrIgnore([
+            DB::table('cliente')->insertOrIgnore([
                 'id_cliente' => $proximoId,
                 'nombre' => $nombreFinal,
                 'estado' => 'activo',
             ]);
 
-            return (int) \Illuminate\Support\Facades\DB::table('usuario')->insertGetId($insertData);
+            return (int) DB::table('usuario')->insertGetId($insertData);
         }
 
-        return (int) \Illuminate\Support\Facades\DB::table('usuario')->insertGetId($insertData);
+        return (int) DB::table('usuario')->insertGetId($insertData);
     }
 }

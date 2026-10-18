@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace App\Support;
@@ -6,6 +7,7 @@ namespace App\Support;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * Resuelve la identidad del usuario que ejecuta la acción (auditoría).
@@ -43,8 +45,29 @@ final class UsuarioActual
         }
 
         $id = self::idDeGuard('proyecto');
-        if ($id === null) {
+        if ($id === null && Auth::check()) {
+            $user = Auth::user();
+            if ($user && ! empty($user->usuario) && Schema::hasTable('usuario')) {
+                try {
+                    $cols = Schema::getColumnListing('usuario');
+                    $campoUsuario = in_array('user', $cols, true) ? 'user' : 'usuario';
+                    $legacyId = DB::table('usuario')->where($campoUsuario, $user->usuario)->value('id_usuario');
+                    if ($legacyId !== null && (int) $legacyId > 0) {
+                        return (int) $legacyId;
+                    }
+                } catch (\Throwable $e) {
+                }
+            }
             $id = Auth::id();
+            if ($id !== null && Schema::hasTable('usuario')) {
+                try {
+                    $exists = DB::table('usuario')->where('id_usuario', $id)->exists();
+                    if (! $exists) {
+                        $id = null;
+                    }
+                } catch (\Throwable $e) {
+                }
+            }
         }
 
         return ($id !== null && (int) $id > 0) ? (int) $id : self::idFallback();
@@ -82,11 +105,12 @@ final class UsuarioActual
      */
     private static function idDeGuard(string $guard): ?int
     {
-        if (config('auth.guards.' . $guard) === null) {
+        if (config('auth.guards.'.$guard) === null) {
             return null;
         }
 
         $guardInstance = Auth::guard($guard);
+
         return $guardInstance->check() ? $guardInstance->id() : null;
     }
 }

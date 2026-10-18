@@ -21,6 +21,22 @@ class UserStoriesFrontendTest extends TestCase
 {
     use DatabaseTransactions;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $admin = \App\Models\User::where('usuario', 'admin')->first()
+            ?? \App\Models\User::firstOrCreate(
+                ['usuario' => 'admin'],
+                [
+                    'password_hash' => \Illuminate\Support\Facades\Hash::make('Admin1234'),
+                    'nombre' => 'Usuario Administrativo',
+                    'rol' => \App\Enums\UserRole::ADMINISTRATIVO,
+                    'estado' => \App\Enums\UserStatus::ACTIVO,
+                ]
+            );
+        $this->signInAs($admin);
+    }
+
     /**
      * HU Verificación de Infraestructura Frontend Blade:
      * Comprueba que todas las vistas migradas a Blade respondan HTTP 200 y carguen el layout con Claymorfismo.

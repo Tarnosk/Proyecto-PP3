@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace App\Models;
@@ -9,7 +10,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class LogAuditoria extends Model
 {
     protected $table = 'log_auditoria';
+
     protected $primaryKey = 'id_auditoria';
+
     public $timestamps = false;
 
     protected $fillable = [
@@ -34,5 +37,17 @@ class LogAuditoria extends Model
     public function usuario(): BelongsTo
     {
         return $this->belongsTo(Usuario::class, 'id_usuario', 'id_usuario');
+    }
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'id_usuario', 'id');
+    }
+
+    public function getNombreUsuarioAttribute(): string
+    {
+        return $this->usuario?->nombre
+            ?: ($this->user?->nombre
+            ?: ($this->id_usuario ? "Usuario #{$this->id_usuario}" : 'Sistema'));
     }
 }

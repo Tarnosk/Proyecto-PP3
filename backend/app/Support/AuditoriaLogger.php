@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace App\Support;
@@ -28,7 +29,7 @@ final class AuditoriaLogger
                 'fecha_hora' => Carbon::now(),
             ]);
         } catch (Throwable $e) {
-            logger()->warning('Fallo al registrar log_auditoria: ' . $e->getMessage());
+            logger()->warning('Fallo al registrar log_auditoria: '.$e->getMessage());
         }
     }
 }

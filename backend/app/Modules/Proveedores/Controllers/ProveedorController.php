@@ -1099,7 +1099,7 @@ class ProveedorController extends Controller
             ], 404);
         }
 
-        $logs = LogAuditoria::with('usuario')
+        $logs = LogAuditoria::with(['usuario', 'user'])
             ->where('tabla_afectada', 'proveedor')
             ->where('id_registro', $id)
             ->orderByDesc('fecha_hora')
@@ -1167,7 +1167,7 @@ class ProveedorController extends Controller
     {
         $limit = max(1, min(100, (int) $request->input('limit', 50)));
 
-        $logs = LogAuditoria::with('usuario')
+        $logs = LogAuditoria::with(['usuario', 'user'])
             ->where('tabla_afectada', 'proveedor')
             ->orderByDesc('fecha_hora')
             ->orderByDesc('id_auditoria')
@@ -1282,10 +1282,7 @@ class ProveedorController extends Controller
             }
         }
 
-        $usuario = $log->usuario;
-        $usuarioNombre = $usuario
-            ? ($usuario->nombre ?: $usuario->usuario)
-            : ($log->id_usuario ? "Usuario #{$log->id_usuario}" : 'Sistema');
+        $usuarioNombre = $log->nombre_usuario;
 
         return [
             'id_auditoria' => $log->id_auditoria,

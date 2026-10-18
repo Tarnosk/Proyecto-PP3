@@ -1,9 +1,19 @@
 <?php
 
+use App\Http\Middleware\AuthenticateApiRequest;
+use App\Http\Middleware\EnsureApiAudience;
+use App\Http\Middleware\EnsureApiUser;
+use App\Http\Middleware\EnsureCurrentSession;
+use App\Http\Middleware\EnsureRole;
+use App\Http\Middleware\IdentidadUsuario;
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
+use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
-use App\Http\Middleware\IdentidadUsuario;
+use Illuminate\Http\Request;
+use Illuminate\Session\Middleware\StartSession;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -13,11 +23,29 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        // Identidad del usuario que ejecuta cada acción (auditoría).
-        // G1 resuelve el login; este middleware expone la identidad y, hasta
-        // que G1 lo integre, el resolver UsuarioActual cae al admin (id=1).
-        $middleware->appendToGroup('api', [IdentidadUsuario::class]);
+        $middleware->alias([
+            'session.current' => EnsureCurrentSession::class,
+            'role' => EnsureRole::class,
+            'api.access' => AuthenticateApiRequest::class,
+            'api.audience' => EnsureApiAudience::class,
+            'api.user' => EnsureApiUser::class,
+        ]);
+
+        $middleware->appendToGroup('api', [
+            EncryptCookies::class,
+            AddQueuedCookiesToResponse::class,
+            StartSession::class,
+            IdentidadUsuario::class,
+        ]);
+        $middleware->appendToGroup('web', [IdentidadUsuario::class]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        $exceptions->render(function (AuthorizationException $exception, Request $request) {
+            if ($request->expectsJson()) {
+                return null;
+            }
+
+            return redirect()->route('dashboard')
+                ->with('permission_error', 'No tiene permisos para acceder a esa pantalla.');
+        });
     })->create();
