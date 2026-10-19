@@ -40,6 +40,8 @@ class ConteoFisicoTest extends TestCase
             'activo' => true,
         ]);
 
+        $userId = Usuario::first()?->id_usuario ?? 1;
+
         return Producto::create([
             'codigo' => $codigo . '-' . uniqid(),
             'nombre' => 'Producto Conteo ' . uniqid(),
@@ -51,7 +53,7 @@ class ConteoFisicoTest extends TestCase
             'stock_minimo' => 10,
             'estado' => 'activo',
             'fecha_alta' => Carbon::now(),
-            'id_usuario_carga' => 1,
+            'id_usuario_carga' => $userId,
         ]);
     }
 

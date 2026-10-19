@@ -127,7 +127,7 @@ class HistorialPrecioService
                 'diferencia_monto' => $diferenciaMonto,
                 'variacion_porcentual' => $variacionPorcentual,
                 'fecha_actualizacion' => $fechaReg->format('Y-m-d H:i:s'),
-                'fecha_formateada' => $fechaReg->format('Y-m-d H:i'),
+                'fecha_formateada' => $fechaReg->format('Y-m-d'),
                 'id_compra' => $registro->id_compra,
                 'numero_compra' => $registro->compra?->numero_compra,
                 'origen' => $registro->id_compra

@@ -439,7 +439,7 @@
                 <table class="clay-table">
                     <thead>
                         <tr>
-                            <th>Fecha y Hora</th>
+                            <th>Fecha</th>
                             <th>Producto</th>
                             <th class="text-right">Precio Anterior</th>
                             <th class="text-right">Nuevo Precio</th>
@@ -938,7 +938,7 @@
             <table class="clay-table">
                 <thead>
                     <tr>
-                        <th>Fecha / Hora</th>
+                        <th>Fecha</th>
                         <th>Producto</th>
                         <th class="text-right">Precio Anterior</th>
                         <th class="text-right">Nuevo Precio</th>
@@ -1954,7 +1954,7 @@
                 return;
             }
             tbody.innerHTML = registros.map(h => {
-                const fecha = h.fecha_cambio ? h.fecha_cambio.substring(0, 16).replace('T', ' ') : '-';
+                const fecha = h.fecha_cambio ? h.fecha_cambio.substring(0, 10) : '-';
                 const prodNombre = h.producto_nombre || (h.codigo_producto ? `${h.codigo_producto} - Producto #${h.id_producto}` : `Producto #${h.id_producto}`);
                 const precioAnt = (h.precio_anterior !== null && h.precio_anterior !== undefined) ? `$${Number(h.precio_anterior).toFixed(2)}` : '-';
                 const precioNuevo = `$${Number(h.precio_nuevo ?? h.precio).toFixed(2)}`;
@@ -2952,7 +2952,7 @@
             const lista = json.data || [];
             if (lista.length > 0) {
                 tbody.innerHTML = lista.map(h => {
-                    const fecha = h.fecha_cambio ? h.fecha_cambio.substring(0, 16).replace('T', ' ') : '-';
+                    const fecha = h.fecha_cambio ? h.fecha_cambio.substring(0, 10) : '-';
                     const prodNombre = h.producto_nombre || (h.codigo_producto ? `${h.codigo_producto} - Producto #${h.id_producto}` : `Producto #${h.id_producto}`);
                     const precioAnt = (h.precio_anterior !== null && h.precio_anterior !== undefined) ? `$${Number(h.precio_anterior).toFixed(2)}` : '-';
                     const precioNuevo = `$${Number(h.precio_nuevo ?? h.precio).toFixed(2)}`;
