@@ -630,28 +630,71 @@
             <input type="hidden" id="compraIdEditar" value="">
             <input type="hidden" id="compraIdOrden" value="">
 
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div class="sm:col-span-1">
+            <div class="grid grid-cols-1 sm:grid-cols-12 gap-3">
+                <!-- PROVEEDOR -->
+                <div class="sm:col-span-6">
                     <label class="block text-[11px] font-extrabold text-slate-600 uppercase mb-1">Proveedor</label>
                     <select id="compraProveedor" required onchange="alCambiarProveedorCompra()" class="clay-input w-full text-xs font-bold">
                         <option value="">Seleccione proveedor activo...</option>
                     </select>
                 </div>
 
-                <div>
-                    <label class="block text-[11px] font-extrabold text-slate-600 uppercase mb-1">N° Comprobante / Factura</label>
-                    <input type="text" id="compraComprobante" placeholder="FC-A-0001-00001234" class="clay-input w-full text-xs font-bold">
-                </div>
-
-                <div>
+                <!-- FECHA COMPRA -->
+                <div class="sm:col-span-3">
                     <label class="block text-[11px] font-extrabold text-slate-600 uppercase mb-1">Fecha de Compra</label>
                     <input type="date" id="compraFecha" required class="clay-input w-full text-xs font-bold">
                 </div>
-            </div>
 
-            <div>
-                <label class="block text-[11px] font-extrabold text-slate-600 uppercase mb-1">Fecha de Vencimiento de Pago</label>
-                <input type="date" id="compraVencimiento" class="clay-input w-48 text-xs font-bold">
+                <!-- FECHA VENCIMIENTO -->
+                <div class="sm:col-span-3">
+                    <label class="block text-[11px] font-extrabold text-slate-600 uppercase mb-1">Fecha de Vencimiento</label>
+                    <input type="date" id="compraVencimiento" class="clay-input w-full text-xs font-bold">
+                </div>
+
+                <!-- COMPROBANTE / FACTURA -->
+                <div class="sm:col-span-12">
+                    <label class="block text-[11px] font-extrabold text-slate-600 uppercase mb-1">
+                        Comprobante / Factura del Proveedor
+                    </label>
+                    <div class="grid grid-cols-1 sm:grid-cols-12 gap-2 items-center">
+                        <!-- TIPO COMPROBANTE -->
+                        <div class="sm:col-span-4">
+                            <select id="compraTipoComprobante" onchange="sincronizarComprobante()" class="clay-input w-full text-xs font-bold">
+                                <option value="A">Factura A</option>
+                                <option value="B">Factura B</option>
+                                <option value="C">Factura C</option>
+                                <option value="TI">Ticket Interno</option>
+                            </select>
+                        </div>
+
+                        <!-- PUNTO DE VENTA Y NÚMERO SEPARADOS POR '-' -->
+                        <div class="sm:col-span-8 flex items-center gap-2">
+                            <div class="w-28 shrink-0">
+                                <input type="text" id="compraPtoVenta" maxlength="4" placeholder="0001" inputmode="numeric"
+                                       oninput="validarDigitos(this, 4); if(this.value.length === 4) document.getElementById('compraNroFactura').focus(); sincronizarComprobante();"
+                                       onblur="formatearPtoVenta(this); sincronizarComprobante();"
+                                       class="clay-input w-full text-center font-mono font-bold text-xs" 
+                                       title="Punto de venta (4 dígitos numéricos)">
+                            </div>
+
+                            <span class="text-slate-400 font-black text-base select-none">-</span>
+
+                            <div class="flex-1">
+                                <input type="text" id="compraNroFactura" maxlength="8" placeholder="00000001" inputmode="numeric"
+                                       oninput="validarDigitos(this, 8); sincronizarComprobante();"
+                                       onblur="formatearNroFactura(this); sincronizarComprobante();"
+                                       class="clay-input w-full font-mono font-bold text-xs" 
+                                       title="Número de comprobante (8 dígitos numéricos)">
+                            </div>
+                        </div>
+                    </div>
+                    <!-- INPUT OCULTO PARA RETROCOMPATIBILIDAD CON TESTS Y API -->
+                    <input type="hidden" id="compraComprobante">
+                    <div class="flex items-center justify-between text-[10px] text-slate-400 font-bold mt-1">
+                        <span>Formato: Tipo - Pto. Venta (4 núms) - N° Comprobante (8 núms)</span>
+                        <span id="previewComprobanteGenerado" class="font-mono text-blue-600 font-black"></span>
+                    </div>
+                </div>
             </div>
 
             <!-- SECCIÓN AGREGAR PRODUCTOS -->
@@ -1258,6 +1301,101 @@
 
     let itemsNuevaCompra = [];
 
+    function validarDigitos(input, maxLen) {
+        input.value = input.value.replace(/\D/g, '').slice(0, maxLen);
+    }
+
+    function formatearPtoVenta(input) {
+        const val = input.value.replace(/\D/g, '');
+        if (val.length > 0) {
+            input.value = val.padStart(4, '0');
+        }
+    }
+
+    function formatearNroFactura(input) {
+        const val = input.value.replace(/\D/g, '');
+        if (val.length > 0) {
+            input.value = val.padStart(8, '0');
+        }
+    }
+
+    function sincronizarComprobante() {
+        const tipo = document.getElementById('compraTipoComprobante')?.value || 'A';
+        const ptoRaw = document.getElementById('compraPtoVenta')?.value.replace(/\D/g, '') || '';
+        const nroRaw = document.getElementById('compraNroFactura')?.value.replace(/\D/g, '') || '';
+        const inputHidden = document.getElementById('compraComprobante');
+        const preview = document.getElementById('previewComprobanteGenerado');
+
+        if (!inputHidden) return;
+
+        if (!ptoRaw && !nroRaw) {
+            inputHidden.value = '';
+            if (preview) preview.textContent = '';
+            return;
+        }
+
+        const pto = ptoRaw ? ptoRaw.padStart(4, '0') : '0001';
+        const nro = nroRaw ? nroRaw.padStart(8, '0') : '';
+
+        const finalVal = nro ? `${tipo}-${pto}-${nro}` : `${tipo}-${pto}`;
+        inputHidden.value = finalVal;
+        if (preview) {
+            preview.textContent = `Asignado: ${finalVal}`;
+        }
+    }
+
+    function actualizarInputsDesdeComprobante(valor) {
+        const inputHidden = document.getElementById('compraComprobante');
+        const selectTipo = document.getElementById('compraTipoComprobante');
+        const inputPto = document.getElementById('compraPtoVenta');
+        const inputNro = document.getElementById('compraNroFactura');
+        const preview = document.getElementById('previewComprobanteGenerado');
+
+        if (inputHidden) inputHidden.value = valor || '';
+
+        if (!valor) {
+            if (selectTipo) selectTipo.value = 'A';
+            if (inputPto) inputPto.value = '';
+            if (inputNro) inputNro.value = '';
+            if (preview) preview.textContent = '';
+            return;
+        }
+
+        let str = String(valor).trim();
+        str = str.replace(/^FAC-/i, '').replace(/^FC-/i, '');
+        const partes = str.split('-');
+
+        if (partes.length === 3) {
+            let t = partes[0].toUpperCase().trim();
+            if (t === 'X' || t === 'TICKET' || t === 'TI') t = 'TI';
+            if (['A', 'B', 'C', 'TI'].includes(t) && selectTipo) {
+                selectTipo.value = t;
+            }
+            if (inputPto) inputPto.value = partes[1].replace(/\D/g, '').slice(0, 4).padStart(4, '0');
+            if (inputNro) inputNro.value = partes[2].replace(/\D/g, '').slice(0, 8).padStart(8, '0');
+        } else if (partes.length === 2 && /^\d+$/.test(partes[0]) && /^\d+$/.test(partes[1])) {
+            if (selectTipo) selectTipo.value = 'A';
+            if (inputPto) inputPto.value = partes[0].replace(/\D/g, '').slice(0, 4).padStart(4, '0');
+            if (inputNro) inputNro.value = partes[1].replace(/\D/g, '').slice(0, 8).padStart(8, '0');
+        } else {
+            if (selectTipo) selectTipo.value = 'TI';
+            const nums = str.replace(/\D/g, '');
+            if (nums.length > 0) {
+                if (nums.length <= 4) {
+                    if (inputPto) inputPto.value = '0001';
+                    if (inputNro) inputNro.value = nums.padStart(8, '0');
+                } else {
+                    if (inputPto) inputPto.value = nums.slice(0, 4).padStart(4, '0');
+                    if (inputNro) inputNro.value = nums.slice(4, 12).padStart(8, '0');
+                }
+            } else {
+                if (inputPto) inputPto.value = '';
+                if (inputNro) inputNro.value = '';
+            }
+        }
+        sincronizarComprobante();
+    }
+
     function abrirModalNuevaCompra() {
         document.getElementById('compraModoEdicion').value = 'false';
         document.getElementById('compraIdEditar').value = '';
@@ -1267,7 +1405,7 @@
         document.getElementById('btnGuardarCompraSubmit').textContent = 'Registrar Compra';
         document.getElementById('compraProveedor').disabled = false;
         document.getElementById('compraProveedor').value = '';
-        document.getElementById('compraComprobante').value = '';
+        actualizarInputsDesdeComprobante('');
         document.getElementById('compraFecha').value = new Date().toISOString().split('T')[0];
         document.getElementById('compraVencimiento').value = new Date(Date.now() + 30*24*60*60*1000).toISOString().split('T')[0];
 
@@ -1304,7 +1442,7 @@
             document.getElementById('compraProveedor').disabled = true; // El proveedor de la compra no cambia
             await alCambiarProveedorCompra();
 
-            document.getElementById('compraComprobante').value = c.numero_comprobante || '';
+            actualizarInputsDesdeComprobante(c.numero_comprobante || '');
             document.getElementById('compraFecha').value = c.fecha_compra ? c.fecha_compra.substring(0, 10) : new Date().toISOString().split('T')[0];
             document.getElementById('compraVencimiento').value = c.fecha_vencimiento ? c.fecha_vencimiento.substring(0, 10) : '';
 
@@ -1404,7 +1542,7 @@
         const esEdicion = document.getElementById('compraModoEdicion').value === 'true';
         const idEditar = document.getElementById('compraIdEditar').value;
         const idOrden = document.getElementById('compraIdOrden').value;
-
+        sincronizarComprobante();
         const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
         const payload = {
             id_proveedor: Number(idProv),
@@ -2776,7 +2914,7 @@
             abrirModalNuevaCompra();
             document.getElementById('compraIdOrden').value = idOrden;
             document.getElementById('modalCompraTitulo').textContent = `Registrar Compra desde Orden #${o.numero_orden || idOrden}`;
-            document.getElementById('compraComprobante').value = `ORD-${o.numero_orden || idOrden}`;
+            actualizarInputsDesdeComprobante(`TI-0001-${String(o.numero_orden || idOrden).padStart(8, '0')}`);
             document.getElementById('compraProveedor').value = o.id_proveedor;
             await alCambiarProveedorCompra();
 
