@@ -1793,127 +1793,81 @@
         const totPag = Number(pagos.total_pagado || 0);
         const saldoAPagar = Math.max(0, impTot - totPag);
 
-        // Determinación de tipo de letra (A, B, C o X)
-        let letra = 'X';
-        let codigoLetra = 'DOC. 000';
+        // Determinación de tipo de letra (A, B, C o TI)
+        let letra = 'TI';
+        let codigoLetra = 'DOC. INTERNO';
         const compUpper = String(c.numero_comprobante || '').toUpperCase();
-        if (compUpper.startsWith('A') || compUpper.includes('FAC-A') || compUpper.includes('FC-A')) {
-            letra = 'A';
-            codigoLetra = 'COD. 001';
-        } else if (compUpper.startsWith('B') || compUpper.includes('FAC-B') || compUpper.includes('FC-B')) {
+        if (compUpper.startsWith('A-') || compUpper === 'A' || compUpper.includes('FAC-A') || compUpper.includes('FC-A')) {
+            let letra = 'A';
+            codigoLetra = 'FACTURA A';
+        } else if (compUpper.startsWith('B-') || compUpper === 'B' || compUpper.includes('FAC-B') || compUpper.includes('FC-B')) {
             letra = 'B';
-            codigoLetra = 'COD. 006';
-        } else if (compUpper.startsWith('C') || compUpper.includes('FAC-C') || compUpper.includes('FC-C')) {
+            codigoLetra = 'FACTURA B';
+        } else if (compUpper.startsWith('C-') || compUpper === 'C' || compUpper.includes('FAC-C') || compUpper.includes('FC-C')) {
             letra = 'C';
-            codigoLetra = 'COD. 011';
+            codigoLetra = 'FACTURA C';
+        } else if (compUpper.startsWith('TI') || compUpper.includes('TICKET') || compUpper.includes('ORD-') || compUpper.startsWith('X')) {
+            letra = 'TI';
+            codigoLetra = 'TICKET INTERNO';
         }
 
         const fmtMonto = (val) => '$ ' + Number(val || 0).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         const fmtFecha = (f) => f ? f.substring(0, 10).split('-').reverse().join('/') : '-';
-
-        let estadoColor = '#2563eb';
-        let estadoLabel = (c.estado || 'pendiente').replace('_', ' ').toUpperCase();
-        if (c.estado === 'completada') estadoColor = '#16a34a';
-        else if (c.estado === 'parcialmente_recibida') estadoColor = '#4f46e5';
-        else if (c.estado === 'cancelada') estadoColor = '#dc2626';
-
-        const printWindow = window.open('', '_blank', 'width=950,height=900,scrollbars=yes');
-        if (!printWindow) {
-            mostrarNotificacion('El navegador bloqueó la ventana emergente. Por favor permita popups para imprimir.', 'error');
-            return;
-        }
+        const estadoLabel = (c.estado || 'pendiente').replace('_', ' ').toUpperCase();
 
         const html = `<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Comprobante de Compra #${c.id_compra} - ${c.proveedor || 'Proveedor'}</title>
+    <title>Comprobante #${c.id_compra} - ${c.proveedor || 'Proveedor'}</title>
     <style>
         @page {
             size: A4 portrait;
-            margin: 10mm 12mm;
+            margin: 8mm 10mm;
         }
         * {
             box-sizing: border-box;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            color: #1e293b;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+            color: #000;
         }
         body {
             margin: 0;
-            padding: 15px;
-            background: #f8fafc;
-            font-size: 12px;
-        }
-        .no-print-bar {
-            background: #0f172a;
-            color: #fff;
-            padding: 10px 18px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
-        }
-        .btn-print {
-            background: #2563eb;
-            color: #fff;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 6px;
-            font-weight: bold;
-            font-size: 13px;
-            cursor: pointer;
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-        }
-        .btn-print:hover { background: #1d4ed8; }
-        .btn-close {
-            background: #475569;
-            color: #fff;
-            border: none;
-            padding: 8px 14px;
-            border-radius: 6px;
-            font-size: 13px;
-            cursor: pointer;
-        }
-        .btn-close:hover { background: #334155; }
-        
-        .factura-box {
+            padding: 0;
             background: #fff;
-            max-width: 820px;
+            font-size: 11.5px;
+            width: 100%;
+        }
+        .factura-box {
+            width: 100%;
+            border: 1.5px solid #000;
             margin: 0 auto;
-            border: 2px solid #0f172a;
-            border-radius: 6px;
-            overflow: hidden;
-            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.05);
+            background: #fff;
         }
         
-        /* HEADER COMERCIAL ESTILO FACTURA */
+        /* HEADER */
         .factura-header {
             display: flex;
             position: relative;
-            border-bottom: 2px solid #0f172a;
+            border-bottom: 1.5px solid #000;
         }
         .header-col {
             flex: 1;
-            padding: 14px 18px;
+            padding: 12px 16px;
         }
         .header-col-left {
-            border-right: 1px solid #cbd5e1;
+            border-right: 1px solid #888;
         }
         .header-letter-box {
             position: absolute;
             left: 50%;
             top: 0;
             transform: translateX(-50%);
-            width: 72px;
-            height: 65px;
+            width: 68px;
+            height: 58px;
             background: #fff;
-            border: 2px solid #0f172a;
+            border: 1.5px solid #000;
             border-top: none;
-            border-radius: 0 0 8px 8px;
+            border-radius: 0 0 6px 6px;
             text-align: center;
             z-index: 10;
             display: flex;
@@ -1922,48 +1876,49 @@
             align-items: center;
         }
         .header-letter-box .letter {
-            font-size: 32px;
+            font-size: ${letra === 'TI' ? '22px' : '28px'};
             font-weight: 900;
             line-height: 1;
-            color: #0f172a;
+            color: #000;
         }
         .header-letter-box .subtext {
-            font-size: 9px;
+            font-size: 8px;
             font-weight: 800;
-            color: #64748b;
+            color: #444;
             text-transform: uppercase;
             letter-spacing: 0.5px;
+            margin-top: 2px;
         }
         .company-name {
-            font-size: 18px;
+            font-size: 17px;
             font-weight: 900;
-            color: #0f172a;
+            color: #000;
             letter-spacing: -0.5px;
-            margin-bottom: 4px;
+            margin-bottom: 3px;
         }
         .company-subtitle {
             font-size: 10px;
             font-weight: 700;
-            color: #64748b;
+            color: #555;
             text-transform: uppercase;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
         }
         .company-info {
             font-size: 11px;
-            color: #334155;
+            color: #222;
             line-height: 1.4;
         }
         .invoice-title {
-            font-size: 17px;
+            font-size: 16px;
             font-weight: 900;
-            color: #0f172a;
+            color: #000;
             text-align: right;
-            margin-bottom: 4px;
+            margin-bottom: 3px;
         }
         .invoice-number {
-            font-size: 15px;
+            font-size: 14px;
             font-weight: 800;
-            color: #1e40af;
+            color: #111;
             text-align: right;
             margin-bottom: 8px;
         }
@@ -1971,23 +1926,23 @@
             font-size: 11px;
             text-align: right;
             line-height: 1.45;
-            color: #334155;
+            color: #222;
         }
 
         /* PROVEEDOR */
         .prov-section {
-            padding: 12px 18px;
-            border-bottom: 2px solid #0f172a;
-            background: #f8fafc;
+            padding: 10px 16px;
+            border-bottom: 1.5px solid #000;
+            background: #fafafa;
         }
         .prov-grid {
             display: grid;
             grid-template-columns: 3fr 2fr;
-            gap: 8px 20px;
-            font-size: 11.5px;
+            gap: 6px 20px;
+            font-size: 11px;
         }
         .prov-item strong {
-            color: #0f172a;
+            color: #000;
             font-weight: 800;
         }
 
@@ -1997,119 +1952,122 @@
             border-collapse: collapse;
         }
         .items-table th {
-            background: #0f172a;
-            color: #fff;
-            font-size: 10.5px;
+            background: #f0f0f0;
+            color: #000;
+            font-size: 10px;
             font-weight: 800;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
-            padding: 8px 10px;
+            padding: 6px 8px;
             text-align: left;
-            border: 1px solid #0f172a;
+            border: 1px solid #000;
         }
         .items-table td {
-            padding: 8px 10px;
-            font-size: 11.5px;
-            border: 1px solid #e2e8f0;
-            color: #334155;
+            padding: 6px 8px;
+            font-size: 11px;
+            border: 1px solid #ccc;
+            color: #111;
         }
-        .items-table tr:nth-child(even) {
-            background: #f8fafc;
+        .items-table tr:nth-child(even) td {
+            background: #fafafa;
         }
         .text-center { text-align: center; }
         .text-right { text-align: right; }
 
-        /* FOOTER TOTALES Y FIRMAS */
+        .check-box-square {
+            width: 12px;
+            height: 12px;
+            border: 1.5px solid #333;
+            border-radius: 2px;
+            margin: 0 auto;
+            background: #fff;
+        }
+
+        /* FOOTER Y TOTALES */
         .factura-bottom {
             display: flex;
-            border-top: 2px solid #0f172a;
+            border-top: 1.5px solid #000;
             background: #fff;
         }
         .bottom-left {
             flex: 1.3;
-            padding: 14px 18px;
-            border-right: 2px solid #0f172a;
+            padding: 12px 16px;
+            border-right: 1.5px solid #000;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
         }
         .bottom-right {
             flex: 1;
-            padding: 14px 18px;
-            background: #f8fafc;
+            padding: 12px 16px;
+            background: #fafafa;
         }
         .totals-row {
             display: flex;
             justify-content: space-between;
             padding: 4px 0;
-            font-size: 12px;
-            color: #475569;
+            font-size: 11.5px;
+            color: #333;
         }
         .totals-row.main-total {
-            border-top: 2px solid #0f172a;
-            border-bottom: 2px solid #0f172a;
-            margin: 6px 0;
-            padding: 8px 0;
-            font-size: 15px;
+            border-top: 1.5px solid #000;
+            border-bottom: 1.5px solid #000;
+            margin: 5px 0;
+            padding: 6px 0;
+            font-size: 14px;
             font-weight: 900;
-            color: #0f172a;
+            color: #000;
         }
         .totals-row.saldo-row {
-            font-size: 13px;
+            font-size: 12.5px;
             font-weight: 900;
-            color: #d97706;
+            color: #111;
         }
-        .status-badge {
-            display: inline-block;
-            padding: 3px 8px;
+
+        .control-panel {
+            border: 1px dashed #666;
             border-radius: 4px;
+            padding: 8px 10px;
+            background: #fff;
+        }
+        .control-panel-title {
             font-size: 10px;
-            font-weight: 900;
+            font-weight: 800;
             text-transform: uppercase;
-            color: #fff;
-            letter-spacing: 0.5px;
+            color: #000;
+            margin-bottom: 6px;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 2px;
         }
-        .signatures {
+        .control-panel-item {
             display: flex;
-            gap: 20px;
-            margin-top: 25px;
-        }
-        .signature-box {
-            flex: 1;
-            border-top: 1px dashed #64748b;
-            padding-top: 5px;
-            text-align: center;
+            align-items: center;
+            gap: 6px;
             font-size: 10px;
-            font-weight: 700;
-            color: #475569;
+            color: #222;
+            margin-bottom: 4px;
         }
+
         .doc-disclaimer {
-            font-size: 9.5px;
-            color: #64748b;
+            font-size: 8.5px;
+            color: #666;
             text-align: center;
-            padding: 10px 15px;
-            background: #f1f5f9;
-            border-top: 1px solid #cbd5e1;
-            line-height: 1.35;
+            padding: 6px 12px;
+            background: #f5f5f5;
+            border-top: 1px solid #ccc;
+            line-height: 1.25;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
         }
 
         @media print {
-            body { background: #fff; padding: 0; }
-            .no-print-bar { display: none !important; }
+            body { margin: 0; padding: 0; background: #fff; }
             .factura-box {
-                border: 2px solid #000;
+                border: 1.5px solid #000;
                 box-shadow: none;
-                max-width: 100%;
-            }
-            .factura-header, .prov-section, .factura-bottom {
-                border-color: #000;
-            }
-            .header-letter-box {
-                border-color: #000;
+                width: 100%;
             }
             .items-table th {
-                background: #000 !important;
-                color: #fff !important;
+                background: #e5e5e5 !important;
                 -webkit-print-color-adjust: exact;
                 print-color-adjust: exact;
             }
@@ -2117,29 +2075,15 @@
     </style>
 </head>
 <body>
-    <div class="no-print-bar">
-        <div style="font-weight: bold; font-size: 14px;">Vista Previa de Comprobante Comercial de Compra</div>
-        <div style="display: flex; gap: 8px;">
-            <button class="btn-print" onclick="window.print()">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg>
-                Imprimir Factura
-            </button>
-            <button class="btn-close" onclick="window.close()">Cerrar</button>
-        </div>
-    </div>
-
     <div class="factura-box">
-        <!-- HEADER COMERCIAL ESTILO FACTURA -->
+        <!-- HEADER COMERCIAL -->
         <div class="factura-header">
             <div class="header-col header-col-left">
                 <div class="company-name">DISTRIBUIDORA PYB S.A.</div>
-                <div class="company-subtitle">Comercialización y Distribución Mayorista</div>
+                <div class="company-subtitle">Distribución Mayorista</div>
                 <div class="company-info">
                     <strong>Razón Social:</strong> DISTRIBUIDORA PYB S.A.<br>
-                    <strong>Domicilio Comercial:</strong> San Martín 1234 - Rosario, Santa Fe<br>
-                    <strong>Condición IVA:</strong> IVA Responsable Inscripto<br>
-                    <strong>CUIT:</strong> 30-71458923-4 | <strong>IIBB:</strong> 902-847291-0<br>
-                    <strong>Inicio de Actividades:</strong> 01/03/2021
+                    <strong>CUIT:</strong> 30-71458923-4
                 </div>
             </div>
 
@@ -2155,24 +2099,23 @@
                     <strong>Orden Interna:</strong> ${c.numero_compra || ('#CMP-' + c.id_compra)}<br>
                     <strong>Fecha Emisión:</strong> ${fmtFecha(c.fecha_compra)}<br>
                     <strong>Fecha Vencimiento:</strong> ${fmtFecha(c.fecha_vencimiento)}<br>
-                    <strong>Condición de Pago:</strong> Cuenta Corriente Proveedores<br>
-                    <strong>Estado Operativo:</strong> <span class="status-badge" style="background:${estadoColor};">${estadoLabel}</span>
+                    <strong>Estado:</strong> ${estadoLabel}
                 </div>
             </div>
         </div>
 
-        <!-- DATOS DEL PROVEEDOR -->
+        <!-- PROVEEDOR -->
         <div class="prov-section">
             <div class="prov-grid">
                 <div class="prov-item">
-                    <strong>Proveedor / Emisor:</strong> ${c.proveedor || 'Sin Razón Social'}<br>
-                    <strong>Domicilio:</strong> ${c.proveedor_direccion || 'No informado'}<br>
-                    <strong>Contacto:</strong> ${c.proveedor_telefono || '-'} | ${c.proveedor_email || '-'}
+                    <strong>Proveedor:</strong> ${c.proveedor || '-'}<br>
+                    <strong>Domicilio:</strong> ${c.proveedor_direccion || '-'}<br>
+                    <strong>Contacto:</strong> ${(c.proveedor_telefono || '-') + ' / ' + (c.proveedor_email || '-')}
                 </div>
                 <div class="prov-item">
-                    <strong>CUIT Proveedor:</strong> ${c.proveedor_cuit || 'Consumidor Final / Sin CUIT'}<br>
-                    <strong>Condición frente al IVA:</strong> IVA Responsable Inscripto<br>
-                    <strong>Comprobante Origen:</strong> ${c.numero_comprobante || 'Pendiente de carga'}
+                    <strong>CUIT Proveedor:</strong> ${c.proveedor_cuit || '-'}<br>
+                    <strong>Condición frente al IVA:</strong> -<br>
+                    <strong>Comprobante Origen:</strong> ${c.numero_comprobante || '-'}
                 </div>
             </div>
         </div>
@@ -2181,102 +2124,106 @@
         <table class="items-table">
             <thead>
                 <tr>
-                    <th style="width: 35px;" class="text-center">#</th>
-                    <th style="width: 90px;">Código</th>
+                    <th style="width: 30px;" class="text-center">#</th>
+                    <th style="width: 85px;">Código</th>
                     <th>Descripción / Producto</th>
-                    <th style="width: 70px;" class="text-center">Cant.</th>
-                    <th style="width: 75px;" class="text-center">Recibido</th>
-                    <th style="width: 95px;" class="text-right">Precio Unit.</th>
-                    <th style="width: 105px;" class="text-right">Subtotal</th>
+                    <th style="width: 55px;" class="text-center">Cant.</th>
+                    <th style="width: 65px;" class="text-center">Recibido</th>
+                    <th style="width: 55px;" class="text-center">Control</th>
+                    <th style="width: 90px;" class="text-right">Precio Unit.</th>
+                    <th style="width: 100px;" class="text-right">Subtotal</th>
                 </tr>
             </thead>
             <tbody>
                 ${detalles.map((d, idx) => `
                     <tr>
-                        <td class="text-center" style="font-weight: bold; color: #64748b;">${idx + 1}</td>
+                        <td class="text-center" style="font-weight: bold; color: #555;">${idx + 1}</td>
                         <td style="font-weight: bold; font-family: monospace;">${d.codigo || '-'}</td>
                         <td>
-                            <strong style="color: #0f172a;">${d.nombre || d.descripcion || ('Producto #' + d.id_producto)}</strong>
-                            ${d.descripcion && d.descripcion !== d.nombre ? `<div style="font-size: 10.5px; color: #64748b;">${d.descripcion}</div>` : ''}
+                            <strong style="color: #000;">${d.nombre || d.descripcion || ('Producto #' + d.id_producto)}</strong>
+                            ${d.descripcion && d.descripcion !== d.nombre ? `<div style="font-size: 10px; color: #555;">${d.descripcion}</div>` : ''}
                         </td>
                         <td class="text-center" style="font-weight: 800;">${d.cantidad}</td>
-                        <td class="text-center" style="font-weight: 800; color: ${Number(d.cantidad_recibida) >= Number(d.cantidad) ? '#16a34a' : '#d97706'};">
-                            ${d.cantidad_recibida || 0}
+                        <td class="text-center" style="font-weight: 800;">${d.cantidad_recibida || 0}</td>
+                        <td class="text-center">
+                            <div class="check-box-square"></div>
                         </td>
                         <td class="text-right">${fmtMonto(d.precio_unitario)}</td>
-                        <td class="text-right" style="font-weight: 800; color: #1e3a8a;">${fmtMonto(d.subtotal)}</td>
+                        <td class="text-right" style="font-weight: 800;">${fmtMonto(d.subtotal)}</td>
                     </tr>
                 `).join('')}
             </tbody>
         </table>
 
-        <!-- TOTALES Y FIRMAS -->
+        <!-- TOTALES Y CASILLA DE CONTROL -->
         <div class="factura-bottom">
             <div class="bottom-left">
-                <div>
-                    <div style="font-size: 11px; font-weight: 800; text-transform: uppercase; color: #475569; margin-bottom: 6px;">
-                        Control Logístico & Financiero
+                <div class="control-panel">
+                    <div class="control-panel-title">Control de Mercadería en Depósito</div>
+                    <div class="control-panel-item">
+                        <div class="check-box-square" style="margin: 0; shrink-0;"></div>
+                        <span>Mercadería recibida, contada e inspeccionada en depósito físico</span>
                     </div>
-                    <div style="font-size: 11px; color: #334155; line-height: 1.5;">
-                        • <strong>Recepción en Depósito:</strong> ${totRec} de ${totComp} unidades (${Math.round((totRec / (totComp || 1)) * 100)}%)<br>
-                        • <strong>Pagos Registrados:</strong> ${pagos.por_metodo && pagos.por_metodo.length > 0 
-                            ? pagos.por_metodo.map(p => `${p.metodo_pago.replace('_', ' ')} (${fmtMonto(p.total)})`).join(', ') 
-                            : 'Sin pagos registrados a la fecha.'}
+                    <div class="control-panel-item">
+                        <div class="check-box-square" style="margin: 0; shrink-0;"></div>
+                        <span>Uso sustituto de remito por extravío o entrega directa sin remito</span>
                     </div>
-                </div>
-
-                <div class="signatures">
-                    <div class="signature-box">
-                        Firma / Control Depósito<br>
-                        <span style="font-size: 8.5px; color: #94a3b8;">Recepción de Mercadería</span>
-                    </div>
-                    <div class="signature-box">
-                        Firma / Administración<br>
-                        <span style="font-size: 8.5px; color: #94a3b8;">Aprobación y Pago</span>
+                    <div style="display: flex; gap: 15px; margin-top: 8px; font-size: 9.5px; color: #333; border-top: 1px dotted #ccc; padding-top: 4px;">
+                        <span>Fecha: ____/____/________</span>
+                        <span>Verificado por: ____________________________</span>
                     </div>
                 </div>
             </div>
 
             <div class="bottom-right">
                 <div class="totals-row">
-                    <span>Subtotal Neto:</span>
-                    <strong style="color: #0f172a;">${fmtMonto(impTot)}</strong>
-                </div>
-                <div class="totals-row">
-                    <span>IVA Discriminado:</span>
-                    <span>$ 0,00</span>
-                </div>
-                <div class="totals-row">
-                    <span>Percepciones / Impuestos:</span>
-                    <span>$ 0,00</span>
+                    <span>Subtotal:</span>
+                    <strong>${fmtMonto(impTot)}</strong>
                 </div>
                 <div class="totals-row main-total">
-                    <span>TOTAL COMPRA:</span>
-                    <span style="color: #1e40af;">${fmtMonto(impTot)}</span>
+                    <span>TOTAL FACTURA:</span>
+                    <span>${fmtMonto(impTot)}</span>
                 </div>
                 <div class="totals-row">
-                    <span>Total Pagado a la Fecha:</span>
-                    <strong style="color: #16a34a;">-${fmtMonto(totPag)}</strong>
+                    <span>Total Pagado:</span>
+                    <span>${fmtMonto(totPag)}</span>
                 </div>
                 <div class="totals-row saldo-row">
                     <span>SALDO PENDIENTE:</span>
-                    <span style="color: ${saldoAPagar > 0 ? '#d97706' : '#16a34a'};">${fmtMonto(saldoAPagar)}</span>
+                    <span>${fmtMonto(saldoAPagar)}</span>
                 </div>
             </div>
         </div>
 
         <div class="doc-disclaimer">
-            <strong>DOCUMENTO DE USO INTERNO Y CONTROL ADMINISTRATIVO</strong><br>
-            Este comprobante no reemplaza la factura fiscal original emitida por el proveedor de conformidad con la normativa impositiva vigente.
-            Emitido por Sistema ERP Distribuidora PyB el ${new Date().toLocaleDateString('es-AR')} a las ${new Date().toLocaleTimeString('es-AR')}.
+            Documento de uso interno y control administrativo · Sistema ERP Distribuidora PyB · ${new Date().toLocaleDateString('es-AR')} ${new Date().toLocaleTimeString('es-AR')}
         </div>
     </div>
 </body>
 </html>`;
 
-        printWindow.document.open();
-        printWindow.document.write(html);
-        printWindow.document.close();
+        let printFrame = document.getElementById('comprasPrintFrame');
+        if (!printFrame) {
+            printFrame = document.createElement('iframe');
+            printFrame.id = 'comprasPrintFrame';
+            printFrame.style.position = 'fixed';
+            printFrame.style.top = '-9999px';
+            printFrame.style.left = '-9999px';
+            printFrame.style.width = '0px';
+            printFrame.style.height = '0px';
+            printFrame.style.border = 'none';
+            document.body.appendChild(printFrame);
+        }
+
+        const frameDoc = printFrame.contentWindow.document;
+        frameDoc.open();
+        frameDoc.write(html);
+        frameDoc.close();
+
+        setTimeout(() => {
+            printFrame.contentWindow.focus();
+            printFrame.contentWindow.print();
+        }, 250);
     }
 
     // =========================================================
