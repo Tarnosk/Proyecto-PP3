@@ -247,6 +247,7 @@ class OrdenCompraController extends Controller
                 'id_detalle_orden' => $d->id_detalle_orden,
                 'id_producto' => $d->id_producto,
                 'codigo' => $d->producto?->codigo,
+                'nombre' => $d->producto?->nombre,
                 'descripcion' => $d->producto?->descripcion,
                 'cantidad_solicitada' => (int) $d->cantidad_solicitada,
                 'precio_estimado' => (float) $d->precio_estimado,

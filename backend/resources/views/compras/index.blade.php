@@ -474,12 +474,21 @@
                 <label class="block text-[11px] font-extrabold text-slate-600 uppercase mb-1">Monto a Abonar ($)</label>
                 <input type="number" step="0.01" min="0.01" id="pagoMonto" required 
                        class="clay-input w-full font-black text-lg text-emerald-700" placeholder="0.00">
+                <div class="flex items-center gap-2 mt-1.5">
+                    <span class="text-[10px] font-extrabold text-slate-400 uppercase">Monto Rápido:</span>
+                    <button type="button" onclick="setMontoPagoRapido(1)" class="px-2 py-0.5 text-[10px] font-black bg-emerald-100 text-emerald-800 hover:bg-emerald-200 rounded-md transition-all">
+                        Pagar Total (100%)
+                    </button>
+                    <button type="button" onclick="setMontoPagoRapido(0.5)" class="px-2 py-0.5 text-[10px] font-black bg-slate-100 text-slate-700 hover:bg-slate-200 rounded-md transition-all">
+                        Pagar 50%
+                    </button>
+                </div>
             </div>
 
             <div class="grid grid-cols-2 gap-3">
                 <div>
                     <label class="block text-[11px] font-extrabold text-slate-600 uppercase mb-1">Método de Pago</label>
-                    <select id="pagoMetodo" required class="clay-input w-full text-xs font-bold">
+                    <select id="pagoMetodo" required onchange="alCambiarMetodoPago()" class="clay-input w-full text-xs font-bold">
                         <option value="transferencia">Transferencia Bancaria</option>
                         <option value="efectivo">Efectivo</option>
                         <option value="cheque">Cheque Físico</option>
@@ -490,6 +499,24 @@
                 <div>
                     <label class="block text-[11px] font-extrabold text-slate-600 uppercase mb-1">Fecha de Pago</label>
                     <input type="date" id="pagoFecha" required class="clay-input w-full text-xs font-bold">
+                </div>
+            </div>
+
+            <!-- DETALLE CONDICIONAL PARA CHEQUES / E-CHEQ -->
+            <div id="pagoCamposCheque" class="hidden p-3 bg-slate-50/80 rounded-xl border border-slate-200/80 space-y-2">
+                <div class="flex items-center gap-1.5 text-xs font-extrabold text-slate-700">
+                    <i data-lucide="file-check" class="w-3.5 h-3.5 text-blue-600"></i>
+                    <span>Datos del Cheque / Comprobante Diferido</span>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-[10px] font-extrabold text-slate-500 uppercase mb-0.5">N° de Cheque / Comprobante</label>
+                        <input type="text" id="pagoNroCheque" placeholder="00012345" class="clay-input w-full text-xs font-bold">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-extrabold text-slate-500 uppercase mb-0.5">Fecha Cobro Diferido</label>
+                        <input type="date" id="pagoFechaDiferida" class="clay-input w-full text-xs font-bold">
+                    </div>
                 </div>
             </div>
 
@@ -526,9 +553,20 @@
 
             <!-- TABLA DE ÍTEMS DE LA COMPRA PARA RECEPCIONAR -->
             <div class="border border-slate-200/80 rounded-2xl overflow-hidden bg-slate-50/50">
-                <div class="p-3 bg-slate-100/60 font-black text-xs text-slate-700 flex justify-between">
-                    <span>Productos de la Compra a Recepcionar</span>
-                    <span class="text-[11px] text-slate-500 font-normal">Complete la cantidad recibida para cada ítem</span>
+                <div class="p-3 bg-slate-100/60 font-black text-xs text-slate-700 flex items-center justify-between flex-wrap gap-2">
+                    <div>
+                        <span>Productos de la Compra a Recepcionar</span>
+                        <span class="text-[11px] text-slate-500 font-normal ml-1">Complete la cantidad recibida para cada ítem</span>
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                        <button type="button" onclick="recepcionarTodoModal()" class="px-2.5 py-1 text-[11px] font-black bg-emerald-100 text-emerald-800 hover:bg-emerald-200 rounded-lg transition-all flex items-center gap-1">
+                            <i data-lucide="check-check" class="w-3.5 h-3.5"></i>
+                            <span>Recibir Todo</span>
+                        </button>
+                        <button type="button" onclick="limpiarCantidadesRecepcion()" class="px-2.5 py-1 text-[11px] font-black bg-slate-200 text-slate-700 hover:bg-slate-300 rounded-lg transition-all">
+                            Poner en Cero
+                        </button>
+                    </div>
                 </div>
                 <div class="overflow-x-auto max-h-72">
                     <table class="clay-table">
@@ -548,6 +586,12 @@
                         </tbody>
                     </table>
                 </div>
+            </div>
+
+            <!-- PREVIEW DINÁMICO DEL ESTADO TRAS LA RECEPCIÓN -->
+            <div id="recepcionPreviewEstado" class="p-2.5 rounded-xl text-xs font-bold transition-all bg-blue-50 text-blue-700 border border-blue-100 flex items-center gap-2">
+                <i data-lucide="info" class="w-4 h-4 shrink-0"></i>
+                <span id="recepcionPreviewTexto">Ajuste las cantidades a recepcionar para ver el impacto en el estado.</span>
             </div>
 
             <!-- Para mantener compatibilidad con selects en tests antiguos -->
@@ -586,28 +630,71 @@
             <input type="hidden" id="compraIdEditar" value="">
             <input type="hidden" id="compraIdOrden" value="">
 
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div class="sm:col-span-1">
+            <div class="grid grid-cols-1 sm:grid-cols-12 gap-3">
+                <!-- PROVEEDOR -->
+                <div class="sm:col-span-6">
                     <label class="block text-[11px] font-extrabold text-slate-600 uppercase mb-1">Proveedor</label>
                     <select id="compraProveedor" required onchange="alCambiarProveedorCompra()" class="clay-input w-full text-xs font-bold">
                         <option value="">Seleccione proveedor activo...</option>
                     </select>
                 </div>
 
-                <div>
-                    <label class="block text-[11px] font-extrabold text-slate-600 uppercase mb-1">N° Comprobante / Factura</label>
-                    <input type="text" id="compraComprobante" placeholder="FC-A-0001-00001234" class="clay-input w-full text-xs font-bold">
-                </div>
-
-                <div>
+                <!-- FECHA COMPRA -->
+                <div class="sm:col-span-3">
                     <label class="block text-[11px] font-extrabold text-slate-600 uppercase mb-1">Fecha de Compra</label>
                     <input type="date" id="compraFecha" required class="clay-input w-full text-xs font-bold">
                 </div>
-            </div>
 
-            <div>
-                <label class="block text-[11px] font-extrabold text-slate-600 uppercase mb-1">Fecha de Vencimiento de Pago</label>
-                <input type="date" id="compraVencimiento" class="clay-input w-48 text-xs font-bold">
+                <!-- FECHA VENCIMIENTO -->
+                <div class="sm:col-span-3">
+                    <label class="block text-[11px] font-extrabold text-slate-600 uppercase mb-1">Fecha de Vencimiento</label>
+                    <input type="date" id="compraVencimiento" class="clay-input w-full text-xs font-bold">
+                </div>
+
+                <!-- COMPROBANTE / FACTURA -->
+                <div class="sm:col-span-12">
+                    <label class="block text-[11px] font-extrabold text-slate-600 uppercase mb-1">
+                        Comprobante / Factura del Proveedor
+                    </label>
+                    <div class="grid grid-cols-1 sm:grid-cols-12 gap-2 items-center">
+                        <!-- TIPO COMPROBANTE -->
+                        <div class="sm:col-span-4">
+                            <select id="compraTipoComprobante" onchange="sincronizarComprobante()" class="clay-input w-full text-xs font-bold">
+                                <option value="A">Factura A</option>
+                                <option value="B">Factura B</option>
+                                <option value="C">Factura C</option>
+                                <option value="TI">Ticket Interno</option>
+                            </select>
+                        </div>
+
+                        <!-- PUNTO DE VENTA Y NÚMERO SEPARADOS POR '-' -->
+                        <div class="sm:col-span-8 flex items-center gap-2">
+                            <div class="w-28 shrink-0">
+                                <input type="text" id="compraPtoVenta" maxlength="4" placeholder="0001" inputmode="numeric"
+                                       oninput="validarDigitos(this, 4); if(this.value.length === 4) document.getElementById('compraNroFactura').focus(); sincronizarComprobante();"
+                                       onblur="formatearPtoVenta(this); sincronizarComprobante();"
+                                       class="clay-input w-full text-center font-mono font-bold text-xs" 
+                                       title="Punto de venta (4 dígitos numéricos)">
+                            </div>
+
+                            <span class="text-slate-400 font-black text-base select-none">-</span>
+
+                            <div class="flex-1">
+                                <input type="text" id="compraNroFactura" maxlength="8" placeholder="00000001" inputmode="numeric"
+                                       oninput="validarDigitos(this, 8); sincronizarComprobante();"
+                                       onblur="formatearNroFactura(this); sincronizarComprobante();"
+                                       class="clay-input w-full font-mono font-bold text-xs" 
+                                       title="Número de comprobante (8 dígitos numéricos)">
+                            </div>
+                        </div>
+                    </div>
+                    <!-- INPUT OCULTO PARA RETROCOMPATIBILIDAD CON TESTS Y API -->
+                    <input type="hidden" id="compraComprobante">
+                    <div class="flex items-center justify-between text-[10px] text-slate-400 font-bold mt-1">
+                        <span>Formato: Tipo - Pto. Venta (4 núms) - N° Comprobante (8 núms)</span>
+                        <span id="previewComprobanteGenerado" class="font-mono text-blue-600 font-black"></span>
+                    </div>
+                </div>
             </div>
 
             <!-- SECCIÓN AGREGAR PRODUCTOS -->
@@ -627,12 +714,16 @@
 
                     <div class="sm:col-span-2">
                         <label class="block text-[10px] font-extrabold text-slate-500 uppercase mb-1">Cantidad</label>
-                        <input type="number" id="compraItemCantidad" min="1" value="1" class="clay-input w-full text-xs font-black text-center">
+                        <input type="number" id="compraItemCantidad" min="1" value="1" 
+                               onkeydown="if(event.key === 'Enter'){ event.preventDefault(); agregarItemCompra(); }" 
+                               class="clay-input w-full text-xs font-black text-center">
                     </div>
 
                     <div class="sm:col-span-2">
                         <label class="block text-[10px] font-extrabold text-slate-500 uppercase mb-1">Precio Unitario ($)</label>
-                        <input type="number" step="0.01" min="0" id="compraItemPrecio" placeholder="0.00" class="clay-input w-full text-xs font-black text-right">
+                        <input type="number" step="0.01" min="0" id="compraItemPrecio" placeholder="0.00" 
+                               onkeydown="if(event.key === 'Enter'){ event.preventDefault(); agregarItemCompra(); }" 
+                               class="clay-input w-full text-xs font-black text-right">
                     </div>
 
                     <div class="sm:col-span-2">
@@ -692,6 +783,29 @@
             </button>
         </div>
 
+        <!-- LÍNEA DE TIEMPO / STEPPER DE ESTADOS DE COMPRA (C07) -->
+        <div class="p-3 bg-slate-50/80 rounded-2xl border border-slate-200/60">
+            <div class="flex items-center justify-between max-w-md mx-auto text-xs font-black">
+                <div id="stepCompraPendiente" class="flex flex-col items-center gap-1">
+                    <div id="circleCompraPendiente" class="w-7 h-7 rounded-full flex items-center justify-center bg-blue-600 text-white shadow-sm text-xs">1</div>
+                    <span id="labelCompraPendiente" class="text-[11px] text-slate-700">Pendiente</span>
+                </div>
+                <div id="lineCompraStep1" class="flex-1 h-0.5 bg-slate-200 mx-2 transition-all"></div>
+                <div id="stepCompraParcial" class="flex flex-col items-center gap-1">
+                    <div id="circleCompraParcial" class="w-7 h-7 rounded-full flex items-center justify-center bg-slate-200 text-slate-500 text-xs">2</div>
+                    <span id="labelCompraParcial" class="text-[11px] text-slate-400">Recepción Parcial</span>
+                </div>
+                <div id="lineCompraStep2" class="flex-1 h-0.5 bg-slate-200 mx-2 transition-all"></div>
+                <div id="stepCompraCompletada" class="flex flex-col items-center gap-1">
+                    <div id="circleCompraCompletada" class="w-7 h-7 rounded-full flex items-center justify-center bg-slate-200 text-slate-500 text-xs">3</div>
+                    <span id="labelCompraCompletada" class="text-[11px] text-slate-400">Completada</span>
+                </div>
+            </div>
+            <div id="bannerCompraCancelada" class="hidden mt-2 p-1.5 bg-rose-50 text-rose-700 rounded-lg text-center text-xs font-black border border-rose-200">
+                Esta compra fue CANCELADA.
+            </div>
+        </div>
+
         <!-- BARRAS DE PROGRESO DE RECEPCIÓN Y PAGOS -->
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div class="p-3 bg-slate-50 rounded-xl border border-slate-200/60 space-y-1">
@@ -749,8 +863,22 @@
             </div>
         </div>
 
-        <div class="flex justify-end pt-3 border-t border-slate-100">
-            <button type="button" onclick="cerrarModalDetalleCompra()" class="clay-btn-secondary px-4 py-2 text-xs font-bold">Cerrar</button>
+        <div class="flex items-center justify-between pt-3 border-t border-slate-100 flex-wrap gap-2">
+            <button type="button" onclick="imprimirFichaCompra()" class="clay-btn-secondary px-3 py-2 text-xs font-bold flex items-center gap-1.5" title="Imprimir Comprobante">
+                <i data-lucide="printer" class="w-4 h-4"></i>
+                <span>Imprimir Ficha</span>
+            </button>
+            <div class="flex items-center gap-2">
+                <button type="button" id="btnDetalleAccionRecepcionar" onclick="irDesdeDetalleARecepcion()" class="clay-btn-secondary px-3 py-2 text-xs font-bold text-emerald-700 flex items-center gap-1.5 hidden">
+                    <i data-lucide="package-check" class="w-4 h-4"></i>
+                    <span>Recepcionar</span>
+                </button>
+                <button type="button" id="btnDetalleAccionPagar" onclick="irDesdeDetalleAPago()" class="clay-btn-secondary px-3 py-2 text-xs font-bold text-violet-700 flex items-center gap-1.5 hidden">
+                    <i data-lucide="credit-card" class="w-4 h-4"></i>
+                    <span>Pagar</span>
+                </button>
+                <button type="button" onclick="cerrarModalDetalleCompra()" class="clay-btn-secondary px-4 py-2 text-xs font-bold">Cerrar</button>
+            </div>
         </div>
     </div>
 </div>
@@ -1013,6 +1141,9 @@
                             <button onclick="abrirModalDetalleCompra(${c.id_compra})" class="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-all" title="Ver Detalle">
                                 <i data-lucide="eye" class="w-4 h-4"></i>
                             </button>
+                            <button onclick="imprimirFichaCompra(${c.id_compra})" class="p-1.5 text-slate-600 hover:bg-slate-100 rounded-lg transition-all" title="Imprimir Comprobante (Factura)">
+                                <i data-lucide="printer" class="w-4 h-4"></i>
+                            </button>
                             ${admiteRecepcion ? `
                             <button onclick="abrirModalRecepcionCompra(${c.id_compra})" class="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all" title="Registrar Recepción">
                                 <i data-lucide="package-check" class="w-4 h-4"></i>
@@ -1139,6 +1270,18 @@
             if (lblInfo) {
                 lblInfo.textContent = asociados.length > 0 ? `${asociados.length} producto(s) con precio acordado.` : 'Sin productos asociados previamente (se asociarán al comprar).';
             }
+
+            // Sugerir fecha de vencimiento según los días de plazo del proveedor
+            const provObj = proveedoresCache.find(p => String(p.id_proveedor) === String(idProv));
+            if (provObj && provObj.plazo_entrega_dias) {
+                const fechaCompraInput = document.getElementById('compraFecha');
+                const fechaVencInput = document.getElementById('compraVencimiento');
+                if (fechaVencInput && !fechaVencInput.value && fechaCompraInput && fechaCompraInput.value) {
+                    const baseDate = new Date(fechaCompraInput.value + 'T00:00:00');
+                    baseDate.setDate(baseDate.getDate() + Number(provObj.plazo_entrega_dias));
+                    fechaVencInput.value = baseDate.toISOString().split('T')[0];
+                }
+            }
         } catch (e) {
             console.error('Error productos proveedor:', e);
         }
@@ -1158,6 +1301,101 @@
 
     let itemsNuevaCompra = [];
 
+    function validarDigitos(input, maxLen) {
+        input.value = input.value.replace(/\D/g, '').slice(0, maxLen);
+    }
+
+    function formatearPtoVenta(input) {
+        const val = input.value.replace(/\D/g, '');
+        if (val.length > 0) {
+            input.value = val.padStart(4, '0');
+        }
+    }
+
+    function formatearNroFactura(input) {
+        const val = input.value.replace(/\D/g, '');
+        if (val.length > 0) {
+            input.value = val.padStart(8, '0');
+        }
+    }
+
+    function sincronizarComprobante() {
+        const tipo = document.getElementById('compraTipoComprobante')?.value || 'A';
+        const ptoRaw = document.getElementById('compraPtoVenta')?.value.replace(/\D/g, '') || '';
+        const nroRaw = document.getElementById('compraNroFactura')?.value.replace(/\D/g, '') || '';
+        const inputHidden = document.getElementById('compraComprobante');
+        const preview = document.getElementById('previewComprobanteGenerado');
+
+        if (!inputHidden) return;
+
+        if (!ptoRaw && !nroRaw) {
+            inputHidden.value = '';
+            if (preview) preview.textContent = '';
+            return;
+        }
+
+        const pto = ptoRaw ? ptoRaw.padStart(4, '0') : '0001';
+        const nro = nroRaw ? nroRaw.padStart(8, '0') : '';
+
+        const finalVal = nro ? `${tipo}-${pto}-${nro}` : `${tipo}-${pto}`;
+        inputHidden.value = finalVal;
+        if (preview) {
+            preview.textContent = `Asignado: ${finalVal}`;
+        }
+    }
+
+    function actualizarInputsDesdeComprobante(valor) {
+        const inputHidden = document.getElementById('compraComprobante');
+        const selectTipo = document.getElementById('compraTipoComprobante');
+        const inputPto = document.getElementById('compraPtoVenta');
+        const inputNro = document.getElementById('compraNroFactura');
+        const preview = document.getElementById('previewComprobanteGenerado');
+
+        if (inputHidden) inputHidden.value = valor || '';
+
+        if (!valor) {
+            if (selectTipo) selectTipo.value = 'A';
+            if (inputPto) inputPto.value = '';
+            if (inputNro) inputNro.value = '';
+            if (preview) preview.textContent = '';
+            return;
+        }
+
+        let str = String(valor).trim();
+        str = str.replace(/^FAC-/i, '').replace(/^FC-/i, '');
+        const partes = str.split('-');
+
+        if (partes.length === 3) {
+            let t = partes[0].toUpperCase().trim();
+            if (t === 'X' || t === 'TICKET' || t === 'TI') t = 'TI';
+            if (['A', 'B', 'C', 'TI'].includes(t) && selectTipo) {
+                selectTipo.value = t;
+            }
+            if (inputPto) inputPto.value = partes[1].replace(/\D/g, '').slice(0, 4).padStart(4, '0');
+            if (inputNro) inputNro.value = partes[2].replace(/\D/g, '').slice(0, 8).padStart(8, '0');
+        } else if (partes.length === 2 && /^\d+$/.test(partes[0]) && /^\d+$/.test(partes[1])) {
+            if (selectTipo) selectTipo.value = 'A';
+            if (inputPto) inputPto.value = partes[0].replace(/\D/g, '').slice(0, 4).padStart(4, '0');
+            if (inputNro) inputNro.value = partes[1].replace(/\D/g, '').slice(0, 8).padStart(8, '0');
+        } else {
+            if (selectTipo) selectTipo.value = 'TI';
+            const nums = str.replace(/\D/g, '');
+            if (nums.length > 0) {
+                if (nums.length <= 4) {
+                    if (inputPto) inputPto.value = '0001';
+                    if (inputNro) inputNro.value = nums.padStart(8, '0');
+                } else {
+                    if (inputPto) inputPto.value = nums.slice(0, 4).padStart(4, '0');
+                    if (inputNro) inputNro.value = nums.slice(4, 12).padStart(8, '0');
+                }
+            } else {
+                if (inputPto) inputPto.value = '';
+                if (inputNro) inputNro.value = '';
+            }
+        }
+        sincronizarComprobante();
+    }
+
     function abrirModalNuevaCompra() {
         document.getElementById('compraModoEdicion').value = 'false';
         document.getElementById('compraIdEditar').value = '';
@@ -1167,7 +1405,7 @@
         document.getElementById('btnGuardarCompraSubmit').textContent = 'Registrar Compra';
         document.getElementById('compraProveedor').disabled = false;
         document.getElementById('compraProveedor').value = '';
-        document.getElementById('compraComprobante').value = '';
+        actualizarInputsDesdeComprobante('');
         document.getElementById('compraFecha').value = new Date().toISOString().split('T')[0];
         document.getElementById('compraVencimiento').value = new Date(Date.now() + 30*24*60*60*1000).toISOString().split('T')[0];
 
@@ -1204,13 +1442,13 @@
             document.getElementById('compraProveedor').disabled = true; // El proveedor de la compra no cambia
             await alCambiarProveedorCompra();
 
-            document.getElementById('compraComprobante').value = c.numero_comprobante || '';
+            actualizarInputsDesdeComprobante(c.numero_comprobante || '');
             document.getElementById('compraFecha').value = c.fecha_compra ? c.fecha_compra.substring(0, 10) : new Date().toISOString().split('T')[0];
             document.getElementById('compraVencimiento').value = c.fecha_vencimiento ? c.fecha_vencimiento.substring(0, 10) : '';
 
             itemsNuevaCompra = (json.data.detalles || []).map(d => ({
                 id_producto: d.id_producto,
-                nombre: d.descripcion || d.codigo || `Prod #${d.id_producto}`,
+                nombre: d.nombre || d.descripcion || d.codigo || `Prod #${d.id_producto}`,
                 cantidad: d.cantidad,
                 precio_unitario: d.precio_unitario,
                 subtotal: d.subtotal
@@ -1304,7 +1542,7 @@
         const esEdicion = document.getElementById('compraModoEdicion').value === 'true';
         const idEditar = document.getElementById('compraIdEditar').value;
         const idOrden = document.getElementById('compraIdOrden').value;
-
+        sincronizarComprobante();
         const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
         const payload = {
             id_proveedor: Number(idProv),
@@ -1366,7 +1604,12 @@
     // DETALLE DE COMPRA (C03 & C07)
     // =========================================================
 
+    let idCompraDetalleActual = null;
+    let compraDetalleActualObjeto = null;
+    let compraDetalleDataCompleta = null;
+
     async function abrirModalDetalleCompra(id) {
+        idCompraDetalleActual = id;
         document.getElementById('detalleCompraSubtitulo').textContent = `Compra #${id}`;
         document.getElementById('modalDetalleCompra').classList.remove('hidden');
         const tbody = document.getElementById('detalleCompraTablaBody');
@@ -1377,6 +1620,8 @@
             const json = await res.json();
             if (json.status === 'success' && json.data) {
                 const c = json.data.compra;
+                compraDetalleActualObjeto = c;
+                compraDetalleDataCompleta = json.data;
                 const totComp = json.data.total_comprado || 1;
                 const totRec = json.data.total_recibido || 0;
                 const pctRec = Math.min(100, Math.round((totRec / totComp) * 100));
@@ -1385,6 +1630,63 @@
                 const impTot = Number(c.importe_total || 0);
                 const totPag = Number(pagos.total_pagado || 0);
                 const pctPag = impTot > 0 ? Math.min(100, Math.round((totPag / impTot) * 100)) : 100;
+
+                // Actualizar stepper de estados (C07)
+                const circlePend = document.getElementById('circleCompraPendiente');
+                const labelPend = document.getElementById('labelCompraPendiente');
+                const line1 = document.getElementById('lineCompraStep1');
+                const circleParc = document.getElementById('circleCompraParcial');
+                const labelParc = document.getElementById('labelCompraParcial');
+                const line2 = document.getElementById('lineCompraStep2');
+                const circleComp = document.getElementById('circleCompraCompletada');
+                const labelComp = document.getElementById('labelCompraCompletada');
+                const bannerCanc = document.getElementById('bannerCompraCancelada');
+
+                if (bannerCanc) bannerCanc.classList.add('hidden');
+                
+                if (circlePend) circlePend.className = 'w-7 h-7 rounded-full flex items-center justify-center bg-blue-600 text-white shadow-sm text-xs font-black';
+                if (labelPend) labelPend.className = 'text-[11px] font-bold text-slate-700';
+                if (line1) line1.className = 'flex-1 h-0.5 bg-slate-200 mx-2 transition-all';
+                if (circleParc) circleParc.className = 'w-7 h-7 rounded-full flex items-center justify-center bg-slate-200 text-slate-500 text-xs font-black';
+                if (labelParc) labelParc.className = 'text-[11px] font-bold text-slate-400';
+                if (line2) line2.className = 'flex-1 h-0.5 bg-slate-200 mx-2 transition-all';
+                if (circleComp) circleComp.className = 'w-7 h-7 rounded-full flex items-center justify-center bg-slate-200 text-slate-500 text-xs font-black';
+                if (labelComp) labelComp.className = 'text-[11px] font-bold text-slate-400';
+
+                if (c.estado === 'parcialmente_recibida') {
+                    if (line1) line1.className = 'flex-1 h-0.5 bg-indigo-500 mx-2 transition-all';
+                    if (circleParc) circleParc.className = 'w-7 h-7 rounded-full flex items-center justify-center bg-indigo-600 text-white shadow-sm text-xs font-black';
+                    if (labelParc) labelParc.className = 'text-[11px] font-bold text-indigo-700';
+                } else if (c.estado === 'completada') {
+                    if (circlePend) circlePend.className = 'w-7 h-7 rounded-full flex items-center justify-center bg-emerald-600 text-white shadow-sm text-xs font-black';
+                    if (line1) line1.className = 'flex-1 h-0.5 bg-emerald-500 mx-2 transition-all';
+                    if (circleParc) circleParc.className = 'w-7 h-7 rounded-full flex items-center justify-center bg-emerald-600 text-white shadow-sm text-xs font-black';
+                    if (line2) line2.className = 'flex-1 h-0.5 bg-emerald-500 mx-2 transition-all';
+                    if (circleComp) circleComp.className = 'w-7 h-7 rounded-full flex items-center justify-center bg-emerald-600 text-white shadow-sm text-xs font-black';
+                    if (labelComp) labelComp.className = 'text-[11px] font-bold text-emerald-700';
+                } else if (c.estado === 'cancelada') {
+                    if (bannerCanc) bannerCanc.classList.remove('hidden');
+                    if (circlePend) circlePend.className = 'w-7 h-7 rounded-full flex items-center justify-center bg-rose-600 text-white shadow-sm text-xs font-black';
+                }
+
+                // Acciones directas desde el detalle
+                const btnRecep = document.getElementById('btnDetalleAccionRecepcionar');
+                const btnPago = document.getElementById('btnDetalleAccionPagar');
+                if (btnRecep) {
+                    if (c.estado === 'pendiente' || c.estado === 'parcialmente_recibida') {
+                        btnRecep.classList.remove('hidden');
+                    } else {
+                        btnRecep.classList.add('hidden');
+                    }
+                }
+                if (btnPago) {
+                    const saldo = Number(c.saldo_pendiente ?? c.importe_total ?? 0);
+                    if (c.estado !== 'cancelada' && saldo > 0) {
+                        btnPago.classList.remove('hidden');
+                    } else {
+                        btnPago.classList.add('hidden');
+                    }
+                }
 
                 // Actualizar barras de progreso C07
                 document.getElementById('detalleRecepcionProgresoTexto').textContent = `${pctRec}% (${totRec} de ${totComp} un.)`;
@@ -1395,7 +1697,10 @@
 
                 tbody.innerHTML = (json.data.detalles || []).map(d => `
                     <tr>
-                        <td class="font-bold text-slate-800">${d.descripcion || d.codigo || `Prod #${d.id_producto}`}</td>
+                        <td>
+                            <div class="font-bold text-slate-800">${d.nombre || d.descripcion || `Prod #${d.id_producto}`}</div>
+                            ${d.codigo ? `<div class="text-[11px] text-slate-400 font-bold">${d.codigo}${d.descripcion && d.descripcion !== d.nombre ? ` • ${d.descripcion}` : ''}</div>` : ''}
+                        </td>
                         <td class="text-center font-black">${d.cantidad}</td>
                         <td class="text-center font-bold text-emerald-600">${d.cantidad_recibida || 0}</td>
                         <td class="text-right font-black">$${Number(d.precio_unitario).toFixed(2)}</td>
@@ -1428,6 +1733,8 @@
                 } else {
                     divPagos.innerHTML = '<span class="text-slate-400 font-bold">Sin pagos registrados todavía.</span>';
                 }
+
+                if (window.lucide) window.lucide.createIcons();
             }
         } catch (e) {
             console.error('Error detalle compra:', e);
@@ -1436,6 +1743,487 @@
 
     function cerrarModalDetalleCompra() {
         document.getElementById('modalDetalleCompra').classList.add('hidden');
+    }
+
+    function irDesdeDetalleARecepcion() {
+        if (!idCompraDetalleActual) return;
+        cerrarModalDetalleCompra();
+        abrirModalRecepcionCompra(idCompraDetalleActual);
+    }
+
+    function irDesdeDetalleAPago() {
+        if (!idCompraDetalleActual) return;
+        cerrarModalDetalleCompra();
+        abrirModalPagoCompra(idCompraDetalleActual);
+    }
+
+    async function imprimirFichaCompra(id = null) {
+        let data = null;
+        const targetId = id || idCompraDetalleActual;
+        
+        if (!targetId && compraDetalleDataCompleta) {
+            data = compraDetalleDataCompleta;
+        } else if (targetId) {
+            if (compraDetalleDataCompleta && compraDetalleDataCompleta.compra && compraDetalleDataCompleta.compra.id_compra === targetId) {
+                data = compraDetalleDataCompleta;
+            } else {
+                try {
+                    const res = await fetch(`${API_BASE}/compras/${targetId}`);
+                    const json = await res.json();
+                    if (json.status === 'success' && json.data) {
+                        data = json.data;
+                    }
+                } catch (e) {
+                    console.error('Error al obtener datos para imprimir:', e);
+                }
+            }
+        }
+
+        if (!data || !data.compra) {
+            mostrarNotificacion('No se pudo cargar la información para imprimir el comprobante.', 'error');
+            return;
+        }
+
+        const c = data.compra;
+        const detalles = data.detalles || [];
+        const pagos = data.pagos || {};
+        const totComp = data.total_comprado || detalles.reduce((acc, d) => acc + Number(d.cantidad || 0), 0);
+        const totRec = data.total_recibido || detalles.reduce((acc, d) => acc + Number(d.cantidad_recibida || 0), 0);
+        const impTot = Number(c.importe_total || 0);
+        const totPag = Number(pagos.total_pagado || 0);
+        const saldoAPagar = Math.max(0, impTot - totPag);
+
+        // Determinación de tipo de letra (A, B, C o TI)
+        let letra = 'TI';
+        let codigoLetra = 'TICKET INTERNO';
+        const compUpper = String(c.numero_comprobante || '').toUpperCase().trim();
+        if (compUpper.startsWith('A-') || compUpper.startsWith('A ') || compUpper === 'A' || compUpper.includes('FAC-A') || compUpper.includes('FC-A') || compUpper.includes('FACTURA A')) {
+            letra = 'A';
+            codigoLetra = 'FACTURA A';
+        } else if (compUpper.startsWith('B-') || compUpper.startsWith('B ') || compUpper === 'B' || compUpper.includes('FAC-B') || compUpper.includes('FC-B') || compUpper.includes('FACTURA B')) {
+            letra = 'B';
+            codigoLetra = 'FACTURA B';
+        } else if (compUpper.startsWith('C-') || compUpper.startsWith('C ') || compUpper === 'C' || compUpper.includes('FAC-C') || compUpper.includes('FC-C') || compUpper.includes('FACTURA C')) {
+            letra = 'C';
+            codigoLetra = 'FACTURA C';
+        } else {
+            letra = 'TI';
+            codigoLetra = 'TICKET INTERNO';
+        }
+
+        const fmtMonto = (val) => '$ ' + Number(val || 0).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        const fmtFecha = (f) => f ? f.substring(0, 10).split('-').reverse().join('/') : '-';
+        const estadoLabel = (c.estado || 'pendiente').replace('_', ' ').toUpperCase();
+
+        const html = `<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Comprobante #${c.id_compra} - ${c.proveedor || 'Proveedor'}</title>
+    <style>
+        @page {
+            size: A4 portrait;
+            margin: 8mm 10mm;
+        }
+        * {
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+            color: #000;
+        }
+        body {
+            margin: 0;
+            padding: 0;
+            background: #fff;
+            font-size: 11.5px;
+            width: 100%;
+        }
+        .factura-box {
+            width: 100%;
+            border: 1.5px solid #000;
+            margin: 0 auto;
+            background: #fff;
+        }
+        
+        /* HEADER */
+        .factura-header {
+            display: flex;
+            position: relative;
+            border-bottom: 1.5px solid #000;
+        }
+        .header-col {
+            flex: 1;
+            padding: 12px 16px;
+        }
+        .header-col-left {
+            border-right: 1px solid #888;
+        }
+        .header-letter-box {
+            position: absolute;
+            left: 50%;
+            top: 0;
+            transform: translateX(-50%);
+            width: 68px;
+            height: 58px;
+            background: #fff;
+            border: 1.5px solid #000;
+            border-top: none;
+            border-radius: 0 0 6px 6px;
+            text-align: center;
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        .header-letter-box .letter {
+            font-size: ${letra === 'TI' ? '22px' : '28px'};
+            font-weight: 900;
+            line-height: 1;
+            color: #000;
+        }
+        .header-letter-box .subtext {
+            font-size: 8px;
+            font-weight: 800;
+            color: #444;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 2px;
+        }
+        .company-name {
+            font-size: 17px;
+            font-weight: 900;
+            color: #000;
+            letter-spacing: -0.5px;
+            margin-bottom: 3px;
+        }
+        .company-subtitle {
+            font-size: 10px;
+            font-weight: 700;
+            color: #555;
+            text-transform: uppercase;
+            margin-bottom: 6px;
+        }
+        .company-info {
+            font-size: 11px;
+            color: #222;
+            line-height: 1.4;
+        }
+        .invoice-title {
+            font-size: 16px;
+            font-weight: 900;
+            color: #000;
+            text-align: right;
+            margin-bottom: 3px;
+        }
+        .invoice-number {
+            font-size: 14px;
+            font-weight: 800;
+            color: #111;
+            text-align: right;
+            margin-bottom: 8px;
+        }
+        .invoice-meta {
+            font-size: 11px;
+            text-align: right;
+            line-height: 1.45;
+            color: #222;
+        }
+
+        /* PROVEEDOR */
+        .prov-section {
+            padding: 10px 16px;
+            border-bottom: 1.5px solid #000;
+            background: #fafafa;
+        }
+        .prov-grid {
+            display: grid;
+            grid-template-columns: 3fr 2fr;
+            gap: 6px 20px;
+            font-size: 11px;
+        }
+        .prov-item strong {
+            color: #000;
+            font-weight: 800;
+        }
+
+        /* TABLA ITEMS */
+        .items-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .items-table th {
+            background: #f0f0f0;
+            color: #000;
+            font-size: 10px;
+            font-weight: 800;
+            text-transform: uppercase;
+            padding: 6px 8px;
+            text-align: left;
+            border: 1px solid #000;
+        }
+        .items-table td {
+            padding: 6px 8px;
+            font-size: 11px;
+            border: 1px solid #ccc;
+            color: #111;
+        }
+        .items-table tr:nth-child(even) td {
+            background: #fafafa;
+        }
+        .text-center { text-align: center; }
+        .text-right { text-align: right; }
+
+        .check-box-square {
+            width: 12px;
+            height: 12px;
+            border: 1.5px solid #333;
+            border-radius: 2px;
+            margin: 0 auto;
+            background: #fff;
+        }
+
+        /* FOOTER Y TOTALES */
+        .factura-bottom {
+            display: flex;
+            border-top: 1.5px solid #000;
+            background: #fff;
+        }
+        .bottom-left {
+            flex: 1.3;
+            padding: 12px 16px;
+            border-right: 1.5px solid #000;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .bottom-right {
+            flex: 1;
+            padding: 12px 16px;
+            background: #fafafa;
+        }
+        .totals-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 4px 0;
+            font-size: 11.5px;
+            color: #333;
+        }
+        .totals-row.main-total {
+            border-top: 1.5px solid #000;
+            border-bottom: 1.5px solid #000;
+            margin: 5px 0;
+            padding: 6px 0;
+            font-size: 14px;
+            font-weight: 900;
+            color: #000;
+        }
+        .totals-row.saldo-row {
+            font-size: 12.5px;
+            font-weight: 900;
+            color: #111;
+        }
+
+        .control-panel {
+            border: 1px dashed #666;
+            border-radius: 4px;
+            padding: 8px 10px;
+            background: #fff;
+        }
+        .control-panel-title {
+            font-size: 10px;
+            font-weight: 800;
+            text-transform: uppercase;
+            color: #000;
+            margin-bottom: 6px;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 2px;
+        }
+        .control-panel-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 10px;
+            color: #222;
+            margin-bottom: 4px;
+        }
+
+        .doc-disclaimer {
+            font-size: 8.5px;
+            color: #666;
+            text-align: center;
+            padding: 6px 12px;
+            background: #f5f5f5;
+            border-top: 1px solid #ccc;
+            line-height: 1.25;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+
+        @media print {
+            body { margin: 0; padding: 0; background: #fff; }
+            .factura-box {
+                border: 1.5px solid #000;
+                box-shadow: none;
+                width: 100%;
+            }
+            .items-table th {
+                background: #e5e5e5 !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="factura-box">
+        <!-- HEADER COMERCIAL -->
+        <div class="factura-header">
+            <div class="header-col header-col-left">
+                <div class="company-name">DISTRIBUIDORA PYB S.A.</div>
+                <div class="company-subtitle">Distribución Mayorista</div>
+                <div class="company-info">
+                    <strong>Razón Social:</strong> DISTRIBUIDORA PYB S.A.<br>
+                    <strong>CUIT:</strong> 30-71458923-4
+                </div>
+            </div>
+
+            <div class="header-letter-box">
+                <span class="letter">${letra}</span>
+                <span class="subtext">${codigoLetra}</span>
+            </div>
+
+            <div class="header-col">
+                <div class="invoice-title">COMPROBANTE DE COMPRA</div>
+                <div class="invoice-number">N° ${c.numero_comprobante || ('0001-' + String(c.id_compra).padStart(8, '0'))}</div>
+                <div class="invoice-meta">
+                    <strong>Orden Interna:</strong> ${c.numero_compra || ('#CMP-' + c.id_compra)}<br>
+                    <strong>Fecha Emisión:</strong> ${fmtFecha(c.fecha_compra)}<br>
+                    <strong>Fecha Vencimiento:</strong> ${fmtFecha(c.fecha_vencimiento)}<br>
+                    <strong>Estado:</strong> ${estadoLabel}
+                </div>
+            </div>
+        </div>
+
+        <!-- PROVEEDOR -->
+        <div class="prov-section">
+            <div class="prov-grid">
+                <div class="prov-item">
+                    <strong>Proveedor:</strong> ${c.proveedor || '-'}<br>
+                    <strong>Domicilio:</strong> ${c.proveedor_direccion || '-'}<br>
+                    <strong>Contacto:</strong> ${(c.proveedor_telefono || '-') + ' / ' + (c.proveedor_email || '-')}
+                </div>
+                <div class="prov-item">
+                    <strong>CUIT Proveedor:</strong> ${c.proveedor_cuit || '-'}<br>
+                    <strong>Condición frente al IVA:</strong> -<br>
+                    <strong>Comprobante Origen:</strong> ${c.numero_comprobante || '-'}
+                </div>
+            </div>
+        </div>
+
+        <!-- ITEMS / DETALLE -->
+        <table class="items-table">
+            <thead>
+                <tr>
+                    <th style="width: 30px;" class="text-center">#</th>
+                    <th style="width: 85px;">Código</th>
+                    <th>Descripción / Producto</th>
+                    <th style="width: 55px;" class="text-center">Cant.</th>
+                    <th style="width: 65px;" class="text-center">Recibido</th>
+                    <th style="width: 55px;" class="text-center">Control</th>
+                    <th style="width: 90px;" class="text-right">Precio Unit.</th>
+                    <th style="width: 100px;" class="text-right">Subtotal</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${detalles.map((d, idx) => `
+                    <tr>
+                        <td class="text-center" style="font-weight: bold; color: #555;">${idx + 1}</td>
+                        <td style="font-weight: bold; font-family: monospace;">${d.codigo || '-'}</td>
+                        <td>
+                            <strong style="color: #000;">${d.nombre || d.descripcion || ('Producto #' + d.id_producto)}</strong>
+                            ${d.descripcion && d.descripcion !== d.nombre ? `<div style="font-size: 10px; color: #555;">${d.descripcion}</div>` : ''}
+                        </td>
+                        <td class="text-center" style="font-weight: 800;">${d.cantidad}</td>
+                        <td class="text-center" style="font-weight: 800;">${d.cantidad_recibida || 0}</td>
+                        <td class="text-center">
+                            <div class="check-box-square"></div>
+                        </td>
+                        <td class="text-right">${fmtMonto(d.precio_unitario)}</td>
+                        <td class="text-right" style="font-weight: 800;">${fmtMonto(d.subtotal)}</td>
+                    </tr>
+                `).join('')}
+            </tbody>
+        </table>
+
+        <!-- TOTALES Y CASILLA DE CONTROL -->
+        <div class="factura-bottom">
+            <div class="bottom-left">
+                <div class="control-panel">
+                    <div class="control-panel-title">Control de Mercadería en Depósito</div>
+                    <div class="control-panel-item">
+                        <div class="check-box-square" style="margin: 0; shrink-0;"></div>
+                        <span>Mercadería recibida, contada e inspeccionada en depósito físico</span>
+                    </div>
+                    <div class="control-panel-item">
+                        <div class="check-box-square" style="margin: 0; shrink-0;"></div>
+                        <span>Uso sustituto de remito por extravío o entrega directa sin remito</span>
+                    </div>
+                    <div style="display: flex; gap: 15px; margin-top: 8px; font-size: 9.5px; color: #333; border-top: 1px dotted #ccc; padding-top: 4px;">
+                        <span>Fecha: ____/____/________</span>
+                        <span>Verificado por: ____________________________</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bottom-right">
+                <div class="totals-row">
+                    <span>Subtotal:</span>
+                    <strong>${fmtMonto(impTot)}</strong>
+                </div>
+                <div class="totals-row main-total">
+                    <span>TOTAL FACTURA:</span>
+                    <span>${fmtMonto(impTot)}</span>
+                </div>
+                <div class="totals-row">
+                    <span>Total Pagado:</span>
+                    <span>${fmtMonto(totPag)}</span>
+                </div>
+                <div class="totals-row saldo-row">
+                    <span>SALDO PENDIENTE:</span>
+                    <span>${fmtMonto(saldoAPagar)}</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="doc-disclaimer">
+            Documento de uso interno y control administrativo · Sistema ERP Distribuidora PyB · ${new Date().toLocaleDateString('es-AR')} ${new Date().toLocaleTimeString('es-AR')}
+        </div>
+    </div>
+</body>
+</html>`;
+
+        let printFrame = document.getElementById('comprasPrintFrame');
+        if (!printFrame) {
+            printFrame = document.createElement('iframe');
+            printFrame.id = 'comprasPrintFrame';
+            printFrame.style.position = 'fixed';
+            printFrame.style.top = '-9999px';
+            printFrame.style.left = '-9999px';
+            printFrame.style.width = '0px';
+            printFrame.style.height = '0px';
+            printFrame.style.border = 'none';
+            document.body.appendChild(printFrame);
+        }
+
+        const frameDoc = printFrame.contentWindow.document;
+        frameDoc.open();
+        frameDoc.write(html);
+        frameDoc.close();
+
+        setTimeout(() => {
+            printFrame.contentWindow.focus();
+            printFrame.contentWindow.print();
+        }, 250);
     }
 
     // =========================================================
@@ -1471,7 +2259,8 @@
                 return `
                     <tr class="${pend <= 0 ? 'opacity-40 bg-slate-100/40' : ''}">
                         <td>
-                            <div class="font-bold text-slate-800">${d.descripcion || d.codigo || `Prod #${d.id_producto}`}</div>
+                            <div class="font-bold text-slate-800">${d.nombre || d.descripcion || `Prod #${d.id_producto}`}</div>
+                            ${d.codigo ? `<div class="text-[11px] text-slate-400 font-bold">${d.codigo}</div>` : ''}
                             <input type="hidden" id="rec_prod_${idx}" value="${d.id_producto}">
                         </td>
                         <td class="text-center font-bold">${d.cantidad}</td>
@@ -1479,13 +2268,68 @@
                         <td class="text-center font-black ${pend > 0 ? 'text-amber-600' : 'text-slate-400'}">${pend}</td>
                         <td class="text-center">
                             <input type="number" min="0" max="${pend}" value="${pend > 0 ? pend : 0}" id="rec_cant_${idx}" 
+                                   oninput="actualizarPreviewRecepcion()" 
                                    ${disabled} class="clay-input w-20 py-1 text-center font-black text-xs">
                         </td>
                     </tr>
                 `;
             }).join('');
+
+            actualizarPreviewRecepcion();
+            if (window.lucide) window.lucide.createIcons();
         } catch (e) {
             mostrarNotificacion('Error al cargar los datos de recepción.', 'error');
+        }
+    }
+
+    function recepcionarTodoModal() {
+        itemsRecepcionModal.forEach((d, idx) => {
+            const input = document.getElementById(`rec_cant_${idx}`);
+            const pend = d.cantidad_pendiente !== undefined ? d.cantidad_pendiente : Math.max(0, d.cantidad - (d.cantidad_recibida || 0));
+            if (input && pend > 0) {
+                input.value = pend;
+            }
+        });
+        actualizarPreviewRecepcion();
+    }
+
+    function limpiarCantidadesRecepcion() {
+        itemsRecepcionModal.forEach((d, idx) => {
+            const input = document.getElementById(`rec_cant_${idx}`);
+            if (input && !input.disabled) {
+                input.value = 0;
+            }
+        });
+        actualizarPreviewRecepcion();
+    }
+
+    function actualizarPreviewRecepcion() {
+        let totalPendiente = 0;
+        let totalARecibir = 0;
+
+        itemsRecepcionModal.forEach((d, idx) => {
+            const input = document.getElementById(`rec_cant_${idx}`);
+            const pend = d.cantidad_pendiente !== undefined ? d.cantidad_pendiente : Math.max(0, d.cantidad - (d.cantidad_recibida || 0));
+            if (pend > 0) {
+                totalPendiente += pend;
+                const cant = Number(input?.value || 0);
+                totalARecibir += cant;
+            }
+        });
+
+        const box = document.getElementById('recepcionPreviewEstado');
+        const txt = document.getElementById('recepcionPreviewTexto');
+        if (!box || !txt) return;
+
+        if (totalARecibir === 0) {
+            box.className = 'p-2.5 rounded-xl text-xs font-bold transition-all bg-slate-100 text-slate-600 border border-slate-200 flex items-center gap-2';
+            txt.textContent = 'Ingrese las cantidades a recibir para ver el impacto en el estado de la compra.';
+        } else if (totalARecibir >= totalPendiente) {
+            box.className = 'p-2.5 rounded-xl text-xs font-bold transition-all bg-emerald-50 text-emerald-800 border border-emerald-200 flex items-center gap-2';
+            txt.textContent = `✓ Esta recepción completará la compra al 100% (${totalARecibir} un. a ingresar. Estado final: Completada).`;
+        } else {
+            box.className = 'p-2.5 rounded-xl text-xs font-bold transition-all bg-indigo-50 text-indigo-800 border border-indigo-200 flex items-center gap-2';
+            txt.textContent = `ℹ Esta recepción registrará un ingreso parcial de ${totalARecibir} un. (Restarán ${totalPendiente - totalARecibir} un. Estado: Parcialmente Recibida).`;
         }
     }
 
@@ -1544,16 +2388,21 @@
     // PAGOS DE COMPRA
     // =========================================================
 
+    let saldoActualModalPago = 0;
+
     async function abrirModalPagoCompra(idCompra) {
         document.getElementById('pagoIdCompra').value = idCompra;
         document.getElementById('pagoFecha').value = new Date().toISOString().split('T')[0];
         document.getElementById('pagoSubtituloCompra').textContent = `Compra #${idCompra}`;
+        document.getElementById('pagoMetodo').value = 'transferencia';
+        alCambiarMetodoPago();
 
         try {
             const res = await fetch(`${API_BASE}/compras/${idCompra}/pagos/resumen`);
             const json = await res.json();
             if (json.status === 'success' && json.data) {
                 const saldo = Number(json.data.saldo_a_pagar || 0);
+                saldoActualModalPago = saldo;
                 const total = Number(json.data.importe_total || 0);
                 document.getElementById('pagoSaldoDisponibleDisplay').textContent = `$${saldo.toFixed(2)}`;
                 document.getElementById('pagoTotalFacturaDisplay').textContent = `$${total.toFixed(2)}`;
@@ -1563,6 +2412,25 @@
         } catch (e) {}
 
         document.getElementById('modalPago').classList.remove('hidden');
+        if (window.lucide) window.lucide.createIcons();
+    }
+
+    function setMontoPagoRapido(factor) {
+        if (saldoActualModalPago <= 0) return;
+        const monto = Math.round(saldoActualModalPago * factor * 100) / 100;
+        document.getElementById('pagoMonto').value = monto.toFixed(2);
+    }
+
+    function alCambiarMetodoPago() {
+        const metodo = document.getElementById('pagoMetodo')?.value;
+        const bloqueCheque = document.getElementById('pagoCamposCheque');
+        if (!bloqueCheque) return;
+        if (metodo === 'cheque' || metodo === 'echeq') {
+            bloqueCheque.classList.remove('hidden');
+            if (window.lucide) window.lucide.createIcons();
+        } else {
+            bloqueCheque.classList.add('hidden');
+        }
     }
 
     function cerrarModalPago() {
@@ -1811,7 +2679,7 @@
 
             itemsNuevaOrden = (json.data.detalles || []).map(d => ({
                 id_producto: d.id_producto,
-                nombre: d.descripcion || d.codigo || `Prod #${d.id_producto}`,
+                nombre: d.nombre || d.descripcion || d.codigo || `Prod #${d.id_producto}`,
                 cantidad_solicitada: d.cantidad_solicitada,
                 precio_estimado: d.precio_estimado,
                 subtotal: d.subtotal
@@ -1993,13 +2861,13 @@
             abrirModalNuevaCompra();
             document.getElementById('compraIdOrden').value = idOrden;
             document.getElementById('modalCompraTitulo').textContent = `Registrar Compra desde Orden #${o.numero_orden || idOrden}`;
-            document.getElementById('compraComprobante').value = `ORD-${o.numero_orden || idOrden}`;
+            actualizarInputsDesdeComprobante(`TI-0001-${String(o.numero_orden || idOrden).padStart(8, '0')}`);
             document.getElementById('compraProveedor').value = o.id_proveedor;
             await alCambiarProveedorCompra();
 
             itemsNuevaCompra = (json.data.detalles || []).map(d => ({
                 id_producto: d.id_producto,
-                nombre: d.descripcion || d.codigo || `Prod #${d.id_producto}`,
+                nombre: d.nombre || d.descripcion || d.codigo || `Prod #${d.id_producto}`,
                 cantidad: d.cantidad_solicitada,
                 precio_unitario: d.precio_estimado,
                 subtotal: d.subtotal
@@ -2024,7 +2892,10 @@
             if (json.status === 'success' && json.data) {
                 tbody.innerHTML = (json.data.detalles || []).map(d => `
                     <tr>
-                        <td class="font-bold text-slate-800">${d.descripcion || d.codigo || `Prod #${d.id_producto}`}</td>
+                        <td>
+                            <div class="font-bold text-slate-800">${d.nombre || d.descripcion || `Prod #${d.id_producto}`}</div>
+                            ${d.codigo ? `<div class="text-[11px] text-slate-400 font-bold">${d.codigo}${d.descripcion && d.descripcion !== d.nombre ? ` • ${d.descripcion}` : ''}</div>` : ''}
+                        </td>
                         <td class="text-center font-black">${d.cantidad_solicitada}</td>
                         <td class="text-right font-black">$${Number(d.precio_estimado).toFixed(2)}</td>
                         <td class="text-right font-black text-indigo-600">$${Number(d.subtotal).toFixed(2)}</td>

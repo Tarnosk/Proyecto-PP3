@@ -481,7 +481,7 @@
                 <table class="clay-table">
                     <thead>
                         <tr>
-                            <th>Fecha y Hora</th>
+                            <th>Fecha</th>
                             <th>Producto</th>
                             <th class="text-center">Unidad</th>
                             <th class="text-right">Precio Anterior</th>
@@ -1394,12 +1394,14 @@
                 `;
             }
 
+            const fechaSolo = (item.fecha_formateada || item.fecha_actualizacion || '').substring(0, 10);
+
             return `
                 <tr>
                     <td class="font-bold text-xs text-slate-700">
                         <div class="flex items-center gap-1.5">
                             <i data-lucide="calendar" class="w-3.5 h-3.5 text-slate-400"></i>
-                            <span>${item.fecha_formateada || item.fecha_actualizacion}</span>
+                            <span>${fechaSolo || '-'}</span>
                         </div>
                     </td>
                     <td>

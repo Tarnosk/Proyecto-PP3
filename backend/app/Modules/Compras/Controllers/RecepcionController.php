@@ -270,7 +270,7 @@ class RecepcionController extends Controller
             $producto,
             'ingreso',
             $cantidad,
-            'Recepción de compra (C06)',
+            'Recepción de compra',
             $idUsuario,
             $idUnidad,
             null,
