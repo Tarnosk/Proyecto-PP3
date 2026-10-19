@@ -1795,18 +1795,18 @@
 
         // Determinación de tipo de letra (A, B, C o TI)
         let letra = 'TI';
-        let codigoLetra = 'DOC. INTERNO';
-        const compUpper = String(c.numero_comprobante || '').toUpperCase();
-        if (compUpper.startsWith('A-') || compUpper === 'A' || compUpper.includes('FAC-A') || compUpper.includes('FC-A')) {
-            let letra = 'A';
+        let codigoLetra = 'TICKET INTERNO';
+        const compUpper = String(c.numero_comprobante || '').toUpperCase().trim();
+        if (compUpper.startsWith('A-') || compUpper.startsWith('A ') || compUpper === 'A' || compUpper.includes('FAC-A') || compUpper.includes('FC-A') || compUpper.includes('FACTURA A')) {
+            letra = 'A';
             codigoLetra = 'FACTURA A';
-        } else if (compUpper.startsWith('B-') || compUpper === 'B' || compUpper.includes('FAC-B') || compUpper.includes('FC-B')) {
+        } else if (compUpper.startsWith('B-') || compUpper.startsWith('B ') || compUpper === 'B' || compUpper.includes('FAC-B') || compUpper.includes('FC-B') || compUpper.includes('FACTURA B')) {
             letra = 'B';
             codigoLetra = 'FACTURA B';
-        } else if (compUpper.startsWith('C-') || compUpper === 'C' || compUpper.includes('FAC-C') || compUpper.includes('FC-C')) {
+        } else if (compUpper.startsWith('C-') || compUpper.startsWith('C ') || compUpper === 'C' || compUpper.includes('FAC-C') || compUpper.includes('FC-C') || compUpper.includes('FACTURA C')) {
             letra = 'C';
             codigoLetra = 'FACTURA C';
-        } else if (compUpper.startsWith('TI') || compUpper.includes('TICKET') || compUpper.includes('ORD-') || compUpper.startsWith('X')) {
+        } else {
             letra = 'TI';
             codigoLetra = 'TICKET INTERNO';
         }
