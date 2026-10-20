@@ -3,7 +3,7 @@
 @section('title', 'Clientes | Sistema de gestión')
 
 @section('nav-links')
-    @can('create', App\Models\Cliente::class)
+    @can('create', App\Modules\Clientes\Models\Cliente::class)
         <a href="{{ route('clientes.create') }}">Nuevo cliente</a>
     @endcan
 @endsection

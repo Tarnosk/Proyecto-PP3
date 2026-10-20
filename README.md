@@ -184,14 +184,19 @@ La suite incluye pruebas de seguridad, clientes, reclamos, integración de cobro
 
 ```text
 app/
-  Enums/          Valores válidos del dominio
   Http/
-    Controllers/  Entrada y respuesta de cada flujo
-    Middleware/   Sesión única, expiración y roles
-    Requests/     Validaciones backend
-  Models/         Modelos y relaciones Eloquent
-  Policies/       Autorización sobre clientes y reclamos
-  Services/       Lógica de autenticación y bloqueo
+    Controllers/  Controlador base y panel principal compartido
+  Modules/
+    Login/        Controllers, Models, Requests, Services, Enums, Middleware y Mail
+    Clientes/     Controllers, Models, Requests, Enums, Policies y Resources
+    Reclamos/     Controllers, Models, Requests, Enums y Policies
+    Reportes/     Controllers, Requests y Services
+    Productos/    Models y Enums del esquema histórico
+    Ventas/       Models y Enums del esquema histórico
+  Contracts/      Interfaces compartidas entre módulos
+  Providers/      Registro de servicios y políticas
+  Services/
+    Gateways/     Clientes HTTP compartidos para APIs de otros grupos
 database/
   factories/      Datos para pruebas
   migrations/     Esquema de base de datos
@@ -199,9 +204,11 @@ database/
 public/assets/    CSS y JavaScript conservados
 resources/views/ Vistas Blade
 routes/web.php    Rutas web con nombre
+routes/api.php    Rutas JSON de integración
 tests/Feature/    Pruebas automatizadas
-legacy/           Copia de referencia del PHP procedural
 ```
+
+Todos los módulos, incluido `Login`, siguen el mismo criterio: las clases PHP se agrupan en `app/Modules/{Modulo}/`, y las rutas, vistas, migraciones, factories, seeders y assets permanecen en sus carpetas generales. Cada módulo contiene las subcarpetas necesarias para su funcionalidad. Ver [estructura-modular.md](docs/estructura-modular.md) para la distribución y el alcance.
 
 ## Configuración de producción
 

@@ -3,7 +3,7 @@
 namespace App\Services\Gateways;
 
 use App\Contracts\SalesGateway;
-use App\Services\ReportData;
+use App\Modules\Reportes\Services\ReportData;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Validator;
 

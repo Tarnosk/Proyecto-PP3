@@ -2,9 +2,9 @@
 
 namespace Database\Seeders;
 
-use App\Enums\UserRole;
-use App\Enums\UserStatus;
-use App\Models\User;
+use App\Modules\Login\Enums\UserRole;
+use App\Modules\Login\Enums\UserStatus;
+use App\Modules\Login\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 

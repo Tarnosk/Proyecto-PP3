@@ -2,17 +2,19 @@
 
 namespace Database\Factories;
 
-use App\Enums\PaymentMethod;
-use App\Enums\PaymentStatus;
-use App\Enums\UserRole;
-use App\Models\Cliente;
-use App\Models\Cobro;
-use App\Models\User;
+use App\Modules\Clientes\Models\Cliente;
+use App\Modules\Login\Enums\UserRole;
+use App\Modules\Login\Models\User;
+use App\Modules\Ventas\Enums\PaymentMethod;
+use App\Modules\Ventas\Enums\PaymentStatus;
+use App\Modules\Ventas\Models\Cobro;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /** @extends Factory<Cobro> */
 class CobroFactory extends Factory
 {
+    protected $model = Cobro::class;
+
     public function definition(): array
     {
         return [

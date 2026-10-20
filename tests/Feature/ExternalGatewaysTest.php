@@ -2,9 +2,9 @@
 
 namespace Tests\Feature;
 
-use App\Enums\UserRole;
-use App\Models\Cliente;
-use App\Models\User;
+use App\Modules\Clientes\Models\Cliente;
+use App\Modules\Login\Enums\UserRole;
+use App\Modules\Login\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;

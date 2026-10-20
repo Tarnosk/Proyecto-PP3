@@ -1,10 +1,10 @@
 <?php
 
-use App\Http\Controllers\Api\V1\AuthController;
-use App\Http\Controllers\Api\V1\ClaimController;
-use App\Http\Controllers\Api\V1\ClientController;
-use App\Http\Controllers\Api\V1\UserController;
-use App\Http\Controllers\Api\V1\ZoneController;
+use App\Modules\Clientes\Controllers\Api\V1\ClientController;
+use App\Modules\Clientes\Controllers\Api\V1\ZoneController;
+use App\Modules\Login\Controllers\Api\V1\AuthController;
+use App\Modules\Login\Controllers\Api\V1\UserController;
+use App\Modules\Reclamos\Controllers\Api\V1\ClaimController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function (): void {
