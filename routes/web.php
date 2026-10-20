@@ -1,13 +1,13 @@
 <?php
 
-use App\Http\Controllers\Auth\AuthenticatedSessionController;
-use App\Http\Controllers\Auth\PasswordRecoveryController;
-use App\Http\Controllers\ClienteController;
 use App\Http\Controllers\DashboardController;
-use App\Http\Controllers\ReclamoController;
-use App\Http\Controllers\ReportController;
-use App\Http\Controllers\ReportExportController;
-use App\Http\Controllers\UserController;
+use App\Modules\Clientes\Controllers\ClienteController;
+use App\Modules\Login\Controllers\AuthenticatedSessionController;
+use App\Modules\Login\Controllers\PasswordRecoveryController;
+use App\Modules\Login\Controllers\UserController;
+use App\Modules\Reclamos\Controllers\ReclamoController;
+use App\Modules\Reportes\Controllers\ReportController;
+use App\Modules\Reportes\Controllers\ReportExportController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', fn () => auth()->check()

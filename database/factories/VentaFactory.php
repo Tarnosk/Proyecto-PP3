@@ -2,16 +2,18 @@
 
 namespace Database\Factories;
 
-use App\Enums\SaleStatus;
-use App\Enums\UserRole;
-use App\Models\Cliente;
-use App\Models\User;
-use App\Models\Venta;
+use App\Modules\Clientes\Models\Cliente;
+use App\Modules\Login\Enums\UserRole;
+use App\Modules\Login\Models\User;
+use App\Modules\Ventas\Enums\SaleStatus;
+use App\Modules\Ventas\Models\Venta;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /** @extends Factory<Venta> */
 class VentaFactory extends Factory
 {
+    protected $model = Venta::class;
+
     public function definition(): array
     {
         return [

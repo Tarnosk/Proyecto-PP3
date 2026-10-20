@@ -2,9 +2,9 @@
 
 namespace Tests\Feature;
 
-use App\Mail\PasswordRecoveryCode;
-use App\Models\PasswordResetCode;
-use App\Models\User;
+use App\Modules\Login\Mail\PasswordRecoveryCode;
+use App\Modules\Login\Models\PasswordResetCode;
+use App\Modules\Login\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;

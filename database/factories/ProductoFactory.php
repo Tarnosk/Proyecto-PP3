@@ -2,13 +2,15 @@
 
 namespace Database\Factories;
 
-use App\Enums\ProductStatus;
-use App\Models\Producto;
+use App\Modules\Productos\Enums\ProductStatus;
+use App\Modules\Productos\Models\Producto;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /** @extends Factory<Producto> */
 class ProductoFactory extends Factory
 {
+    protected $model = Producto::class;
+
     public function definition(): array
     {
         return [

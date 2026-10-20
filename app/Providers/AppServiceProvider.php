@@ -3,10 +3,10 @@
 namespace App\Providers;
 
 use App\Contracts\SalesGateway;
-use App\Models\Cliente;
-use App\Models\Reclamo;
-use App\Policies\ClientePolicy;
-use App\Policies\ReclamoPolicy;
+use App\Modules\Clientes\Models\Cliente;
+use App\Modules\Clientes\Policies\ClientePolicy;
+use App\Modules\Reclamos\Models\Reclamo;
+use App\Modules\Reclamos\Policies\ReclamoPolicy;
 use App\Services\Gateways\HttpSalesGateway;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;

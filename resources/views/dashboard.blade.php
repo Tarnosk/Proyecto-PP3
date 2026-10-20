@@ -21,18 +21,18 @@
 
         <nav class="side-nav" aria-label="Navegación principal">
             <a class="active" href="{{ route('dashboard') }}">Inicio / Panel</a>
-            @if (in_array(auth()->user()->rol, [App\Enums\UserRole::ADMINISTRATIVO, App\Enums\UserRole::REPARTIDOR], true))
+            @if (in_array(auth()->user()->rol, [App\Modules\Login\Enums\UserRole::ADMINISTRATIVO, App\Modules\Login\Enums\UserRole::REPARTIDOR], true))
                 <a href="{{ route('ventas.index') }}">Ventas y Pedidos</a>
                 <a href="{{ route('stock.index') }}">Inventario y Stock</a>
             @endif
-            @if (auth()->user()->rol === App\Enums\UserRole::ADMINISTRATIVO)
+            @if (auth()->user()->rol === App\Modules\Login\Enums\UserRole::ADMINISTRATIVO)
                 <a href="{{ route('clientes.index') }}">Clientes, Prov. y Compras</a>
                 <a href="{{ route('reclamos.index') }}">Reclamos</a>
                 <a href="#">Logística y Transporte</a>
                 <a href="{{ route('reports.index') }}">Reportes y Finanzas</a>
                 <a href="{{ route('users.index') }}">Lista de Usuarios</a>
                 <a href="#">Roles y Accesos</a>
-            @elseif (auth()->user()->rol === App\Enums\UserRole::REPARTIDOR)
+            @elseif (auth()->user()->rol === App\Modules\Login\Enums\UserRole::REPARTIDOR)
                 <a href="{{ route('clientes.index') }}">Clientes</a>
                 <a href="{{ route('reclamos.create') }}">Crear reclamo</a>
             @else
@@ -52,7 +52,7 @@
             <div class="alert alert-error" role="alert"><p>{{ session('permission_error') }}</p></div>
         @endif
 
-        @if (auth()->user()->rol === App\Enums\UserRole::ADMINISTRATIVO)
+        @if (auth()->user()->rol === App\Modules\Login\Enums\UserRole::ADMINISTRATIVO)
             <section class="erp-heading">
                 <div>
                     <p class="eyebrow">Panel administrativo</p>
@@ -122,7 +122,7 @@
                 <article class="action-panel"><div><h2>Pagos y saldos</h2><p>Consultar cuentas corrientes e historial informado por otros modulos.</p></div><a class="button button-primary" href="{{ route('clientes.index') }}">Ver cuentas</a></article>
                 <article class="action-panel"><div><h2>Reportes</h2><p>Historial y análisis de clientes.</p></div><a class="button button-primary" href="{{ route('reports.index') }}">Abrir reportes</a></article>
             </section>
-        @elseif (auth()->user()->rol === App\Enums\UserRole::REPARTIDOR)
+        @elseif (auth()->user()->rol === App\Modules\Login\Enums\UserRole::REPARTIDOR)
             <section class="erp-heading"><div><p class="eyebrow">Panel repartidor</p><h1>Bienvenido, {{ auth()->user()->nombre }}</h1><p>Accesos comerciales para consultar clientes, crear reclamos, revisar ventas y ver stock.</p></div></section>
             <section class="panel-grid" aria-label="Accesos de repartidor">
                 <article class="action-panel"><div><h2>Clientes</h2><p>Buscar y consultar clientes registrados.</p></div><a class="button button-primary" href="{{ route('clientes.index') }}">Ver clientes</a></article>
