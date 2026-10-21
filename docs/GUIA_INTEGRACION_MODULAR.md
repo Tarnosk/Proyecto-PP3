@@ -1,5 +1,7 @@
 # Guía de Integración Modular - ERP Juan XXIII (Rama `develop`)
 
+> **Estado de integración G1 (18/10/2026):** Esta guía describe la arquitectura modular propuesta para `develop`, no el estado completo del código integrado. G1 conserva sus rutas y controladores globales y consulta ventas, catálogo, cobros y saldos mediante APIs de los grupos responsables, sin leer sus tablas locales para esos flujos. El equipo debe acordar si la integración final usará una base compartida o servicios HTTP antes de aplicar las reglas de base de datos unificada que siguen. Ver `docs/integracion-microservicios.md` y `docs/contratos-sprint4-g1.md` para el estado actual de G1.
+
 Esta guía define las pautas de arquitectura, el esquema de datos y el flujo de integración en la rama troncal `develop` para todos los grupos de trabajo.
 
 ---

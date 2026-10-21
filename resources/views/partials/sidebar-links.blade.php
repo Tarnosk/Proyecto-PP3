@@ -32,11 +32,25 @@
         <span class="sidebar-text truncate">Compras y Órdenes</span>
     </a>
 
-    <!-- PROVEEDORES / CLIENTES -->
-    <a href="{{ url('/proveedores') }}" title="Proveedores y Clientes"
-       class="sidebar-link flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all {{ (request()->is('proveedores*') || request()->is('clientes*')) ? 'bg-white/20 text-white shadow-inner font-black' : 'text-blue-100 hover:bg-white/10 hover:text-white' }}">
+    <!-- PROVEEDORES (G3) -->
+    <a href="{{ url('/proveedores') }}" title="Proveedores"
+       class="sidebar-link flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all {{ request()->is('proveedores*') ? 'bg-white/20 text-white shadow-inner font-black' : 'text-blue-100 hover:bg-white/10 hover:text-white' }}">
+        <i data-lucide="truck" class="w-4 h-4 shrink-0"></i>
+        <span class="sidebar-text truncate">Proveedores</span>
+    </a>
+
+    <!-- CLIENTES (G1) -->
+    <a href="{{ url('/clientes') }}" title="Clientes"
+       class="sidebar-link flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all {{ request()->is('clientes*') ? 'bg-white/20 text-white shadow-inner font-black' : 'text-blue-100 hover:bg-white/10 hover:text-white' }}">
         <i data-lucide="users" class="w-4 h-4 shrink-0"></i>
-        <span class="sidebar-text truncate">Proveedores / Clientes</span>
+        <span class="sidebar-text truncate">Clientes</span>
+    </a>
+
+    <!-- RECLAMOS (G1) -->
+    <a href="{{ url('/reclamos') }}" title="Reclamos"
+       class="sidebar-link flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all {{ request()->is('reclamos*') ? 'bg-white/20 text-white shadow-inner font-black' : 'text-blue-100 hover:bg-white/10 hover:text-white' }}">
+        <i data-lucide="message-square-warning" class="w-4 h-4 shrink-0"></i>
+        <span class="sidebar-text truncate">Reclamos</span>
     </a>
 
     @if ($userRol === 'administrativo')

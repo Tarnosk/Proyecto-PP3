@@ -2,14 +2,14 @@
 
 namespace Tests\Feature;
 
-use App\Models\User;
-use Illuminate\Foundation\Testing\DatabaseTransactions;
+use App\Modules\Login\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
 use Tests\TestCase;
 
 class SessionSecurityTest extends TestCase
 {
-    use DatabaseTransactions;
+    use RefreshDatabase;
 
     public function test_session_expires_after_two_hours_of_inactivity(): void
     {

@@ -28,7 +28,8 @@
         }
     </script>
 
-    <!-- Estilos Claymorfismo PyB -->
+    <!-- Estilos Claymorfismo PyB y Módulos G1 -->
+    <link rel="stylesheet" href="{{ asset('assets/css/styles.css') }}">
     <link rel="stylesheet" href="{{ asset('css/pigue-claymorphism.css') }}">
     <link rel="stylesheet" href="{{ asset('css/claymorfismo.css') }}">
 
@@ -225,12 +226,7 @@
 
         <!-- CONTENIDO DE LA PÁGINA -->
         <main class="flex-1 p-4 md:p-8 overflow-y-auto">
-            @if (session('permission_error'))
-                <div class="mb-4 p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 font-bold text-xs flex items-center gap-2 shadow-xs" role="alert">
-                    <i data-lucide="alert-triangle" class="w-4 h-4 text-amber-600 shrink-0"></i>
-                    <span>{{ session('permission_error') }}</span>
-                </div>
-            @endif
+            @include('partials.messages')
             @yield('content')
         </main>
     </div>
@@ -327,5 +323,6 @@
     <!-- Bootstrap 5 JS Bundle (para soporte de modales y tabs en submódulos) -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     @yield('scripts')
+    @stack('scripts')
 </body>
 </html>

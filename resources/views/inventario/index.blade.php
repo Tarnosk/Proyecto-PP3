@@ -6,6 +6,7 @@
 
 @section('content')
 <div class="space-y-6">
+    <span class="sr-only">Inventario y stock</span>
 
     <!-- BARRA SUPERIOR DE PESTAÑAS (Claymorphism Tabs idéntica a InventoryView) -->
     <div class="flex items-center justify-between flex-wrap gap-4 bg-white/70 backdrop-blur-md p-2 rounded-2xl border border-white/80 shadow-[inset_2px_2px_4px_rgba(255,255,255,0.8),0_4px_12px_rgba(0,0,0,0.02)]">

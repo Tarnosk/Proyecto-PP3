@@ -1,0 +1,133 @@
+// Reemplazar en el diagrama general desde el comentario [G1]
+// hasta antes del comentario [G3].
+
+Enum ROL_USUARIO {
+  administrativo
+  repartidor
+  contador
+}
+
+Enum ESTADO_USUARIO {
+  activo
+  inactivo
+}
+
+Enum TIPO_CLIENTE {
+  minorista
+  mayorista
+}
+
+Enum ESTADO_CLIENTE {
+  activo
+  inactivo
+}
+
+Enum PRIORIDAD_RECLAMO {
+  baja
+  media
+  alta
+}
+
+Enum ESTADO_RECLAMO {
+  abierto
+  en_proceso
+  cerrado
+}
+
+// ----- [G1] Zonas, usuarios, clientes, seguridad y reclamos -----
+
+Table ZONA {
+  id_zona     integer [pk, increment]
+  nombre      varchar(120) [not null]
+  descripcion varchar(255)
+
+  Note: 'Entidad del diagrama general. La asociacion con CLIENTE queda disponible para la integracion con zonas.'
+}
+
+Table USUARIO {
+  id_usuario            integer [pk, increment]
+  usuario               varchar(50) [not null, unique]
+  password_hash         varchar(255) [not null]
+  nombre                varchar(120) [not null]
+  email                 varchar(160) [unique]
+  rol                   ROL_USUARIO [not null]
+  estado                ESTADO_USUARIO [not null, default: 'activo']
+  intentos_fallidos     tinyint [not null, default: 0]
+  bloqueado_hasta       datetime
+  ultimo_intento_fallido datetime
+  current_session_id    varchar(128)
+  created_at            timestamp [not null, default: `CURRENT_TIMESTAMP`]
+
+  Note: 'Usuarios internos del ERP. No es una subtabla de CLIENTE. Incluye bloqueo de acceso y sesion unica.'
+}
+
+Table PASSWORD_RESET_CODE {
+  id          bigint [pk, increment]
+  usuario_id  integer [not null, unique, ref: > USUARIO.id_usuario]
+  code_hash   varchar(255) [not null]
+  intentos    tinyint [not null, default: 0]
+  expires_at  timestamp [not null]
+  created_at  timestamp
+  updated_at  timestamp
+
+  Note: 'Codigo temporal hasheado para recuperar la contrasena. Cada usuario puede tener un solo codigo vigente.'
+}
+
+Table CLIENTE {
+  id_cliente              integer [pk, increment]
+  nombre                  varchar(120) [not null]
+  apellido_razon_social   varchar(160) [not null]
+  dni_cuit                varchar(20) [not null, unique]
+  telefono                varchar(30) [not null]
+  email                   varchar(160) [not null, unique]
+  direccion               varchar(255) [not null]
+  localidad               varchar(120)
+  id_zona                  integer [ref: > ZONA.id_zona]
+  tipo_cliente            TIPO_CLIENTE [not null]
+  condicion_iva           varchar(80)
+  estado                  ESTADO_CLIENTE [not null, default: 'activo']
+  saldo                   decimal(12,2) [default: 0]
+  creado_por              integer [not null, ref: > USUARIO.id_usuario]
+  created_at              timestamp [not null, default: `CURRENT_TIMESTAMP`]
+  updated_at              timestamp [not null, default: `CURRENT_TIMESTAMP`]
+
+  indexes {
+    creado_por [name: 'idx_cliente_creado_por']
+    id_zona [name: 'idx_cliente_id_zona']
+  }
+
+  Note: 'Combina los campos implementados en MySQL con localidad, zona, condicion IVA y saldo del modelo general.'
+}
+
+Table LOGIN_LOG {
+  id           integer [pk, increment]
+  usuario_id   integer [not null, ref: > USUARIO.id_usuario]
+  fecha_hora   timestamp [not null, default: `CURRENT_TIMESTAMP`]
+  ip           varchar(45)
+
+  indexes {
+    usuario_id [name: 'idx_login_log_usuario_id']
+  }
+
+  Note: 'Historial de inicios de sesion exitosos.'
+}
+
+Table RECLAMO {
+  id           integer [pk, increment]
+  cliente_id   integer [not null, ref: > CLIENTE.id_cliente]
+  usuario_id   integer [not null, ref: > USUARIO.id_usuario]
+  asunto       varchar(160) [not null]
+  descripcion  text [not null]
+  prioridad    PRIORIDAD_RECLAMO [not null, default: 'media']
+  estado       ESTADO_RECLAMO [not null, default: 'abierto']
+  created_at   timestamp [not null, default: `CURRENT_TIMESTAMP`]
+  updated_at   timestamp [not null, default: `CURRENT_TIMESTAMP`]
+
+  indexes {
+    cliente_id [name: 'idx_reclamo_cliente_id']
+    usuario_id [name: 'idx_reclamo_usuario_id']
+    estado [name: 'idx_reclamo_estado']
+  }
+
+  Note: 'Reclamos cargados por un repartidor o un administrador y asociados a un cliente.'
+}

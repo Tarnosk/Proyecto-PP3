@@ -2,9 +2,9 @@
 
 namespace Tests\Feature;
 
-use App\Enums\UserRole;
-use App\Enums\UserStatus;
-use App\Models\User;
+use App\Modules\Login\Enums\UserRole;
+use App\Modules\Login\Enums\UserStatus;
+use App\Modules\Login\Models\User;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
@@ -35,8 +35,10 @@ class ExampleTest extends TestCase
     public function test_the_application_returns_a_successful_response(): void
     {
         $response = $this->get('/');
-        $response->assertOk();
-        $response->assertViewIs('dashboard');
+        $response->assertRedirect('/dashboard');
+        $dashboard = $this->get('/dashboard');
+        $dashboard->assertOk();
+        $dashboard->assertViewIs('dashboard');
     }
 
     public function test_inventario_view_loads(): void

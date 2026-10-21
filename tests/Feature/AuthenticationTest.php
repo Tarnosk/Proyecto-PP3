@@ -2,22 +2,15 @@
 
 namespace Tests\Feature;
 
-use App\Enums\UserStatus;
-use App\Models\User;
-use Illuminate\Foundation\Testing\DatabaseTransactions;
+use App\Modules\Login\Enums\UserStatus;
+use App\Modules\Login\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
 
 class AuthenticationTest extends TestCase
 {
-    use DatabaseTransactions;
-
-    protected function setUp(): void
-    {
-        parent::setUp();
-        \App\Models\LoginLog::query()->delete();
-        User::whereIn('usuario', ['admin', 'repartidor', 'contador', 'inactivo'])->delete();
-    }
+    use RefreshDatabase;
 
     public function test_active_user_can_log_in_and_login_is_recorded(): void
     {
