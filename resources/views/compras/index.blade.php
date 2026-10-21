@@ -1,4 +1,4 @@
-@extends('layouts.app')
+@extends('layouts.g3')
 
 @section('title', 'Compras y Órdenes - Distribuidora Pigüé')
 @section('page_title', 'Compras y Órdenes de Compra')

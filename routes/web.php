@@ -10,12 +10,6 @@ use App\Modules\Reportes\Controllers\ReportController;
 use App\Modules\Reportes\Controllers\ReportExportController;
 use Illuminate\Support\Facades\Route;
 
-/*
-|--------------------------------------------------------------------------
-| Web Routes - Distribuidora PyB (ERP Integrado G1 + G3)
-|--------------------------------------------------------------------------
-*/
-
 Route::get('/', fn () => auth()->check()
     ? redirect()->route('dashboard')
     : redirect()->route('login'));
@@ -56,34 +50,6 @@ Route::middleware(['auth', 'session.current'])->group(function (): void {
         Route::get('/reclamos', [ReclamoController::class, 'index'])->name('reclamos.index');
         Route::get('/reclamos/nuevo', [ReclamoController::class, 'create'])->name('reclamos.create');
         Route::post('/reclamos', [ReclamoController::class, 'store'])->name('reclamos.store');
-
-        // Módulo Proveedores (G3)
-        Route::view('/proveedores', 'proveedores.index')->name('proveedores.index');
-
-        // Módulo Inventario y Stock (G3)
-        Route::view('/inventario', 'inventario.index')->name('inventario.index');
-        Route::redirect('/productos', '/inventario')->name('productos.index');
-        Route::view('/stock', 'inventario.index')->name('stock.index');
-
-        // Módulo Ventas (G4 / Alias de integración)
-        Route::view('/ventas', 'reports.external-module', ['module' => 'Ventas y pedidos', 'group' => 'G4'])
-            ->name('ventas.index');
-
-        // Módulo Compras y Órdenes (G3)
-        Route::view('/compras', 'compras.index')->name('compras.index');
-        Route::redirect('/pedidos-compra', '/compras')->name('pedidos-compra.index');
-        Route::redirect('/pedido-compra', '/compras');
-        Route::redirect('/pedido_compra', '/compras');
-        Route::redirect('/pedidos_compra', '/compras');
-        Route::redirect('/ordenes-compra', '/compras');
-        Route::redirect('/ordenes_compra', '/compras');
-        Route::redirect('/ordenes', '/compras');
-
-        // Submódulos Reposición y Vencimientos (G3)
-        Route::redirect('/vencimientos', '/inventario')->name('vencimientos.index');
-        Route::view('/sugerencias-reposicion', 'sugerencias-reposicion')->name('sugerencias-reposicion.index');
-        Route::view('/dashboard-reposicion', 'dashboard-reposicion')->name('dashboard-reposicion.index');
-        Route::redirect('/reposicion', '/sugerencias-reposicion');
     });
 
     Route::middleware('role:administrativo')->group(function (): void {
@@ -103,4 +69,11 @@ Route::middleware(['auth', 'session.current'])->group(function (): void {
         Route::get('/ranking-comercial', [ReportController::class, 'productRanking'])->name('product-ranking');
         Route::get('/historial-clientes/exportar/{format}', [ReportExportController::class, 'clientHistory'])->name('client-history.export');
     });
+
+    Route::view('/ventas', 'reports.external-module', ['module' => 'Ventas y pedidos', 'group' => 'G4'])
+        ->middleware('role:administrativo,repartidor')
+        ->name('ventas.index');
+    Route::view('/stock', 'reports.external-module', ['module' => 'Inventario y stock', 'group' => 'G3'])
+        ->middleware('role:administrativo,repartidor')
+        ->name('stock.index');
 });

@@ -6,9 +6,7 @@ use App\Modules\Login\Enums\UserRole;
 use App\Modules\Login\Enums\UserStatus;
 use App\Modules\Login\Models\User;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Schema;
 
 class DatabaseSeeder extends Seeder
 {
@@ -22,7 +20,7 @@ class DatabaseSeeder extends Seeder
         ];
 
         foreach ($users as $data) {
-            $user = User::query()->updateOrCreate(
+            User::query()->updateOrCreate(
                 ['usuario' => $data['usuario']],
                 [
                     'password_hash' => Hash::make($data['password']),
@@ -32,28 +30,6 @@ class DatabaseSeeder extends Seeder
                     'estado' => $data['estado'],
                 ],
             );
-
-            if (Schema::hasTable('usuario')) {
-                $cols = Schema::getColumnListing('usuario');
-                $hash = Hash::make($data['password']);
-                $payload = [
-                    'nombre' => $data['nombre'],
-                    'rol' => $data['rol']->value,
-                    'estado' => $data['estado']->value,
-                ];
-                if (in_array('password_hash', $cols, true)) {
-                    $payload['password_hash'] = $hash;
-                }
-                if (in_array('password', $cols, true)) {
-                    $payload['password'] = $hash;
-                }
-
-                $queryCol = in_array('usuario', $cols, true) ? 'usuario' : 'user';
-                DB::table('usuario')->updateOrInsert(
-                    [$queryCol => $data['usuario']],
-                    $payload
-                );
-            }
         }
     }
 }
