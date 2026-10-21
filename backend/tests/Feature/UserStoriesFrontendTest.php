@@ -43,11 +43,12 @@ class UserStoriesFrontendTest extends TestCase
      */
     public function test_01_all_blade_frontend_views_render_successfully(): void
     {
-        // 1. Dashboard Principal
+        // 1. Dashboard Principal (G1) y Panel G3
         $this->get('/')->assertRedirect('/dashboard');
-        $resDash = $this->get('/dashboard');
+        $this->get('/dashboard')->assertOk()->assertViewIs('dashboard');
+        $resDash = $this->get('/panel-g3');
         $resDash->assertOk();
-        $resDash->assertViewIs('dashboard');
+        $resDash->assertViewIs('dashboard-g3');
         $resDash->assertSee('Distribuidora PyB');
         $resDash->assertSee('Stock e Inventario');
         $resDash->assertSee('Compras y Órdenes');

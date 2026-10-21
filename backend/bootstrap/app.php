@@ -5,15 +5,11 @@ use App\Modules\Login\Middleware\EnsureApiAudience;
 use App\Modules\Login\Middleware\EnsureApiUser;
 use App\Modules\Login\Middleware\EnsureCurrentSession;
 use App\Modules\Login\Middleware\EnsureRole;
-use App\Http\Middleware\IdentidadUsuario;
 use Illuminate\Auth\Access\AuthorizationException;
-use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
-use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
-use Illuminate\Session\Middleware\StartSession;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -30,14 +26,6 @@ return Application::configure(basePath: dirname(__DIR__))
             'api.audience' => EnsureApiAudience::class,
             'api.user' => EnsureApiUser::class,
         ]);
-
-        $middleware->appendToGroup('api', [
-            EncryptCookies::class,
-            AddQueuedCookiesToResponse::class,
-            StartSession::class,
-            IdentidadUsuario::class,
-        ]);
-        $middleware->appendToGroup('web', [IdentidadUsuario::class]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->render(function (AuthorizationException $exception, Request $request) {

@@ -1,4 +1,4 @@
-@extends('layouts.app')
+@extends('layouts.g3')
 
 @section('title', 'Inventario y Stock - Distribuidora Pigüé')
 @section('page_title', 'Inventario y Stock')
