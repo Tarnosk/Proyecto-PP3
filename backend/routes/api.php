@@ -37,8 +37,8 @@ $registrarRutasG3 = function () {
     Route::get('/', function (Request $request) {
         $payload = [
             'status' => 'success',
-            'message' => 'API REST del ERP Grupo 3. La interfaz web no vive en /api; está en /Interfaz/index.html',
-            'interfaz' => url('/Interfaz/index.html'),
+            'message' => 'API REST del ERP Grupo 3. La interfaz web está en /dashboard',
+            'interfaz' => url('/dashboard'),
             'endpoints' => [
                 'GET /api/categorias',
                 'GET /api/marcas',
@@ -88,7 +88,7 @@ $registrarRutasG3 = function () {
             return response()->json($payload);
         }
 
-        return redirect('/Interfaz/index.html');
+        return redirect('/dashboard');
     });
 
     // Categorías (P02)
