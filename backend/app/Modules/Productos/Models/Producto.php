@@ -8,6 +8,9 @@ use App\Modules\Stock\Models\MovimientoStock;
 use App\Modules\Stock\Models\Ubicacion;
 use App\Modules\Stock\Models\UnidadMedida;
 use App\Modules\Proveedores\Models\ProductoProveedor;
+use Database\Factories\ProductoFactory;
+use Illuminate\Database\Eloquent\Attributes\UseFactory;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -15,11 +18,20 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Schema;
 
+#[UseFactory(ProductoFactory::class)]
 class Producto extends Model
 {
+    /** @use HasFactory<ProductoFactory> */
+    use HasFactory;
+
     protected $table = 'PRODUCTO';
     protected $primaryKey = 'id_producto';
     public $timestamps = false;
+
+    public function getIdAttribute(): ?int
+    {
+        return isset($this->attributes['id_producto']) ? (int) $this->attributes['id_producto'] : null;
+    }
 
     protected $appends = [
         'stock_disponible',

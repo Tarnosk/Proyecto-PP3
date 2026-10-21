@@ -1,0 +1,23 @@
+{
+  "data": [
+    {
+      "fecha": "2026-10-06T10:30:00-03:00",
+      "numero_factura": "FC-000123",
+      "total": "3200.00",
+      "estado": "facturada",
+      "cliente": {
+        "nombre": "Ana",
+        "apellido_razon_social": "Comercial Norte"
+      },
+      "detalles": [
+        {
+          "cantidad": 2,
+          "subtotal": "3200.00",
+          "producto": {
+            "nombre": "Yerba 1kg"
+          }
+        }
+      ]
+    }
+  ]
+}

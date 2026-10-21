@@ -55,7 +55,7 @@
                     <label for="password">Contraseña <span aria-hidden="true">*</span></label>
                     <input type="password" id="password" name="password" autocomplete="current-password" maxlength="255" required>
                     <small class="field-error" data-error-for="password"></small>
-                    <a class="auth-link" href="{{ Route::has('password.request') ? route('password.request') : '#' }}">¿Olvidó su contraseña?</a>
+                    <a class="auth-link" href="{{ route('password.request') }}">¿Olvidó su contraseña?</a>
                 </div>
 
                 <button type="submit" class="button button-primary">Iniciar sesión</button>

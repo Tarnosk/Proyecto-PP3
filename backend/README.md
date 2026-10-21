@@ -1,59 +1,221 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# ERP Juan23
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Sistema web de gestión comercial en Laravel. Incluye autenticación segura, recuperación de contraseña por email, permisos por rol, clientes, reclamos y reportes. Los cobros y facturas pertenecen a G2; los saldos y ventas, a G4.
 
-## About Laravel
+## Requisitos
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+- PHP 8.2 o superior.
+- Laravel 12.x.
+- Composer 2.x.
+- MySQL 8 o MariaDB 10.4 o superior.
+- Extensiones PHP: `bcmath`, `ctype`, `curl`, `dom`, `fileinfo`, `gd`, `mbstring`, `openssl`, `pdo`, `pdo_mysql`, `tokenizer`, `xml` y `zip`.
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+El proyecto fue verificado con PHP 8.2.12, Laravel 12.69.2 y MariaDB 10.4.32 de XAMPP.
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+En XAMPP, habilitar `extension=gd` y `extension=zip` en `C:\xampp\php\php.ini`. Como alternativa, los comandos de este README que generan PDF o Excel incluyen ambas extensiones mediante `-d`.
 
-## Learning Laravel
+## Instalación
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+1. Instalar las dependencias:
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+   ```bash
+   composer install
+   ```
 
-## Laravel Sponsors
+   En este equipo también puede usarse el Composer local ya descargado:
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+   ```powershell
+   C:\xampp\php\php.exe -d extension=gd -d extension=zip .tools\composer.phar install
+   ```
 
-### Premium Partners
+2. Crear el archivo de entorno:
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+   ```powershell
+   Copy-Item .env.example .env
+   ```
 
-## Contributing
+3. Generar la clave de la aplicación:
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+   ```powershell
+   C:\xampp\php\php.exe artisan key:generate
+   ```
 
-## Code of Conduct
+4. Configurar MySQL en `.env`:
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+   ```dotenv
+   DB_CONNECTION=mysql
+   DB_HOST=127.0.0.1
+   DB_PORT=3306
+   DB_DATABASE=sistema_gestion
+   DB_USERNAME=root
+   DB_PASSWORD=
+   ```
 
-## Security Vulnerabilities
+5. Iniciar MySQL desde XAMPP.
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+## Base de datos
 
-## License
+### Instalación nueva
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+Crear primero una base vacía llamada `sistema_gestion` con cotejamiento `utf8mb4_unicode_ci`. Luego ejecutar:
+
+```powershell
+C:\xampp\php\php.exe artisan migrate --seed
+```
+
+Esto crea también las tablas de Sprint 3: `zonas`, `categorias`, `marcas`, `productos`, `ventas`, `detalle_ventas`, `cobros` y `cobro_ventas`, junto con sus índices y claves foráneas.
+
+### Base existente del proyecto
+
+Hacer una copia de seguridad y apuntar `.env` a la base actual. Después ejecutar:
+
+```powershell
+C:\xampp\php\php.exe artisan migrate
+```
+
+La primera migration detecta las tablas existentes y las registra como línea base sin eliminar datos. No es necesario volver a importar los SQL históricos ni ejecutar el seeder.
+
+La migration de recuperación agrega un email opcional y único a `usuarios`. El administrador puede asignar los emails reales desde **Lista de Usuarios** en su panel, sin utilizar phpMyAdmin.
+
+`database/database.sql` y las antiguas migraciones SQL se conservan como documentación del esquema previo.
+
+## Ejecución
+
+Desde la raíz del proyecto:
+
+```powershell
+C:\xampp\php\php.exe -d extension=gd -d extension=zip artisan serve
+```
+
+Abrir:
+
+```text
+http://localhost:8000
+```
+
+Laravel debe servirse desde `public/`. No usar `php -S localhost:8000` sin `artisan serve`, porque podría exponer archivos internos.
+
+## Usuarios de prueba
+
+Estas credenciales son solo para desarrollo local y se crean con `artisan db:seed`.
+
+| Usuario | Contraseña | Rol |
+| --- | --- | --- |
+| admin | Admin1234 | administrativo |
+| repartidor | Repartidor1234 | repartidor |
+| contador | Contador1234 | contador |
+| inactivo | Inactivo1234 | repartidor inactivo |
+
+Los usuarios sembrados usan direcciones `example.com`. Deben reemplazarse por emails reales para probar el envío mediante SMTP.
+
+## Permisos
+
+Los reportes Sprint 4 de deudores y ranking estan preparados para consumir JSON de G2/G4. Hasta que esos grupos confirmen y publiquen las APIs, muestran integracion pendiente. Ver [contratos-sprint4-g1.md](docs/contratos-sprint4-g1.md) para rutas, campos y variables `BILLING_SERVICE_*`, `BALANCE_SERVICE_*` y `SALES_SERVICE_*`.
+
+| Funcionalidad | Administrativo | Repartidor | Contador |
+| --- | --- | --- | --- |
+| Panel propio | Sí | Sí | Sí |
+| Listar y buscar clientes | Sí | Sí | No |
+| Crear y editar clientes | Sí | No | No |
+| Crear y listar reclamos | Sí | Sí | No |
+| Ver historial de clientes | Sí | Sí | No |
+| Consultar cobros y saldos de otros módulos | Sí | Sí | No |
+| Reportes de clientes y ranking comercial | Sí | No | Sí |
+| Exportar historial de clientes a PDF y Excel | Sí | No | Sí |
+| Secciones de ventas y stock sin consultas de G1 | Sí | Sí | No |
+| Configurar emails de usuarios | Sí | No | No |
+
+## Seguridad de acceso
+
+- Tres contraseñas incorrectas bloquean la cuenta durante 15 minutos.
+- Cada cuenta admite una sola sesión activa.
+- La sesión expira después de 120 minutos sin actividad.
+- El logout utiliza POST con protección CSRF.
+- Las contraseñas usan hashing seguro de Laravel.
+- Los identificadores de sesión guardados en la base están hasheados.
+- Los permisos se verifican en middleware, Policies y Form Requests.
+- La recuperación usa códigos numéricos hasheados que vencen en 15 minutos y admiten hasta 5 intentos.
+
+## Recuperación de contraseña por email
+
+En desarrollo, `MAIL_MAILER=log` guarda el mensaje y su código en `storage/logs/laravel.log`, pero no envía un correo real. Para usar un servidor SMTP, configure en `.env`:
+
+```dotenv
+MAIL_MAILER=smtp
+MAIL_HOST=smtp.example.com
+MAIL_PORT=587
+MAIL_SCHEME=null
+MAIL_USERNAME=usuario_smtp
+MAIL_PASSWORD=contrasena_smtp
+MAIL_FROM_ADDRESS=no-reply@example.com
+MAIL_FROM_NAME="Varela ERP"
+```
+
+Después de modificar `.env`, limpiar la configuración:
+
+```powershell
+C:\xampp\php\php.exe artisan config:clear
+```
+
+## Pruebas y comprobaciones
+
+Ejecutar la suite automatizada:
+
+```powershell
+C:\xampp\php\php.exe -d extension=gd -d extension=zip artisan test
+```
+
+Comprobar una instalación limpia con SQLite en memoria, sin tocar MySQL:
+
+```powershell
+C:\xampp\php\php.exe artisan migrate:fresh --seed --env=testing --force
+```
+
+Revisar rutas y formato:
+
+```powershell
+C:\xampp\php\php.exe artisan route:list --except-vendor
+C:\xampp\php\php.exe vendor\bin\pint --test
+```
+
+La suite incluye pruebas de seguridad, clientes, reclamos, integración de cobros y saldos, reportes y exportaciones.
+
+## Estructura principal
+
+```text
+app/
+  Http/
+    Controllers/  Controlador base y panel principal compartido
+  Modules/
+    Login/        Controllers, Models, Requests, Services, Enums, Middleware y Mail
+    Clientes/     Controllers, Models, Requests, Enums, Policies y Resources
+    Reclamos/     Controllers, Models, Requests, Enums y Policies
+    Reportes/     Controllers, Requests y Services
+    Productos/    Models y Enums del esquema histórico
+    Ventas/       Models y Enums del esquema histórico
+  Contracts/      Interfaces compartidas entre módulos
+  Providers/      Registro de servicios y políticas
+  Services/
+    Gateways/     Clientes HTTP compartidos para APIs de otros grupos
+database/
+  factories/      Datos para pruebas
+  migrations/     Esquema de base de datos
+  seeders/        Usuarios de desarrollo
+public/assets/    CSS y JavaScript conservados
+resources/views/ Vistas Blade
+routes/web.php    Rutas web con nombre
+routes/api.php    Rutas JSON de integración
+tests/Feature/    Pruebas automatizadas
+```
+
+Todos los módulos, incluido `Login`, siguen el mismo criterio: las clases PHP se agrupan en `app/Modules/{Modulo}/`, y las rutas, vistas, migraciones, factories, seeders y assets permanecen en sus carpetas generales. Cada módulo contiene las subcarpetas necesarias para su funcionalidad. Ver [estructura-modular.md](docs/estructura-modular.md) para la distribución y el alcance.
+
+## Configuración de producción
+
+Configurar credenciales reales en `.env`, utilizar `APP_DEBUG=false`, habilitar HTTPS y definir `SESSION_SECURE_COOKIE=true`. Nunca subir `.env` al repositorio.
+
+El detalle completo de la migración está en [MIGRATION.md](MIGRATION.md).
+
+## Integración entre grupos
+
+La API JSON de G1 y los contratos HTTP esperados de G2, G3 y G4 se documentan en [docs/integracion-microservicios.md](docs/integracion-microservicios.md). No existe un modo de datos locales para ventas o productos externos. El login API es publico; las demas rutas aceptan un token de usuario o, segun sus permisos, `INTERNAL_API_TOKEN`. Ningun token debe incluirse en el repositorio.

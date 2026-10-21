@@ -24,14 +24,14 @@ class UserStoriesFrontendTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $admin = \App\Models\User::where('usuario', 'admin')->first()
-            ?? \App\Models\User::firstOrCreate(
+        $admin = \App\Modules\Login\Models\User::where('usuario', 'admin')->first()
+            ?? \App\Modules\Login\Models\User::firstOrCreate(
                 ['usuario' => 'admin'],
                 [
                     'password_hash' => \Illuminate\Support\Facades\Hash::make('Admin1234'),
                     'nombre' => 'Usuario Administrativo',
-                    'rol' => \App\Enums\UserRole::ADMINISTRATIVO,
-                    'estado' => \App\Enums\UserStatus::ACTIVO,
+                    'rol' => \App\Modules\Login\Enums\UserRole::ADMINISTRATIVO,
+                    'estado' => \App\Modules\Login\Enums\UserStatus::ACTIVO,
                 ]
             );
         $this->signInAs($admin);
@@ -44,7 +44,8 @@ class UserStoriesFrontendTest extends TestCase
     public function test_01_all_blade_frontend_views_render_successfully(): void
     {
         // 1. Dashboard Principal
-        $resDash = $this->get('/');
+        $this->get('/')->assertRedirect('/dashboard');
+        $resDash = $this->get('/dashboard');
         $resDash->assertOk();
         $resDash->assertViewIs('dashboard');
         $resDash->assertSee('Distribuidora PyB');

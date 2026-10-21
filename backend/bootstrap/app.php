@@ -1,10 +1,10 @@
 <?php
 
-use App\Http\Middleware\AuthenticateApiRequest;
-use App\Http\Middleware\EnsureApiAudience;
-use App\Http\Middleware\EnsureApiUser;
-use App\Http\Middleware\EnsureCurrentSession;
-use App\Http\Middleware\EnsureRole;
+use App\Modules\Login\Middleware\AuthenticateApiRequest;
+use App\Modules\Login\Middleware\EnsureApiAudience;
+use App\Modules\Login\Middleware\EnsureApiUser;
+use App\Modules\Login\Middleware\EnsureCurrentSession;
+use App\Modules\Login\Middleware\EnsureRole;
 use App\Http\Middleware\IdentidadUsuario;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;

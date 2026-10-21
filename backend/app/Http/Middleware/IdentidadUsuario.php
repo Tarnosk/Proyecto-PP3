@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\Middleware;
 
-use App\Enums\UserRole;
-use App\Services\ApiTokenService;
+use App\Modules\Login\Enums\UserRole;
+use App\Modules\Login\Services\ApiTokenService;
 use App\Support\UsuarioActual;
 use Closure;
 use Illuminate\Http\Request;
