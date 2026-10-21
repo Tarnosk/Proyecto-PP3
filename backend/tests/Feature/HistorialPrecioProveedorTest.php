@@ -17,7 +17,9 @@ use Tests\TestCase;
 
 class HistorialPrecioProveedorTest extends TestCase
 {
-    use DatabaseTransactions;
+    use DatabaseTransactions, \Tests\UsesG3Database {
+        \Tests\UsesG3Database::beginDatabaseTransaction insteadof DatabaseTransactions;
+    }
 
     private function crearProveedorTest(string $cuit = '30-99112233-4'): Proveedor
     {

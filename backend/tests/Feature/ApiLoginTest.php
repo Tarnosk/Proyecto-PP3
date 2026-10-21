@@ -10,7 +10,9 @@ use Tests\TestCase;
 
 class ApiLoginTest extends TestCase
 {
-    use DatabaseTransactions;
+    use DatabaseTransactions, \Tests\UsesG3Database {
+        \Tests\UsesG3Database::beginDatabaseTransaction insteadof DatabaseTransactions;
+    }
 
     protected function setUp(): void
     {

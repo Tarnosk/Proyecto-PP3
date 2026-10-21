@@ -23,6 +23,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (\Illuminate\Support\Facades\Schema::getConnection()->getDriverName() === 'sqlite') {
+            return;
+        }
+
         if (Schema::hasTable('HISTORIAL_PLAZO_PROVEEDOR')) {
             return;
         }

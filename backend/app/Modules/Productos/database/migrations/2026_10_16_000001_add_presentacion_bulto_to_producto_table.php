@@ -10,6 +10,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (\Illuminate\Support\Facades\Schema::getConnection()->getDriverName() === 'sqlite') {
+            return;
+        }
+
         if (Schema::hasTable('PRODUCTO')) {
             Schema::table('PRODUCTO', function (Blueprint $table) {
                 if (!Schema::hasColumn('PRODUCTO', 'formato_bulto')) {

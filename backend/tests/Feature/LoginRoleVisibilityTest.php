@@ -9,7 +9,9 @@ use Tests\TestCase;
 
 class LoginRoleVisibilityTest extends TestCase
 {
-    use DatabaseTransactions;
+    use DatabaseTransactions, \Tests\UsesG3Database {
+        \Tests\UsesG3Database::beginDatabaseTransaction insteadof DatabaseTransactions;
+    }
 
     public function test_each_role_receives_its_own_dashboard_content(): void
     {
