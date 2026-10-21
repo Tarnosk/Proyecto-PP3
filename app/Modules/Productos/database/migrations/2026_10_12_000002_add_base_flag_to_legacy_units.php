@@ -10,6 +10,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (\Illuminate\Support\Facades\Schema::getConnection()->getDriverName() === 'sqlite') {
+            return;
+        }
+
         if (!Schema::hasTable('UNIDAD_MEDIDA') || Schema::hasColumn('UNIDAD_MEDIDA', 'es_base')) {
             return;
         }

@@ -28,8 +28,30 @@ class Producto extends Model
     protected $primaryKey = 'id_producto';
     public $timestamps = false;
 
+    public function getTable(): string
+    {
+        if (Schema::getConnection()->getDriverName() === 'sqlite') {
+            return 'productos';
+        }
+
+        return $this->table;
+    }
+
+    public function getKeyName(): string
+    {
+        if (Schema::getConnection()->getDriverName() === 'sqlite') {
+            return 'id';
+        }
+
+        return $this->primaryKey;
+    }
+
     public function getIdAttribute(): ?int
     {
+        if (isset($this->attributes['id'])) {
+            return (int) $this->attributes['id'];
+        }
+
         return isset($this->attributes['id_producto']) ? (int) $this->attributes['id_producto'] : null;
     }
 

@@ -9,6 +9,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (\Illuminate\Support\Facades\Schema::getConnection()->getDriverName() === 'sqlite') {
+            return;
+        }
+
         if (Schema::hasTable('HISTORIAL_PRECIO_PROVEEDOR')
             && !Schema::hasColumn('HISTORIAL_PRECIO_PROVEEDOR', 'id_unidad')) {
             Schema::table('HISTORIAL_PRECIO_PROVEEDOR', function (Blueprint $table): void {
