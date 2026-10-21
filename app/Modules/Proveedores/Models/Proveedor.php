@@ -1,0 +1,90 @@
+<?php
+declare(strict_types=1);
+
+namespace App\Modules\Proveedores\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+
+class Proveedor extends Model
+{
+    protected $table = 'PROVEEDOR';
+    protected $primaryKey = 'id_proveedor';
+    public $timestamps = false;
+
+    protected $fillable = [
+        'razon_social',
+        'contacto',
+        'cuit',
+        'CUIT',
+        'telefono',
+        'email',
+        'direccion',
+        'estado',
+        'fecha_alta',
+        'fecha_modificacion',
+        'fecha_desactivacion',
+        'plazo_entrega_dias',
+        'id_usuario_carga',
+        'id_usuario_modificacion',
+    ];
+
+    public function getCuitAttribute(): ?string
+    {
+        return $this->attributes['cuit'] ?? $this->attributes['CUIT'] ?? null;
+    }
+
+    protected $casts = [
+        'id_proveedor' => 'integer',
+        'fecha_alta' => 'datetime:Y-m-d H:i:s',
+        'fecha_modificacion' => 'datetime:Y-m-d H:i:s',
+        'fecha_desactivacion' => 'datetime:Y-m-d H:i:s',
+        'plazo_entrega_dias' => 'integer',
+    ];
+
+    /**
+     * Asociaciones producto-proveedor del proveedor (PV05)
+     */
+    public function productos(): HasMany
+    {
+        return $this->hasMany(ProductoProveedor::class, 'id_proveedor', 'id_proveedor');
+    }
+
+    /**
+     * Historial de plazos de entrega (PV07). El valor vigente sigue estando en
+     * la propia fila; esto es solo el rastro de cambios.
+     */
+    public function historialPlazos(): HasMany
+    {
+        return $this->hasMany(HistorialPlazoProveedor::class, 'id_proveedor', 'id_proveedor')
+            ->orderByDesc('fecha_cambio')
+            ->orderByDesc('id_historial_plazo');
+    }
+
+    /**
+     * Historial de precios acordados y compras (PV06).
+     */
+    public function historialPrecios(): HasMany
+    {
+        return $this->hasMany(HistorialPrecioProveedor::class, 'id_proveedor', 'id_proveedor')
+            ->orderByDesc('fecha_actualizacion')
+            ->orderByDesc('id_historial_prov');
+    }
+
+    /** Último plazo registrado en el historial (el vigente debería coincidir). */
+    public function ultimoPlazoRegistrado(): ?HistorialPlazoProveedor
+    {
+        return $this->historialPlazos()->first();
+    }
+
+    public function usuarioCarga(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\Usuario::class, 'id_usuario_carga', 'id_usuario');
+    }
+
+    public function usuarioModificacion(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\Usuario::class, 'id_usuario_modificacion', 'id_usuario');
+    }
+}
