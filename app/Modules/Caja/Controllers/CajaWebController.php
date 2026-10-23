@@ -7,13 +7,11 @@ use App\Modules\Caja\Models\CajaMovimiento;
 use App\Modules\Caja\Services\CajaService;
 use App\Modules\Shared\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use App\Modules\Shared\Auth\G2Identity;
 
 class CajaWebController extends Controller
 {
-    // PROVISORIO: usuario y rol fijos hasta que G1 termine el login.
-    // 3 = matias (repartidor). Para probar como Diego: 1 y Caja::ROL_ADMIN.
-    private const ID_USUARIO_PROVISORIO = 3;
-    private const ROL_PROVISORIO = Caja::ROL_REPARTIDOR;
+
 
     public function __construct(private CajaService $service)
     {
@@ -27,12 +25,12 @@ class CajaWebController extends Controller
      */
     public function diaActual()
     {
-        $caja = $this->service->obtenerCajaAbiertaDeUsuario(self::ID_USUARIO_PROVISORIO);
+        $caja = $this->service->obtenerCajaAbiertaDeUsuario(G2Identity::id());
 
         if ($caja === null) {
             // Si la última caja se cerró sola a las 72 h, se avisa que falta cargar el conteo.
             return view('caja.abrir', [
-                'cajaPendienteConteo' => $this->service->obtenerCajaPendienteDeConteo(self::ID_USUARIO_PROVISORIO),
+                'cajaPendienteConteo' => $this->service->obtenerCajaPendienteDeConteo(G2Identity::id()),
             ]);
         }
 
@@ -51,6 +49,8 @@ class CajaWebController extends Controller
             abort(404, 'Caja no encontrada');
         }
 
+        G2Identity::assertOwner($caja, 'id_usuario');
+
         $montoActual = $caja['estado'] === Caja::ESTADO_ABIERTA ? $this->service->obtenerMontoActual($id) : null;
 
         return $this->vistaCaja($caja, $montoActual);
@@ -62,9 +62,9 @@ class CajaWebController extends Controller
             'caja' => $caja,
             'montoActual' => $montoActual,
             // Solo los tipos de movimiento que el rol puede cargar.
-            'tiposPermitidos' => CajaMovimiento::tiposPermitidosPara(self::ROL_PROVISORIO),
+            'tiposPermitidos' => CajaMovimiento::tiposPermitidosPara(G2Identity::role()),
             // Solo las cajas de repartidor se cierran solas a las 72 h.
-            'cierreAutomatico' => self::ROL_PROVISORIO === Caja::ROL_REPARTIDOR,
+            'cierreAutomatico' => G2Identity::role() === Caja::ROL_REPARTIDOR,
         ]);
     }
 
@@ -76,8 +76,8 @@ class CajaWebController extends Controller
         ]);
 
         $resultado = $this->service->abrirCaja(
-            self::ID_USUARIO_PROVISORIO,
-            self::ROL_PROVISORIO,
+            G2Identity::id(),
+            G2Identity::role(),
             (float) $datos['monto_inicial'],
             $datos['observaciones'] ?? null
         );
@@ -106,8 +106,8 @@ class CajaWebController extends Controller
 
         $resultado = $this->service->registrarMovimiento(
             $id,
-            self::ID_USUARIO_PROVISORIO,
-            self::ROL_PROVISORIO,
+            G2Identity::id(),
+            G2Identity::role(),
             $datos['tipo'],
             $datos['concepto'],
             (float) $datos['monto'],
@@ -148,10 +148,10 @@ class CajaWebController extends Controller
 
         $resultado = $this->service->cerrarCaja(
             $id,
-            self::ID_USUARIO_PROVISORIO,
+            G2Identity::id(),
             (float) $datos['monto_final'],
             $datos['observaciones'] ?? null,
-            self::ROL_PROVISORIO
+            G2Identity::role()
         );
 
         if ($resultado === null) {
@@ -179,10 +179,10 @@ class CajaWebController extends Controller
 
         $resultado = $this->service->completarConteoCierreAutomatico(
             $id,
-            self::ID_USUARIO_PROVISORIO,
+            G2Identity::id(),
             (float) $datos['monto_final'],
             $datos['observaciones'] ?? null,
-            self::ROL_PROVISORIO
+            G2Identity::role()
         );
 
         if ($resultado === null) {
@@ -200,7 +200,7 @@ class CajaWebController extends Controller
 
     public function cierresIndex(Request $request)
     {
-        $idUsuario = $request->query('id_usuario');
+        $idUsuario = G2Identity::role() === Caja::ROL_ADMIN ? $request->query('id_usuario') : G2Identity::id();
         $desde = $request->query('desde');
         $hasta = $request->query('hasta');
 
@@ -225,10 +225,12 @@ class CajaWebController extends Controller
             abort(404, 'Cierre no encontrado');
         }
 
+        G2Identity::assertOwner($cierre, 'id_usuario');
+
         return view('caja.cierre-detalle', [
             'cierre' => $cierre,
             // Solo el admin carga el conteo de una caja cerrada sola.
-            'puedeCargarConteo' => self::ROL_PROVISORIO === Caja::ROL_ADMIN,
+            'puedeCargarConteo' => G2Identity::role() === Caja::ROL_ADMIN,
         ]);
     }
 }

@@ -135,7 +135,7 @@ class RemitoRepository
         }
 
         // 1. Obtener datos de la venta y cliente desde la API de Ventas (G4)
-        $ventasClient = new \App\Modules\Ventas\Services\VentasApiClient();
+        $ventasClient = new \App\Modules\Entregas\Integraciones\VentasApiClient();
         $venta = $ventasClient->obtenerVentaPorId((int)$remito['id_venta']);
 
         $remito['fecha_venta'] = $venta['fecha'] ?? date('Y-m-d H:i:s');

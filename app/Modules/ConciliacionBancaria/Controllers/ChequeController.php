@@ -24,7 +24,7 @@ class ChequeController extends Controller
     {
         $estado = $request->query('estado');
 
-        Response::json($this->service->listar($estado));
+        return Response::json($this->service->listar($estado));
     }
 
     public function show(int $id)
@@ -32,11 +32,10 @@ class ChequeController extends Controller
         $cheque = $this->service->buscar($id);
 
         if ($cheque === null) {
-            Response::error('Cheque no encontrado', 404);
-            return;
+            return Response::error('Cheque no encontrado', 404);
         }
 
-        Response::json($cheque);
+        return Response::json($cheque);
     }
 
     public function depositar(int $id)
@@ -44,16 +43,14 @@ class ChequeController extends Controller
         $resultado = $this->service->depositar($id);
 
         if ($resultado === null) {
-            Response::error('Cheque no encontrado', 404);
-            return;
+            return Response::error('Cheque no encontrado', 404);
         }
 
         if ($resultado['error'] ?? false) {
-            Response::error($resultado['mensaje'], 400);
-            return;
+            return Response::error($resultado['mensaje'], 400);
         }
 
-        Response::json($resultado);
+        return Response::json($resultado);
     }
 
     public function rechazar(int $id)
@@ -61,15 +58,13 @@ class ChequeController extends Controller
         $resultado = $this->service->rechazar($id);
 
         if ($resultado === null) {
-            Response::error('Cheque no encontrado', 404);
-            return;
+            return Response::error('Cheque no encontrado', 404);
         }
 
         if ($resultado['error'] ?? false) {
-            Response::error($resultado['mensaje'], 400);
-            return;
+            return Response::error($resultado['mensaje'], 400);
         }
 
-        Response::json($resultado);
+        return Response::json($resultado);
     }
 }

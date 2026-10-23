@@ -2,7 +2,12 @@
 
 @section('titulo', 'Períodos de Conciliación')
 
+@push('styles')
+<link rel="stylesheet" href="{{ asset('css/g2-finanzas.css') }}">
+@endpush
+
 @section('contenido')
+<div class="g2-page">
     <div class="clay-card">
         <div style="display:flex; justify-content:space-between; align-items:center; gap:1rem; flex-wrap:wrap;">
             <div>
@@ -11,6 +16,11 @@
             </div>
             <a href="{{ route('conciliacion.create') }}" class="clay-btn-primary">Nuevo período</a>
         </div>
+
+        <form method="POST" action="{{ route('conciliacion.mes') }}" style="margin:1rem 0">
+            @csrf
+            <button type="submit" class="clay-btn-secondary">Crear período del mes si falta</button>
+        </form>
 
         <form method="GET" action="{{ route('conciliacion.index') }}" style="max-width: 280px; margin-bottom: 1.5rem;">
             <label for="estado">Filtrar por estado</label>
@@ -55,4 +65,5 @@
             </table>
         @endif
     </div>
+</div>
 @endsection

@@ -125,7 +125,7 @@ class RendicionRepository
     }
 
     /**
-     * Verifica si el repartidor dado existe y está activo en la tabla USUARIO.
+     * Verifica si el repartidor dado existe y está activo en el directorio de G1.
      */
     public function repartidorEstaActivo(int $idRepartidor): bool
     {
@@ -140,7 +140,7 @@ class RendicionRepository
     {
         $tabla = Schema::hasTable('entrega') ? 'entrega' : (Schema::hasTable('ENTREGA') ? 'ENTREGA' : null);
         if (!$tabla) {
-            return $idEntrega > 0;
+            return false;
         }
 
         return DB::table($tabla)
@@ -153,15 +153,14 @@ class RendicionRepository
      */
     public function facturaEstaPendiente(int $idFactura): bool
     {
-        if (Schema::hasTable('VENTA')) {
-            return DB::table('VENTA')
-                ->where('id_venta', $idFactura)
-                ->where('pagado', false)
-                ->exists();
+        $venta = (new \App\Modules\Entregas\Integraciones\VentasApiClient())->obtenerVentaPorId($idFactura);
+        if ($venta === null) {
+            return false;
+        }
+        if (!array_key_exists('pagado', $venta) || !is_bool($venta['pagado'])) {
+            throw new \UnexpectedValueException('G4 debe informar el indicador booleano pagado para validar el cobro.');
         }
 
-        // Consultar API de Ventas desacoplada
-        $venta = (new \App\Modules\Ventas\Services\VentasApiClient())->obtenerVentaPorId($idFactura);
-        return $venta !== null && !($venta['pagado'] ?? false);
+        return !$venta['pagado'];
     }
 }

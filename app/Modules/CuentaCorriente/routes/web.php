@@ -11,5 +11,7 @@ use Illuminate\Support\Facades\Route;
 | Antes estaban en routes/web.php: se mudaron sin cambiar URL ni nombre.
 */
 
-Route::get('/saldo', [CuentaCorrienteController::class, 'index'])->name('saldo');
-Route::post('/saldo/{cliente}/movimientos', [CuentaCorrienteController::class, 'registrarMovimiento'])->name('saldo.movimientos');
+Route::middleware(['auth', 'session.current', 'role:administrativo,contador'])->group(function (): void {
+    Route::get('/saldo', [CuentaCorrienteController::class, 'index'])->name('saldo');
+    Route::post('/saldo/{cliente}/movimientos', [CuentaCorrienteController::class, 'registrarMovimiento'])->name('saldo.movimientos');
+});

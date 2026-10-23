@@ -15,9 +15,7 @@ use Illuminate\Validation\Rule;
  * Toda la lógica de negocio vive en CajaService — este Controller solo valida
  * el request y traduce el resultado del Service a HTTP.
  *
- * Todas las rutas de Caja están protegidas con auth:sanctum (ver routes/api.php),
- * y $request->user() devuelve el App\Modules\Shared\Models\Usuario autenticado.
- * PROVISORIO: Sanctum se usa solo para probar roles hasta que G1 termine el login.
+ * Integración web autenticada con la sesión de G1; el actor nunca viene del body.
  */
 class CajaController extends Controller
 {
@@ -27,21 +25,8 @@ class CajaController extends Controller
 
     private function resolverUsuarioYRol(Request $request): array
     {
-        if ($request->user()) {
-            return [(int) $request->user()->id_usuario, $request->user()->rol ?? Caja::ROL_ADMIN];
-        }
-
-        $idUsuario = (int) ($request->input('id_usuario') ?? $request->query('id_usuario') ?? 1);
-        $rol = $request->input('rol') ?? $request->query('rol');
-
-        if (!$rol) {
-            $usuario = \App\Modules\Shared\Services\UsuarioService::obtenerUsuario($idUsuario);
-            $rol = $usuario['rol'] ?? (($idUsuario === 2 || $idUsuario === 3) ? Caja::ROL_ADMIN : Caja::ROL_REPARTIDOR);
-        }
-
-        return [$idUsuario, $rol];
+        return [\App\Modules\Shared\Auth\G2Identity::id(), \App\Modules\Shared\Auth\G2Identity::role()];
     }
-
     private function esAdmin(Request $request): bool
     {
         [, $rol] = $this->resolverUsuarioYRol($request);
@@ -56,8 +41,7 @@ class CajaController extends Controller
         [$idUsuario, $rol] = $this->resolverUsuarioYRol($request);
 
         if (!Caja::rolManejaCaja($rol)) {
-            Response::error('Tu rol no maneja caja.', 403);
-            return;
+            return Response::error('Tu rol no maneja caja.', 403);
         }
 
         $datos = $request->validate([
@@ -73,11 +57,10 @@ class CajaController extends Controller
         );
 
         if ($resultado['error'] ?? false) {
-            Response::json($resultado, 409); // incluye id_caja_pendiente y vencida
-            return;
+            return Response::json($resultado, 409); // incluye id_caja_pendiente y vencida
         }
 
-        Response::json($resultado, 201);
+        return Response::json($resultado, 201);
     }
 
     /**
@@ -97,7 +80,7 @@ class CajaController extends Controller
             ? ($datos['id_usuario'] ?? null)
             : $idUsuarioSesion;
 
-        Response::json($this->service->listarCajas($datos['estado'] ?? null, $idUsuario));
+        return Response::json($this->service->listarCajas($datos['estado'] ?? null, $idUsuario));
     }
 
     /**
@@ -106,11 +89,10 @@ class CajaController extends Controller
     public function porFecha(Request $request, string $fecha)
     {
         if (!$this->esAdmin($request)) {
-            Response::error('Solo un administrador puede ver las cajas de otros usuarios.', 403);
-            return;
+            return Response::error('Solo un administrador puede ver las cajas de otros usuarios.', 403);
         }
 
-        Response::json($this->service->obtenerCajasDeFecha($fecha));
+        return Response::json($this->service->obtenerCajasDeFecha($fecha));
     }
 
     /**
@@ -122,11 +104,10 @@ class CajaController extends Controller
         [$idUsuarioSesion, $rol] = $this->resolverUsuarioYRol($request);
 
         if ($rol !== Caja::ROL_ADMIN && $idUsuarioSesion !== $id_usuario) {
-            Response::error('No podés ver la caja de otro usuario.', 403);
-            return;
+            return Response::error('No podés ver la caja de otro usuario.', 403);
         }
 
-        Response::json($this->service->obtenerCajasDeUsuarioYFecha($id_usuario, $fecha));
+        return Response::json($this->service->obtenerCajasDeUsuarioYFecha($id_usuario, $fecha));
     }
 
     /**
@@ -151,16 +132,14 @@ class CajaController extends Controller
         );
 
         if ($resultado === null) {
-            Response::error('Caja no encontrada.', 404);
-            return;
+            return Response::error('Caja no encontrada.', 404);
         }
 
         if ($resultado['error'] ?? false) {
-            Response::error($resultado['mensaje'], 409);
-            return;
+            return Response::error($resultado['mensaje'], 409);
         }
 
-        Response::json($resultado);
+        return Response::json($resultado);
     }
 
     /**
@@ -185,16 +164,14 @@ class CajaController extends Controller
         );
 
         if ($resultado === null) {
-            Response::error('Caja no encontrada.', 404);
-            return;
+            return Response::error('Caja no encontrada.', 404);
         }
 
         if ($resultado['error'] ?? false) {
-            Response::error($resultado['mensaje'], 409);
-            return;
+            return Response::error($resultado['mensaje'], 409);
         }
 
-        Response::json($resultado);
+        return Response::json($resultado);
     }
 
     /**
@@ -215,7 +192,7 @@ class CajaController extends Controller
             ? ($datos['id_usuario'] ?? null)
             : $idUsuarioSesion;
 
-        Response::json($this->service->obtenerHistorialCierres(
+        return Response::json($this->service->obtenerHistorialCierres(
             $idUsuario !== null ? (int) $idUsuario : null,
             $datos['desde'] ?? null,
             $datos['hasta'] ?? null
@@ -233,11 +210,10 @@ class CajaController extends Controller
         // 404 también cuando no es suyo, para no revelar que el id existe
         if ($cierre === null
             || ($rol !== Caja::ROL_ADMIN && (int) $cierre['id_usuario'] !== $idUsuarioSesion)) {
-            Response::error('No existe un cierre con ese id.', 404);
-            return;
+            return Response::error('No existe un cierre con ese id.', 404);
         }
 
-        Response::json($cierre);
+        return Response::json($cierre);
     }
 
     /**
@@ -267,16 +243,14 @@ class CajaController extends Controller
         );
 
         if ($resultado === null) {
-            Response::error('Caja no encontrada.', 404);
-            return;
+            return Response::error('Caja no encontrada.', 404);
         }
 
         if ($resultado['error'] ?? false) {
-            Response::error($resultado['mensaje'], 409);
-            return;
+            return Response::error($resultado['mensaje'], 409);
         }
 
-        Response::json($resultado, 201);
+        return Response::json($resultado, 201);
     }
 
     /**
@@ -289,11 +263,10 @@ class CajaController extends Controller
 
         if ($movimiento === null
             || ($rol !== Caja::ROL_ADMIN && (int) $movimiento['id_usuario'] !== $idUsuarioSesion)) {
-            Response::error('Movimiento no encontrado.', 404);
-            return;
+            return Response::error('Movimiento no encontrado.', 404);
         }
 
-        Response::json($movimiento);
+        return Response::json($movimiento);
     }
 
     /**
@@ -305,8 +278,7 @@ class CajaController extends Controller
         [$idUsuarioSesion, $rol] = $this->resolverUsuarioYRol($request);
 
         if ($rol !== Caja::ROL_ADMIN) {
-            Response::error('Solo un administrador puede modificar un movimiento.', 403);
-            return;
+            return Response::error('Solo un administrador puede modificar un movimiento.', 403);
         }
 
         $datos = $request->validate([
@@ -322,15 +294,13 @@ class CajaController extends Controller
         );
 
         if ($resultado === null) {
-            Response::error('Movimiento no encontrado.', 404);
-            return;
+            return Response::error('Movimiento no encontrado.', 404);
         }
 
         if ($resultado['error'] ?? false) {
-            Response::error($resultado['mensaje'], 409);
-            return;
+            return Response::error($resultado['mensaje'], 409);
         }
 
-        Response::json($resultado);
+        return Response::json($resultado);
     }
 }

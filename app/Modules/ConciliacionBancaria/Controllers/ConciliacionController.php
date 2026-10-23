@@ -25,7 +25,7 @@ class ConciliacionController extends Controller
     {
         $estado = $request->query('estado');
 
-        Response::json($this->service->listarPeriodos($estado));
+        return Response::json($this->service->listarPeriodos($estado));
     }
 
     /**
@@ -36,11 +36,10 @@ class ConciliacionController extends Controller
         $periodo = $this->service->buscarPeriodo($id);
 
         if ($periodo === null) {
-            Response::error('Período de conciliación no encontrado', 404);
-            return;
+            return Response::error('Período de conciliación no encontrado', 404);
         }
 
-        Response::json($periodo);
+        return Response::json($periodo);
     }
 
     /**
@@ -48,6 +47,7 @@ class ConciliacionController extends Controller
      */
     public function store(Request $request)
     {
+        $request->merge(['id_usuario' => \App\Modules\Shared\Auth\G2Identity::id()]);
         $datos = $request->validate([
             'fecha_desde' => ['required', 'date'],
             'fecha_hasta' => ['required', 'date', 'after_or_equal:fecha_desde'],
@@ -56,7 +56,7 @@ class ConciliacionController extends Controller
 
         $periodo = $this->service->crearPeriodo($datos);
 
-        Response::json($periodo, 201);
+        return Response::json($periodo, 201);
     }
 
     /**
@@ -67,16 +67,14 @@ class ConciliacionController extends Controller
         $resultado = $this->service->conciliarAutomatico($id);
 
         if ($resultado === null) {
-            Response::error('Período de conciliación no encontrado', 404);
-            return;
+            return Response::error('Período de conciliación no encontrado', 404);
         }
 
         if ($resultado['error'] ?? false) {
-            Response::error($resultado['mensaje'], 400);
-            return;
+            return Response::error($resultado['mensaje'], 400);
         }
 
-        Response::json($resultado);
+        return Response::json($resultado);
     }
 
     /**
@@ -85,6 +83,7 @@ class ConciliacionController extends Controller
      */
     public function conciliarManual(Request $request, int $id)
     {
+        $request->merge(['id_usuario' => \App\Modules\Shared\Auth\G2Identity::id()]);
         $datos = $request->validate([
             'id_cobro' => ['nullable', 'integer'],
             'id_movimiento_caja' => ['nullable', 'integer'],
@@ -96,16 +95,14 @@ class ConciliacionController extends Controller
         $resultado = $this->service->conciliarManual($id, $datos);
 
         if ($resultado === null) {
-            Response::error('Movimiento bancario no encontrado', 404);
-            return;
+            return Response::error('Movimiento bancario no encontrado', 404);
         }
 
         if ($resultado['error'] ?? false) {
-            Response::error($resultado['mensaje'], 400);
-            return;
+            return Response::error($resultado['mensaje'], 400);
         }
 
-        Response::json($resultado, 201);
+        return Response::json($resultado, 201);
     }
 
     /**
@@ -116,15 +113,13 @@ class ConciliacionController extends Controller
         $resultado = $this->service->cerrarPeriodo($id);
 
         if ($resultado === null) {
-            Response::error('Período de conciliación no encontrado', 404);
-            return;
+            return Response::error('Período de conciliación no encontrado', 404);
         }
 
         if ($resultado['error'] ?? false) {
-            Response::error($resultado['mensaje'], 400);
-            return;
+            return Response::error($resultado['mensaje'], 400);
         }
 
-        Response::json($resultado);
+        return Response::json($resultado);
     }
 }

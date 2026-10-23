@@ -12,6 +12,8 @@ use Illuminate\Support\Facades\Route;
 | Antes estaban en routes/web.php: se mudaron sin cambiar URL ni nombre.
 */
 
-Route::get('/ventas', [VentaController::class, 'index'])->name('ventas');                       // Pantalla del POS
-Route::post('/ventas', [VentaController::class, 'store'])->name('ventas.store');                // Alta de venta desde el POS
-Route::get('/historial-ventas', [VentaController::class, 'historial'])->name('ventas.historial'); // Historial de ventas
+Route::middleware(['auth', 'session.current', 'role:administrativo,repartidor'])->group(function (): void {
+    Route::get('/ventas', [VentaController::class, 'index'])->name('ventas.index');
+    Route::post('/ventas', [VentaController::class, 'store'])->name('ventas.store');
+    Route::get('/historial-ventas', [VentaController::class, 'historial'])->name('ventas.historial');
+});

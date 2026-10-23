@@ -2,7 +2,12 @@
 
 @section('titulo', 'Nuevo período de conciliación')
 
+@push('styles')
+<link rel="stylesheet" href="{{ asset('css/g2-finanzas.css') }}">
+@endpush
+
 @section('contenido')
+<div class="g2-page">
     <div class="clay-card card-angosta">
         <h2>Nuevo período de conciliación</h2>
         <p class="subtitulo">Definí el rango de fechas que vas a conciliar contra el extracto bancario.</p>
@@ -28,4 +33,5 @@
             </div>
         </form>
     </div>
+</div>
 @endsection

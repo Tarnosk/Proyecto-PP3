@@ -33,7 +33,7 @@
                 <small>Informados por G2</small>
             @else
                 <strong>--</strong>
-                <small>Esperando API de cobros de G2</small>
+                <small>Sin conexión al historial de pagos de G2</small>
             @endif
         </article>
         <article>
@@ -52,7 +52,7 @@
         <div class="section-title"><h2>Historial de pagos</h2></div>
         <div class="table-panel">
             @if (! $cobrosDisponibles)
-                <p class="empty-state">El historial estara disponible cuando G2 publique su API de cobros.</p>
+                <p class="empty-state">Sin datos disponibles para el historial de pagos. Los cobros registrados en rendiciones se muestran por separado y no certifican pagos confirmados.</p>
             @elseif (count($cobros) === 0)
                 <p class="empty-state">Este cliente no tiene pagos registrados.</p>
             @else
@@ -74,6 +74,28 @@
                 </div>
             @endif
         </div>
+    </section>
+
+    <section class="section-block" aria-label="Cobros registrados en rendiciones de G2">
+        <div class="section-title"><h2>Cobros registrados en rendiciones</h2></div>
+        <p>Registros visibles para la cuenta de servicio de G1. No equivalen al historial completo de pagos confirmados ni permiten calcular el saldo. El estado mostrado corresponde a la rendición; G2 no informa la confirmación individual del cobro.</p>
+        @if (! $cobrosRendidos['ready'])
+            <p class="empty-state" role="status">{{ $cobrosRendidos['message'] }}</p>
+        @elseif ($cobrosRendidos['rows'] === [])
+            <p class="empty-state">No hay cobros de este cliente en las rendiciones devueltas por G2.</p>
+        @else
+            <div class="table-scroll"><table>
+                <thead><tr><th>Fecha</th><th>Rendición</th><th>Factura (ID)</th><th>Importe registrado</th><th>Medio</th><th>Estado de la rendición</th></tr></thead>
+                <tbody>@foreach ($cobrosRendidos['rows'] as $registro)
+                    <tr>
+                        <td>{{ \Illuminate\Support\Carbon::parse($registro['fecha'])->format('d/m/Y H:i') }}</td>
+                        <td>#{{ $registro['rendicion_id'] }}</td><td>#{{ $registro['factura_id'] }}</td>
+                        <td>${{ number_format((float) $registro['monto'], 2, ',', '.') }}</td>
+                        <td>{{ ucfirst($registro['medio_pago']) }}</td><td>{{ ucfirst($registro['estado_rendicion']) }}</td>
+                    </tr>
+                @endforeach</tbody>
+            </table></div>
+        @endif
     </section>
 
     <section class="section-block">

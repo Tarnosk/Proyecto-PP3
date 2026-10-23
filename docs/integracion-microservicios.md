@@ -158,23 +158,27 @@ El cliente debe estar activo y el usuario debe ser administrativo o repartidor a
 | --- | --- | --- | --- |
 | G2 | Cobros por `cliente_id` | Ficha del cliente y `GET /api/v1/clientes/{id}/cobros` | Pendiente de endpoint de listado |
 | G2 | Facturas pendientes | Reporte de clientes deudores | Pendiente de endpoint |
-| G3 | Catalogo de productos | Selector del reporte clientes por producto | `GET /api/v1/productos` visible en rama G3; falta configurar y probar conexion |
-| G4 | Ventas por cliente | Ficha, historial y exportaciones | Pendiente de contrato JSON compatible |
-| G4 | Clientes compradores por producto | Porcentaje de clientes por producto | Pendiente de endpoint |
-| G4 | Ranking de productos | Reporte ranking comercial | Pendiente de endpoint |
+| G3 | Catalogo completo de productos | Selector opcional del reporte clientes por producto | `GET /api/v1/productos`; localmente falla por tabla `PRODUCTO` ausente. Sin catalogo configurado, G1 ofrece solo productos con ventas desde G4 |
+| G4 | Ventas por cliente | Ficha, historial y exportaciones | `GET /api/ventas` adaptado y probado mediante HTTP |
+| G4 | Clientes compradores por producto | Porcentaje de clientes por producto | G1 deriva IDs distintos desde `GET /api/ventas`; selector aun depende de G3 |
+| G4 | Ranking de productos | Reporte ranking comercial | G1 agrega cantidades e importes netos desde `GET /api/ventas` |
 | G4 | Saldo por cliente y lista de deudores | Ficha, API de saldo y reporte de deudores | Pendiente de endpoints |
 
 Un endpoint visible en una rama no implica integracion operativa. G1 no consulta ventas, productos, cobros ni saldos de sus tablas locales para estos flujos. La issue de transferencias #120 sigue fuera de alcance.
 
 ## JSON requerido de Ventas
 
-El Grupo 1 consulta `GET /api/v1/ventas?cliente_id=12&desde=YYYY-MM-DD&hasta=YYYY-MM-DD` para el historial de un cliente. Los filtros `desde` y `hasta` son opcionales. La respuesta `{ "data": [...] }` debe contener todas las operaciones del filtro, ordenadas por fecha descendente.
+El Grupo 1 consulta `GET /api/ventas?cliente_id=12&desde=YYYY-MM-DD&hasta=YYYY-MM-DD` para el historial de un cliente. Los filtros `desde` y `hasta` son opcionales. La respuesta `{ "data": [...] }` usa `meta.current_page`, `last_page` y `total` cuando esta paginada. G1 recorre las paginas enviando `page`, conserva filtros y rechaza respuestas parciales o duplicadas. El limite es 100 paginas por consulta.
 
-Cada elemento debe tener `fecha` (ISO 8601), `numero_factura` (cadena o `null`), `total` (decimal), `estado` (`pendiente`, `confirmada`, `pagada`, `facturada` o `cancelada`), `cliente` con `nombre` y `apellido_razon_social`, y `detalles` como lista de `{ cantidad, subtotal, producto: { nombre } }`. Deben venir todos los estados.
+El recurso publicado tiene `id`, `fecha`, `numero_comprobante`, `total`, `estado: {valor, etiqueta}`, `cliente: {id, nombre, cuit}` y `detalles: [{id_producto, codigo, producto, cantidad, subtotal, ...}]`, con `producto` como texto. Incluye `descuento_global` monetario y `anulada` booleano. Los estados de lectura son `pendiente`, `confirmada`, `preparada`, `entregada`, `pagada`, `facturada` y `cancelada`. G1 convierte esos datos a sus DTO de presentacion sin depender de modelos de G4. Para el historial deben recibirse todos los estados.
 
 Ejemplo de contrato (solo documentacion y pruebas, no datos cargados en ejecucion): [ventas.json](contracts/ventas.json).
 
-G1 ya no consume alertas de stock ni genera reportes de ventas generales o inventario. Las secciones de Ventas y Stock permanecen visibles sin consultas desde G1. El historial de clientes solo usa la API de G4. El reporte de clientes por producto usa el catalogo JSON de G3 (`GET /api/v1/productos`, con `id_producto`, `codigo`, `nombre` o `descripcion`) y solicita a G4 `GET /api/v1/reportes/productos/{id}/compradores`, con `data: [{"cliente_id": 12}]`. G4 debe devolver una vez cada cliente con venta confirmada, pagada o facturada, excluyendo pendientes y canceladas. Esta ultima ruta es un contrato **propuesto**, no disponible actualmente en la rama publica de G4. El porcentaje se calcula sobre todos los clientes registrados en G1. Ninguna consulta toma ventas o productos de las tablas locales.
+G1 no consulta alertas de stock ni tablas de ventas o productos. El historial usa la API de G4. Compradores y ranking tambien usan `/api/ventas`, sin filtro de cliente. G1 selecciona ventas confirmadas, preparadas, entregadas, pagadas y facturadas; excluye pendientes, canceladas y anuladas. Los compradores se identifican por `detalles[].id_producto`, se deduplican por `cliente.id` y se cruzan exclusivamente con clientes existentes en G1. El porcentaje usa todos los clientes registrados de G1 como denominador.
+
+Actualizacion 23/10/2026: si el catalogo de G3 no esta configurado, el selector de compradores ofrece **Productos con ventas**, derivados de esa misma API de G4. Una sola lectura paginada obtiene selector y compradores; excluye productos que solo aparecen en pendientes o canceladas. La pantalla aclara que es informacion historica y no incluye productos sin ventas ni reemplaza el catalogo completo, precios o stock actuales. No genera productos simulados. Si G3 esta configurado, sigue siendo la fuente del selector; un fallo del proveedor no se oculta cambiando de fuente. Ver [auditoria-apis-todas-las-ramas-g1.md](auditoria-apis-todas-las-ramas-g1.md).
+
+El ranking agrega cantidades por ID de producto. Usa subtotales de linea ya descontados y distribuye el descuento global monetario proporcionalmente entre ellos, con mayor resto y desempate por ID de producto y posicion de linea. Trabaja en centavos enteros y verifica que subtotal menos descuento coincida exactamente con `total`. No aplica dos veces el descuento individual ni presenta importes brutos como netos. La clave interna `monto_facturado` conserva compatibilidad, pero la pantalla muestra **Importe neto vendido**. No se calculan saldos ni facturas pendientes desde este ranking.
 
 ## Configuracion de servicios externos
 
@@ -182,6 +186,10 @@ G1 ya no consume alertas de stock ni genera reportes de ventas generales o inven
 INTERNAL_API_TOKEN=valor_aleatorio_largo
 SALES_SERVICE_URL=http://ventas:8000
 SALES_SERVICE_TOKEN=token_del_servicio_ventas
+SALES_AUTH_REQUIRED=false
+SALES_HISTORY_PATH=/api/ventas
+SALES_BUYERS_PATH=
+SALES_RANKING_PATH=
 CATALOG_SERVICE_URL=http://productos:8000
 CATALOG_SERVICE_TOKEN=
 BILLING_SERVICE_URL=http://cobros:8000
@@ -190,10 +198,10 @@ BALANCE_SERVICE_URL=http://saldos:8000
 BALANCE_SERVICE_TOKEN=token_del_servicio_saldos
 ```
 
-Las URL y tokens anteriores son valores ilustrativos: no se deben copiar como servicios reales. G3 puede consultarse sin token mientras su API siga publica; los otros consumidores requieren token. Tras cambiar `.env`, ejecutar `php artisan config:clear`. Sin servicio configurado, las pantallas muestran integracion pendiente y las rutas API/exportaciones devuelven `503`. Un servicio caido devuelve `503`, y un error o JSON invalido devuelve `502`. Nunca se sustituyen los datos externos por tablas locales ni por respuestas simuladas.
+Las URL y tokens anteriores son ilustrativos: no copiarlos como servicios reales. G3 y la lectura actual de G4 pueden consultarse sin token. Si Ventas requiere autenticacion, usar `SALES_AUTH_REQUIRED=true` y un token real. Los consumidores financieros requieren token. Tras cambiar `.env`, ejecutar `php artisan config:clear`. Sin servicio configurado, las pantallas muestran integracion pendiente y las rutas API/exportaciones devuelven `503`. Un servicio caido devuelve `503`, y un error o JSON invalido devuelve `502`. Nunca se sustituyen datos externos por tablas locales ni respuestas simuladas de G1.
 
-Cada ruta externa tambien se puede ajustar con las variables `SALES_HISTORY_PATH`, `SALES_BUYERS_PATH`, `SALES_RANKING_PATH`, `CATALOG_PRODUCTS_PATH`, `BILLING_PAYMENTS_PATH`, `BILLING_INVOICES_PATH`, `BALANCE_CLIENT_PATH` y `BALANCE_DEBTORS_PATH` de `.env.example`. En las rutas de comprador y saldo individual, `{id}` se reemplaza por el ID correspondiente. Cambiar la ruta no adapta automaticamente un JSON distinto: si el otro grupo entrega otra estructura, hay que acordar y actualizar el adaptador y sus pruebas.
+Cada ruta externa se ajusta con las variables `*_PATH` de `.env.example`. `SALES_BUYERS_PATH` y `SALES_RANKING_PATH` vacios habilitan los calculos de G1 desde Ventas. Si se completan, se usan endpoints directos alternativos que deben tener contrato y criterio compatibles, expresamente acordados. En rutas de comprador y saldo individual, `{id}` se reemplaza por el ID correspondiente. Cambiar una ruta no adapta automaticamente otro JSON.
 
-Estado verificado en las ramas publicas: G3 publica `GET /api/v1/productos` con `data`; G2 publica alta de cobros y una consulta de saldo propia, pero **no** el historial ni las facturas pendientes aqui esperadas. G4 publica `GET /api/ventas`, que hoy no equivale al contrato JSON de historial, ranking, compradores y saldos requerido por G1. Estas rutas propuestas no deben marcarse como integradas hasta probarlas extremo a extremo.
+Estado verificado el 22/10/2026: G3 publica `GET /api/v1/productos` con `data`, pero falla localmente por falta de `PRODUCTO`. G2 dispone de operaciones de cobros y otra rama contiene una consulta de saldo propia, que no equivale al saldo de cuenta corriente requerido aqui. No se conectan listados financieros incompletos ni se importan ramas ajenas. G4 publica `/api/ventas`; G1 ya lo adapta para historial, compradores y ranking. La prueba real entrega cero ventas, y los casos con movimientos se verifican mediante HTTP simulado. Saldos, deudores, historial de cobros y facturas pendientes siguen sin integrar. Detalles y reversion: [informe-consumo-apis-g1.md](informe-consumo-apis-g1.md).
 
 G2 es dueno de cobros y facturas; G4, de saldos y ventas. Las tablas locales historicas `cobros` y `clientes.saldo` se conservan sin borrar datos, pero ya no se usan en pantallas, reportes ni escrituras. Los nuevos contratos propuestos para Sprint 4 estan en [contratos-sprint4-g1.md](contratos-sprint4-g1.md). No se considera integrada una API hasta que el otro grupo confirme su ruta y estructura.
