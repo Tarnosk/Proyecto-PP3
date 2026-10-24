@@ -58,15 +58,15 @@ return new class extends Migration
             }
         }
 
-        // 2. Sembrar catálogo base compartido con G1/G4 únicamente si `producto` está vacía
-        if (! Schema::hasTable('producto') || DB::table('producto')->count() > 0) {
+        // 2. Sembrar catálogo base compartido con G1/G4 (P001 - P006)
+        if (! Schema::hasTable('producto')) {
             return;
         }
 
         $idUsuario = (int) (DB::table('usuario')->value('id_usuario') ?? 1);
         $hoy = '2026-09-01';
 
-        if (Schema::hasTable('categoria') && DB::table('categoria')->count() === 0) {
+        if (Schema::hasTable('categoria')) {
             DB::table('categoria')->insertOrIgnore([
                 ['id_categoria' => 1, 'nombre' => 'Bebidas', 'fecha_creacion' => $hoy],
                 ['id_categoria' => 2, 'nombre' => 'Panadería', 'fecha_creacion' => $hoy],
@@ -74,7 +74,7 @@ return new class extends Migration
             ]);
         }
 
-        if (Schema::hasTable('marca') && DB::table('marca')->count() === 0) {
+        if (Schema::hasTable('marca')) {
             DB::table('marca')->insertOrIgnore([
                 ['id_marca' => 1, 'nombre' => 'Coca-Cola', 'fecha_creacion' => $hoy],
                 ['id_marca' => 2, 'nombre' => 'Bimbo', 'fecha_creacion' => $hoy],
@@ -84,6 +84,17 @@ return new class extends Migration
                 ['id_marca' => 6, 'nombre' => 'Matarazzo', 'fecha_creacion' => $hoy],
             ]);
         }
+
+        $catBebidas = (int) (DB::table('categoria')->where('nombre', 'Bebidas')->value('id_categoria') ?? 1);
+        $catPanaderia = (int) (DB::table('categoria')->where('nombre', 'Panadería')->value('id_categoria') ?? 2);
+        $catAlmacen = (int) (DB::table('categoria')->where('nombre', 'Almacén')->value('id_categoria') ?? 3);
+
+        $marcaCoca = (int) (DB::table('marca')->where('nombre', 'Coca-Cola')->value('id_marca') ?? 1);
+        $marcaBimbo = (int) (DB::table('marca')->where('nombre', 'Bimbo')->value('id_marca') ?? 2);
+        $marcaPlayadito = (int) (DB::table('marca')->where('nombre', 'Playadito')->value('id_marca') ?? 3);
+        $marcaNatura = (int) (DB::table('marca')->where('nombre', 'Natura')->value('id_marca') ?? 4);
+        $marcaGallo = (int) (DB::table('marca')->where('nombre', 'Gallo')->value('id_marca') ?? 5);
+        $marcaMatarazzo = (int) (DB::table('marca')->where('nombre', 'Matarazzo')->value('id_marca') ?? 6);
 
         $productos = [
             [
@@ -97,8 +108,8 @@ return new class extends Migration
                 'dias_alerta_vencimiento' => 30,
                 'estado' => 'activo',
                 'fecha_alta' => '2026-09-01',
-                'id_categoria' => 1,
-                'id_marca' => 1,
+                'id_categoria' => $catBebidas,
+                'id_marca' => $marcaCoca,
                 'id_usuario_carga' => $idUsuario,
                 'formato_bulto' => 'Pack',
                 'unidades_por_bulto' => 6,
@@ -114,8 +125,8 @@ return new class extends Migration
                 'dias_alerta_vencimiento' => 15,
                 'estado' => 'activo',
                 'fecha_alta' => '2026-09-02',
-                'id_categoria' => 2,
-                'id_marca' => 2,
+                'id_categoria' => $catPanaderia,
+                'id_marca' => $marcaBimbo,
                 'id_usuario_carga' => $idUsuario,
                 'formato_bulto' => 'Bolsa',
                 'unidades_por_bulto' => 1,
@@ -131,8 +142,8 @@ return new class extends Migration
                 'dias_alerta_vencimiento' => 60,
                 'estado' => 'activo',
                 'fecha_alta' => '2026-09-05',
-                'id_categoria' => 3,
-                'id_marca' => 3,
+                'id_categoria' => $catAlmacen,
+                'id_marca' => $marcaPlayadito,
                 'id_usuario_carga' => $idUsuario,
                 'formato_bulto' => 'Fardo',
                 'unidades_por_bulto' => 10,
@@ -148,8 +159,8 @@ return new class extends Migration
                 'dias_alerta_vencimiento' => 60,
                 'estado' => 'activo',
                 'fecha_alta' => '2026-09-10',
-                'id_categoria' => 3,
-                'id_marca' => 4,
+                'id_categoria' => $catAlmacen,
+                'id_marca' => $marcaNatura,
                 'id_usuario_carga' => $idUsuario,
                 'formato_bulto' => 'Caja',
                 'unidades_por_bulto' => 12,
@@ -165,8 +176,8 @@ return new class extends Migration
                 'dias_alerta_vencimiento' => 90,
                 'estado' => 'activo',
                 'fecha_alta' => '2026-09-12',
-                'id_categoria' => 3,
-                'id_marca' => 5,
+                'id_categoria' => $catAlmacen,
+                'id_marca' => $marcaGallo,
                 'id_usuario_carga' => $idUsuario,
                 'formato_bulto' => 'Fardo',
                 'unidades_por_bulto' => 10,
@@ -182,8 +193,8 @@ return new class extends Migration
                 'dias_alerta_vencimiento' => 90,
                 'estado' => 'activo',
                 'fecha_alta' => '2026-09-15',
-                'id_categoria' => 3,
-                'id_marca' => 6,
+                'id_categoria' => $catAlmacen,
+                'id_marca' => $marcaMatarazzo,
                 'id_usuario_carga' => $idUsuario,
                 'formato_bulto' => 'Caja',
                 'unidades_por_bulto' => 20,
