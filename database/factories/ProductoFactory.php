@@ -2,7 +2,7 @@
 
 namespace Database\Factories;
 
-use App\Models\Usuario;
+use App\Modules\Login\Models\User;
 use App\Modules\Productos\Models\Categoria;
 use App\Modules\Productos\Models\Marca;
 use App\Modules\Productos\Models\Producto;
@@ -31,7 +31,7 @@ class ProductoFactory extends Factory
 
         $categoria = Categoria::query()->first() ?? Categoria::query()->create(['nombre' => 'General']);
         $marca = Marca::query()->first() ?? Marca::query()->create(['nombre' => 'Genérica']);
-        $usuarioId = Usuario::query()->value('id_usuario') ?? 1;
+        $usuarioId = User::query()->value('id') ?? 1;
 
         return [
             'codigo' => fake()->unique()->bothify('PROD-####'),

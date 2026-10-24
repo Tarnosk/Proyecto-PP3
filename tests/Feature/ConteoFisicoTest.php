@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
-use App\Models\Usuario;
+use App\Modules\Login\Models\User;
 use App\Modules\Productos\Models\Categoria;
 use App\Modules\Productos\Models\Marca;
 use App\Modules\Productos\Models\Producto;
@@ -19,15 +19,31 @@ class ConteoFisicoTest extends TestCase
         \Tests\UsesG3Database::beginDatabaseTransaction insteadof DatabaseTransactions;
     }
 
-    private function crearUsuarioTest(string $nombre = 'usuario-conteo'): Usuario
+    private function crearUsuarioTest(string $nombre = 'usuario-conteo'): User
     {
-        return Usuario::create([
-            'user' => $nombre . '-' . uniqid(),
-            'password' => password_hash('secret', PASSWORD_DEFAULT),
+        $username = $nombre . '-' . uniqid();
+        $hash = password_hash('secret', PASSWORD_DEFAULT);
+
+        $user = User::create([
+            'usuario' => $username,
+            'password_hash' => $hash,
             'nombre' => 'Usuario Conteo',
-            'rol' => 'deposito',
+            'rol' => 'administrativo',
             'estado' => 'activo',
         ]);
+
+        if (\Illuminate\Support\Facades\Schema::hasTable('usuario')) {
+            \Illuminate\Support\Facades\DB::table('usuario')->insertOrIgnore([
+                'id_usuario' => $user->id,
+                'usuario' => $username,
+                'password_hash' => $hash,
+                'nombre' => 'Usuario Conteo',
+                'rol' => 'deposito',
+                'estado' => 'activo',
+            ]);
+        }
+
+        return $user;
     }
 
     private function crearProductoTest(string $codigo = 'PROD-CONT'): Producto
@@ -42,7 +58,7 @@ class ConteoFisicoTest extends TestCase
             'activo' => true,
         ]);
 
-        $userId = Usuario::first()?->id_usuario ?? 1;
+        $userId = User::first()?->id ?? 1;
 
         return Producto::create([
             'codigo' => $codigo . '-' . uniqid(),
@@ -66,7 +82,7 @@ class ConteoFisicoTest extends TestCase
         $response = $this->postJson('/api/stock/conteos/sesiones', [
             'fecha_conteo' => '2026-10-11',
             'observaciones' => 'Auditoría mensual pasillo A',
-            'id_usuario' => $usuario->id_usuario,
+            'id_usuario' => $usuario->id,
         ]);
 
         $response->assertStatus(201)
@@ -87,7 +103,7 @@ class ConteoFisicoTest extends TestCase
             'observaciones' => 'Conteo de coincidencia',
             'total_productos' => 0,
             'total_diferencias' => 0,
-            'id_usuario' => $usuario->id_usuario,
+            'id_usuario' => $usuario->id,
         ]);
 
         $response = $this->postJson("/api/stock/conteos/sesiones/{$sesion->id_sesion}/items", [
@@ -119,7 +135,7 @@ class ConteoFisicoTest extends TestCase
             'observaciones' => 'Conteo con diferencia',
             'total_productos' => 0,
             'total_diferencias' => 0,
-            'id_usuario' => $usuario->id_usuario,
+            'id_usuario' => $usuario->id,
         ]);
 
         $response = $this->postJson("/api/stock/conteos/sesiones/{$sesion->id_sesion}/items", [
@@ -148,7 +164,7 @@ class ConteoFisicoTest extends TestCase
             'observaciones' => 'Sesión cerrada',
             'total_productos' => 0,
             'total_diferencias' => 0,
-            'id_usuario' => $usuario->id_usuario,
+            'id_usuario' => $usuario->id,
         ]);
 
         $response = $this->postJson("/api/stock/conteos/sesiones/{$sesion->id_sesion}/items", [
@@ -173,7 +189,7 @@ class ConteoFisicoTest extends TestCase
             'observaciones' => 'Resumen con inconsistencias',
             'total_productos' => 0,
             'total_diferencias' => 0,
-            'id_usuario' => $usuario->id_usuario,
+            'id_usuario' => $usuario->id,
         ]);
 
         $this->postJson("/api/stock/conteos/sesiones/{$sesion->id_sesion}/items", [
@@ -209,7 +225,7 @@ class ConteoFisicoTest extends TestCase
             'observaciones' => 'Regularización final',
             'total_productos' => 0,
             'total_diferencias' => 0,
-            'id_usuario' => $usuario->id_usuario,
+            'id_usuario' => $usuario->id,
         ]);
 
         $this->postJson("/api/stock/conteos/sesiones/{$sesion->id_sesion}/items", [

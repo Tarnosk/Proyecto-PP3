@@ -14,7 +14,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use App\Support\UsuarioActual;
-use App\Models\LogAuditoria;
+use App\Modules\Productos\Models\LogAuditoria;
 use App\Support\AuditoriaLogger;
 
 /**

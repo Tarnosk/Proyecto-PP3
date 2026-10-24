@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Proveedores\Models;
 
+use App\Modules\Login\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -43,6 +44,6 @@ class HistorialPlazoProveedor extends Model
 
     public function usuario(): BelongsTo
     {
-        return $this->belongsTo(\App\Models\Usuario::class, 'id_usuario', 'id_usuario');
+        return $this->belongsTo(User::class, 'id_usuario', 'id');
     }
 }

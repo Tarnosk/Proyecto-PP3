@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Proveedores\Models;
 
+use App\Modules\Login\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -80,11 +81,11 @@ class Proveedor extends Model
 
     public function usuarioCarga(): BelongsTo
     {
-        return $this->belongsTo(\App\Models\Usuario::class, 'id_usuario_carga', 'id_usuario');
+        return $this->belongsTo(User::class, 'id_usuario_carga', 'id');
     }
 
     public function usuarioModificacion(): BelongsTo
     {
-        return $this->belongsTo(\App\Models\Usuario::class, 'id_usuario_modificacion', 'id_usuario');
+        return $this->belongsTo(User::class, 'id_usuario_modificacion', 'id');
     }
 }
