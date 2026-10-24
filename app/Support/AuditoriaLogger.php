@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Support;
 
-use App\Models\LogAuditoria;
+use App\Modules\Productos\Models\LogAuditoria;
 use Carbon\Carbon;
 use Throwable;
 

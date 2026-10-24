@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Tests\Feature;
 
 use App\Modules\Compras\Models\Compra;
+use App\Modules\Login\Models\User;
 use App\Modules\Productos\Models\Categoria;
 use App\Modules\Productos\Models\Marca;
 use App\Modules\Productos\Models\Producto;
@@ -23,7 +24,7 @@ class HistorialPrecioProveedorTest extends TestCase
 
     private function crearProveedorTest(string $cuit = '30-99112233-4'): Proveedor
     {
-        $userId = \App\Models\Usuario::first()?->id_usuario ?? 1;
+        $userId = User::first()?->id ?? 1;
 
         return Proveedor::create([
             'razon_social' => 'Proveedor Test PV06 ' . uniqid(),
@@ -43,7 +44,7 @@ class HistorialPrecioProveedorTest extends TestCase
     {
         $cat = Categoria::first() ?? Categoria::create(['nombre' => 'Cat Test', 'activo' => true]);
         $marca = Marca::first() ?? Marca::create(['nombre' => 'Marca Test', 'activo' => true]);
-        $userId = \App\Models\Usuario::first()?->id_usuario ?? 1;
+        $userId = User::first()?->id ?? 1;
 
         return Producto::create([
             'codigo' => $codigo . '-' . uniqid(),
@@ -131,7 +132,7 @@ class HistorialPrecioProveedorTest extends TestCase
             'precio_acordado' => 1200.00,
             'activo' => true,
             'fecha_asociacion' => Carbon::now()->subDays(10),
-            'id_usuario' => \App\Models\Usuario::first()?->id_usuario ?? 1,
+            'id_usuario' => User::first()?->id ?? 1,
         ]);
 
         // Crear 3 registros en fechas distintas
@@ -141,7 +142,7 @@ class HistorialPrecioProveedorTest extends TestCase
             'id_producto' => $prod->id_producto,
             'precio_acordado' => 1000.00,
             'fecha_actualizacion' => Carbon::now()->subDays(5),
-            'id_usuario' => \App\Models\Usuario::first()?->id_usuario ?? 1,
+            'id_usuario' => User::first()?->id ?? 1,
         ]);
 
         HistorialPrecioProveedor::create([
@@ -150,7 +151,7 @@ class HistorialPrecioProveedorTest extends TestCase
             'id_producto' => $prod->id_producto,
             'precio_acordado' => 1100.00,
             'fecha_actualizacion' => Carbon::now()->subDays(3),
-            'id_usuario' => \App\Models\Usuario::first()?->id_usuario ?? 1,
+            'id_usuario' => User::first()?->id ?? 1,
         ]);
 
         HistorialPrecioProveedor::create([
@@ -159,7 +160,7 @@ class HistorialPrecioProveedorTest extends TestCase
             'id_producto' => $prod->id_producto,
             'precio_acordado' => 1200.00,
             'fecha_actualizacion' => Carbon::now()->subDay(),
-            'id_usuario' => \App\Models\Usuario::first()?->id_usuario ?? 1,
+            'id_usuario' => User::first()?->id ?? 1,
         ]);
 
         // Por defecto: DESC (el más reciente primero: 1200)
@@ -190,7 +191,7 @@ class HistorialPrecioProveedorTest extends TestCase
             'precio_acordado' => 200.00,
             'activo' => true,
             'fecha_asociacion' => Carbon::now()->subMonths(3),
-            'id_usuario' => \App\Models\Usuario::first()?->id_usuario ?? 1,
+            'id_usuario' => User::first()?->id ?? 1,
         ]);
 
         // Registro de hace 2 meses
@@ -200,7 +201,7 @@ class HistorialPrecioProveedorTest extends TestCase
             'id_producto' => $prod->id_producto,
             'precio_acordado' => 150.00,
             'fecha_actualizacion' => Carbon::now()->subMonths(2),
-            'id_usuario' => \App\Models\Usuario::first()?->id_usuario ?? 1,
+            'id_usuario' => User::first()?->id ?? 1,
         ]);
 
         // Registro de hace 10 días
@@ -210,7 +211,7 @@ class HistorialPrecioProveedorTest extends TestCase
             'id_producto' => $prod->id_producto,
             'precio_acordado' => 180.00,
             'fecha_actualizacion' => Carbon::now()->subDays(10),
-            'id_usuario' => \App\Models\Usuario::first()?->id_usuario ?? 1,
+            'id_usuario' => User::first()?->id ?? 1,
         ]);
 
         // Registro de hoy
@@ -220,7 +221,7 @@ class HistorialPrecioProveedorTest extends TestCase
             'id_producto' => $prod->id_producto,
             'precio_acordado' => 200.00,
             'fecha_actualizacion' => Carbon::now(),
-            'id_usuario' => \App\Models\Usuario::first()?->id_usuario ?? 1,
+            'id_usuario' => User::first()?->id ?? 1,
         ]);
 
         // Filtrar rango que solo abarque los últimos 15 días hasta ayer
@@ -250,7 +251,7 @@ class HistorialPrecioProveedorTest extends TestCase
             'precio_acordado' => 1250.00,
             'activo' => true,
             'fecha_asociacion' => Carbon::now()->subDays(2),
-            'id_usuario' => \App\Models\Usuario::first()?->id_usuario ?? 1,
+            'id_usuario' => User::first()?->id ?? 1,
         ]);
 
         HistorialPrecioProveedor::create([
@@ -259,7 +260,7 @@ class HistorialPrecioProveedorTest extends TestCase
             'id_producto' => $prod->id_producto,
             'precio_acordado' => 1000.00,
             'fecha_actualizacion' => Carbon::now()->subDays(2),
-            'id_usuario' => \App\Models\Usuario::first()?->id_usuario ?? 1,
+            'id_usuario' => User::first()?->id ?? 1,
         ]);
 
         HistorialPrecioProveedor::create([
@@ -268,7 +269,7 @@ class HistorialPrecioProveedorTest extends TestCase
             'id_producto' => $prod->id_producto,
             'precio_acordado' => 1250.00,
             'fecha_actualizacion' => Carbon::now()->subDay(),
-            'id_usuario' => \App\Models\Usuario::first()?->id_usuario ?? 1,
+            'id_usuario' => User::first()?->id ?? 1,
         ]);
 
         $res = $this->getJson("/api/proveedores/{$prov->id_proveedor}/productos/{$prod->id_producto}/precios-historicos");
@@ -311,7 +312,7 @@ class HistorialPrecioProveedorTest extends TestCase
             'precio_acordado' => 200.00,
             'activo' => true,
             'fecha_asociacion' => Carbon::now()->subDays(5),
-            'id_usuario' => \App\Models\Usuario::first()?->id_usuario ?? 1,
+            'id_usuario' => User::first()?->id ?? 1,
         ]);
 
         $rel2 = ProductoProveedor::create([
@@ -321,7 +322,7 @@ class HistorialPrecioProveedorTest extends TestCase
             'precio_acordado' => 600.00,
             'activo' => true,
             'fecha_asociacion' => Carbon::now()->subDays(5),
-            'id_usuario' => \App\Models\Usuario::first()?->id_usuario ?? 1,
+            'id_usuario' => User::first()?->id ?? 1,
         ]);
 
         // Prod 1 sube de 100 a 200 (+100%)
@@ -331,7 +332,7 @@ class HistorialPrecioProveedorTest extends TestCase
             'id_producto' => $prod1->id_producto,
             'precio_acordado' => 100.00,
             'fecha_actualizacion' => Carbon::now()->subDays(5),
-            'id_usuario' => \App\Models\Usuario::first()?->id_usuario ?? 1,
+            'id_usuario' => User::first()?->id ?? 1,
         ]);
         HistorialPrecioProveedor::create([
             'id_producto_proveedor' => $rel1->id_producto_proveedor,
@@ -339,7 +340,7 @@ class HistorialPrecioProveedorTest extends TestCase
             'id_producto' => $prod1->id_producto,
             'precio_acordado' => 200.00,
             'fecha_actualizacion' => Carbon::now()->subDay(),
-            'id_usuario' => \App\Models\Usuario::first()?->id_usuario ?? 1,
+            'id_usuario' => User::first()?->id ?? 1,
         ]);
 
         // Prod 2 sube de 500 a 600 (+20%)
@@ -349,7 +350,7 @@ class HistorialPrecioProveedorTest extends TestCase
             'id_producto' => $prod2->id_producto,
             'precio_acordado' => 500.00,
             'fecha_actualizacion' => Carbon::now()->subDays(5),
-            'id_usuario' => \App\Models\Usuario::first()?->id_usuario ?? 1,
+            'id_usuario' => User::first()?->id ?? 1,
         ]);
         HistorialPrecioProveedor::create([
             'id_producto_proveedor' => $rel2->id_producto_proveedor,
@@ -357,7 +358,7 @@ class HistorialPrecioProveedorTest extends TestCase
             'id_producto' => $prod2->id_producto,
             'precio_acordado' => 600.00,
             'fecha_actualizacion' => Carbon::now()->subDay(),
-            'id_usuario' => \App\Models\Usuario::first()?->id_usuario ?? 1,
+            'id_usuario' => User::first()?->id ?? 1,
         ]);
 
         $resComp = $this->getJson("/api/proveedores/{$prov->id_proveedor}/comparativa-aumentos");

@@ -16,7 +16,7 @@ use Illuminate\Support\Facades\Validator;
 use Carbon\Carbon;
 use Exception;
 use App\Support\UsuarioActual;
-use App\Models\LogAuditoria;
+use App\Modules\Productos\Models\LogAuditoria;
 use App\Support\AuditoriaLogger;
 
 class ProductoController extends Controller
@@ -43,6 +43,7 @@ class ProductoController extends Controller
             ->get()
             ->map(function (Producto $p) {
                 return [
+                    'id' => $p->id_producto,
                     'id_producto' => $p->id_producto,
                     'codigo' => $p->codigo,
                     'descripcion' => $p->descripcion,
@@ -235,6 +236,7 @@ class ProductoController extends Controller
         return response()->json([
             'status' => 'success',
             'data' => [
+                'id' => $producto->id_producto,
                 'id_producto' => $producto->id_producto,
                 'codigo' => $producto->codigo,
                 'descripcion' => $producto->descripcion,

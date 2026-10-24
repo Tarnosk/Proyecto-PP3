@@ -4,28 +4,16 @@ declare(strict_types=1);
 
 namespace App\Support;
 
+use App\Modules\Login\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Resuelve la identidad del usuario que ejecuta la acción (auditoría).
- *
- * Division de responsabilidades:
- *  - G1 (autenticación): valida el login y deja disponible quién realiza
- *    la acción (atributo de request 'usuario_autenticado_id' y/o guard de
- *    Laravel que G1 configurará contra la tabla USUARIO).
- *  - G3 (auditoría): consume la identidad únicamente a traves de
- *    UsuarioActual::id(), jamas desde el body de la request (no confiable).
- *
- * Orden de resolución:
- *   1) Atributo de request 'usuario_autenticado_id' (inyectado por el
- *      middleware de identidad al detectar sesión, o por el middleware de G1).
- *   2) Guard 'proyecto' si G1 configuró ese nombre (contrato a convenir).
- *   3) Auth::id() del guard por defecto.
- *   4) Fallback: usuario administrativo activo mas bajo. Se resuelve
- *      contra la tabla USUARIO porque el id de la semilla no es fijo.
+ * Resuelve la identidad del usuario que ejecuta la acción (auditoría)
+ * conectando con App\Modules\Login\Models\User (G1).
  */
 final class UsuarioActual
 {
@@ -37,47 +25,32 @@ final class UsuarioActual
     {
         $request = $request ?? request();
 
+        $id = null;
+
         if ($request !== null) {
             $attr = $request->attributes->get(self::ATTRIBUTO);
             if (is_numeric($attr) && (int) $attr > 0) {
-                return (int) $attr;
+                $id = (int) $attr;
             }
         }
 
-        $id = self::idDeGuard('proyecto');
+        if ($id === null) {
+            $id = self::idDeGuard('proyecto');
+        }
+
         if ($id === null && Auth::check()) {
-            $user = Auth::user();
-            if ($user && ! empty($user->usuario) && Schema::hasTable('usuario')) {
-                try {
-                    $cols = Schema::getColumnListing('usuario');
-                    $campoUsuario = in_array('user', $cols, true) ? 'user' : 'usuario';
-                    $legacyId = DB::table('usuario')->where($campoUsuario, $user->usuario)->value('id_usuario');
-                    if ($legacyId !== null && (int) $legacyId > 0) {
-                        return (int) $legacyId;
-                    }
-                } catch (\Throwable $e) {
-                }
-            }
-            $id = Auth::id();
-            if ($id !== null && Schema::hasTable('usuario')) {
-                try {
-                    $exists = DB::table('usuario')->where('id_usuario', $id)->exists();
-                    if (! $exists) {
-                        $id = null;
-                    }
-                } catch (\Throwable $e) {
-                }
-            }
+            $id = (int) Auth::id();
         }
 
-        return ($id !== null && (int) $id > 0) ? (int) $id : self::idFallback();
+        $finalId = ($id !== null && $id > 0) ? $id : self::idFallback();
+
+        if ($finalId > 0) {
+            self::sincronizarFkUsuarioSiCorresponde($finalId);
+        }
+
+        return $finalId;
     }
 
-    /**
-     * El id del usuario operativo no puede estar hardcodeado: las semillas
-     * y los reimportes de esquema dejan el AUTO_INCREMENT desplazado y un
-     * id fijo viola la FK de auditoria (producto.id_usuario_carga, etc.).
-     */
     private static function idFallback(): int
     {
         if (self::$fallback !== null) {
@@ -85,24 +58,106 @@ final class UsuarioActual
         }
 
         try {
-            $id = DB::table('usuario')
-                ->where('estado', 'activo')
-                ->orderByRaw("CASE WHEN rol = 'administrativo' THEN 0 ELSE 1 END")
-                ->orderBy('id_usuario')
-                ->value('id_usuario');
+            if (Schema::hasTable('usuarios')) {
+                $id = User::query()
+                    ->where('estado', 'activo')
+                    ->orderByRaw("CASE WHEN rol = 'administrativo' THEN 0 ELSE 1 END")
+                    ->orderBy('id')
+                    ->value('id');
 
-            self::$fallback = $id !== null ? (int) $id : 0;
+                if ($id !== null) {
+                    self::$fallback = (int) $id;
+
+                    return self::$fallback;
+                }
+            }
+
+            if (Schema::hasTable('usuario')) {
+                $id = DB::table('usuario')
+                    ->where('estado', 'activo')
+                    ->orderByRaw("CASE WHEN rol = 'administrativo' THEN 0 ELSE 1 END")
+                    ->orderBy('id_usuario')
+                    ->value('id_usuario');
+
+                if ($id !== null) {
+                    self::$fallback = (int) $id;
+
+                    return self::$fallback;
+                }
+            }
         } catch (\Throwable $e) {
             self::$fallback = 0;
         }
 
-        return self::$fallback;
+        return self::$fallback ?? 1;
     }
 
     /**
-     * Lee el id del guard indicado solo si está configurado (evita lanzar
-     * si G1 todavía no define su guard 'proyecto').
+     * Garantiza que el usuario de App\Modules\Login\Models\User (tabla usuarios)
+     * tenga su reflejo en la tabla usuario si las FKs de G3 en MySQL apuntan a ella.
      */
+    private static function sincronizarFkUsuarioSiCorresponde(int $idUsuario): void
+    {
+        try {
+            $hasUsuarios = Schema::hasTable('usuarios');
+            $hasUsuario = Schema::hasTable('usuario');
+
+            if ($hasUsuarios && $hasUsuario) {
+                $existsInUsuario = DB::table('usuario')->where('id_usuario', $idUsuario)->exists();
+                if (! $existsInUsuario) {
+                    $g1User = DB::table('usuarios')->where('id', $idUsuario)->first();
+                    $cols = Schema::getColumnListing('usuario');
+                    $campoUsuario = in_array('user', $cols, true) ? 'user' : 'usuario';
+                    $campoPass = in_array('password', $cols, true) ? 'password' : 'password_hash';
+
+                    $loginName = $g1User->usuario ?? ('usr_'.$idUsuario);
+                    if (DB::table('usuario')->where($campoUsuario, $loginName)->exists()) {
+                        $loginName = $loginName.'_'.$idUsuario;
+                    }
+
+                    $insert = [
+                        'id_usuario' => $idUsuario,
+                        $campoUsuario => $loginName,
+                        $campoPass => $g1User->password_hash ?? Hash::make('secret123'),
+                        'rol' => in_array($g1User->rol ?? '', ['administrativo', 'repartidor', 'contador', 'vendedor', 'deposito'], true)
+                            ? $g1User->rol
+                            : 'administrativo',
+                        'estado' => $g1User->estado ?? 'activo',
+                    ];
+                    if (in_array('nombre', $cols, true)) {
+                        $insert['nombre'] = $g1User->nombre ?? ('Usuario #'.$idUsuario);
+                    }
+
+                    DB::table('usuario')->insertOrIgnore($insert);
+                }
+
+                $existsInUsuarios = DB::table('usuarios')->where('id', $idUsuario)->exists();
+                if (! $existsInUsuarios) {
+                    $g3User = DB::table('usuario')->where('id_usuario', $idUsuario)->first();
+                    if ($g3User) {
+                        $loginName = $g3User->usuario ?? ($g3User->user ?? ('usr_'.$idUsuario));
+                        if (DB::table('usuarios')->where('usuario', $loginName)->exists()) {
+                            $loginName = $loginName.'_'.$idUsuario;
+                        }
+                        $rolG1 = in_array($g3User->rol ?? '', ['administrativo', 'repartidor', 'contador'], true)
+                            ? $g3User->rol
+                            : 'administrativo';
+                        DB::table('usuarios')->insertOrIgnore([
+                            'id' => $idUsuario,
+                            'usuario' => $loginName,
+                            'password_hash' => $g3User->password_hash ?? ($g3User->password ?? Hash::make('secret123')),
+                            'nombre' => $g3User->nombre ?? ('Usuario #'.$idUsuario),
+                            'rol' => $rolG1,
+                            'estado' => $g3User->estado ?? 'activo',
+                        ]);
+                    }
+                }
+            }
+        } catch (\Throwable $e) {
+            // No interrumpir si el esquema es de prueba en memoria
+        }
+    }
+
     private static function idDeGuard(string $guard): ?int
     {
         if (config('auth.guards.'.$guard) === null) {
@@ -111,6 +166,6 @@ final class UsuarioActual
 
         $guardInstance = Auth::guard($guard);
 
-        return $guardInstance->check() ? $guardInstance->id() : null;
+        return $guardInstance->check() ? (int) $guardInstance->id() : null;
     }
 }

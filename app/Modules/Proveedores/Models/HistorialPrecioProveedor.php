@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Proveedores\Models;
 
-use App\Models\Usuario;
+use App\Modules\Login\Models\User;
 use App\Modules\Compras\Models\Compra;
 use App\Modules\Productos\Models\Producto;
 use App\Modules\Stock\Models\UnidadMedida;
@@ -67,6 +67,6 @@ class HistorialPrecioProveedor extends Model
 
     public function usuario(): BelongsTo
     {
-        return $this->belongsTo(Usuario::class, 'id_usuario', 'id_usuario');
+        return $this->belongsTo(User::class, 'id_usuario', 'id');
     }
 }

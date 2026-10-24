@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Models;
+namespace App\Modules\Productos\Models;
 
 use App\Modules\Login\Models\User;
 use Illuminate\Database\Eloquent\Model;
@@ -37,7 +37,7 @@ class LogAuditoria extends Model
 
     public function usuario(): BelongsTo
     {
-        return $this->belongsTo(Usuario::class, 'id_usuario', 'id_usuario');
+        return $this->belongsTo(User::class, 'id_usuario', 'id');
     }
 
     public function user(): BelongsTo
@@ -47,8 +47,8 @@ class LogAuditoria extends Model
 
     public function getNombreUsuarioAttribute(): string
     {
-        return $this->usuario?->nombre
-            ?: ($this->user?->nombre
+        return $this->user?->nombre
+            ?: ($this->usuario?->nombre
             ?: ($this->id_usuario ? "Usuario #{$this->id_usuario}" : 'Sistema'));
     }
 }
