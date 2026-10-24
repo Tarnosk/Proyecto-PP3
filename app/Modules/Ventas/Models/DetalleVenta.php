@@ -2,35 +2,17 @@
 
 namespace App\Modules\Ventas\Models;
 
-use App\Modules\Productos\Models\Producto;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class DetalleVenta extends Model
 {
-    public $timestamps = false;
-
-    protected $table = 'detalle_ventas';
-
+    protected $table = 'detalle_venta';
+    protected $primaryKey = 'id_detalle';
     protected $guarded = [];
+    public $timestamps = false; // Igual aquí, tu tabla no tiene timestamps[cite: 13]
 
-    protected function casts(): array
+    public function venta()
     {
-        return [
-            'cantidad' => 'integer',
-            'precio_unitario' => 'decimal:2',
-            'descuento' => 'decimal:2',
-            'subtotal' => 'decimal:2',
-        ];
-    }
-
-    public function venta(): BelongsTo
-    {
-        return $this->belongsTo(Venta::class, 'venta_id');
-    }
-
-    public function producto(): BelongsTo
-    {
-        return $this->belongsTo(Producto::class, 'producto_id');
+        return $this->belongsTo(Venta::class, 'id_venta', 'id_venta');
     }
 }

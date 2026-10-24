@@ -3,6 +3,7 @@
 @section('title', 'Clientes deudores | Sistema de gestion')
 
 @section('content')
+    @include('reports.partials.navigation')
     <section class="page-heading">
         <p class="eyebrow">Reportes</p>
         <h1>Clientes deudores</h1>
@@ -16,7 +17,7 @@
                 <option value="menor" @selected($orden === 'menor')>Menor a mayor</option>
             </select>
         </div>
-        <div class="toolbar-actions"><button class="button button-primary" type="submit">Consultar</button></div>
+        <div class="toolbar-actions"><button class="button button-primary" type="submit" @disabled(! $ready)>Consultar</button></div>
     </form>
 
     <section class="table-panel" aria-label="Clientes deudores">

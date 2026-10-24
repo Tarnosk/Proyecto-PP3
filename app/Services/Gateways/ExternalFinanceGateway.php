@@ -2,12 +2,13 @@
 
 namespace App\Services\Gateways;
 
+use App\Modules\Reportes\Services\SalesAnalytics;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Validator;
 
 class ExternalFinanceGateway
 {
-    public function __construct(private ExternalJsonClient $client) {}
+    public function __construct(private ExternalJsonClient $client, private SalesAnalytics $analytics) {}
 
     public function isConfigured(string $service): bool
     {
@@ -84,6 +85,10 @@ class ExternalFinanceGateway
 
     public function productRanking(?string $from, ?string $to): array
     {
+        abort_unless($this->productRankingAvailable(), 503, 'La consulta de ranking de G4 todavia no esta configurada.');
+        if (blank(config('services.sales.ranking_path'))) {
+            return $this->analytics->ranking($from, $to);
+        }
         $rows = $this->client->get('sales', config('services.sales.ranking_path'), array_filter([
             'desde' => $from,
             'hasta' => $to,
@@ -98,6 +103,11 @@ class ExternalFinanceGateway
         ]);
 
         return $rows;
+    }
+
+    public function productRankingAvailable(): bool
+    {
+        return $this->isConfigured('sales') && (filled(config('services.sales.ranking_path')) || filled(config('services.sales.history_path')));
     }
 
     private function requireList(array $rows): void

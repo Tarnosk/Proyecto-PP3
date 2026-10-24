@@ -9,7 +9,7 @@ use Illuminate\Support\Collection;
 
 class ReportService
 {
-    public function __construct(private SalesGateway $sales, private ExternalJsonClient $client) {}
+    public function __construct(private SalesGateway $sales, private ExternalJsonClient $client, private SalesAnalytics $analytics) {}
 
     public function salesAvailable(): bool
     {
@@ -24,5 +24,15 @@ class ReportService
     public function productBuyerIds(int $productId): array
     {
         return $this->sales->productBuyerIds($productId);
+    }
+
+    public function salesProductReach(?int $productId): array
+    {
+        return $this->analytics->productReach($productId);
+    }
+
+    public function buyersAvailable(): bool
+    {
+        return $this->salesAvailable() && (filled(config('services.sales.buyers_path')) || filled(config('services.sales.history_path')));
     }
 }

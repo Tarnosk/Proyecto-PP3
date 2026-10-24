@@ -1,0 +1,105 @@
+/* Presentación de Reportes de G1; utiliza la paleta y los botones del grupo. */
+.report-hub .report-card-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 20px;
+}
+
+.report-hub .report-card {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+    padding: 24px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(28, 31, 39, .07);
+    min-width: 0;
+}
+
+.report-card-heading {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.report-card-icon {
+    display: grid;
+    place-items: center;
+    flex: 0 0 46px;
+    height: 46px;
+    color: var(--primary);
+    background: var(--primary-soft);
+    border-radius: 8px;
+}
+
+.report-card-icon svg {
+    width: 24px;
+    height: 24px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.7;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.report-hub .report-card h2,
+.report-hub .report-card h3 {
+    margin: 0;
+    color: var(--text);
+    font-size: 1.15rem;
+    line-height: 1.4;
+}
+
+.report-hub .report-card p {
+    margin: 0;
+    color: var(--muted);
+}
+
+.report-hub .report-card .button {
+    gap: 12px;
+    margin-top: auto;
+}
+
+.report-hub .report-card small {
+    color: var(--muted);
+}
+
+.report-hub .button:disabled,
+.report-filter .button:disabled {
+    opacity: .65;
+    cursor: not-allowed;
+}
+
+.report-hub .button:focus-visible,
+.report-return .button:focus-visible {
+    outline: 3px solid var(--primary);
+    outline-offset: 4px;
+}
+
+.report-return {
+    margin-bottom: 22px;
+}
+
+.report-unavailable {
+    padding: 24px;
+}
+
+.report-unavailable .toolbar-actions {
+    flex-wrap: wrap;
+}
+
+@media (max-width: 680px) {
+    .report-hub .report-card-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .report-hub .report-card {
+        padding: 20px;
+    }
+
+    .report-hub .report-card .button {
+        width: 100%;
+    }
+}

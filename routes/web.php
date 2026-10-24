@@ -70,10 +70,10 @@ Route::middleware(['auth', 'session.current'])->group(function (): void {
         Route::get('/historial-clientes/exportar/{format}', [ReportExportController::class, 'clientHistory'])->name('client-history.export');
     });
 
-    Route::view('/ventas', 'reports.external-module', ['module' => 'Ventas y pedidos', 'group' => 'G4'])
-        ->middleware('role:administrativo,repartidor')
-        ->name('ventas.index');
-    Route::view('/stock', 'reports.external-module', ['module' => 'Inventario y stock', 'group' => 'G3'])
+    Route::redirect('/stock', '/inventario')
         ->middleware('role:administrativo,repartidor')
         ->name('stock.index');
+
+    Route::view('/promociones', 'promociones.promociones')
+        ->middleware('role:administrativo')->name('promociones.index');
 });

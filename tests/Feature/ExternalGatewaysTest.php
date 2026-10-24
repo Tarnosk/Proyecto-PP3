@@ -18,7 +18,7 @@ class ExternalGatewaysTest extends TestCase
         parent::setUp();
         config()->set('services.sales', [...config('services.sales'),
             'url' => 'https://ventas.example.test',
-            'token' => 'ventas-token',
+            'token' => 'ventas-token', 'auth_required' => true,
         ]);
         Http::preventStrayRequests();
     }
@@ -29,7 +29,7 @@ class ExternalGatewaysTest extends TestCase
         $client = Cliente::factory()->create(['creado_por' => $admin->id]);
         $sales = json_decode(file_get_contents(base_path('docs/contracts/ventas.json')), true);
         Http::fake([
-            'ventas.example.test/api/v1/ventas*' => Http::response($sales),
+            'ventas.example.test/api/ventas*' => Http::response($sales),
         ]);
 
         $this->signInAs($admin)->get(route('reports.client-history', [
@@ -65,7 +65,7 @@ class ExternalGatewaysTest extends TestCase
 
         config()->set('services.sales.token', null);
         $this->get(route('reports.client-history', ['cliente_id' => $client->id]))
-            ->assertOk()->assertSeeText('G4 publique su API de ventas');
+            ->assertOk()->assertSeeText('falta conectar el servicio de Ventas');
         $this->get(route('reports.client-history.export', [
             'format' => 'pdf', 'cliente_id' => $client->id,
         ]))->assertServiceUnavailable();
@@ -82,7 +82,7 @@ class ExternalGatewaysTest extends TestCase
             'saldos.example.test/api/v1/clientes/*/saldo' => Http::response(['data' => [
                 'cliente_id' => $client->id, 'saldo' => '40.00', 'moneda' => 'ARS',
             ]]),
-            'ventas.example.test/api/v1/ventas*' => Http::response(['data' => []]),
+            'ventas.example.test/api/ventas*' => Http::response(['data' => []]),
         ]);
 
         $response = $this->signInAs($admin)->get(route('clientes.show', $client));
