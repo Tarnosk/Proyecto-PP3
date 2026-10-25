@@ -1,0 +1,101 @@
+<?php
+declare(strict_types=1);
+
+namespace App\Modules\Stock\Controllers;
+
+use App\Http\Controllers\Controller;
+use App\Modules\Productos\Models\Producto;
+use App\Modules\Stock\Services\StockService;
+use App\Support\UsuarioActual;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Validator;
+
+class VentaStockController extends Controller
+{
+    public function __construct(private StockService $stockService)
+    {
+    }
+
+    /**
+     * S04 - Actualización automática de stock por venta.
+     *
+     * Endpoint interno simple (el Grupo 4 lo invocará al facturar una venta).
+     * Recibe id_producto y cantidad vendida; descuenta el stock, impide que
+     * resulte negativo y registra un movimiento tipo 'venta'.
+     */
+    public function store(Request $request): JsonResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'id_producto' => 'required|integer|exists:PRODUCTO,id_producto',
+            'cantidad' => 'required|integer|min:1',
+            'id_unidad' => 'nullable|integer|exists:UNIDAD_MEDIDA,id_unidad',
+            'id_venta' => 'nullable|integer|exists:VENTA,id_venta',
+            'motivo' => 'nullable|string|max:255',
+        ], [
+            'id_producto.required' => 'Debe indicar el producto vendido.',
+            'id_producto.integer' => 'El producto vendido debe ser un identificador numérico.',
+            'id_producto.exists' => 'El producto vendido no existe.',
+            'cantidad.required' => 'Debe indicar la cantidad vendida.',
+            'cantidad.integer' => 'La cantidad vendida debe ser un número entero.',
+            'cantidad.min' => 'La cantidad vendida debe ser mayor a cero.',
+            'id_unidad.integer' => 'La unidad de medida debe ser un identificador numérico.',
+            'id_unidad.exists' => 'La unidad de medida indicada no existe.',
+            'id_venta.integer' => 'El identificador de la venta debe ser numérico.',
+            'id_venta.exists' => 'La venta indicada no existe.',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => 'error',
+                'message' => $validator->errors()->first(),
+            ], 400);
+        }
+
+        try {
+            $producto = Producto::find((int) $request->input('id_producto'));
+
+            if (!$producto || $producto->estado !== 'activo') {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'El producto no está activo o no existe.',
+                ], 400);
+            }
+
+            $idUsuario = UsuarioActual::id($request);
+            $idUnidad = $request->filled('id_unidad') ? (int) $request->input('id_unidad') : null;
+            $idVenta = $request->filled('id_venta') ? (int) $request->input('id_venta') : null;
+            $motivo = $request->input('motivo') ?? 'Venta registrada';
+
+            $this->stockService->registrarMovimiento(
+                $producto,
+                'venta',
+                (int) $request->input('cantidad'),
+                $motivo,
+                $idUsuario,
+                $idUnidad,
+                $idVenta
+            );
+
+            $producto->refresh();
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Stock actualizado por la venta. Se descontó ' . $request->input('cantidad') . ' unidad(es).',
+                'data' => [
+                    'id_producto' => $producto->id_producto,
+                    'codigo' => $producto->codigo,
+                    'descripcion' => $producto->descripcion,
+                    'cantidad_vendida' => (int) $request->input('cantidad'),
+                    'stock_disponible' => $producto->stock_disponible,
+                    'estado_alerta' => $producto->estado_alerta,
+                ],
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => $e->getMessage(),
+            ], 400);
+        }
+    }
+}

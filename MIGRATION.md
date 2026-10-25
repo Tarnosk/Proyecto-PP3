@@ -2,7 +2,9 @@
 
 ## Alcance
 
-El sistema procedural original fue migrado a Laravel 12 conservando sus módulos, reglas de negocio, diseño y estructura de datos. La implementación anterior se mantiene únicamente como referencia en `legacy/`; la aplicación activa se sirve desde `public/index.php`.
+El sistema procedural original fue migrado a Laravel 12 conservando sus módulos, reglas de negocio, diseño y estructura de datos. La aplicación activa se sirve desde `public/index.php`; la implementación anterior puede consultarse en el historial de Git.
+
+Las clases funcionales se agrupan en `app/Modules/`, incluyendo `Login` con el mismo criterio que Clientes y los demás módulos. Las rutas, vistas, migraciones, factories y seeders permanecen centralizados. Los nombres de clases de este informe conservan su función, con los namespaces actualizados según [estructura-modular.md](docs/estructura-modular.md).
 
 ## Módulos migrados
 

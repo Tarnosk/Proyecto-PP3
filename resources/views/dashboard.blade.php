@@ -5,54 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Panel principal | Sistema de gestión</title>
     <link rel="stylesheet" href="{{ asset('assets/css/styles.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/modules.css') }}">
+    <link rel="stylesheet" href="{{ asset('assets/css/navigation.css') }}">
 </head>
-<body class="erp-body">
-    <aside class="sidebar">
-        <div class="sidebar-brand">
-            <strong>PyB Pigue ERP</strong>
-            <span>Distribuidora comercial</span>
-        </div>
-
-        <div class="user-card">
-            <span>Usuario activo</span>
-            <strong>{{ auth()->user()->nombre }}</strong>
-            <small>{{ auth()->user()->rol->value }}</small>
-        </div>
-
-        <nav class="side-nav" aria-label="Navegación principal">
-            <a class="active" href="{{ route('dashboard') }}">Inicio / Panel</a>
-            @if (in_array(auth()->user()->rol, [App\Enums\UserRole::ADMINISTRATIVO, App\Enums\UserRole::REPARTIDOR], true))
-                <a href="{{ route('ventas.index') }}">Ventas y Pedidos</a>
-                <a href="{{ route('stock.index') }}">Inventario y Stock</a>
-            @endif
-            @if (auth()->user()->rol === App\Enums\UserRole::ADMINISTRATIVO)
-                <a href="{{ route('clientes.index') }}">Clientes, Prov. y Compras</a>
-                <a href="{{ route('reclamos.index') }}">Reclamos</a>
-                <a href="#">Logística y Transporte</a>
-                <a href="{{ route('reports.index') }}">Reportes y Finanzas</a>
-                <a href="{{ route('users.index') }}">Lista de Usuarios</a>
-                <a href="#">Roles y Accesos</a>
-            @elseif (auth()->user()->rol === App\Enums\UserRole::REPARTIDOR)
-                <a href="{{ route('clientes.index') }}">Clientes</a>
-                <a href="{{ route('reclamos.create') }}">Crear reclamo</a>
-            @else
-                <a href="{{ route('reports.index') }}">Reportes contables</a>
-                <a href="{{ route('reports.index') }}">Finanzas y Tesorería</a>
-            @endif
-            <a href="#">Mi Perfil</a>
-            <form action="{{ route('logout') }}" method="post">
-                @csrf
-                <button class="side-nav-button" type="submit">Cerrar sesión</button>
-            </form>
-        </nav>
-    </aside>
+<body class="erp-body erp-shell">
+    @include('partials.sidebar')
 
     <main class="erp-main">
         @if (session('permission_error'))
             <div class="alert alert-error" role="alert"><p>{{ session('permission_error') }}</p></div>
         @endif
 
-        @if (auth()->user()->rol === App\Enums\UserRole::ADMINISTRATIVO)
+        @if (auth()->user()->rol === App\Modules\Login\Enums\UserRole::ADMINISTRATIVO)
             <section class="erp-heading">
                 <div>
                     <p class="eyebrow">Panel administrativo</p>
@@ -64,8 +28,8 @@
 
             <section class="module-tabs" aria-label="Módulos administrativos">
                 <a class="active" href="{{ route('clientes.index') }}">Fichas de Clientes ({{ $totalClientes }})</a>
-                <a href="#">Proveedores / Fábricas (0)</a>
-                <a href="#">Ingreso de Compras (0)</a>
+                <a href="{{ route('proveedores.index') }}">Proveedores / Fábricas</a>
+                <a href="{{ route('compras.index') }}">Ingreso de Compras</a>
             </section>
 
             <section class="search-panel">
@@ -122,11 +86,11 @@
                 <article class="action-panel"><div><h2>Pagos y saldos</h2><p>Consultar cuentas corrientes e historial informado por otros modulos.</p></div><a class="button button-primary" href="{{ route('clientes.index') }}">Ver cuentas</a></article>
                 <article class="action-panel"><div><h2>Reportes</h2><p>Historial y análisis de clientes.</p></div><a class="button button-primary" href="{{ route('reports.index') }}">Abrir reportes</a></article>
             </section>
-        @elseif (auth()->user()->rol === App\Enums\UserRole::REPARTIDOR)
+        @elseif (auth()->user()->rol === App\Modules\Login\Enums\UserRole::REPARTIDOR)
             <section class="erp-heading"><div><p class="eyebrow">Panel repartidor</p><h1>Bienvenido, {{ auth()->user()->nombre }}</h1><p>Accesos comerciales para consultar clientes, crear reclamos, revisar ventas y ver stock.</p></div></section>
             <section class="panel-grid" aria-label="Accesos de repartidor">
                 <article class="action-panel"><div><h2>Clientes</h2><p>Buscar y consultar clientes registrados.</p></div><a class="button button-primary" href="{{ route('clientes.index') }}">Ver clientes</a></article>
-                <article class="action-panel"><div><h2>Ventas y Pedidos</h2><p>Acceso operativo para próximas cargas de pedidos.</p></div><a class="button button-primary" href="{{ route('ventas.index') }}">Abrir</a></article>
+                <article class="action-panel"><div><h2>Ventas y Pedidos</h2><p>Registrar ventas y consultar el catálogo comercial.</p></div><a class="button button-primary" href="{{ route('ventas.index') }}">Abrir</a></article>
                 <article class="action-panel"><div><h2>Reclamos</h2><p>Cargar reclamos asociados a clientes registrados.</p></div><a class="button button-primary" href="{{ route('reclamos.create') }}">Crear reclamo</a></article>
                 <article class="action-panel"><div><h2>Inventario y Stock</h2><p>Módulo de G3.</p></div><a class="button button-primary" href="{{ route('stock.index') }}">Abrir</a></article>
             </section>
@@ -138,5 +102,6 @@
             </section>
         @endif
     </main>
+    <script src="{{ asset('assets/js/navigation.js') }}" defer></script>
 </body>
 </html>

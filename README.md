@@ -81,6 +81,8 @@ La migration de recuperación agrega un email opcional y único a `usuarios`. El
 
 ## Ejecución
 
+Las pantallas internas usan el menú lateral compartido. El relevamiento de APIs de G1 quedó en el chat. La conexión de G2, sus requisitos pendientes y la reversión se detallan en [informe de integración de G2](docs/informe-integracion-operativa-g2.md).
+
 Desde la raíz del proyecto:
 
 ```powershell
@@ -94,6 +96,28 @@ http://localhost:8000
 ```
 
 Laravel debe servirse desde `public/`. No usar `php -S localhost:8000` sin `artisan serve`, porque podría exponer archivos internos.
+
+### Ventas, Historial y Cuentas corrientes: modo de integración
+
+La configuración de G4 está restaurada en modo de prueba:
+
+```dotenv
+VENTAS_INTEGRACION=mock
+```
+
+Este modo usa los catálogos originales de clientes y productos de G4 y simula la integración de stock. **No convierte las ventas, el historial ni los pagos en operaciones ficticias**: Historial y Cuentas corrientes consultan MySQL y las acciones de guardar conservan las escrituras originales de G4. Para revisar las pantallas, iniciar MySQL desde XAMPP; no confirmar operaciones con datos de prueba sobre una base compartida.
+
+Después de cambiar `VENTAS_INTEGRACION`, ejecutar `C:\xampp\php\php.exe artisan config:clear`. El modo `http` queda preparado en el registro de dependencias, pero requiere validar URLs, autenticación y contratos con cada grupo antes de activarlo.
+
+Detalle de la corrección y verificaciones: [informe de integración de G4](docs/informe-correccion-integracion-g4.md).
+
+Si faltan las tablas locales de G4, su instalación acotada usa únicamente estas dos migraciones:
+
+```powershell
+C:\xampp\php\php.exe artisan migrate --path=app/Modules/CuentaCorriente/database/migrations/2026_10_07_000000_create_cuenta_corriente_movimientos_table.php --path=app/Modules/Ventas/database/migrations/2026_10_22_000000_create_g4_sales_base_tables.php
+```
+
+Crean `venta`, `detalle_venta` y `cuenta_corriente_movimientos`. No ejecutan las migraciones pendientes de otros grupos. Esta instalación ya se aplicó a `sistema_gestion`; el informe detalla el lote, las verificaciones y cómo revertirlo. La nueva migración rechaza reemplazar tablas existentes y bloquea su reversión si encuentra operaciones de G4 guardadas.
 
 ## Usuarios de prueba
 
@@ -184,14 +208,19 @@ La suite incluye pruebas de seguridad, clientes, reclamos, integración de cobro
 
 ```text
 app/
-  Enums/          Valores válidos del dominio
   Http/
-    Controllers/  Entrada y respuesta de cada flujo
-    Middleware/   Sesión única, expiración y roles
-    Requests/     Validaciones backend
-  Models/         Modelos y relaciones Eloquent
-  Policies/       Autorización sobre clientes y reclamos
-  Services/       Lógica de autenticación y bloqueo
+    Controllers/  Controlador base y panel principal compartido
+  Modules/
+    Login/        Controllers, Models, Requests, Services, Enums, Middleware y Mail
+    Clientes/     Controllers, Models, Requests, Enums, Policies y Resources
+    Reclamos/     Controllers, Models, Requests, Enums y Policies
+    Reportes/     Controllers, Requests y Services
+    Productos/    Models y Enums del esquema histórico
+    Ventas/       Models y Enums del esquema histórico
+  Contracts/      Interfaces compartidas entre módulos
+  Providers/      Registro de servicios y políticas
+  Services/
+    Gateways/     Clientes HTTP compartidos para APIs de otros grupos
 database/
   factories/      Datos para pruebas
   migrations/     Esquema de base de datos
@@ -199,9 +228,11 @@ database/
 public/assets/    CSS y JavaScript conservados
 resources/views/ Vistas Blade
 routes/web.php    Rutas web con nombre
+routes/api.php    Rutas JSON de integración
 tests/Feature/    Pruebas automatizadas
-legacy/           Copia de referencia del PHP procedural
 ```
+
+Todos los módulos, incluido `Login`, siguen el mismo criterio: las clases PHP se agrupan en `app/Modules/{Modulo}/`, y las rutas, vistas, migraciones, factories, seeders y assets permanecen en sus carpetas generales. Cada módulo contiene las subcarpetas necesarias para su funcionalidad. Ver [estructura-modular.md](docs/estructura-modular.md) para la distribución y el alcance.
 
 ## Configuración de producción
 

@@ -2,12 +2,12 @@
 
 namespace Tests\Feature;
 
-use App\Enums\UserRole;
-use App\Models\Cliente;
-use App\Models\Producto;
-use App\Models\User;
-use App\Models\Venta;
+use App\Modules\Clientes\Models\Cliente;
+use App\Modules\Login\Enums\UserRole;
+use App\Modules\Login\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Client\Factory;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
@@ -32,20 +32,25 @@ class ReportsTest extends TestCase
     {
         $admin = User::factory()->create(['rol' => UserRole::ADMINISTRATIVO]);
         $client = Cliente::factory()->create(['creado_por' => $admin->id]);
-        $product = Producto::factory()->create(['nombre' => 'Producto local']);
-        Venta::factory()->create(['cliente_id' => $client->id, 'usuario_id' => $admin->id]);
+        $queries = [];
+        DB::listen(function ($query) use (&$queries) {
+            $queries[] = $query->sql;
+        });
         config()->set('services.sales.url', null);
         config()->set('services.catalog.url', null);
 
         $this->signInAs($admin)->get(route('reports.client-history', ['cliente_id' => $client->id]))
-            ->assertOk()->assertSeeText('G4 publique su API de ventas')->assertDontSeeText('0 operaciones');
+            ->assertOk()->assertSeeText('falta conectar el servicio de Ventas')->assertDontSeeText('0 operaciones');
         $this->get(route('clientes.show', $client))
             ->assertOk()->assertSeeText('Esperando API de ventas de G4');
-        $this->get(route('reports.client-product-reach', ['producto_id' => $product->id]))
-            ->assertOk()->assertSeeText('G3 publique el catalogo')->assertDontSeeText('Producto local');
+        $this->get(route('reports.client-product-reach', ['producto_id' => 42]))
+            ->assertOk()->assertSeeText('G3 publique el catalogo');
         $this->get(route('reports.client-history.export', ['format' => 'pdf', 'cliente_id' => $client->id]))
             ->assertServiceUnavailable();
         Http::assertNothingSent();
+        foreach ($queries as $sql) {
+            $this->assertDoesNotMatchRegularExpression('/(?:from|join)\s+["`]?\b(?:venta|ventas|producto|productos)\b/i', $sql);
+        }
     }
 
     public function test_client_history_reads_only_g4_json_and_preserves_date_filters(): void
@@ -53,7 +58,7 @@ class ReportsTest extends TestCase
         $admin = User::factory()->create(['rol' => UserRole::ADMINISTRATIVO]);
         $client = Cliente::factory()->create(['creado_por' => $admin->id]);
         $this->configureSales();
-        Http::fake(['ventas.example.test/api/v1/ventas*' => Http::response(json_decode(
+        Http::fake(['ventas.example.test/api/ventas*' => Http::response(json_decode(
             file_get_contents(base_path('docs/contracts/ventas.json')), true
         ))]);
 
@@ -122,12 +127,16 @@ class ReportsTest extends TestCase
     {
         $admin = User::factory()->create(['rol' => UserRole::ADMINISTRATIVO]);
         config()->set('services.catalog.url', 'https://catalogo.example.test');
+        Http::fake(['catalogo.example.test/api/v1/productos' => Http::response(['data' => [[
+            'id_producto' => 42, 'codigo' => 'P-42', 'descripcion' => 'Yerba 1kg',
+        ]]])]);
         $this->signInAs($admin)->get(route('reports.client-product-reach'))
-            ->assertOk()->assertSeeText('G4 publique los compradores por producto');
-        Http::assertNothingSent();
+            ->assertOk()->assertSeeText('Falta conectar la API de Ventas');
+        Http::assertSentCount(1);
 
         $clients = Cliente::factory()->count(21)->create(['creado_por' => $admin->id]);
         $this->configureSales();
+        Http::swap((new Factory)->preventStrayRequests());
         Http::fake([
             'catalogo.example.test/api/v1/productos' => Http::response(['data' => [[
                 'id_producto' => 42, 'codigo' => 'P-42', 'nombre' => null, 'descripcion' => 'Yerba 1kg',
@@ -141,7 +150,7 @@ class ReportsTest extends TestCase
             ->assertSeeText('Página 2 de 2');
     }
 
-    public function test_report_roles_and_external_placeholders_remain_restricted(): void
+    public function test_g1_report_roles_remain_restricted(): void
     {
         $contador = User::factory()->create(['rol' => UserRole::CONTADOR]);
         $repartidor = User::factory()->create(['rol' => UserRole::REPARTIDOR]);
@@ -149,8 +158,8 @@ class ReportsTest extends TestCase
         $this->signInAs($contador)->get(route('reports.index'))
             ->assertOk()->assertSeeText('Historial de clientes')->assertSeeText('Clientes por producto');
         $this->signInAs($repartidor)->get(route('reports.index'))->assertRedirect(route('dashboard'));
-        $this->get(route('ventas.index'))->assertOk()->assertSeeText('Ventas y pedidos');
-        $this->get(route('stock.index'))->assertOk()->assertSeeText('Inventario y stock');
+        $this->get(route('reports.client-history'))->assertRedirect(route('dashboard'));
+        $this->get(route('reports.client-product-reach'))->assertRedirect(route('dashboard'));
     }
 
     public function test_client_history_export_uses_g4_json_for_pdf_and_xlsx(): void
@@ -158,7 +167,7 @@ class ReportsTest extends TestCase
         $admin = User::factory()->create(['rol' => UserRole::ADMINISTRATIVO]);
         $client = Cliente::factory()->create(['creado_por' => $admin->id]);
         $this->configureSales();
-        Http::fake(['ventas.example.test/api/v1/ventas*' => Http::response(['data' => []])]);
+        Http::fake(['ventas.example.test/api/ventas*' => Http::response(['data' => []])]);
         $this->signInAs($admin);
 
         $this->get(route('reports.client-history.export', ['format' => 'pdf', 'cliente_id' => $client->id]))
@@ -171,5 +180,6 @@ class ReportsTest extends TestCase
     {
         config()->set('services.sales.url', 'https://ventas.example.test');
         config()->set('services.sales.token', 'ventas-token');
+        config()->set('services.sales.buyers_path', '/api/v1/reportes/productos/{id}/compradores');
     }
 }

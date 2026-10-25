@@ -2,16 +2,18 @@
 
 namespace Database\Factories;
 
-use App\Enums\ClientStatus;
-use App\Enums\ClientType;
-use App\Enums\UserRole;
-use App\Models\Cliente;
-use App\Models\User;
+use App\Modules\Clientes\Enums\ClientStatus;
+use App\Modules\Clientes\Enums\ClientType;
+use App\Modules\Clientes\Models\Cliente;
+use App\Modules\Login\Enums\UserRole;
+use App\Modules\Login\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /** @extends Factory<Cliente> */
 class ClienteFactory extends Factory
 {
+    protected $model = Cliente::class;
+
     public function definition(): array
     {
         return [

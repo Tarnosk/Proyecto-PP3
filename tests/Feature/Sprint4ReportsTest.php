@@ -2,9 +2,9 @@
 
 namespace Tests\Feature;
 
-use App\Enums\UserRole;
-use App\Models\Cliente;
-use App\Models\User;
+use App\Modules\Clientes\Models\Cliente;
+use App\Modules\Login\Enums\UserRole;
+use App\Modules\Login\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
@@ -30,7 +30,7 @@ class Sprint4ReportsTest extends TestCase
         $this->signInAs($admin)->get(route('reports.debtors'))
             ->assertOk()->assertSeeText('G2 publique facturas pendientes');
         $this->get(route('reports.product-ranking'))
-            ->assertOk()->assertSeeText('G4 publique su API');
+            ->assertOk()->assertSeeText('conectar la API de Ventas');
         $this->get(route('clientes.show', $client))
             ->assertOk()->assertSeeText('Esperando API de saldos de G4')
             ->assertDontSeeText('$1.000,00');
@@ -132,6 +132,7 @@ class Sprint4ReportsTest extends TestCase
 
     private function configureServices(): void
     {
+        config()->set('services.sales.ranking_path', '/api/v1/reportes/ranking-productos');
         config()->set('services.sales', [...config('services.sales'), 'url' => 'https://ventas.example.test', 'token' => 'ventas-token']);
         config()->set('services.billing', [...config('services.billing'), 'url' => 'https://facturas.example.test', 'token' => 'facturas-token']);
         config()->set('services.balances', [...config('services.balances'), 'url' => 'https://saldos.example.test', 'token' => 'saldos-token']);

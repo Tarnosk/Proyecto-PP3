@@ -2,11 +2,11 @@
 
 namespace App\Http\Controllers;
 
-use App\Enums\ClaimStatus;
-use App\Enums\ClientType;
-use App\Enums\UserRole;
-use App\Models\Cliente;
-use App\Models\Reclamo;
+use App\Modules\Clientes\Enums\ClientType;
+use App\Modules\Clientes\Models\Cliente;
+use App\Modules\Login\Enums\UserRole;
+use App\Modules\Reclamos\Enums\ClaimStatus;
+use App\Modules\Reclamos\Models\Reclamo;
 use Illuminate\View\View;
 
 class DashboardController extends Controller

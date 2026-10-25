@@ -20,7 +20,7 @@
                                 @endforelse
                             </td>
                         @else
-                            <td>{{ $venta->cliente->apellido_razon_social }}, {{ $venta->cliente->nombre }}</td>
+                            <td>{{ $venta->cliente->nombre }}</td>
                         @endif
                         <td>{{ ucfirst($venta->estado->value) }}</td>
                         <td><strong>${{ number_format((float) $venta->total, 2, ',', '.') }}</strong></td>

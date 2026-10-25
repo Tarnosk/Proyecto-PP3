@@ -1,13 +1,13 @@
 <?php
 
-use App\Http\Controllers\Auth\AuthenticatedSessionController;
-use App\Http\Controllers\Auth\PasswordRecoveryController;
-use App\Http\Controllers\ClienteController;
 use App\Http\Controllers\DashboardController;
-use App\Http\Controllers\ReclamoController;
-use App\Http\Controllers\ReportController;
-use App\Http\Controllers\ReportExportController;
-use App\Http\Controllers\UserController;
+use App\Modules\Clientes\Controllers\ClienteController;
+use App\Modules\Login\Controllers\AuthenticatedSessionController;
+use App\Modules\Login\Controllers\PasswordRecoveryController;
+use App\Modules\Login\Controllers\UserController;
+use App\Modules\Reclamos\Controllers\ReclamoController;
+use App\Modules\Reportes\Controllers\ReportController;
+use App\Modules\Reportes\Controllers\ReportExportController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', fn () => auth()->check()
@@ -70,10 +70,10 @@ Route::middleware(['auth', 'session.current'])->group(function (): void {
         Route::get('/historial-clientes/exportar/{format}', [ReportExportController::class, 'clientHistory'])->name('client-history.export');
     });
 
-    Route::view('/ventas', 'reports.external-module', ['module' => 'Ventas y pedidos', 'group' => 'G4'])
-        ->middleware('role:administrativo,repartidor')
-        ->name('ventas.index');
-    Route::view('/stock', 'reports.external-module', ['module' => 'Inventario y stock', 'group' => 'G3'])
+    Route::redirect('/stock', '/inventario')
         ->middleware('role:administrativo,repartidor')
         ->name('stock.index');
+
+    Route::view('/promociones', 'promociones.promociones')
+        ->middleware('role:administrativo')->name('promociones.index');
 });

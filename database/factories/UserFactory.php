@@ -2,15 +2,17 @@
 
 namespace Database\Factories;
 
-use App\Enums\UserRole;
-use App\Enums\UserStatus;
-use App\Models\User;
+use App\Modules\Login\Enums\UserRole;
+use App\Modules\Login\Enums\UserStatus;
+use App\Modules\Login\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
 
 /** @extends Factory<User> */
 class UserFactory extends Factory
 {
+    protected $model = User::class;
+
     public function definition(): array
     {
         return [
