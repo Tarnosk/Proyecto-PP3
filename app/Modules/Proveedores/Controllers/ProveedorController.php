@@ -662,43 +662,6 @@ class ProveedorController extends Controller
             }
         }
 
-        // 4. Afinidad automática por rubro/categoría para productos activos
-        $provBebidas = Proveedor::where('estado', 'activo')->where('razon_social', 'LIKE', '%Bebidas%')->first();
-        $provLacteos = Proveedor::where('estado', 'activo')->where('razon_social', 'LIKE', '%Lácteos%')->first();
-        $provLimpieza = Proveedor::where('estado', 'activo')->where('razon_social', 'LIKE', '%Limpieza%')->first();
-        $provDefault = Proveedor::where('estado', 'activo')->orderBy('id_proveedor')->first();
-
-        $productosActivos = Producto::with('categoria')->where('estado', 'activo')->get();
-        foreach ($productosActivos as $p) {
-            $catNom = strtolower($p->categoria?->nombre ?? '');
-            $targetProv = null;
-            if (str_contains($catNom, 'bebida') && $provBebidas) {
-                $targetProv = $provBebidas;
-            } elseif (str_contains($catNom, 'lácteo') && $provLacteos) {
-                $targetProv = $provLacteos;
-            } elseif (str_contains($catNom, 'limpieza') && $provLimpieza) {
-                $targetProv = $provLimpieza;
-            } elseif ($provDefault) {
-                $targetProv = $provDefault;
-            }
-
-            if ($targetProv) {
-                $yaTiene = ProductoProveedor::where('id_producto', $p->id_producto)->where('activo', true)->exists();
-                if (!$yaTiene) {
-                    ProductoProveedor::create([
-                        'id_producto' => $p->id_producto,
-                        'id_proveedor' => $targetProv->id_proveedor,
-                        'es_proveedor_principal' => true,
-                        'precio_acordado' => $p->precio_unitario ? round((float) $p->precio_unitario * 0.75, 2) : null,
-                        'activo' => true,
-                        'fecha_asociacion' => $hoy,
-                        'id_usuario' => $idUsuario,
-                    ]);
-                    $nuevas++;
-                }
-            }
-        }
-
         $total = ProductoProveedor::where('activo', true)->count();
 
         return response()->json([
