@@ -16,20 +16,26 @@ Esta carpeta reúne la documentación técnica y operativa del sistema ERP.
 
 ## Propósito
 
-La documentación pretende permitir que el proyecto pueda ser entendido, instalado, mantenido y extendido por nuevos integrantes del equipo sin depender únicamente del código fuente.
+La documentación tiene como objetivo permitir que el proyecto pueda ser entendido, levantado, mantenido y extendido por nuevos integrantes del equipo sin depender únicamente del código fuente.
 
-## Estructura de la documentación
+## Organización
 
 - `guia-instalacion.md`: entorno local, requisitos y pasos para levantar la app.
-- `arquitectura.md`: capas, módulos y patrones utilizados.
-- `estructura-proyecto.md`: organización de carpetas y archivos.
-- `modulos.md`: descripción de cada dominio funcional.
-- `flujo-negocio.md`: funcionamiento del ERP desde la operación real.
-- `seguridad.md`: autenticación, permisos, sesiones y buenas prácticas.
-- `despliegue.md`: produccion, entorno y recomendaciones.
-- `roadmap.md`: estado, pendientes y evolución del sistema.
-- `guia-colaboradores.md`: guía para trabajo en equipo.
+- `arquitectura.md`: capas, módulos y patrones de diseño.
+- `estructura-proyecto.md`: organización de carpetas y archivos relevantes.
+- `modulos.md`: detalle funcional por dominio.
+- `flujo-negocio.md`: descripción del funcionamiento del ERP.
+- `seguridad.md`: autenticación, permisos y buenas prácticas.
+- `despliegue.md`: recomendaciones para entorno productivo.
+- `roadmap.md`: estado del proyecto y evolución esperada.
+- `guia-colaboradores.md`: flujo de trabajo del equipo.
 
-## Convención
+## Convención general
 
-Toda modificación funcional importante debe ir acompañada por la actualización de la documentación correspondiente.
+Toda modificación funcional importante debe ir acompañada de una actualización en los documentos relevantes.
+
+## Enlace principal
+
+El README principal del repositorio se encuentra en:
+
+- [README.md](../README.md)

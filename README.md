@@ -1,24 +1,30 @@
 # Proyecto PP3
 
-Sistema ERP modular desarrollado con Laravel para la gestión comercial de una distribuidora.
+![Laravel](https://img.shields.io/badge/Laravel-12.x-FF2D20)
+![PHP](https://img.shields.io/badge/PHP-8.2%2B-777BB4)
+![MySQL](https://img.shields.io/badge/MySQL-8.0%2B-4479A1)
+![Status](https://img.shields.io/badge/Estado-Desarrollo%20activo-green)
+
+Sistema ERP modular desarrollado en Laravel para la gestión comercial y operativa de una distribuidora.
 
 ## Descripción general
 
-Proyecto PP3 es una aplicación web orientada a la administración integral de una distribuidora, con foco en clientes, ventas, productos, stock, compras, reportes y procesos de negocio internos. La solución está diseñada como una aplicación modular en Laravel, con separaciones por dominio y una base de datos central para los procesos operativos.
+Proyecto PP3 es una aplicación web orientada a la administración interna de una empresa distribuidora. El sistema integra funciones de clientes, ventas, stock, compras, proveedores, reportes, reclamos, seguridad y control financiero bajo una arquitectura modular.
+
+El repositorio está organizado para facilitar el mantenimiento, la escalabilidad y la colaboración entre módulos funcionales, manteniendo una separación clara por dominio.
 
 ## Objetivo del sistema
 
-Facilitar la gestión diaria de una organización comercial con capacidades para:
+Permitir gestionar de manera centralizada los procesos clave del negocio, incluyendo:
 
-- gestionar clientes, zonas y contactos
-- controlar ventas y estados comerciales
-- administrar stock, ubicaciones y movimientos
-- gestionar compras, proveedores y pagos
-- planificar reposición y sugerencias de compra
-- registrar reclamos y devoluciones
-- consultar reportes, saldos y analítica
-- controlar seguridad, roles y sesiones
-- integrar módulos interdependientes bajo una misma plataforma
+- administración de clientes y zonas
+- gestión de ventas y estados comerciales
+- control de inventario y movimientos de stock
+- compras, proveedores y pagos
+- reportes y analítica interna
+- reclamos, devoluciones y seguimiento operativos
+- seguridad, permisos y sesiones por rol
+- integración de módulos funcionales bajo una misma plataforma
 
 ## Stack tecnológico
 
@@ -30,6 +36,23 @@ Facilitar la gestión diaria de una organización comercial con capacidades para
 - CSS
 - JavaScript
 - PHPUnit
+
+## Arquitectura
+
+El proyecto sigue una estructura modular basada en Laravel, donde cada dominio funcional se encapsula en su propio módulo bajo `backend/app/Modules`.
+
+Esta organización permite separar claramente responsabilidades como:
+
+- autenticación y seguridad
+- clientes
+- ventas
+- stock
+- compras
+- proveedores
+- reportes
+- reclamos
+- entregas y rendiciones
+- cuenta corriente
 
 ## Estructura del repositorio
 
@@ -65,10 +88,11 @@ Facilitar la gestión diaria de una organización comercial con capacidades para
 │   └── guia-colaboradores.md
 ├── Documentacion/
 ├── .gitignore
-└── .env.example
+├── .env.example
+└── .gitignore
 ```
 
-## Requisitos
+## Requisitos previos
 
 - PHP 8.2 o superior
 - Composer 2.x
@@ -98,7 +122,7 @@ git clone https://github.com/Tarnosk/Proyecto-PP3.git
 cd Proyecto-PP3
 ```
 
-2. Ingresar al backend
+2. Entrar al backend
 
 ```bash
 cd backend
@@ -110,7 +134,7 @@ cd backend
 composer install
 ```
 
-4. Crear archivo de entorno
+4. Crear el archivo de entorno
 
 ```bash
 cp .env.example .env
@@ -145,57 +169,112 @@ php artisan migrate --seed
 php artisan serve
 ```
 
-Abrir en el navegador:
+Abrir la app en el navegador:
 
 ```text
 http://localhost:8000
 ```
 
-## Documentación central
+## Variables de entorno recomendadas
 
-La documentación completa está organizada en `docs/` y cubre instalación, flujo, módulos, arquitectura, seguridad y despliegue:
+```dotenv
+APP_ENV=local
+APP_DEBUG=true
+APP_URL=http://localhost:8000
 
-- `docs/README.md`
-- `docs/guia-instalacion.md`
-- `docs/arquitectura.md`
-- `docs/estructura-proyecto.md`
-- `docs/modulos.md`
-- `docs/flujo-negocio.md`
-- `docs/seguridad.md`
-- `docs/despliegue.md`
-- `docs/roadmap.md`
-- `docs/guia-colaboradores.md`
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=proyecto_pp3
+DB_USERNAME=root
+DB_PASSWORD=
+```
 
 ## Módulos principales
 
-El proyecto está organizado por dominios funcionales, por ejemplo:
+La aplicación está organizada por dominios funcionales. Algunos de los módulos principales son:
 
-- Autenticación y usuarios
-- Clientes y zonas
+- Auth / Login
+- Clientes
 - Ventas
-- Compras y proveedores
-- Stock e inventario
-- Reparto y entregas
+- Stock
+- Compras
+- Proveedores
+- Reportes
 - Reclamos
-- Reportes y analítica
-- Cuenta corriente
+- Entregas
 - Rendiciones
+- Cuenta corriente
 
-## Reglas de trabajo
+Cada módulo mantiene una estructura consistente de controladores, modelos, servicios, requests, validaciones y rutas.
 
-- cada cambio funcional debe documentarse
-- cada módulo debe mantener estructura clara y consistente
-- no se debe subir `.env` ni credenciales reales
-- las pruebas deben ejecutarse antes de mergear cambios
+## Flujo principal del sistema
+
+1. El usuario inicia sesión con su rol.
+2. El sistema valida permisos y acceso.
+3. Se gestionan operaciones de negocio según el módulo.
+4. La lógica de negocio procesa los datos y persiste en la base de datos.
+5. Se genera una respuesta visible en la interfaz o en reportes.
+6. Los distintos módulos interactúan entre sí para mantener la coherencia del ERP.
+
+## Pruebas
+
+Ejecutar la suite de pruebas del backend:
+
+```bash
+php artisan test
+```
+
+Validaciones rápidas recomendadas:
+
+```bash
+php artisan route:list --except-vendor
+php artisan config:clear
+php artisan cache:clear
+```
+
+## Documentación
+
+La documentación técnica y operativa está organizada en `docs/`:
+
+- [docs/README.md](docs/README.md)
+- [docs/guia-instalacion.md](docs/guia-instalacion.md)
+- [docs/arquitectura.md](docs/arquitectura.md)
+- [docs/estructura-proyecto.md](docs/estructura-proyecto.md)
+- [docs/modulos.md](docs/modulos.md)
+- [docs/flujo-negocio.md](docs/flujo-negocio.md)
+- [docs/seguridad.md](docs/seguridad.md)
+- [docs/despliegue.md](docs/despliegue.md)
+- [docs/roadmap.md](docs/roadmap.md)
+- [docs/guia-colaboradores.md](docs/guia-colaboradores.md)
+
+También existe una guía específica del backend en:
+
+- [backend/README.md](backend/README.md)
+
+## Estado del proyecto
+
+El proyecto se encuentra en desarrollo activo con una estructura modular consolidada. La aplicación ya cuenta con la base conceptual y técnica para una solución ERP de gestión comercial, y la documentación acompañada del código facilita la evolución del sistema por módulos.
 
 ## Contribución
 
 1. Crear una rama nueva.
-2. Trabajar sobre el área correspondiente.
+2. Trabajar sobre el módulo o corrección correspondiente.
 3. Ejecutar pruebas relevantes.
-4. Actualizar documentación si cambió el comportamiento.
-5. Abrir un pull request con descripción clara.
+4. Actualizar documentación si cambia el comportamiento o la arquitectura.
+5. Abrir un pull request con una descripción clara.
+
+## Recomendaciones de mantenimiento
+
+- no versionar archivos `.env` con datos reales
+- mantener actualizado el estado de cada módulo
+- revisar permisos y reglas de negocio antes de mergear
+- conservar la documentación sincronizada con los cambios de código
 
 ## Licencia
 
-Si el proyecto no declara licencia explícita, se recomienda definir una antes de uso en producción o publicación institucional.
+Si el proyecto no declara una licencia formal en el repositorio, se recomienda definirla antes de una publicación externa o uso institucional en producción.
+
+## Contacto
+
+Este repositorio forma parte del desarrollo del proyecto PP3 y su documentación puede ampliarse según lo requieran el equipo, la entrega académica o el despliegue final del sistema.
