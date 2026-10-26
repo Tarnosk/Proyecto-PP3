@@ -1727,10 +1727,39 @@ class UserStoriesFrontendTest extends TestCase
         $orden1Res->assertStatus(201);
         $orden1Id = $orden1Res->json('data.id_orden');
 
+        // PC04: Modificar orden de compra en estado pendiente
+        $editRes = $this->putJson("/api/ordenes-compra/{$orden1Id}", [
+            'id_proveedor' => $proveedor->id_proveedor,
+            'fecha_creacion' => now()->toDateString(),
+            'items' => [
+                [
+                    'id_producto' => $producto->id_producto,
+                    'cantidad_solicitada' => 15,
+                    'precio_estimado' => 500.00,
+                ]
+            ]
+        ]);
+        $editRes->assertOk();
+        $this->assertEquals(7500.00, (float) $editRes->json('data.total_estimado'));
+        $this->assertEquals(now()->toDateString(), $editRes->json('data.fecha_modificacion'));
+
         // PC06: Enviar orden
         $enviarRes = $this->patchJson("/api/ordenes-compra/{$orden1Id}/enviar");
         $enviarRes->assertOk();
         $this->assertEquals('enviada', $enviarRes->json('data.estado'));
+
+        // PC04: Rechazar edición si la orden ya fue enviada
+        $editSentRes = $this->putJson("/api/ordenes-compra/{$orden1Id}", [
+            'id_proveedor' => $proveedor->id_proveedor,
+            'items' => [
+                [
+                    'id_producto' => $producto->id_producto,
+                    'cantidad_solicitada' => 20,
+                    'precio_estimado' => 500.00,
+                ]
+            ]
+        ]);
+        $editSentRes->assertStatus(400);
 
         // Orden 2: Probar cancelación de orden pendiente (PC05)
         $orden2Res = $this->postJson('/api/ordenes-compra', [
