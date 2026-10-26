@@ -1841,8 +1841,27 @@ class UserStoriesFrontendTest extends TestCase
         $viewDash->assertSee('Dashboard de Reposición');
 
         // Endpoints PC07
+        $genSugRes = $this->postJson('/api/sugerencias-reposicion/generar');
+        $genSugRes->assertStatus(201);
+        $genSugRes->assertJsonPath('exito', true);
+
         $listSugRes = $this->getJson('/api/sugerencias-reposicion');
         $listSugRes->assertOk();
+        $listSugRes->assertJsonPath('exito', true);
+
+        $sugerencias = $listSugRes->json('datos');
+        if (!empty($sugerencias)) {
+            $primeraId = $sugerencias[0]['id'];
+            $genOrdenRes = $this->postJson("/api/sugerencias-reposicion/{$primeraId}/generar-orden");
+            $genOrdenRes->assertStatus(201);
+            $genOrdenRes->assertJsonPath('exito', true);
+            $this->assertNotNull($genOrdenRes->json('orden.id'));
+            $this->assertNotNull($genOrdenRes->json('orden.id_proveedor'));
+
+            // No permitir duplicar la orden sobre la misma sugerencia ya procesada
+            $reintentarRes = $this->postJson("/api/sugerencias-reposicion/{$primeraId}/generar-orden");
+            $reintentarRes->assertStatus(400);
+        }
 
         $resumenSugRes = $this->getJson('/api/sugerencias-reposicion/resumen');
         $resumenSugRes->assertOk();
