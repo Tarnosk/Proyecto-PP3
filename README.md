@@ -1,127 +1,205 @@
 # ERP Juan23
 
-Sistema web de gestión comercial en Laravel. Incluye autenticación segura, recuperación de contraseña por email, permisos por rol, clientes, reclamos y reportes. Los cobros y facturas pertenecen a G2; los saldos y ventas, a G4.
+![Laravel](https://img.shields.io/badge/Laravel-12.x-FF2D20)
+![PHP](https://img.shields.io/badge/PHP-8.2%2B-777BB4)
+![MySQL](https://img.shields.io/badge/MySQL-8.0%2B-4479A1)
+![Status](https://img.shields.io/badge/Estado-Desarrollo%20activo-green)
 
-## Requisitos
+Sistema web de gestión comercial en Laravel para una distribuidora o empresa con operaciones de venta, clientes, stock, compras, reportes, cobros y seguridad por roles.
 
-- PHP 8.2 o superior.
-- Laravel 12.x.
-- Composer 2.x.
-- MySQL 8 o MariaDB 10.4 o superior.
-- Extensiones PHP: `bcmath`, `ctype`, `curl`, `dom`, `fileinfo`, `gd`, `mbstring`, `openssl`, `pdo`, `pdo_mysql`, `tokenizer`, `xml` y `zip`.
+## Descripción general
 
-El proyecto fue verificado con PHP 8.2.12, Laravel 12.69.2 y MariaDB 10.4.32 de XAMPP.
+ERP Juan23 es una aplicación web orientada a la administración interna de una empresa comercial. El sistema integra la gestión de clientes, ventas, inventario, compras, proveedores, reportes y seguridad con una arquitectura modular pensada para mantener cada dominio funcional separado.
 
-En XAMPP, habilitar `extension=gd` y `extension=zip` en `C:\xampp\php\php.ini`. Como alternativa, los comandos de este README que generan PDF o Excel incluyen ambas extensiones mediante `-d`.
+El repositorio está estructurado para facilitar la evolución del sistema, la documentación por módulo y la incorporación de nuevos procesos sin depender de una única capa monolítica.
+
+## Objetivo del sistema
+
+Permitir gestionar de manera centralizada los procesos clave del negocio, entre ellos:
+
+- administración de clientes y zonas
+- gestión de ventas y estados comerciales
+- control de stock, ubicaciones y movimientos
+- compras, proveedores y pagos
+- reportes y análisis operativos
+- reclamos, devoluciones y seguimiento de incidencias
+- seguridad, permisos y sesiones por rol
+- integración de módulos funcionales bajo una misma plataforma
+
+## Stack tecnológico
+
+- PHP 8.2+
+- Laravel 12.x
+- MySQL / MariaDB
+- Blade + Bootstrap
+- JavaScript
+- PHPUnit
+
+## Arquitectura
+
+El proyecto sigue una estructura modular basada en Laravel, donde cada dominio funcional se encapsula en su propio módulo bajo `app/Modules`.
+
+Esta organización permite separar claramente responsabilidades como:
+
+- autenticación y seguridad
+- clientes
+- ventas
+- stock
+- compras
+- proveedores
+- reportes
+- reclamos
+- entregas y rendiciones
+- cuenta corriente
+
+## Estructura principal
+
+```text
+app/
+  Http/
+    Controllers/
+  Modules/
+    Auth/
+    Clientes/
+    Reclamos/
+    Reportes/
+    Productos/
+    Ventas/
+    Compras/
+    Stock/
+    Proveedores/
+    Login/
+  Contracts/
+  Providers/
+  Services/
+    Gateways/
+bootstrap/
+config/
+public/
+resources/
+  views/
+routes/
+database/
+  migrations/
+  seeders/
+tests/
+```
+
+## Requisitos previos
+
+- PHP 8.2 o superior
+- Composer 2.x
+- MySQL 8 o MariaDB 10.4 o superior
+- Extensiones PHP: `bcmath`, `ctype`, `curl`, `dom`, `fileinfo`, `gd`, `mbstring`, `openssl`, `pdo`, `pdo_mysql`, `tokenizer`, `xml` y `zip`
+
+> En XAMPP o entornos locales, habilitar `extension=gd` y `extension=zip` en `php.ini` si corresponde.
 
 ## Instalación
 
-1. Instalar las dependencias:
+1. Clonar el repositorio:
 
-   ```bash
-   composer install
-   ```
-
-   En este equipo también puede usarse el Composer local ya descargado:
-
-   ```powershell
-   C:\xampp\php\php.exe -d extension=gd -d extension=zip .tools\composer.phar install
-   ```
-
-2. Crear el archivo de entorno:
-
-   ```powershell
-   Copy-Item .env.example .env
-   ```
-
-3. Generar la clave de la aplicación:
-
-   ```powershell
-   C:\xampp\php\php.exe artisan key:generate
-   ```
-
-4. Configurar MySQL en `.env`:
-
-   ```dotenv
-   DB_CONNECTION=mysql
-   DB_HOST=127.0.0.1
-   DB_PORT=3306
-   DB_DATABASE=sistema_gestion
-   DB_USERNAME=root
-   DB_PASSWORD=
-   ```
-
-5. Iniciar MySQL desde XAMPP.
-
-## Base de datos
-
-### Instalación nueva
-
-Crear primero una base vacía llamada `sistema_gestion` con cotejamiento `utf8mb4_unicode_ci`. Luego ejecutar:
-
-```powershell
-C:\xampp\php\php.exe artisan migrate --seed
+```bash
+git clone https://github.com/rapiriz/ERP-Juan23.git
+cd ERP-Juan23
 ```
 
-Esto crea también las tablas de Sprint 3: `zonas`, `categorias`, `marcas`, `productos`, `ventas`, `detalle_ventas`, `cobros` y `cobro_ventas`, junto con sus índices y claves foráneas.
+2. Instalar dependencias:
 
-### Base existente del proyecto
-
-Hacer una copia de seguridad y apuntar `.env` a la base actual. Después ejecutar:
-
-```powershell
-C:\xampp\php\php.exe artisan migrate
+```bash
+composer install
 ```
 
-La primera migration detecta las tablas existentes y las registra como línea base sin eliminar datos. No es necesario volver a importar los SQL históricos ni ejecutar el seeder.
+3. Crear el archivo de entorno:
 
-La migration de recuperación agrega un email opcional y único a `usuarios`. El administrador puede asignar los emails reales desde **Lista de Usuarios** en su panel, sin utilizar phpMyAdmin.
-
-`database/database.sql` y las antiguas migraciones SQL se conservan como documentación del esquema previo.
-
-## Ejecución
-
-Las pantallas internas usan el menú lateral compartido. El relevamiento de APIs de G1 quedó en el chat. La conexión de G2, sus requisitos pendientes y la reversión se detallan en [informe de integración de G2](docs/informe-integracion-operativa-g2.md).
-
-Desde la raíz del proyecto:
-
-```powershell
-C:\xampp\php\php.exe -d extension=gd -d extension=zip artisan serve
+```bash
+cp .env.example .env
 ```
 
-Abrir:
+4. Generar la clave de la aplicación:
+
+```bash
+php artisan key:generate
+```
+
+5. Configurar la base de datos en `.env`:
+
+```dotenv
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=sistema_gestion
+DB_USERNAME=root
+DB_PASSWORD=
+```
+
+6. Crear la base de datos y ejecutar migraciones + seeders:
+
+```bash
+php artisan migrate --seed
+```
+
+7. Ejecutar la aplicación:
+
+```bash
+php artisan serve
+```
+
+Abrir en el navegador:
 
 ```text
 http://localhost:8000
 ```
 
-Laravel debe servirse desde `public/`. No usar `php -S localhost:8000` sin `artisan serve`, porque podría exponer archivos internos.
+## Base de datos
 
-### Ventas, Historial y Cuentas corrientes: modo de integración
+### Instalación nueva
 
-La configuración de G4 está restaurada en modo de prueba:
+Crear primero una base vacío llamada `sistema_gestion` con juego de caracteres `utf8mb4_unicode_ci`. Luego ejecutar:
 
-```dotenv
-VENTAS_INTEGRACION=mock
+```bash
+php artisan migrate --seed
 ```
 
-Este modo usa los catálogos originales de clientes y productos de G4 y simula la integración de stock. **No convierte las ventas, el historial ni los pagos en operaciones ficticias**: Historial y Cuentas corrientes consultan MySQL y las acciones de guardar conservan las escrituras originales de G4. Para revisar las pantallas, iniciar MySQL desde XAMPP; no confirmar operaciones con datos de prueba sobre una base compartida.
+### Base existente
 
-Después de cambiar `VENTAS_INTEGRACION`, ejecutar `C:\xampp\php\php.exe artisan config:clear`. El modo `http` queda preparado en el registro de dependencias, pero requiere validar URLs, autenticación y contratos con cada grupo antes de activarlo.
+Hacer una copia de seguridad y apuntar `.env` a la base actual. Después correr:
 
-Detalle de la corrección y verificaciones: [informe de integración de G4](docs/informe-correccion-integracion-g4.md).
-
-Si faltan las tablas locales de G4, su instalación acotada usa únicamente estas dos migraciones:
-
-```powershell
-C:\xampp\php\php.exe artisan migrate --path=app/Modules/CuentaCorriente/database/migrations/2026_10_07_000000_create_cuenta_corriente_movimientos_table.php --path=app/Modules/Ventas/database/migrations/2026_10_22_000000_create_g4_sales_base_tables.php
+```bash
+php artisan migrate
 ```
 
-Crean `venta`, `detalle_venta` y `cuenta_corriente_movimientos`. No ejecutan las migraciones pendientes de otros grupos. Esta instalación ya se aplicó a `sistema_gestion`; el informe detalla el lote, las verificaciones y cómo revertirlo. La nueva migración rechaza reemplazar tablas existentes y bloquea su reversión si encuentra operaciones de G4 guardadas.
+La primera migration detecta las tablas existentes y las registra como línea base sin eliminar datos. Las migraciones históricas y los SQL previos se conservan como documentación del esquema.
+
+## Módulos principales
+
+La aplicación está organizada por dominios funcionales. Algunos de los módulos principales son:
+
+- Auth / Login
+- Clientes
+- Ventas
+- Stock
+- Compras
+- Proveedores
+- Reportes
+- Reclamos
+- Entregas
+- Rendiciones
+- Cuenta corriente
+
+Cada módulo mantiene una estructura consistente de controladores, modelos, servicios, requests, migraciones y rutas.
+
+## Flujo principal del sistema
+
+1. El usuario inicia sesión con su rol.
+2. El sistema valida permisos y acceso.
+3. Se gestionan operaciones de negocio según el módulo.
+4. La lógica de negocio procesa los datos y persiste en la base.
+5. Se genera una respuesta visible en la interfaz o en reportes.
+6. Los distintos módulos interactúan entre sí para mantener la coherencia del ERP.
 
 ## Usuarios de prueba
 
-Estas credenciales son solo para desarrollo local y se crean con `artisan db:seed`.
+Estas credenciales son solo para desarrollo local y se crean al ejecutar `php artisan db:seed`.
 
 | Usuario | Contraseña | Rol |
 | --- | --- | --- |
@@ -130,11 +208,7 @@ Estas credenciales son solo para desarrollo local y se crean con `artisan db:see
 | contador | Contador1234 | contador |
 | inactivo | Inactivo1234 | repartidor inactivo |
 
-Los usuarios sembrados usan direcciones `example.com`. Deben reemplazarse por emails reales para probar el envío mediante SMTP.
-
 ## Permisos
-
-Los reportes Sprint 4 de deudores y ranking estan preparados para consumir JSON de G2/G4. Hasta que esos grupos confirmen y publiquen las APIs, muestran integracion pendiente. Ver [contratos-sprint4-g1.md](docs/contratos-sprint4-g1.md) para rutas, campos y variables `BILLING_SERVICE_*`, `BALANCE_SERVICE_*` y `SALES_SERVICE_*`.
 
 | Funcionalidad | Administrativo | Repartidor | Contador |
 | --- | --- | --- | --- |
@@ -145,8 +219,8 @@ Los reportes Sprint 4 de deudores y ranking estan preparados para consumir JSON 
 | Ver historial de clientes | Sí | Sí | No |
 | Consultar cobros y saldos de otros módulos | Sí | Sí | No |
 | Reportes de clientes y ranking comercial | Sí | No | Sí |
-| Exportar historial de clientes a PDF y Excel | Sí | No | Sí |
-| Secciones de ventas y stock sin consultas de G1 | Sí | Sí | No |
+| Exportar historial a PDF y Excel | Sí | No | Sí |
+| Secciones de ventas y stock | Sí | Sí | No |
 | Configurar emails de usuarios | Sí | No | No |
 
 ## Seguridad de acceso
@@ -157,12 +231,12 @@ Los reportes Sprint 4 de deudores y ranking estan preparados para consumir JSON 
 - El logout utiliza POST con protección CSRF.
 - Las contraseñas usan hashing seguro de Laravel.
 - Los identificadores de sesión guardados en la base están hasheados.
-- Los permisos se verifican en middleware, Policies y Form Requests.
-- La recuperación usa códigos numéricos hasheados que vencen en 15 minutos y admiten hasta 5 intentos.
+- Los permisos se verifican en middleware, policies y form requests.
+- La recuperación usa códigos numéricos hasheados que vencen en 15 minutos.
 
 ## Recuperación de contraseña por email
 
-En desarrollo, `MAIL_MAILER=log` guarda el mensaje y su código en `storage/logs/laravel.log`, pero no envía un correo real. Para usar un servidor SMTP, configure en `.env`:
+En desarrollo, `MAIL_MAILER=log` guarda el mensaje y el código en `storage/logs/laravel.log`, pero no envía correo real. Para usar SMTP, configurar en `.env`:
 
 ```dotenv
 MAIL_MAILER=smtp
@@ -172,74 +246,64 @@ MAIL_SCHEME=null
 MAIL_USERNAME=usuario_smtp
 MAIL_PASSWORD=contrasena_smtp
 MAIL_FROM_ADDRESS=no-reply@example.com
-MAIL_FROM_NAME="Varela ERP"
+MAIL_FROM_NAME="ERP Juan23"
 ```
 
-Después de modificar `.env`, limpiar la configuración:
+Luego limpiar la configuración:
 
-```powershell
-C:\xampp\php\php.exe artisan config:clear
+```bash
+php artisan config:clear
 ```
 
 ## Pruebas y comprobaciones
 
 Ejecutar la suite automatizada:
 
-```powershell
-C:\xampp\php\php.exe -d extension=gd -d extension=zip artisan test
+```bash
+php artisan test
 ```
 
-Comprobar una instalación limpia con SQLite en memoria, sin tocar MySQL:
+También es útil verificar rutas y formato:
 
-```powershell
-C:\xampp\php\php.exe artisan migrate:fresh --seed --env=testing --force
+```bash
+php artisan route:list --except-vendor
+php artisan config:clear
+php artisan cache:clear
 ```
 
-Revisar rutas y formato:
+## Documentación
 
-```powershell
-C:\xampp\php\php.exe artisan route:list --except-vendor
-C:\xampp\php\php.exe vendor\bin\pint --test
-```
+La documentación técnica y operativa está organizada en `docs/`:
 
-La suite incluye pruebas de seguridad, clientes, reclamos, integración de cobros y saldos, reportes y exportaciones.
+- [docs/README.md](docs/README.md)
+- [MIGRATION.md](MIGRATION.md)
+- [README.md](README.md)
 
-## Estructura principal
+También se mantiene documentación de integración y arquitectura en la carpeta `docs` del proyecto.
 
-```text
-app/
-  Http/
-    Controllers/  Controlador base y panel principal compartido
-  Modules/
-    Login/        Controllers, Models, Requests, Services, Enums, Middleware y Mail
-    Clientes/     Controllers, Models, Requests, Enums, Policies y Resources
-    Reclamos/     Controllers, Models, Requests, Enums y Policies
-    Reportes/     Controllers, Requests y Services
-    Productos/    Models y Enums del esquema histórico
-    Ventas/       Models y Enums del esquema histórico
-  Contracts/      Interfaces compartidas entre módulos
-  Providers/      Registro de servicios y políticas
-  Services/
-    Gateways/     Clientes HTTP compartidos para APIs de otros grupos
-database/
-  factories/      Datos para pruebas
-  migrations/     Esquema de base de datos
-  seeders/        Usuarios de desarrollo
-public/assets/    CSS y JavaScript conservados
-resources/views/ Vistas Blade
-routes/web.php    Rutas web con nombre
-routes/api.php    Rutas JSON de integración
-tests/Feature/    Pruebas automatizadas
-```
+## Estado del proyecto
 
-Todos los módulos, incluido `Login`, siguen el mismo criterio: las clases PHP se agrupan en `app/Modules/{Modulo}/`, y las rutas, vistas, migraciones, factories, seeders y assets permanecen en sus carpetas generales. Cada módulo contiene las subcarpetas necesarias para su funcionalidad. Ver [estructura-modular.md](docs/estructura-modular.md) para la distribución y el alcance.
+El proyecto se encuentra en desarrollo activo con una estructura modular consolidada. La aplicación ya cuenta con la base conceptual y técnica para una solución ERP de gestión comercial y la documentación acompaña el crecimiento del sistema por módulos.
 
-## Configuración de producción
+## Contribución
 
-Configurar credenciales reales en `.env`, utilizar `APP_DEBUG=false`, habilitar HTTPS y definir `SESSION_SECURE_COOKIE=true`. Nunca subir `.env` al repositorio.
+1. Crear una rama nueva.
+2. Trabajar sobre el módulo o corrección correspondiente.
+3. Ejecutar pruebas relevantes.
+4. Actualizar documentación si cambia el comportamiento o la arquitectura.
+5. Abrir un pull request con una descripción clara.
 
-El detalle completo de la migración está en [MIGRATION.md](MIGRATION.md).
+## Recomendaciones de mantenimiento
 
-## Integración entre grupos
+- no versionar archivos `.env` con información real
+- mantener actualizado el estado de cada módulo
+- revisar permisos y reglas de negocio antes de mergear
+- conservar la documentación sincronizada con los cambios de código
 
-La API JSON de G1 y los contratos HTTP esperados de G2, G3 y G4 se documentan en [docs/integracion-microservicios.md](docs/integracion-microservicios.md). No existe un modo de datos locales para ventas o productos externos. El login API es publico; las demas rutas aceptan un token de usuario o, segun sus permisos, `INTERNAL_API_TOKEN`. Ningun token debe incluirse en el repositorio.
+## Licencia
+
+Si el proyecto no declara una licencia formal en el repositorio, se recomienda definirla antes de una publicación externa o uso institucional en producción.
+
+## Contacto
+
+Este repositorio forma parte del desarrollo del ERP Juan23 y su documentación puede ampliarse según lo requieran el equipo, la entrega académica o el despliegue final del sistema.
