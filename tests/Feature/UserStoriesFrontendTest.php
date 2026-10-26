@@ -1727,10 +1727,39 @@ class UserStoriesFrontendTest extends TestCase
         $orden1Res->assertStatus(201);
         $orden1Id = $orden1Res->json('data.id_orden');
 
+        // PC04: Modificar orden de compra en estado pendiente
+        $editRes = $this->putJson("/api/ordenes-compra/{$orden1Id}", [
+            'id_proveedor' => $proveedor->id_proveedor,
+            'fecha_creacion' => now()->toDateString(),
+            'items' => [
+                [
+                    'id_producto' => $producto->id_producto,
+                    'cantidad_solicitada' => 15,
+                    'precio_estimado' => 500.00,
+                ]
+            ]
+        ]);
+        $editRes->assertOk();
+        $this->assertEquals(7500.00, (float) $editRes->json('data.total_estimado'));
+        $this->assertEquals(now()->toDateString(), $editRes->json('data.fecha_modificacion'));
+
         // PC06: Enviar orden
         $enviarRes = $this->patchJson("/api/ordenes-compra/{$orden1Id}/enviar");
         $enviarRes->assertOk();
         $this->assertEquals('enviada', $enviarRes->json('data.estado'));
+
+        // PC04: Rechazar edición si la orden ya fue enviada
+        $editSentRes = $this->putJson("/api/ordenes-compra/{$orden1Id}", [
+            'id_proveedor' => $proveedor->id_proveedor,
+            'items' => [
+                [
+                    'id_producto' => $producto->id_producto,
+                    'cantidad_solicitada' => 20,
+                    'precio_estimado' => 500.00,
+                ]
+            ]
+        ]);
+        $editSentRes->assertStatus(400);
 
         // Orden 2: Probar cancelación de orden pendiente (PC05)
         $orden2Res = $this->postJson('/api/ordenes-compra', [
@@ -1747,10 +1776,49 @@ class UserStoriesFrontendTest extends TestCase
         $orden2Res->assertStatus(201);
         $orden2Id = $orden2Res->json('data.id_orden');
 
-        // PC05: Cancelar orden
+        // PC05: Cancelar orden pendiente
         $cancRes = $this->patchJson("/api/ordenes-compra/{$orden2Id}/cancelar");
         $cancRes->assertOk();
         $this->assertEquals('cancelada', $cancRes->json('data.estado'));
+        $this->assertEquals(now()->toDateString(), $cancRes->json('data.fecha_cancelacion'));
+
+        // PC05: Conservar historial y detalle de la orden cancelada
+        $showCancRes = $this->getJson("/api/ordenes-compra/{$orden2Id}");
+        $showCancRes->assertOk();
+        $this->assertEquals('cancelada', $showCancRes->json('data.orden.estado'));
+        $this->assertCount(1, $showCancRes->json('data.detalles'));
+
+        // PC05: Impedir cancelar una orden no pendiente (ej. enviada o completada)
+        $cancSentRes = $this->patchJson("/api/ordenes-compra/{$orden1Id}/cancelar");
+        $cancSentRes->assertStatus(400);
+        $this->assertStringContainsString('Solo se pueden cancelar órdenes pendientes', $cancSentRes->json('message'));
+
+        // PC06: Visualizar avance de estado: enviada -> recibida_parcialmente -> completada
+        $parcialRes = $this->patchJson("/api/ordenes-compra/{$orden1Id}/cambiar-estado", [
+            'estado' => 'recibida_parcialmente',
+        ]);
+        $parcialRes->assertOk();
+        $this->assertEquals('recibida_parcialmente', $parcialRes->json('data.estado'));
+
+        $compRes = $this->patchJson("/api/ordenes-compra/{$orden1Id}/cambiar-estado", [
+            'estado' => 'completada',
+        ]);
+        $compRes->assertOk();
+        $this->assertEquals('completada', $compRes->json('data.estado'));
+
+        // PC06: Consultar y filtrar órdenes por estado
+        $filtroPend = $this->getJson('/api/ordenes-compra?estado=pendiente');
+        $filtroPend->assertOk();
+        $filtroComp = $this->getJson('/api/ordenes-compra?estado=completada');
+        $filtroComp->assertOk();
+        $this->assertTrue(collect($filtroComp->json('data'))->every(fn ($o) => $o['estado'] === 'completada'));
+
+        // PC06: Visualización en frontend (/compras) de filtros y selector de estados
+        $viewCompras = $this->get('/compras');
+        $viewCompras->assertOk();
+        $viewCompras->assertSee('filtroEstadoOrdenes');
+        $viewCompras->assertSee('recibida_parcialmente');
+        $viewCompras->assertSee('completada');
     }
 
     /**
@@ -1773,8 +1841,27 @@ class UserStoriesFrontendTest extends TestCase
         $viewDash->assertSee('Dashboard de Reposición');
 
         // Endpoints PC07
+        $genSugRes = $this->postJson('/api/sugerencias-reposicion/generar');
+        $genSugRes->assertStatus(201);
+        $genSugRes->assertJsonPath('exito', true);
+
         $listSugRes = $this->getJson('/api/sugerencias-reposicion');
         $listSugRes->assertOk();
+        $listSugRes->assertJsonPath('exito', true);
+
+        $sugerencias = $listSugRes->json('datos');
+        if (!empty($sugerencias)) {
+            $primeraId = $sugerencias[0]['id'];
+            $genOrdenRes = $this->postJson("/api/sugerencias-reposicion/{$primeraId}/generar-orden");
+            $genOrdenRes->assertStatus(201);
+            $genOrdenRes->assertJsonPath('exito', true);
+            $this->assertNotNull($genOrdenRes->json('orden.id'));
+            $this->assertNotNull($genOrdenRes->json('orden.id_proveedor'));
+
+            // No permitir duplicar la orden sobre la misma sugerencia ya procesada
+            $reintentarRes = $this->postJson("/api/sugerencias-reposicion/{$primeraId}/generar-orden");
+            $reintentarRes->assertStatus(400);
+        }
 
         $resumenSugRes = $this->getJson('/api/sugerencias-reposicion/resumen');
         $resumenSugRes->assertOk();
