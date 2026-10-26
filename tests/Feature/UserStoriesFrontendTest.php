@@ -1792,6 +1792,33 @@ class UserStoriesFrontendTest extends TestCase
         $cancSentRes = $this->patchJson("/api/ordenes-compra/{$orden1Id}/cancelar");
         $cancSentRes->assertStatus(400);
         $this->assertStringContainsString('Solo se pueden cancelar órdenes pendientes', $cancSentRes->json('message'));
+
+        // PC06: Visualizar avance de estado: enviada -> recibida_parcialmente -> completada
+        $parcialRes = $this->patchJson("/api/ordenes-compra/{$orden1Id}/cambiar-estado", [
+            'estado' => 'recibida_parcialmente',
+        ]);
+        $parcialRes->assertOk();
+        $this->assertEquals('recibida_parcialmente', $parcialRes->json('data.estado'));
+
+        $compRes = $this->patchJson("/api/ordenes-compra/{$orden1Id}/cambiar-estado", [
+            'estado' => 'completada',
+        ]);
+        $compRes->assertOk();
+        $this->assertEquals('completada', $compRes->json('data.estado'));
+
+        // PC06: Consultar y filtrar órdenes por estado
+        $filtroPend = $this->getJson('/api/ordenes-compra?estado=pendiente');
+        $filtroPend->assertOk();
+        $filtroComp = $this->getJson('/api/ordenes-compra?estado=completada');
+        $filtroComp->assertOk();
+        $this->assertTrue(collect($filtroComp->json('data'))->every(fn ($o) => $o['estado'] === 'completada'));
+
+        // PC06: Visualización en frontend (/compras) de filtros y selector de estados
+        $viewCompras = $this->get('/compras');
+        $viewCompras->assertOk();
+        $viewCompras->assertSee('filtroEstadoOrdenes');
+        $viewCompras->assertSee('recibida_parcialmente');
+        $viewCompras->assertSee('completada');
     }
 
     /**
