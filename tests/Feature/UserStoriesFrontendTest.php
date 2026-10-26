@@ -1776,10 +1776,22 @@ class UserStoriesFrontendTest extends TestCase
         $orden2Res->assertStatus(201);
         $orden2Id = $orden2Res->json('data.id_orden');
 
-        // PC05: Cancelar orden
+        // PC05: Cancelar orden pendiente
         $cancRes = $this->patchJson("/api/ordenes-compra/{$orden2Id}/cancelar");
         $cancRes->assertOk();
         $this->assertEquals('cancelada', $cancRes->json('data.estado'));
+        $this->assertEquals(now()->toDateString(), $cancRes->json('data.fecha_cancelacion'));
+
+        // PC05: Conservar historial y detalle de la orden cancelada
+        $showCancRes = $this->getJson("/api/ordenes-compra/{$orden2Id}");
+        $showCancRes->assertOk();
+        $this->assertEquals('cancelada', $showCancRes->json('data.orden.estado'));
+        $this->assertCount(1, $showCancRes->json('data.detalles'));
+
+        // PC05: Impedir cancelar una orden no pendiente (ej. enviada o completada)
+        $cancSentRes = $this->patchJson("/api/ordenes-compra/{$orden1Id}/cancelar");
+        $cancSentRes->assertStatus(400);
+        $this->assertStringContainsString('Solo se pueden cancelar órdenes pendientes', $cancSentRes->json('message'));
     }
 
     /**
