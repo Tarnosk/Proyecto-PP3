@@ -249,6 +249,9 @@ class UnidadController extends Controller
 
         if ($idUnidad === 0) {
             UnidadMedida::where('id_producto', $id)->update(['es_base' => 0]);
+            $producto->formato_bulto = 'Unidad';
+            $producto->unidades_por_bulto = 1;
+            $producto->save();
             return response()->json([
                 'status' => 'success',
                 'message' => 'El producto ahora se visualizará en unidades individuales por defecto (u.).',

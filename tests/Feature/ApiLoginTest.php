@@ -4,15 +4,13 @@ namespace Tests\Feature;
 
 use App\Modules\Login\Enums\UserRole;
 use App\Modules\Login\Models\User;
-use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
 
 class ApiLoginTest extends TestCase
 {
-    use DatabaseTransactions, \Tests\UsesG3Database {
-        \Tests\UsesG3Database::beginDatabaseTransaction insteadof DatabaseTransactions;
-    }
+    use RefreshDatabase;
 
     protected function setUp(): void
     {
