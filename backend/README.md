@@ -1,90 +1,145 @@
-# ERP Juan23
+# Backend del Proyecto PP3
 
-Sistema web de gestión comercial en Laravel. Incluye autenticación segura, recuperación de contraseña por email, permisos por rol, clientes, reclamos y reportes. Los cobros y facturas pertenecen a G2; los saldos y ventas, a G4.
+Este directorio contiene la aplicación principal del sistema ERP. La lógica del negocio, rutas, migraciones, modelos, servicios, validaciones y vistas se encuentran aquí.
+
+## Objetivo
+
+La aplicación backend está construida sobre Laravel y está orientada a la gestión de una distribuidora. Se organiza por dominios funcionales con rutas, modelos y servicios claros para cada área del negocio.
+
+## Estructura principal
+
+```text
+backend/
+├── app/
+│   ├── Http/
+│   ├── Modules/
+│   ├── Providers/
+│   ├── Services/
+│   ├── Support/
+│   └── Contracts/
+├── bootstrap/
+├── config/
+├── database/
+├── public/
+├── resources/
+├── routes/
+├── tests/
+├── artisan
+├── composer.json
+├── composer.lock
+├── phpunit.xml
+├── .env.example
+├── .env.testing
+└── README.md
+```
+
+## Tecnologías
+
+- PHP 8.2+
+- Laravel 12.x
+- Composer 2.x
+- MySQL / MariaDB
+- Blade
+- CSS / JavaScript
+- PHPUnit
+
+## Módulos funcionales
+
+La lógica del sistema se agrupa en módulos bajo `app/Modules/`.
+
+Algunos de los principales son:
+
+- `Auth`
+- `Login`
+- `Clientes`
+- `Ventas`
+- `Stock`
+- `Compras`
+- `Proveedores`
+- `Reportes`
+- `Reclamos`
+- `Rendiciones`
+- `Entregas`
+- `CuentaCorriente`
+
+Cada módulo suele contener:
+
+- `Controllers`
+- `Models`
+- `Services`
+- `Requests`
+- `Policies`
+- `database/migrations`
+- `routes/`
+- `README.md` cuando aplica
 
 ## Requisitos
 
-- PHP 8.2 o superior.
-- Laravel 12.x.
-- Composer 2.x.
-- MySQL 8 o MariaDB 10.4 o superior.
-- Extensiones PHP: `bcmath`, `ctype`, `curl`, `dom`, `fileinfo`, `gd`, `mbstring`, `openssl`, `pdo`, `pdo_mysql`, `tokenizer`, `xml` y `zip`.
+- PHP 8.2 o superior
+- Composer 2.x
+- MySQL 8 o MariaDB 10.4+
+- extensiones recomendadas:
+  - bcmath
+  - ctype
+  - curl
+  - dom
+  - fileinfo
+  - gd
+  - mbstring
+  - openssl
+  - pdo
+  - pdo_mysql
+  - tokenizer
+  - xml
+  - zip
 
-El proyecto fue verificado con PHP 8.2.12, Laravel 12.69.2 y MariaDB 10.4.32 de XAMPP.
+## Instalación local
 
-En XAMPP, habilitar `extension=gd` y `extension=zip` en `C:\xampp\php\php.ini`. Como alternativa, los comandos de este README que generan PDF o Excel incluyen ambas extensiones mediante `-d`.
+1. Ingresar al directorio del backend
 
-## Instalación
-
-1. Instalar las dependencias:
-
-   ```bash
-   composer install
-   ```
-
-   En este equipo también puede usarse el Composer local ya descargado:
-
-   ```powershell
-   C:\xampp\php\php.exe -d extension=gd -d extension=zip .tools\composer.phar install
-   ```
-
-2. Crear el archivo de entorno:
-
-   ```powershell
-   Copy-Item .env.example .env
-   ```
-
-3. Generar la clave de la aplicación:
-
-   ```powershell
-   C:\xampp\php\php.exe artisan key:generate
-   ```
-
-4. Configurar MySQL en `.env`:
-
-   ```dotenv
-   DB_CONNECTION=mysql
-   DB_HOST=127.0.0.1
-   DB_PORT=3306
-   DB_DATABASE=sistema_gestion
-   DB_USERNAME=root
-   DB_PASSWORD=
-   ```
-
-5. Iniciar MySQL desde XAMPP.
-
-## Base de datos
-
-### Instalación nueva
-
-Crear primero una base vacía llamada `sistema_gestion` con cotejamiento `utf8mb4_unicode_ci`. Luego ejecutar:
-
-```powershell
-C:\xampp\php\php.exe artisan migrate --seed
+```bash
+cd backend
 ```
 
-Esto crea también las tablas de Sprint 3: `zonas`, `categorias`, `marcas`, `productos`, `ventas`, `detalle_ventas`, `cobros` y `cobro_ventas`, junto con sus índices y claves foráneas.
+2. Instalar dependencias
 
-### Base existente del proyecto
-
-Hacer una copia de seguridad y apuntar `.env` a la base actual. Después ejecutar:
-
-```powershell
-C:\xampp\php\php.exe artisan migrate
+```bash
+composer install
 ```
 
-La primera migration detecta las tablas existentes y las registra como línea base sin eliminar datos. No es necesario volver a importar los SQL históricos ni ejecutar el seeder.
+3. Crear el archivo `.env`
 
-La migration de recuperación agrega un email opcional y único a `usuarios`. El administrador puede asignar los emails reales desde **Lista de Usuarios** en su panel, sin utilizar phpMyAdmin.
+```bash
+cp .env.example .env
+```
 
-`database/database.sql` y las antiguas migraciones SQL se conservan como documentación del esquema previo.
+4. Configurar la base de datos
 
-## Ejecución
+```dotenv
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=proyecto_pp3
+DB_USERNAME=root
+DB_PASSWORD=
+```
 
-Desde la raíz del proyecto:
+5. Generar la clave de aplicación
 
-```powershell
-C:\xampp\php\php.exe -d extension=gd -d extension=zip artisan serve
+```bash
+php artisan key:generate
+```
+
+6. Ejecutar migraciones y seeders
+
+```bash
+php artisan migrate --seed
+```
+
+7. Levantar la aplicación
+
+```bash
+php artisan serve
 ```
 
 Abrir:
@@ -93,129 +148,34 @@ Abrir:
 http://localhost:8000
 ```
 
-Laravel debe servirse desde `public/`. No usar `php -S localhost:8000` sin `artisan serve`, porque podría exponer archivos internos.
+## Validaciones útiles
 
-## Usuarios de prueba
-
-Estas credenciales son solo para desarrollo local y se crean con `artisan db:seed`.
-
-| Usuario | Contraseña | Rol |
-| --- | --- | --- |
-| admin | Admin1234 | administrativo |
-| repartidor | Repartidor1234 | repartidor |
-| contador | Contador1234 | contador |
-| inactivo | Inactivo1234 | repartidor inactivo |
-
-Los usuarios sembrados usan direcciones `example.com`. Deben reemplazarse por emails reales para probar el envío mediante SMTP.
-
-## Permisos
-
-Los reportes Sprint 4 de deudores y ranking estan preparados para consumir JSON de G2/G4. Hasta que esos grupos confirmen y publiquen las APIs, muestran integracion pendiente. Ver [contratos-sprint4-g1.md](docs/contratos-sprint4-g1.md) para rutas, campos y variables `BILLING_SERVICE_*`, `BALANCE_SERVICE_*` y `SALES_SERVICE_*`.
-
-| Funcionalidad | Administrativo | Repartidor | Contador |
-| --- | --- | --- | --- |
-| Panel propio | Sí | Sí | Sí |
-| Listar y buscar clientes | Sí | Sí | No |
-| Crear y editar clientes | Sí | No | No |
-| Crear y listar reclamos | Sí | Sí | No |
-| Ver historial de clientes | Sí | Sí | No |
-| Consultar cobros y saldos de otros módulos | Sí | Sí | No |
-| Reportes de clientes y ranking comercial | Sí | No | Sí |
-| Exportar historial de clientes a PDF y Excel | Sí | No | Sí |
-| Secciones de ventas y stock sin consultas de G1 | Sí | Sí | No |
-| Configurar emails de usuarios | Sí | No | No |
-
-## Seguridad de acceso
-
-- Tres contraseñas incorrectas bloquean la cuenta durante 15 minutos.
-- Cada cuenta admite una sola sesión activa.
-- La sesión expira después de 120 minutos sin actividad.
-- El logout utiliza POST con protección CSRF.
-- Las contraseñas usan hashing seguro de Laravel.
-- Los identificadores de sesión guardados en la base están hasheados.
-- Los permisos se verifican en middleware, Policies y Form Requests.
-- La recuperación usa códigos numéricos hasheados que vencen en 15 minutos y admiten hasta 5 intentos.
-
-## Recuperación de contraseña por email
-
-En desarrollo, `MAIL_MAILER=log` guarda el mensaje y su código en `storage/logs/laravel.log`, pero no envía un correo real. Para usar un servidor SMTP, configure en `.env`:
-
-```dotenv
-MAIL_MAILER=smtp
-MAIL_HOST=smtp.example.com
-MAIL_PORT=587
-MAIL_SCHEME=null
-MAIL_USERNAME=usuario_smtp
-MAIL_PASSWORD=contrasena_smtp
-MAIL_FROM_ADDRESS=no-reply@example.com
-MAIL_FROM_NAME="Varela ERP"
+```bash
+php artisan test
+php artisan route:list --except-vendor
+php artisan config:clear
+php artisan cache:clear
 ```
 
-Después de modificar `.env`, limpiar la configuración:
+## Buenas prácticas
 
-```powershell
-C:\xampp\php\php.exe artisan config:clear
-```
+- no subir credenciales ni `.env` reales
+- mantener descripciones claras por módulo
+- documentar cambios funcionales junto al código
+- usar validaciones y permisos por rol
+- mantener migraciones y seeders controlados
 
-## Pruebas y comprobaciones
+## Documentación asociada
 
-Ejecutar la suite automatizada:
+- `../docs/README.md`
+- `../docs/guia-instalacion.md`
+- `../docs/arquitectura.md`
+- `../docs/estructura-proyecto.md`
+- `../docs/modulos.md`
+- `../docs/flujo-negocio.md`
+- `../docs/seguridad.md`
+- `../docs/despliegue.md`
 
-```powershell
-C:\xampp\php\php.exe -d extension=gd -d extension=zip artisan test
-```
+## Recomendación final
 
-Comprobar una instalación limpia con SQLite en memoria, sin tocar MySQL:
-
-```powershell
-C:\xampp\php\php.exe artisan migrate:fresh --seed --env=testing --force
-```
-
-Revisar rutas y formato:
-
-```powershell
-C:\xampp\php\php.exe artisan route:list --except-vendor
-C:\xampp\php\php.exe vendor\bin\pint --test
-```
-
-La suite incluye pruebas de seguridad, clientes, reclamos, integración de cobros y saldos, reportes y exportaciones.
-
-## Estructura principal
-
-```text
-app/
-  Http/
-    Controllers/  Controlador base y panel principal compartido
-  Modules/
-    Login/        Controllers, Models, Requests, Services, Enums, Middleware y Mail
-    Clientes/     Controllers, Models, Requests, Enums, Policies y Resources
-    Reclamos/     Controllers, Models, Requests, Enums y Policies
-    Reportes/     Controllers, Requests y Services
-    Productos/    Models y Enums del esquema histórico
-    Ventas/       Models y Enums del esquema histórico
-  Contracts/      Interfaces compartidas entre módulos
-  Providers/      Registro de servicios y políticas
-  Services/
-    Gateways/     Clientes HTTP compartidos para APIs de otros grupos
-database/
-  factories/      Datos para pruebas
-  migrations/     Esquema de base de datos
-  seeders/        Usuarios de desarrollo
-public/assets/    CSS y JavaScript conservados
-resources/views/ Vistas Blade
-routes/web.php    Rutas web con nombre
-routes/api.php    Rutas JSON de integración
-tests/Feature/    Pruebas automatizadas
-```
-
-Todos los módulos, incluido `Login`, siguen el mismo criterio: las clases PHP se agrupan en `app/Modules/{Modulo}/`, y las rutas, vistas, migraciones, factories, seeders y assets permanecen en sus carpetas generales. Cada módulo contiene las subcarpetas necesarias para su funcionalidad. Ver [estructura-modular.md](docs/estructura-modular.md) para la distribución y el alcance.
-
-## Configuración de producción
-
-Configurar credenciales reales en `.env`, utilizar `APP_DEBUG=false`, habilitar HTTPS y definir `SESSION_SECURE_COOKIE=true`. Nunca subir `.env` al repositorio.
-
-El detalle completo de la migración está en [MIGRATION.md](MIGRATION.md).
-
-## Integración entre grupos
-
-La API JSON de G1 y los contratos HTTP esperados de G2, G3 y G4 se documentan en [docs/integracion-microservicios.md](docs/integracion-microservicios.md). No existe un modo de datos locales para ventas o productos externos. El login API es publico; las demas rutas aceptan un token de usuario o, segun sus permisos, `INTERNAL_API_TOKEN`. Ningun token debe incluirse en el repositorio.
+El backend debe mantenerse alineado con la documentación de negocio y técnica. Cuando se agregue un módulo, cambie una regla de negocio o altere una integración, debe actualizarse la documentación correspondiente dentro del mismo PR.
