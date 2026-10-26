@@ -21,3 +21,11 @@ yarn-error.log
 config/database.local.php
 legacy/config/database.local.php
 runtime/
+.context/
+/learning-records
+/lessons
+/reference
+/assets
+MISSION.md 
+NOTES.md 
+RESOURCES.md
