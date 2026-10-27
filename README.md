@@ -275,6 +275,12 @@ php artisan cache:clear
 
 La documentación técnica y operativa del proyecto está organizada en `docs/` y `Documentacion/`:
 
+### Guías de Operación y Exposición
+- [Manual de Usuario y Guía Operativa](docs/manual-usuario.md)
+- [Guía de Solución de Problemas y FAQ (Troubleshooting)](docs/troubleshooting.md)
+- [Guía de Defensa y Presentación del Proyecto (Pitch Guide)](docs/guia-defensa-proyecto.md)
+- [Diagramas de Flujo, Estados y Secuencia en Mermaid](docs/diagramas-flujo.md)
+
 ### Guías del Sistema (`docs/`)
 - [Índice de documentación](docs/README.md)
 - [Guía de instalación](docs/guia-instalacion.md)
@@ -298,9 +304,12 @@ La documentación técnica y operativa del proyecto está organizada en `docs/` 
 - [Mapa de APIs Sprints 3 y 4](docs/mapa-apis-sprints-3-y-4.md)
 - [Informe Técnico Integral](docs/informe-tecnico-integral-erp-juan23.md)
 
-### Requisitos y Base de Datos
+### Requisitos, Datos y Evidencias de Pruebas
 - [Matriz de Trazabilidad de Requisitos (RTM)](docs/matriz-trazabilidad-requisitos.md)
 - [Diccionario de Datos de la Base de Datos](docs/diccionario-datos.md)
+- [Reporte de Pruebas: Stock y Productos (S01-S16 / P01-P08)](docs/reporte-pruebas-stock-inventario.md)
+- [Reporte de Pruebas: Proveedores y Compras (PV01-PV08 / C01-C09)](docs/reporte-pruebas-proveedores-compras.md)
+- [Reportes de Pruebas: Órdenes de Compra (PC01 a PC07)](docs/reporte-pruebas-pc01-ordenes-compra.md)
 
 ### Entregas Académicas y Sprints (`Documentacion/`)
 - [Historias de Usuario (PDF)](Documentacion/Historias%20de%20Usuario.pdf)

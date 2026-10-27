@@ -4,9 +4,15 @@ Esta carpeta reúne la documentación técnica y operativa del sistema ERP.
 
 ## Índice
 
-### Guías Generales
+### Guías de Operación y Usuario
+- [Manual de Usuario y Guía Operativa](./manual-usuario.md)
+- [Guía de Solución de Problemas y FAQ](./troubleshooting.md)
+- [Guía de Defensa y Presentación del Proyecto (Pitch Guide)](./guia-defensa-proyecto.md)
+
+### Guías Generales de Desarrollo
 - [Guía de instalación](./guia-instalacion.md)
 - [Arquitectura del sistema](./arquitectura.md)
+- [Diagramas de Flujo, Estados y Secuencia (Mermaid)](./diagramas-flujo.md)
 - [Estructura del proyecto](./estructura-proyecto.md)
 - [Módulos funcionales](./modulos.md)
 - [Flujo de negocio](./flujo-negocio.md)
@@ -15,9 +21,12 @@ Esta carpeta reúne la documentación técnica y operativa del sistema ERP.
 - [Roadmap](./roadmap.md)
 - [Guía de colaboradores](./guia-colaboradores.md)
 
-### Requisitos y Datos
+### Requisitos, Datos y Evidencias de Prueba
 - [Matriz de Trazabilidad de Requisitos (RTM)](./matriz-trazabilidad-requisitos.md)
 - [Diccionario de Datos](./diccionario-datos.md)
+- [Reporte de Pruebas: Stock y Productos (S01-S16 / P01-P08)](./reporte-pruebas-stock-inventario.md)
+- [Reporte de Pruebas: Proveedores y Compras (PV01-PV08 / C01-C09)](./reporte-pruebas-proveedores-compras.md)
+- [Reportes de Pruebas: Órdenes de Compra (PC01 a PC07)](./reporte-pruebas-pc01-ordenes-compra.md)
 
 ### Especificaciones de API y Contratos
 - [Especificación OpenAPI 3.0 (YAML)](./openapi.yaml)
