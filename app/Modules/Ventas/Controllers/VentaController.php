@@ -3,8 +3,8 @@
 namespace App\Modules\Ventas\Controllers;
 
 use App\Http\Controllers\Controller;
-use App\Modules\Ventas\Contracts\ClienteGateway;
-use App\Modules\Ventas\Contracts\ProductoGateway;
+use App\Services\MockClienteApi;
+use App\Services\MockProductoApi;
 use App\Services\MockUsuarioApi;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -14,20 +14,20 @@ use Illuminate\Validation\ValidationException;
 
 class VentaController extends Controller
 {
-    public function index(ClienteGateway $clientes, ProductoGateway $productos)
+    public function index(MockClienteApi $clientes, MockProductoApi $productos)
     {
-        return view('ventas', [
+        return view('ventas.ventas', [
             'productos' => $productos->todos(),
             'clientes' => $clientes->todos(),
         ]);
     }
 
-    public function obtenerProductosSimulados(ProductoGateway $productos)
+    public function obtenerProductosSimulados(MockProductoApi $productos)
     {
         return response()->json($productos->todos());
     }
 
-    public function store(Request $request, ClienteGateway $clientes, ProductoGateway $productos)
+    public function store(Request $request, MockClienteApi $clientes, MockProductoApi $productos)
     {
         $todosLosProductos = $productos->todos();
         $datos = $request->validate([
@@ -143,7 +143,7 @@ class VentaController extends Controller
         ], 201);
     }
 
-    public function historial(ClienteGateway $clientes, MockUsuarioApi $usuarios, ProductoGateway $productos)
+    public function historial(MockClienteApi $clientes, MockUsuarioApi $usuarios, MockProductoApi $productos)
     {
         $ventas = DB::table('venta as v')
             ->select(
@@ -162,9 +162,7 @@ class VentaController extends Controller
             ->get();
 
         $clientesMock = collect($clientes->todos())->keyBy('id');
-        $productosMock = collect($productos->todos())
-        ->keyBy('id')
-        ->all();
+        $productosMock = $productos->indexado();
         $idsVentas = $ventas->pluck('id_venta')->all();
         $detalles = empty($idsVentas)
             ? collect()
@@ -265,7 +263,7 @@ class VentaController extends Controller
             ->map(fn ($producto) => ['id_producto' => $producto['id'], 'nombre' => $producto['nombre']])
             ->values();
 
-        return view('historial-ventas', compact(
+        return view('historial-ventas.historial-ventas', compact(
             'ventas', 'kpis', 'clientesFiltro', 'productosFiltro'
         ));
     }

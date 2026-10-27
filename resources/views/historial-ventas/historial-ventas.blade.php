@@ -22,6 +22,12 @@
         display: flex; justify-content: space-between; align-items: center;
         margin-bottom: .85rem;
     }
+    .hv-filtros-opciones { display: flex; align-items: center; gap: 1rem; }
+    .hv-toggle-canceladas {
+        display: inline-flex; align-items: center; gap: .45rem;
+        color: var(--muted); font-size: .85rem; font-weight: 600; cursor: pointer;
+    }
+    .hv-toggle-canceladas input { width: 16px; height: 16px; min-height: 0; accent-color: var(--primary); cursor: pointer; }
     .hv-filtros-titulo {
         display: flex; align-items: center; gap: .5rem;
         font-size: .85rem; font-weight: 700; color: var(--muted);
@@ -149,6 +155,11 @@
         color: #64748B; max-width: 60%;
         text-align: right;
     }
+    .hv-detalle-acciones {
+        display: flex;
+        justify-content: flex-end;
+        margin-top: .75rem;
+    }
 
     .hv-detalle-tabla {
         width: 100%; border-collapse: collapse; background: #fff;
@@ -175,6 +186,82 @@
         background: #fff; border-radius: 12px;
     }
 
+    /* ---------- Editor de venta ---------- */
+    .hv-editor {
+        margin: 1rem 0;
+        padding: 1rem;
+        background: #fff;
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        box-shadow: 0 3px 10px rgba(30, 58, 138, .06);
+    }
+    .hv-editor-header {
+        display: flex; justify-content: space-between; align-items: center; gap: 1rem;
+        margin-bottom: 1rem; padding-bottom: .75rem;
+        border-bottom: 1px solid var(--border);
+    }
+    .hv-editor-title { margin: 0; font-size: 1rem; font-weight: 800; color: var(--text); }
+    .hv-editor-label {
+        display: flex; align-items: center; gap: .5rem;
+        font-size: .82rem; font-weight: 700; color: var(--muted);
+    }
+    .hv-editor-input {
+        min-height: 40px; padding: .45rem .65rem;
+        border: 1px solid var(--border); border-radius: 10px;
+        background: #fff; color: var(--text); font: inherit;
+    }
+    .hv-editor-input:focus {
+        outline: 3px solid var(--primary); outline-offset: 1px; border-color: var(--primary);
+    }
+    .hv-editor-tabla-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 12px; }
+    .hv-editor-tabla { min-width: 760px; }
+    .hv-editor-tabla input { width: 90px; }
+    .hv-editor-tabla [data-campo="cantidad"] { width: 76px; }
+    .hv-editor-tabla [data-campo="descuento"] { width: 100px; }
+    .hv-editor-vacio { padding: 1rem; text-align: center; color: var(--muted); }
+    .hv-editor-agregar {
+        display: flex; align-items: end; flex-wrap: wrap; gap: .75rem;
+        margin-top: 1rem; padding: 1rem;
+        background: #F8FAFC; border: 1px solid var(--border); border-radius: 12px;
+    }
+    .hv-editor-agregar .hv-editor-label { flex: 1 1 320px; flex-direction: column; align-items: stretch; }
+    .hv-editor-agregar [data-nuevo-producto] { width: 100%; }
+    .hv-editor-cantidad { width: 100px; }
+    .hv-editor-resumen {
+        display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;
+        margin-top: 1rem; padding: .85rem 1rem;
+        background: #EFF6FF; border-radius: 12px;
+    }
+    .hv-editor-resumen .hv-editor-label { align-items: center; }
+    .hv-editor-descuento { width: 130px; }
+    .hv-editor-total { font-size: 1.05rem; font-weight: 800; color: var(--primary); }
+    .hv-editor-total small { display: block; margin-top: .15rem; font-size: .78rem; font-weight: 500; color: var(--muted); }
+    .hv-editor-error {
+        margin: .75rem 0 0; padding: .7rem .85rem;
+        color: #991B1B; background: #FEF2F2; border: 1px solid #FECACA; border-radius: 10px;
+    }
+    .hv-editor-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: .5rem; margin-top: 1rem; }
+    .hv-editor-remove { padding: .35rem .65rem; }
+    .hv-anulacion-form {
+        margin-top: 1rem; padding: 1rem;
+        background: #FEF2F2; border: 1px solid #FECACA; border-radius: 12px;
+    }
+    .hv-anulacion-form[hidden] { display: none; }
+    .hv-anulacion-form label {
+        display: block; margin-bottom: .45rem;
+        font-size: .85rem; font-weight: 700; color: #991B1B;
+    }
+    .hv-anulacion-form textarea {
+        display: block; width: 100%; min-height: 84px; resize: vertical;
+        padding: .65rem .75rem; border: 1px solid #FCA5A5; border-radius: 10px;
+        background: #fff; color: var(--text); font: inherit;
+    }
+    .hv-anulacion-form textarea:focus {
+        outline: 3px solid #FECACA; outline-offset: 1px; border-color: #EF4444;
+    }
+    .hv-anulacion-ayuda { display: block; margin-top: .35rem; font-size: .78rem; color: #7F1D1D; }
+    .hv-anulacion-acciones { display: flex; justify-content: flex-end; gap: .5rem; margin-top: .75rem; }
+
     /* ---------- Responsive ---------- */
     @media (max-width: 1100px) {
         .hv-filtros-grid { grid-template-columns: 1fr 1fr; }
@@ -182,10 +269,14 @@
         .hv-tabla { overflow-x: auto; }
         .hv-tabla-header, .hv-row { min-width: 1100px; }
         .hv-detalle { min-width: 1100px; }
+        .hv-editor { min-width: 0; }
     }
     @media (max-width: 720px) {
         .hv-filtros-grid { grid-template-columns: 1fr; }
         .hv-resumen { grid-template-columns: 1fr; }
+        .hv-editor-header, .hv-editor-resumen { align-items: stretch; flex-direction: column; }
+        .hv-editor-actions { justify-content: stretch; }
+        .hv-editor-actions .btn-action { flex: 1; justify-content: center; }
     }
     .hv-row .factura {
         font-weight: 700;
@@ -214,7 +305,13 @@
     <form class="clay-card" id="formFiltros">
         <div class="hv-filtros-header">
             <span class="hv-filtros-titulo">🔽 Filtros</span>
-            <button type="button" class="hv-limpiar" id="limpiarFiltros">Limpiar filtros</button>
+            <div class="hv-filtros-opciones">
+                <label class="hv-toggle-canceladas" for="fCanceladas">
+                    <input type="checkbox" id="fCanceladas">
+                    Ver ventas canceladas
+                </label>
+                <button type="button" class="hv-limpiar" id="limpiarFiltros">Limpiar filtros</button>
+            </div>
         </div>
 
         <div class="hv-filtros-grid">
@@ -335,23 +432,6 @@
                         <div class="hv-detalle-header">
                             <span>Productos vendidos ({{ count($v['detalle']) }})</span>
 
-                            {{-- BOTONES DE PRUEBA (sin estilos) para probar el back de modificar / anular / estados.
-                                 Se muestran según los flags que manda VentaController@historial (reglas en app/Modules/Ventas/Enums/EstadoVenta.php). --}}
-                            <span>
-                                @if ($v['puede_modificar'])
-                                    <button type="button" data-accion="modificar" data-id="{{ $v['id'] }}">Modificar</button>
-                                @endif
-                                @if ($v['puede_eliminar'])
-                                    <button type="button" data-accion="eliminar" data-id="{{ $v['id'] }}">Eliminar</button>
-                                @endif
-                                @if ($v['puede_restaurar'])
-                                    <button type="button" data-accion="restaurar" data-id="{{ $v['id'] }}">Restaurar</button>
-                                @endif
-                                @if (! $v['anulada'] && $v['estado'] !== 'facturada')
-                                    <button type="button" data-accion="estado" data-id="{{ $v['id'] }}" data-estado="{{ $v['estado'] }}">Cambiar estado</button>
-                                @endif
-                            </span>
-
                             @if (!empty($v['observaciones']))
                                 <span class="obs">📝 {{ $v['observaciones'] }}</span>
                             @endif
@@ -394,6 +474,49 @@
                         @else
                             <div class="hv-detalle-vacio">Esta venta no tiene detalle cargado.</div>
                         @endif
+
+                        {{-- Las acciones se muestran según los flags que manda VentaController@historial. --}}
+                        <div class="hv-detalle-acciones">
+                            <div class="actions-group">
+                                @if ($v['puede_modificar'])
+                                    <button type="button" class="btn-action btn-edit" data-accion="modificar" data-id="{{ $v['id'] }}">
+                                        <span aria-hidden="true"></span> Modificar
+                                    </button>
+                                @endif
+                                @if ($v['puede_eliminar'])
+                                    <button type="button" class="btn-action btn-danger" data-accion="eliminar" data-id="{{ $v['id'] }}">
+                                        <span aria-hidden="true"></span> Eliminar
+                                    </button>
+                                @endif
+                                @if ($v['puede_restaurar'])
+                                    <button type="button" class="btn-action btn-cart" data-accion="restaurar" data-id="{{ $v['id'] }}">
+                                        <span aria-hidden="true">↻</span> Restaurar
+                                    </button>
+                                @endif
+                                {{-- Cambiar estado se conserva aquí, pero está deshabilitado por ahora.
+                                @if (! $v['anulada'] && $v['estado'] !== 'facturada')
+                                    <button type="button" data-accion="estado" data-id="{{ $v['id'] }}" data-estado="{{ $v['estado'] }}">Cambiar estado</button>
+                                @endif --}}
+                            </div>
+                        </div>
+                        @if ($v['puede_eliminar'])
+                            <form class="hv-anulacion-form" data-form-anulacion="{{ $v['id'] }}" hidden>
+                                <label for="motivo-anulacion-{{ $v['id'] }}">Motivo de la anulación</label>
+                                <textarea
+                                    id="motivo-anulacion-{{ $v['id'] }}"
+                                    name="motivo"
+                                    required
+                                    minlength="5"
+                                    maxlength="150"
+                                    placeholder="Explicá por qué se anula esta venta (mínimo 5 caracteres)"
+                                ></textarea>
+                                <span class="hv-anulacion-ayuda">Entre 5 y 150 caracteres.</span>
+                                <div class="hv-anulacion-acciones">
+                                    <button type="button" class="btn-action btn-cart" data-cancelar-anulacion>Cancelar</button>
+                                    <button type="submit" class="btn-action btn-danger">Confirmar anulación</button>
+                                </div>
+                            </form>
+                        @endif
                     </div>
                 </div>
             @endforeach
@@ -407,14 +530,6 @@
 
 @push('scripts')
 <script>
-    // ---------- Toggle de detalle ----------
-    document.querySelectorAll('[data-toggle-detalle]').forEach(row => {
-        row.addEventListener('click', () => {
-            const grupo = row.closest('.hv-grupo');
-            const abierto = grupo.classList.toggle('abierto');
-            row.classList.toggle('abierta', abierto);
-        });
-    });
 
     // ---------- Auto-submit de filtros con debounce ----------
     const form = document.getElementById('formFiltros');
@@ -448,7 +563,7 @@
         if (respuesta.ok) location.reload();
     }
 
-    // ---------- EDITOR DE "MODIFICAR" (sin estilos) ----------
+    // ---------- EDITOR DE "MODIFICAR" ----------
     // Permite cambiar cantidades y descuentos, QUITAR productos, AGREGAR productos
     // del catálogo, elegir la lista de precios y el descuento global.
     // El total que se ve es una ESTIMACIÓN: el total real lo calcula el back
@@ -511,10 +626,10 @@
                     <td>${escapar(p?.codigo ?? '')}</td>
                     <td>${escapar(p?.nombre ?? 'Producto #' + item.id)}</td>
                     <td>${pesos(precio(item.id))}</td>
-                    <td><input type="number" min="1" max="9999" step="1" value="${item.cantidad}" data-campo="cantidad" data-i="${i}" style="width:70px"></td>
-                    <td><input type="number" min="0" step="0.01" value="${item.descuento}" data-campo="descuento" data-i="${i}" style="width:90px"></td>
+                    <td><input class="hv-editor-input" type="number" min="1" max="9999" step="1" value="${item.cantidad}" data-campo="cantidad" data-i="${i}" aria-label="Cantidad de ${escapar(p?.nombre ?? 'producto')}"></td>
+                    <td><input class="hv-editor-input" type="number" min="0" step="0.01" value="${item.descuento}" data-campo="descuento" data-i="${i}" aria-label="Descuento por unidad de ${escapar(p?.nombre ?? 'producto')}"></td>
                     <td>${pesos(subtotal)}</td>
-                    <td><button type="button" data-quitar="${i}">Quitar</button></td>
+                    <td><button type="button" class="btn-action btn-danger hv-editor-remove" data-quitar="${i}">Quitar</button></td>
                 </tr>`;
             }).join('');
 
@@ -526,33 +641,50 @@
             ).join('');
 
             contenedor.innerHTML = `
-                <hr>
-                <strong>Modificar venta #${venta.id}</strong>
-                <p>
-                    Lista de precios:
-                    <select data-campo="lista">
+                <section class="hv-editor" aria-label="Editar venta #${venta.id}">
+                    <header class="hv-editor-header">
+                        <h3 class="hv-editor-title">Modificar venta #${venta.id}</h3>
+                        <label class="hv-editor-label">
+                            Lista de precios
+                            <select class="hv-editor-input" data-campo="lista">
                         <option value="minorista" ${editor.lista === 'minorista' ? 'selected' : ''}>Minorista</option>
                         <option value="mayorista" ${editor.lista === 'mayorista' ? 'selected' : ''}>Mayorista</option>
-                    </select>
-                </p>
-                <table border="1" cellpadding="4">
-                    <thead><tr><th>Código</th><th>Producto</th><th>Precio</th><th>Cantidad</th><th>Desc. c/u ($)</th><th>Subtotal</th><th></th></tr></thead>
-                    <tbody>${filas || '<tr><td colspan="7">Sin productos: agregá al menos uno.</td></tr>'}</tbody>
-                </table>
-                <p>
-                    Agregar producto:
-                    <select data-nuevo-producto>${opciones}</select>
-                    Cantidad: <input type="number" min="1" value="1" data-nueva-cantidad style="width:70px">
-                    <button type="button" data-agregar>Agregar</button>
-                </p>
-                <p>
-                    Descuento global ($): <input type="number" min="0" step="0.01" value="${editor.descuentoGlobal}" data-campo="descuentoGlobal" style="width:100px">
-                </p>
-                <p><strong>Total estimado: ${pesos(total)}</strong> (antes: ${pesos(venta.total)})</p>
-                <p data-errores style="color:red"></p>
-                <button type="button" data-guardar>Guardar cambios</button>
-                <button type="button" data-cancelar>Cancelar</button>
-                <hr>`;
+                            </select>
+                        </label>
+                    </header>
+                    <div class="hv-editor-tabla-wrap">
+                        <table class="hv-detalle-tabla hv-editor-tabla">
+                            <thead><tr><th>Código</th><th>Producto</th><th class="num">Precio</th><th class="num">Cantidad</th><th class="num">Desc. c/u ($)</th><th class="num">Subtotal</th><th>Acción</th></tr></thead>
+                            <tbody>${filas || '<tr><td class="hv-editor-vacio" colspan="7">Sin productos: agregá al menos uno.</td></tr>'}</tbody>
+                        </table>
+                    </div>
+                    <div class="hv-editor-agregar">
+                        <label class="hv-editor-label">
+                            Agregar producto
+                            <select class="hv-editor-input" data-nuevo-producto>${opciones}</select>
+                        </label>
+                        <label class="hv-editor-label">
+                            Cantidad
+                            <input class="hv-editor-input hv-editor-cantidad" type="number" min="1" value="1" data-nueva-cantidad>
+                        </label>
+                        <button type="button" class="btn-action btn-cart" data-agregar>Agregar producto</button>
+                    </div>
+                    <div class="hv-editor-resumen">
+                        <label class="hv-editor-label">
+                            Descuento global ($)
+                            <input class="hv-editor-input hv-editor-descuento" type="number" min="0" step="0.01" value="${editor.descuentoGlobal}" data-campo="descuentoGlobal">
+                        </label>
+                        <div class="hv-editor-total">
+                            Total estimado: ${pesos(total)}
+                            <small>Antes: ${pesos(venta.total)}</small>
+                        </div>
+                    </div>
+                    <p data-errores class="hv-editor-error" role="alert" hidden></p>
+                    <div class="hv-editor-actions">
+                        <button type="button" class="btn-action btn-danger" data-cancelar>Cancelar</button>
+                        <button type="button" class="btn-action btn-cart" data-guardar>Guardar cambios</button>
+                    </div>
+                </section>`;
         }
 
         // Un solo "escuchador" para todo el editor (se re-dibuja después de cada cambio).
@@ -611,8 +743,10 @@
 
                 // Errores del back (422 campo por campo, o 409/404/500 con "message").
                 const errores = json.errors ? Object.values(json.errors).flat() : [];
-                contenedor.querySelector('[data-errores]').textContent =
+                const errorElement = contenedor.querySelector('[data-errores]');
+                errorElement.textContent =
                     `HTTP ${r.status}: ${json.message ?? ''} ${errores.length ? '→ ' + errores.join(' | ') : ''}`;
+                errorElement.hidden = false;
             }
         };
 
@@ -630,9 +764,10 @@
             }
 
             if (boton.dataset.accion === 'eliminar') {
-                const motivo = prompt('Motivo de la anulación (mínimo 5 caracteres):');
-                if (motivo === null) return;
-                await llamarApi('DELETE', url, { motivo });
+                const grupo = boton.closest('.hv-grupo');
+                const formulario = grupo.querySelector(`[data-form-anulacion="${id}"]`);
+                formulario.hidden = false;
+                formulario.querySelector('textarea').focus();
             }
 
             if (boton.dataset.accion === 'restaurar') {
@@ -647,6 +782,31 @@
                 if (estado === null) return;
                 await llamarApi('PATCH', `${url}/estado`, { estado });
             }
+        });
+    });
+
+    document.querySelectorAll('[data-form-anulacion]').forEach(formulario => {
+        formulario.addEventListener('submit', async event => {
+            event.preventDefault();
+            const motivo = formulario.elements.motivo.value.trim();
+            if (motivo.length < 5 || motivo.length > 150) {
+                formulario.elements.motivo.setCustomValidity('El motivo debe tener entre 5 y 150 caracteres.');
+                formulario.elements.motivo.reportValidity();
+                return;
+            }
+
+            formulario.elements.motivo.setCustomValidity('');
+            const id = formulario.dataset.formAnulacion;
+            await llamarApi('DELETE', `/api/ventas/${id}`, { motivo });
+        });
+
+        formulario.elements.motivo.addEventListener('input', event => {
+            event.target.setCustomValidity('');
+        });
+
+        formulario.querySelector('[data-cancelar-anulacion]').addEventListener('click', () => {
+            formulario.reset();
+            formulario.hidden = true;
         });
     });
 </script>
