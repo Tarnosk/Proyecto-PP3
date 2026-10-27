@@ -11,12 +11,14 @@ Route::prefix('v1')->group(function (): void {
     Route::post('/auth/login', [AuthController::class, 'login'])
         ->middleware('throttle:5,1');
 
+    Route::get('/clientes', [ClientController::class, 'index'])
+        ->middleware('throttle:60,1');
+
     Route::middleware(['api.access', 'throttle:60,1'])->group(function (): void {
         Route::post('/auth/logout', [AuthController::class, 'logout'])->middleware('api.user');
 
         Route::get('/health', fn () => response()->json(['status' => 'ok']));
 
-        Route::get('/clientes', [ClientController::class, 'index'])->middleware('api.audience:administrativo,repartidor');
         Route::post('/clientes', [ClientController::class, 'store'])->middleware('api.user:administrativo');
         Route::get('/clientes/{cliente}', [ClientController::class, 'show'])->whereNumber('cliente')->middleware('api.audience:administrativo,repartidor');
         Route::put('/clientes/{cliente}', [ClientController::class, 'replace'])->whereNumber('cliente')->middleware('api.user:administrativo');

@@ -5,7 +5,7 @@ Este documento describe las rutas implementadas en `routes/api.php` bajo `/api/v
 ## Convenciones
 
 - Enviar `Accept: application/json` siempre. En `POST`, `PUT` y `PATCH`, enviar ademas `Content-Type: application/json`.
-- Salvo `POST /auth/login`, enviar `Authorization: Bearer <token>`. El token de usuario sale del login; el token interno de servicio se configura en `INTERNAL_API_TOKEN` y no se obtiene por HTTP.
+- Salvo `POST /auth/login` y `GET /clientes`, enviar `Authorization: Bearer <token>`. El token de usuario sale del login; el token interno de servicio se configura en `INTERNAL_API_TOKEN` y no se obtiene por HTTP.
 - `administrativo`, `repartidor` y `contador` son los valores de rol. Un usuario inactivo o con token vencido/reemplazado no se autentica.
 - El token interno puede leer clientes, zonas, reclamos y usuarios, y crear/cambiar reclamos. No puede crear/cambiar clientes ni hacer logout.
 - Los importes (`saldo`, `monto_total`) son cadenas decimales de dos posiciones, no numeros JSON. Fechas y horas son cadenas ISO 8601. Los campos opcionales de una respuesta pueden valer `null`.
@@ -18,7 +18,7 @@ Este documento describe las rutas implementadas en `routes/api.php` bajo `/api/v
 | --- | --- | --- |
 | `200 OK` | Consulta, login, logout o modificacion exitosa | JSON especifico de la ruta |
 | `201 Created` | Alta de cliente o reclamo | `{"data": {...}}`; el alta de cliente agrega cabecera `Location: .../api/v1/clientes/{id}` |
-| `401 Unauthorized` | Falta el Bearer, es invalido o vencio; no aplica al login publico | `{"message":"No autorizado."}` |
+| `401 Unauthorized` | Falta el Bearer, es invalido o vencio; no aplica al login ni al listado publico de clientes | `{"message":"No autorizado."}` |
 | `403 Forbidden` | Token valido pero rol no permitido; token interno en ruta reservada a usuario | `{"message":"No tiene permisos para esta operacion."}` |
 | `404 Not Found` | ID inexistente o ruta no encontrada | Error JSON de Laravel, normalmente `{"message":"No query results for model ..."}` para un ID inexistente; el texto exacto no es parte estable del contrato |
 | `422 Unprocessable Content` | Campos invalidos, faltantes, duplicados o credenciales incorrectas/bloqueadas | `{"message":"...","errors":{"campo":["..."]}}`; el texto depende de la validacion/traducciones |
@@ -108,7 +108,7 @@ En `PATCH` debe enviarse al menos un campo. Los campos desconocidos en escritura
 
 ### `GET /api/v1/clientes`
 
-- Acceso: token interno, administrativo o repartidor.
+- Acceso: publico, sin token Bearer.
 - Query obligatoria: ninguna. Opcionales: `buscar` (cadena max. 160, busca nombre, razon social o DNI/CUIT), `estado` (`activo`/`inactivo`), `tipo` (`minorista`/`mayorista`), `zona_id` (entero >= 1), `page`, `per_page`.
 - Exito: `200`, orden por ID ascendente.
 
@@ -116,7 +116,7 @@ En `PATCH` debe enviarse al menos un campo. Los campos desconocidos en escritura
 {"data":[{"id":12,"nombre":"Ana","apellido_razon_social":"Comercial Norte","dni_cuit":"20-12345678-9","telefono":"11-4444-5555","email":"ana@example.com","direccion":"Calle Principal 123","localidad":"San Isidro","zona_id":3,"condicion_iva":"Responsable Inscripto","tipo_cliente":"mayorista","estado":"activo"}],"meta":{"current_page":1,"last_page":8,"per_page":20,"total":150}}
 ```
 
-- Errores aplicables: `401`, `403`, `422` (filtros invalidos), `429`, `500`.
+- Errores aplicables: `422` (filtros invalidos), `429`, `500`.
 
 ### `POST /api/v1/clientes`
 
