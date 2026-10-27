@@ -273,13 +273,37 @@ php artisan cache:clear
 
 ## Documentación
 
-La documentación técnica y operativa está organizada en `docs/`:
+La documentación técnica y operativa del proyecto está organizada en `docs/` y `Documentacion/`:
 
-- [docs/README.md](docs/README.md)
-- [MIGRATION.md](MIGRATION.md)
-- [README.md](README.md)
+### Guías del Sistema (`docs/`)
+- [Índice de documentación](docs/README.md)
+- [Guía de instalación](docs/guia-instalacion.md)
+- [Arquitectura del sistema](docs/arquitectura.md)
+- [Estructura del proyecto](docs/estructura-proyecto.md)
+- [Módulos funcionales](docs/modulos.md)
+- [Flujo de negocio](docs/flujo-negocio.md)
+- [Seguridad y accesos](docs/seguridad.md)
+- [Despliegue](docs/despliegue.md)
+- [Roadmap del proyecto](docs/roadmap.md)
+- [Guía de colaboradores](docs/guia-colaboradores.md)
+- [Guía de migración](MIGRATION.md)
 
-También se mantiene documentación de integración y arquitectura en la carpeta `docs` del proyecto.
+### Integración y Contratos de API
+- [Contrato API G1](docs/contrato-api-g1.md)
+- [Contratos Sprint 4 G1](docs/contratos-sprint4-g1.md)
+- [Guía de Integración Modular](docs/GUIA_INTEGRACION_MODULAR.md)
+- [Integración de Microservicios](docs/integracion-microservicios.md)
+- [Mapa de APIs Sprints 3 y 4](docs/mapa-apis-sprints-3-y-4.md)
+- [Informe Técnico Integral](docs/informe-tecnico-integral-erp-juan23.md)
+
+### Entregas Académicas y Sprints (`Documentacion/`)
+- [Historias de Usuario (PDF)](Documentacion/Historias%20de%20Usuario.pdf)
+- [Control de Versiones y Evolución de Sprints](Documentacion/CONTROL_DE_VERSIONES_EVOLUCION_SPRINTS.md)
+- [Presentación Sprints 2 y 3](Documentacion/PRESENTACION_SPRINT_2_Y_3.md)
+- [Plan de Pruebas de Validación y Verificación](Documentacion/plan%20de%20prueba%20de%20validacion%20y%20verificacion.md)
+- [Criterios de Accesibilidad y Usabilidad](Documentacion/criterios%20de%20accesibilidad%20y%20usabilidad.md)
+- [Contrato G1 Auditoría](Documentacion/CONTRATO_G1_AUDITORIA.md)
+- [Pendientes del Proyecto](Documentacion/PENDIENTES_PROYECTO.md)
 
 ## Estado del proyecto
 
