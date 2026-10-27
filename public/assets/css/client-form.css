@@ -1,0 +1,8 @@
+.client-form .field { align-content: start; }
+.client-form .client-field-help { color: var(--muted, #667085); font-size: .82rem; line-height: 1.5; }
+.client-form .client-type-field { max-width: calc(50% - 9px); }
+.client-form [aria-invalid="true"] { border-color: var(--danger, #b42318); }
+.client-form .client-location-row { align-items: start; }
+@media (max-width: 720px) {
+    .client-form .client-type-field { max-width: none; }
+}

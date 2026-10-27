@@ -7,6 +7,7 @@ use App\Modules\Login\Enums\UserRole;
 use App\Modules\Login\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
 class ExternalGatewaysTest extends TestCase
@@ -90,6 +91,6 @@ class ExternalGatewaysTest extends TestCase
             ->assertOk()->assertSeeText('$40,00')->assertDontSeeText('$100,00');
 
         $this->assertDatabaseHas('clientes', ['id' => $client->id, 'saldo' => 100]);
-        $this->assertDatabaseCount('cobros', 0);
+        $this->assertFalse(Schema::hasTable('cobros'));
     }
 }

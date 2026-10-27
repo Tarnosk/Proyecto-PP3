@@ -4,6 +4,7 @@ namespace App\Modules\Clientes\Models;
 
 use App\Modules\Clientes\Enums\ClientStatus;
 use App\Modules\Clientes\Enums\ClientType;
+use App\Modules\Clientes\Services\ClientFields;
 use App\Modules\Login\Models\User;
 use App\Modules\Reclamos\Models\Reclamo;
 use App\Modules\Ventas\Models\Cobro;
@@ -27,9 +28,12 @@ class Cliente extends Model
         'nombre',
         'apellido_razon_social',
         'dni_cuit',
+        'tipo_documento',
         'telefono',
         'email',
         'direccion',
+        'direccion_calle',
+        'direccion_numero',
         'tipo_cliente',
         'estado',
         'localidad',
@@ -37,6 +41,41 @@ class Cliente extends Model
         'condicion_iva',
         'saldo',
     ];
+
+    protected static function booted(): void
+    {
+        static::saving(function (Cliente $client): void {
+            if ($client->isDirty('dni_cuit')) {
+                $client->dni_cuit = ClientFields::documentValue($client->dni_cuit);
+                if (! $client->isDirty('tipo_documento') || ! $client->tipo_documento) {
+                    $client->tipo_documento = ClientFields::documentType($client->dni_cuit);
+                }
+            }
+
+            if ($client->isDirty('direccion_calle') || $client->isDirty('direccion_numero')) {
+                if (filled($client->direccion_calle) && filled($client->direccion_numero)) {
+                    $client->direccion = $client->direccion_calle.' '.$client->direccion_numero;
+                }
+            } elseif ($client->isDirty('direccion')) {
+                $client->fill(ClientFields::addressParts($client->direccion));
+            }
+        });
+    }
+
+    public function getTipoDocumentoAttribute(?string $value): ?string
+    {
+        return $value ?: ClientFields::documentType($this->attributes['dni_cuit'] ?? null);
+    }
+
+    public function getDireccionCalleAttribute(?string $value): ?string
+    {
+        return $value ?? ClientFields::addressParts($this->attributes['direccion'] ?? null)['direccion_calle'];
+    }
+
+    public function getDireccionNumeroAttribute(?string $value): ?string
+    {
+        return $value ?? ClientFields::addressParts($this->attributes['direccion'] ?? null)['direccion_numero'];
+    }
 
     protected function casts(): array
     {

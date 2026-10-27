@@ -3,11 +3,12 @@
 namespace App\Modules\Clientes\Controllers;
 
 use App\Http\Controllers\Controller;
-use App\Modules\Clientes\Enums\ClientStatus;
 use App\Modules\Clientes\Models\Cliente;
+use App\Modules\Clientes\Models\Zona;
 use App\Modules\Clientes\Requests\SearchClienteRequest;
 use App\Modules\Clientes\Requests\StoreClienteRequest;
 use App\Modules\Clientes\Requests\UpdateClienteRequest;
+use App\Modules\Clientes\Services\ClientWriter;
 use App\Modules\Reportes\Services\ReportService;
 use App\Services\Gateways\ExternalFinanceGateway;
 use App\Services\Gateways\RendicionesGateway;
@@ -21,7 +22,7 @@ class ClienteController extends Controller
     public function index(SearchClienteRequest $request): View
     {
         $search = trim((string) $request->validated('q', ''));
-        $clientes = Cliente::query()
+        $clientes = Cliente::with('zona')
             ->when($search !== '', function ($query) use ($search): void {
                 $query->where(function ($query) use ($search): void {
                     $pattern = '%'.$search.'%';
@@ -32,6 +33,7 @@ class ClienteController extends Controller
                         ->orWhere('telefono', 'like', $pattern)
                         ->orWhere('localidad', 'like', $pattern)
                         ->orWhere('direccion', 'like', $pattern);
+                    $query->orWhereHas('zona', fn ($zone) => $zone->where('nombre', 'like', $pattern));
                 });
             })
             ->orderBy('apellido_razon_social')
@@ -46,7 +48,7 @@ class ClienteController extends Controller
     {
         Gate::authorize('create', Cliente::class);
 
-        return view('clientes.create');
+        return view('clientes.create', ['zonas' => Zona::orderBy('nombre')->get()]);
     }
 
     public function show(Request $request, Cliente $cliente, ReportService $reports, ExternalFinanceGateway $finance, RendicionesGateway $rendiciones): View
@@ -73,12 +75,9 @@ class ClienteController extends Controller
         ]);
     }
 
-    public function store(StoreClienteRequest $request): RedirectResponse
+    public function store(StoreClienteRequest $request, ClientWriter $writer): RedirectResponse
     {
-        $cliente = new Cliente($request->validated());
-        $cliente->estado = ClientStatus::ACTIVO;
-        $cliente->creado_por = $request->user()->id;
-        $cliente->save();
+        $writer->save($request->validated(), creator: $request->user()->id);
 
         return redirect()->route('clientes.create')
             ->with('success', 'Cliente registrado correctamente.');
@@ -88,12 +87,12 @@ class ClienteController extends Controller
     {
         Gate::authorize('update', $cliente);
 
-        return view('clientes.edit', compact('cliente'));
+        return view('clientes.edit', ['cliente' => $cliente->load('zona'), 'zonas' => Zona::orderBy('nombre')->get()]);
     }
 
-    public function update(UpdateClienteRequest $request, Cliente $cliente): RedirectResponse
+    public function update(UpdateClienteRequest $request, Cliente $cliente, ClientWriter $writer): RedirectResponse
     {
-        $cliente->update($request->validated());
+        $writer->save($request->validated(), $cliente);
 
         return redirect()->route('clientes.index')
             ->with('success', 'Cliente actualizado correctamente.');

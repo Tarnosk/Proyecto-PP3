@@ -60,6 +60,7 @@
 
                 <button type="submit" class="button button-primary">Iniciar sesión</button>
             </form>
+            <p><a class="auth-link" href="{{ route('catalogo.index') }}">Consultar el catálogo sin iniciar sesión →</a></p>
         </section>
     </main>
     <script src="{{ asset('assets/js/app.js') }}"></script>

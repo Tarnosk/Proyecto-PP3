@@ -9,14 +9,33 @@ use App\Modules\Login\Models\User;
 use App\Services\Gateways\ExternalFinanceGateway;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Blade;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\ViewErrorBag;
+use RuntimeException;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 use Tests\TestCase;
 
 /** Frontend only: no migrations, seeders, persisted users or business operations. */
 class PresentationIntegrationTest extends TestCase
 {
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        if (DB::connection()->getDriverName() !== 'sqlite' || DB::connection()->getDatabaseName() !== ':memory:') {
+            throw new RuntimeException('Las pruebas de presentación requieren SQLite :memory: aislado.');
+        }
+
+        // El alta de Clientes consulta zonas; este fixture solo sirve a la vista.
+        // Las pruebas funcionales crean el esquema con las migraciones reales.
+        Schema::create('zonas', function ($table): void {
+            $table->increments('id');
+            $table->string('nombre', 120)->unique();
+        });
+    }
+
     private function assertSharedSidebar(string $html): void
     {
         $this->assertSame(1, substr_count($html, 'data-erp-sidebar aria-label='));

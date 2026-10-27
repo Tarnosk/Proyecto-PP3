@@ -31,6 +31,9 @@
     }
 
     document.querySelectorAll('form[data-validate]').forEach(function (form) {
+        if (form.hasAttribute('data-client-form')) {
+            return; // Clientes tiene validación específica en client-form.js.
+        }
         form.addEventListener('submit', function (event) {
             clearErrors(form);
             var valid = true;

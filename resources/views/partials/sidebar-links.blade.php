@@ -4,6 +4,7 @@
     $accounting = ['administrativo', 'contador'];
     $links = [
         ['dashboard', 'Inicio / Panel', null],
+        ['catalogo.index', 'Catálogo de productos', null],
         ['clientes.index', 'Clientes', $operational],
         ['reclamos.index', 'Reclamos', $operational],
         ['ventas.index', 'Ventas y Pedidos', $operational],
@@ -24,6 +25,7 @@
     ];
     $activePatterns = [
         'dashboard' => ['dashboard', 'g3.dashboard'],
+        'catalogo.index' => ['catalogo.*'],
         'clientes.index' => ['clientes.*'],
         'reclamos.index' => ['reclamos.*'],
         'reports.index' => ['reports.*'],
