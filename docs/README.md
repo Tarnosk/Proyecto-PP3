@@ -4,6 +4,7 @@ Esta carpeta reúne la documentación técnica y operativa del sistema ERP.
 
 ## Índice
 
+### Guías Generales
 - [Guía de instalación](./guia-instalacion.md)
 - [Arquitectura del sistema](./arquitectura.md)
 - [Estructura del proyecto](./estructura-proyecto.md)
@@ -13,6 +14,18 @@ Esta carpeta reúne la documentación técnica y operativa del sistema ERP.
 - [Despliegue](./despliegue.md)
 - [Roadmap](./roadmap.md)
 - [Guía de colaboradores](./guia-colaboradores.md)
+
+### Requisitos y Datos
+- [Matriz de Trazabilidad de Requisitos (RTM)](./matriz-trazabilidad-requisitos.md)
+- [Diccionario de Datos](./diccionario-datos.md)
+
+### Especificaciones de API y Contratos
+- [Especificación OpenAPI 3.0 (YAML)](./openapi.yaml)
+- [Colección Postman REST API](./contracts/ERP_Juan23_API_Collection.postman_collection.json)
+- [Contrato API G1](./contrato-api-g1.md)
+- [Contratos Sprint 4 G1](./contratos-sprint4-g1.md)
+- [Guía de Integración Modular](./GUIA_INTEGRACION_MODULAR.md)
+- [Informe Técnico Integral](./informe-tecnico-integral-erp-juan23.md)
 
 ## Propósito
 

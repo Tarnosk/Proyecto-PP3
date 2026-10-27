@@ -288,13 +288,19 @@ La documentación técnica y operativa del proyecto está organizada en `docs/` 
 - [Guía de colaboradores](docs/guia-colaboradores.md)
 - [Guía de migración](MIGRATION.md)
 
-### Integración y Contratos de API
+### Especificaciones de API y Contratos
+- [Especificación OpenAPI 3.0 (YAML)](docs/openapi.yaml)
+- [Colección Postman REST API (JSON)](docs/contracts/ERP_Juan23_API_Collection.postman_collection.json)
 - [Contrato API G1](docs/contrato-api-g1.md)
 - [Contratos Sprint 4 G1](docs/contratos-sprint4-g1.md)
 - [Guía de Integración Modular](docs/GUIA_INTEGRACION_MODULAR.md)
 - [Integración de Microservicios](docs/integracion-microservicios.md)
 - [Mapa de APIs Sprints 3 y 4](docs/mapa-apis-sprints-3-y-4.md)
 - [Informe Técnico Integral](docs/informe-tecnico-integral-erp-juan23.md)
+
+### Requisitos y Base de Datos
+- [Matriz de Trazabilidad de Requisitos (RTM)](docs/matriz-trazabilidad-requisitos.md)
+- [Diccionario de Datos de la Base de Datos](docs/diccionario-datos.md)
 
 ### Entregas Académicas y Sprints (`Documentacion/`)
 - [Historias de Usuario (PDF)](Documentacion/Historias%20de%20Usuario.pdf)

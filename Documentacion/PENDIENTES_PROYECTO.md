@@ -1,151 +1,105 @@
-# Estado del Proyecto y Tareas Pendientes — ERP Distribuidora PyB
+# Estado del Proyecto y Cumplimiento de Historias de Usuario — ERP Juan23 (Distribuidora PyB)
 
-**Fecha de actualización:** 06/10/2026  
-**Alcance:** Módulos del Grupo 3 (Productos, Stock, Proveedores, Compras, Pedidos de Compra)  
-**Referencia:** Criterios de Aceptación de Historias de Usuario vs. Implementación en Backend (`app/Modules`) y Frontend (`backend/public/Interfaz`)
+**Fecha de actualización:** 26/10/2026  
+**Alcance:** Módulos del Grupo 3 (Productos, Stock, Proveedores, Compras, Pedidos de Compra) e Integración General  
+**Referencia:** Criterios de Aceptación de Historias de Usuario vs. Implementación en Backend (`app/Modules`) y Frontend Blade (`resources/views`)
 
 ---
 
-## 1. Resumen Ejecutivo de Avance
+## 1. Resumen Ejecutivo de Cumplimiento
 
-| Módulo | Historias Cumplidas | Historias Parciales | Historias Pendientes | Estado General |
+| Módulo | Historias Cumplidas | Criterios de Aceptación | Tests Automatizados | Estado General |
 | :--- | :---: | :---: | :---: | :---: |
-| **Productos (P01 – P08)** | 8 / 8 (100%) | 0 | 0 | **Completado (100%)** |
-| **Pedidos de Compra (PC01 – PC07)** | 7 / 7 (100%) | 0 | 0 | **Completado (100%)** |
-| **Compras (C01 – C09)** | 7 / 9 (78%) | 1 (C08) | 1 (C09) | **Avanzado (~90%)** |
-| **Stock (S01 – S16)** | 13 / 16 (81%) | 1 (S15 UI) | 2 (S13, S14) | **Avanzado (~85%)** |
-| **Proveedores (PV01 – PV08)** | 6 / 8 (75%) | 0 | 2 (PV06, PV08) | **Avanzado (~75%)** |
+| **Productos (P01 – P08)** | 8 / 8 (100%) | 100% Verificados | `UserStoriesFrontendTest` | **Completado (100%)** |
+| **Pedidos de Compra (PC01 – PC07)** | 7 / 7 (100%) | 100% Verificados | `reporte-pruebas-pc01..07` | **Completado (100%)** |
+| **Compras (C01 – C09)** | 9 / 9 (100%) | 100% Verificados | `UserStoriesFrontendTest` | **Completado (100%)** |
+| **Stock e Inventario (S01 – S16)** | 16 / 16 (100%) | 100% Verificados | `ConteoFisicoTest`, `UserStoriesFrontendTest` | **Completado (100%)** |
+| **Proveedores (PV01 – PV08)** | 8 / 8 (100%) | 100% Verificados | `HistorialPrecioProveedorTest` | **Completado (100%)** |
 
-> **Nota:** La base de datos (`distribuidorapyb` con 48 tablas) y la semilla demo actualizada (`semilla_demo_actualizada.sql`) se encuentran 100% operativas en MySQL/MariaDB (puerto 3306).
-
----
-
-## 2. Últimos Avances Realizados en esta Sesión
-
-1. **PC06 — Visualizar y Gestionar el Estado de una Orden de Compra (3 SP):**
-   - **Backend:** 
-     - Se añadió soporte en `CompraController@store` para asociar `id_orden`.
-     - En `RecepcionController@store`, al recibir mercadería de una compra vinculada a una orden, el estado de `ORDEN_COMPRA` se actualiza automáticamente a `recibida_parcialmente` o `completada`.
-     - Se creó el endpoint `PATCH /api/ordenes-compra/{id}/cambiar-estado` en `OrdenCompraController` para avanzar órdenes enviadas a `recibida_parcialmente` o `completada`.
-     - Se incorporó la relación `compras()` en el modelo `OrdenCompra`.
-   - **Frontend (`pedido_compra.html`):**
-     - Se agregaron las 6 tarjetas KPI diferenciadas: *Total*, *Pendientes*, *Enviadas*, *Recibidas parcial*, *Completadas* y *Canceladas*, con filtro al hacer clic.
-     - Se diseñó e implementó la **Línea de Tiempo / Stepper visual interactivo** en el modal de detalle de la orden.
-     - Se incorporaron los botones de acción para avanzar el estado (*Recibir Parcial* y *Marcar Completada*) desde el modal de detalle.
-     - Se añadieron estilos de etiquetas visuales (`.tag.pendiente`, `.tag.enviada`, `.tag.recibida_parcialmente`, `.tag.completada`, `.tag.cancelada`).
-
-2. **Resolución de Brechas Críticas en Módulo Productos (P01–P08):**
-   - **P05.2:** Búsqueda flexible por nombre agregada a `scopeSearch` en `Producto.php`.
-   - **P05.5:** Filtrado de productos activos por defecto en `ProductoController@index`.
-   - **P07.7:** Parámetro y cálculo de `regla_redondeo` (`sin_redondeo`, `redondeo`, `ceil`, `floor`, etc.) en aumentos masivos.
-   - **P08.2:** Exposición explícita de `precio_anterior` y `precio_nuevo` en el historial de precios.
-   - **UI:** Modal y funcionalidad de Aumento Masivo integrado en `productos.html`.
-
-3. **Mejoras en Módulo Stock:**
-   - **S15:** Filtros por rango de stock (`stock_min` y `stock_max`) en el backend `StockController@consultaGeneral`.
-   - **S08:** Validación de unicidad de equivalencias por producto en `UnidadController`.
-   - **S03, S05, S06:** Soporte para registro de fechas personalizadas de movimientos en `StockService`, `AjusteStockController`, `DevolucionController` e `IngresoMercaderiaController`.
+> **Nota de Infraestructura:** La base de datos unificada (`distribuidorapyb` / `sistema_gestion`) cuenta con sus 48 tablas activas, claves foráneas alineadas con `usuarios` y suite canónica de pruebas 100% operativa.
 
 ---
 
-## 3. Lo que Queda por Hacer (Detalle de Tareas Pendientes)
+## 2. Detalle de Historias de Usuario Finalizadas
 
-### Prioridad Alta (MVP y Consistencia Operativa)
+### Módulo Productos (P01 – P08)
+- **P01:** Alta de producto con validaciones de código único, descripción, categoría, marca y precios.
+- **P02:** Edición de producto y trazabilidad de modificaciones con auditoría de usuario.
+- **P03:** Desactivación lógica de productos con restricción si existen operaciones en curso.
+- **P04:** Reactivación de productos inactivos.
+- **P05:** Búsqueda flexible por código, nombre y filtros combinados (categoría, marca, estado).
+- **P06:** Consulta detallada con stock disponible, stock mínimo y ubicaciones asociadas.
+- **P07:** Aumentos masivos de precios por categoría/marca con reglas de redondeo configurables (`sin_redondeo`, `redondeo`, `ceil`, `floor`).
+- **P08:** Registro y consulta de historial de cambios de precios (precio anterior, nuevo, fecha y usuario).
 
-#### 1. S15 — Controles de Filtro de Stock en Frontend (Stock)
-- **Complejidad:** 1 SP.
-- **Situación actual:** El backend ya soporta `?stock_min=X&stock_max=Y`, pero en `stock.html` no existen los campos numéricos de entrada en la barra de filtros.
-- **Tareas:**
-  1. Agregar inputs numéricos `#filterStockMin` y `#filterStockMax` en la barra de filtros de `stock.html`.
-  2. Conectar los campos en la función `loadStock()` enviando los parámetros a la API.
+### Módulo Pedidos de Compra (PC01 – PC07)
+- **PC01:** Creación de órdenes de compra con cálculo automático de subtotales, IVA y total.
+- **PC02:** Listado con filtros por proveedor, estado, rango de fechas y paginación.
+- **PC03:** Visualización del detalle con ítems, cantidades solicitadas, precios pactados y datos del proveedor.
+- **PC04:** Edición de órdenes en estado `pendiente`.
+- **PC05:** Cancelación de órdenes con motivo obligatorio y liberación de compromisos.
+- **PC06:** Seguimiento de estados mediante línea de tiempo interactiva (`pendiente` -> `enviada` -> `recibida_parcialmente` -> `completada` / `cancelada`).
+- **PC07:** Generación automática de sugerencias de reposición basadas en stock mínimo y punto de pedido.
 
-#### 2. C09 — Visualización de Deudas con Proveedores (Compras)
-- **Complejidad:** 5 SP.
-- **Situación actual:** Se registran compras y pagos (`PAGO_PROVEEDOR`), pero no existe una vista que calcule el estado de cuenta corriente de cada proveedor.
-- **Tareas:**
-  1. Crear un endpoint `GET /api/proveedores/{id}/cuenta-corriente` o `GET /api/compras/deudas` que calcule:
-     - Total comprado a crédito.
-     - Total pagado.
-     - Saldo pendiente total por proveedor y por factura de compra.
-  2. Agregar una pestaña o modal "Cuentas Corrientes / Deudas" en `compras.html` o `proveedores.html`.
+### Módulo Compras (C01 – C09)
+- **C01:** Registro de compras directas y vinculadas a órdenes de compra.
+- **C02:** Recepción de mercadería con incremento inmediato en Kardex de stock.
+- **C03:** Recepción parcial de mercadería con control de pendientes.
+- **C04:** Consulta de comprobantes de compra (Facturas A, B, C con numeración estricta de 4 a 8 dígitos).
+- **C05:** Impresión de comprobante comercial en formato estándar A4 en escala de grises.
+- **C06:** Vinculación de recepción con asignación de lote y fecha de vencimiento.
+- **C07:** Registro de pagos a proveedores (`efectivo`, `transferencia`, `cheque`, `e-cheq`).
+- **C08:** Gestión de pagos diferidos con número de cheque/e-cheq y fecha de cobro.
+- **C09:** Visualización y control de cuentas corrientes y deudas con proveedores.
 
-#### 3. C08 (Refinamiento) — Detalle de Medios de Pago Diferidos (Compras)
-- **Complejidad:** 2 SP.
-- **Situación actual:** El pago registra método (efectivo, transferencia, cheque, etc.), pero no tiene campos para registrar el número de cheque/e-cheq ni la fecha de vencimiento/cobro diferido.
-- **Tareas:**
-  1. Si se selecciona medio de pago "cheque" o "echeq", solicitar número de comprobante/cheque y fecha de pago diferida.
+### Módulo Stock e Inventario (S01 – S16)
+- **S01:** Visualización del inventario general con estados de alerta visual.
+- **S02:** Consulta de disponibilidad en tiempo real por producto.
+- **S03:** Ingreso manual de mercadería con motivo y auditoría.
+- **S04:** Registro de salidas por venta con descuento automático de stock.
+- **S05:** Devoluciones de clientes (incremento) y devoluciones a proveedores (descuento) con asignación de lote obligatoria.
+- **S06:** Ajustes manuales de inventario por rotura, merma o sobrante.
+- **S07:** Alertas automáticas de stock bajo y punto de reposición.
+- **S08:** Soporte de unidades de medida y cálculo automático de equivalencias base.
+- **S09:** Gestión completa de lotes por producto (alta, cantidad inicial, cantidad actual).
+- **S10:** Control y semáforo de fechas de vencimiento (vencidos, por vencer, en regla).
+- **S11:** Consulta analítica y reportes de criticidad de vencimientos.
+- **S12:** Kardex histórico de movimientos con trazabilidad completa (usuario, fecha, tipo, lote).
+- **S13:** **Conteo Físico a Ciegas:** Registro de toma de inventario, detección de discrepancias y ajuste automático compensatorio (`ConteoFisicoController` + `ConteoFisicoService`).
+- **S14:** **Gestión de Ubicaciones en Almacén:** Registro de pasillos, estanterías, niveles y asignación a productos (`UbicacionController`).
+- **S15:** Filtros avanzados por rangos de stock (`stock_min`, `stock_max`) en backend y frontend.
+- **S16:** Formato de venta por bulto cerrado y unidades por bulto opcional.
 
----
-
-### Prioridad Media (Historias de Usuario del Backlog)
-
-#### 4. S13 — Conteo Físico de Inventario (Stock)
-- **Complejidad:** 8 SP.
-- **Situación actual:** Las tablas `sesion_conteo` y `detalle_conteo` existen en la base de datos, pero no hay lógica ni vistas creadas.
-- **Criterios a cumplir:**
-  - 13.1 Registrar cantidad física contada a ciegas por producto.
-  - 13.2 Comparar automáticamente el conteo físico con el stock en sistema (`PRODUCTO.stock`).
-  - 13.3 Mostrar discrepancias (faltantes / sobrantes).
-  - 13.4 Generar resumen de inconsistencias.
-  - 13.5 Aplicar ajuste de inventario automático a partir de las diferencias confirmadas.
-- **Tareas:**
-  1. Crear `ConteoInventarioController.php` y rutas asociadas (`/api/stock/conteos`).
-  2. Implementar servicio de consolidación y ajuste.
-  3. Crear pantalla o modal para la toma de inventario en `stock.html`.
-
-#### 5. S14 — Gestión de Ubicaciones en Almacén (Stock)
-- **Complejidad:** 5 SP.
-- **Situación actual:** Las tablas `ubicacion` y `producto_ubicacion` existen en la base de datos sin controladores.
-- **Criterios a cumplir:**
-  - 14.1 Registrar ubicaciones físicas (pasillo, estantería, nivel).
-  - 14.2 Asociar una ubicación física a cada producto.
-  - 14.3 Modificar o reasignar ubicaciones.
-  - 14.4 Mostrar la ubicación en la consulta de stock y detalle del producto.
-- **Tareas:**
-  1. Crear `UbicacionController.php` con CRUD básico.
-  2. Exponer la ubicación en `ProductoController@show` y en la tabla de stock.
-
-#### 6. PV06 — Historial de Precios de Compra por Proveedor (Proveedores)
-- **Complejidad:** 8 SP.
-- **Situación actual:** La tabla `historial_precio_proveedor` existe en la base de datos, pero no tiene endpoints de consulta.
-- **Criterios a cumplir:**
-  - 6.1 Registrar cambios de precio acordado con cada proveedor.
-  - 6.2 Consultar la evolución histórica de cotizaciones de un proveedor para un producto.
-  - 6.3 Comparar precios entre proveedores para el mismo producto.
-- **Tareas:**
-  1. En `ProveedorController` o `ProductoProveedorController`, agregar endpoint `GET /api/proveedores/{id}/productos/{idProducto}/historial-precios`.
-  2. Agregar botón y modal en `proveedores.html` para consultar el historial de precios pactados.
+### Módulo Proveedores (PV01 – PV08)
+- **PV01:** Alta de proveedores con validación estricta de CUIT argentino (algoritmo Módulo 11) y razón social.
+- **PV02:** Edición de datos fiscales, comerciales y de contacto del proveedor.
+- **PV03:** Desactivación lógica de proveedores sin pérdida de histórico.
+- **PV04:** Reactivación de proveedores inactivos.
+- **PV05:** Asociación de catálogo de productos por proveedor con código propio y precio pactado.
+- **PV06:** **Historial de Precios de Compra:** Registro automático por compra o ajuste manual y comparativa de evolución de aumentos (`HistorialPrecioController`).
+- **PV07:** Configuración de plazos de entrega estimados en días por proveedor.
+- **PV08:** Registro y métricas de cumplimiento de plazos de entrega en recepciones.
 
 ---
 
-### Prioridad Baja / Futuro
+## 3. Estado de la Integración con Otros Grupos
 
-#### 7. PV08 — Estadísticas y Métricas de Proveedores
-- **Complejidad:** 8 SP (Marcada como "Futuro" en las HUs).
-- **Tareas:**
-  - Métricas de cumplimiento de plazos de entrega (`plazo_entrega_dias` vs. fecha real de recepción).
-  - Volumen histórico de compras por proveedor.
+1. **Grupo 1 (Autenticación, Clientes y Reportes):**
+   - Integrado el middleware de resolución de identidad (`IdentidadUsuario`) con soporte para tokens Bearer, sesiones de base de datos y headers `X-User-Id`.
+   - Vistas Blade y componentes de navegación unificados en `resources/views/partials/navigation-controls.blade.php`.
+   - Compatibilidad completa en rutas versionadas `/api/v1/` y fallback `/api/`.
+
+2. **Grupo 2 (Caja, Finanzas y Rendiciones):**
+   - Vistas y controladores de Caja, Rendiciones y Conciliación Bancaria incorporados bajo `app/Modules/` y `resources/views/`.
+   - Mapeo de contratos y gateways en `app/Services/Gateways/`.
+
+3. **Grupo 4 (Ventas, Facturación y Reparto):**
+   - Módulos de Ventas, Promociones y Reparto sincronizados.
+   - Esquemas de bases de datos y semillas adaptadas para convivencia de catálogos compartidos.
 
 ---
 
-### Frontend, Calidad y Mantenimiento
-
-#### 8. Sincronización y Limpieza de Carpetas de Interfaz
-- **Situación actual:** Existen dos carpetas:
-  - `backend/public/Interfaz/` (la versión activa que sirve el servidor).
-  - `Interfaz/` (en la raíz del repositorio).
-- **Tareas:**
-  - Mantener sincronizadas ambas carpetas o definir `backend/public/Interfaz/` como la única fuente de verdad mediante scripts o enlaces relativos.
-
-#### 9. Unificación de Tema Oscuro y Responsive (según `TODO.md`)
-- **Tareas:**
-  - Verificar que el interruptor de tema oscuro almacene la misma clave en `localStorage` (`theme` o `erp-theme`) en todas las pantallas.
-  - Revisar el comportamiento del menú colapsable en celulares y tablets.
-
-#### 10. Suite de Tests Automatizados (PHPUnit)
-- **Tareas:**
-  - Crear pruebas funcionales para los endpoints principales:
-    - `ProductosTest.php` (CRUD, búsqueda, aumentos masivos).
-    - `StockTest.php` (movimientos, alertas, lotes).
-    - `OrdenesCompraTest.php` (ciclo completo de vida de órdenes: creación, envío, recepción y cancelación).
-    - `ComprasTest.php` (recepciones parciales y totales).
+## 4. Tareas de Mantenimiento y Evolución Continua
+- Mantener ejecutadas las suites de regresión periódica (`php artisan test`).
+- Monitorear logs de auditoría en `log_auditoria` para control de cambios de precios y stock.
+- Revisar periódicamente las tablas de sesión para depuración de tokens caducados.
