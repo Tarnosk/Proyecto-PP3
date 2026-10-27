@@ -37,6 +37,7 @@
                             <th>Cliente</th>
                             <th>DNI/CUIT</th>
                             <th>Localidad</th>
+                            <th>Zona</th>
                             <th>Domicilio</th>
                             <th>Contacto</th>
                             <th>Tipo</th>
@@ -53,6 +54,7 @@
                                 </td>
                                 <td>{{ $cliente->dni_cuit }}</td>
                                 <td>{{ $cliente->localidad ?: 'No informada' }}</td>
+                                <td>{{ $cliente->zona?->nombre ?: 'No informada' }}</td>
                                 <td>{{ $cliente->direccion }}</td>
                                 <td>{{ $cliente->telefono }}</td>
                                 <td><span class="type-badge type-{{ $cliente->tipo_cliente->value }}">{{ $cliente->tipo_cliente->value }}</span></td>

@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\DashboardController;
+use App\Modules\Catalogo\Controllers\CatalogoController;
 use App\Modules\Clientes\Controllers\ClienteController;
 use App\Modules\Login\Controllers\AuthenticatedSessionController;
 use App\Modules\Login\Controllers\PasswordRecoveryController;
@@ -9,6 +10,17 @@ use App\Modules\Reclamos\Controllers\ReclamoController;
 use App\Modules\Reportes\Controllers\ReportController;
 use App\Modules\Reportes\Controllers\ReportExportController;
 use Illuminate\Support\Facades\Route;
+
+// G1: consulta pública independiente del login y del almacenamiento de sesiones.
+Route::prefix('catalogo')->name('catalogo.')->withoutMiddleware([
+    \Illuminate\Session\Middleware\StartSession::class,
+    \Illuminate\View\Middleware\ShareErrorsFromSession::class,
+    \Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class,
+])->group(function (): void {
+    Route::get('/', [CatalogoController::class, 'index'])->name('index');
+    Route::get('/datos', [CatalogoController::class, 'dataJson'])->name('data');
+    Route::get('/{producto}', [CatalogoController::class, 'show'])->where('producto', '[1-9][0-9]{0,9}')->name('show');
+});
 
 Route::get('/', fn () => auth()->check()
     ? redirect()->route('dashboard')

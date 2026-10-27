@@ -89,7 +89,7 @@ class ClientManagementTest extends TestCase
         $this->signInAs($admin);
 
         $this->post(route('clientes.store'), [])->assertSessionHasErrors([
-            'nombre', 'apellido_razon_social', 'dni_cuit', 'telefono', 'email', 'localidad', 'direccion', 'tipo_cliente',
+            'nombre', 'apellido_razon_social', 'tipo_documento', 'dni_cuit', 'telefono', 'email', 'localidad', 'zona', 'direccion_calle', 'direccion_numero', 'tipo_cliente',
         ]);
 
         $invalid = $this->validData();
@@ -147,10 +147,13 @@ class ClientManagementTest extends TestCase
             'nombre' => 'Ana',
             'apellido_razon_social' => 'Pérez Comercial',
             'dni_cuit' => '20-12345678-9',
+            'tipo_documento' => 'cuit',
             'telefono' => '11-4444-5555',
             'email' => 'cliente@example.com',
             'localidad' => 'Pigue',
-            'direccion' => 'Calle Principal 123',
+            'zona' => 'Norte',
+            'direccion_calle' => 'Calle Principal',
+            'direccion_numero' => '123',
             'tipo_cliente' => 'mayorista',
         ];
     }

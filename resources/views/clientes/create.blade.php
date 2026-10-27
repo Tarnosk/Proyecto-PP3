@@ -15,4 +15,9 @@
 
 @push('scripts')
     <script src="{{ asset('assets/js/app.js') }}"></script>
+    <script src="{{ asset('assets/js/client-form.js') }}"></script>
+@endpush
+
+@push('styles')
+    <link rel="stylesheet" href="{{ asset('assets/css/client-form.css') }}">
 @endpush

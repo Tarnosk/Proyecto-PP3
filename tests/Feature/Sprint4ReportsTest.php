@@ -7,6 +7,7 @@ use App\Modules\Login\Enums\UserRole;
 use App\Modules\Login\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
 class Sprint4ReportsTest extends TestCase
@@ -125,7 +126,7 @@ class Sprint4ReportsTest extends TestCase
         $this->signInAs($admin)->post("/clientes/{$client->id}/cobros", [
             'monto_total' => 50, 'medio_pago' => 'efectivo',
         ])->assertNotFound();
-        $this->assertDatabaseCount('cobros', 0);
+        $this->assertFalse(Schema::hasTable('cobros'));
         $this->signInAs($repartidor)->get(route('reports.debtors'))->assertRedirect(route('dashboard'));
         $this->get(route('reports.product-ranking'))->assertRedirect(route('dashboard'));
     }

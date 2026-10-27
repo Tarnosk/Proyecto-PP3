@@ -3,10 +3,10 @@
 namespace App\Modules\Clientes\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
-use App\Modules\Clientes\Enums\ClientStatus;
 use App\Modules\Clientes\Models\Cliente;
 use App\Modules\Clientes\Requests\Api\ClientWriteRequest;
 use App\Modules\Clientes\Resources\ClientResource;
+use App\Modules\Clientes\Services\ClientWriter;
 use App\Services\Gateways\ExternalFinanceGateway;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -54,28 +54,24 @@ class ClientController extends Controller
         return response()->json(['data' => (new ClientResource($cliente))->toArray($request)]);
     }
 
-    public function store(ClientWriteRequest $request): JsonResponse
+    public function store(ClientWriteRequest $request, ClientWriter $writer): JsonResponse
     {
-        $client = new Cliente($request->validated());
-        $client->estado = ClientStatus::ACTIVO;
-        $client->creado_por = $request->user()->id;
-        $client->save();
-        $client->refresh();
+        $client = $writer->save($request->validated(), creator: $request->user()->id);
 
         return response()->json(['data' => (new ClientResource($client))->toArray($request)], 201)
             ->header('Location', url('/api/v1/clientes/'.$client->id));
     }
 
-    public function replace(ClientWriteRequest $request, Cliente $cliente): JsonResponse
+    public function replace(ClientWriteRequest $request, Cliente $cliente, ClientWriter $writer): JsonResponse
     {
-        $cliente->update($request->validated());
+        $cliente = $writer->save($request->validated(), $cliente);
 
         return response()->json(['data' => (new ClientResource($cliente))->toArray($request)]);
     }
 
-    public function patch(ClientWriteRequest $request, Cliente $cliente): JsonResponse
+    public function patch(ClientWriteRequest $request, Cliente $cliente, ClientWriter $writer): JsonResponse
     {
-        $cliente->update($request->validated());
+        $cliente = $writer->save($request->validated(), $cliente);
 
         return response()->json(['data' => (new ClientResource($cliente))->toArray($request)]);
     }
