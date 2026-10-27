@@ -10,6 +10,22 @@ trait UsesG3Database
 {
     public function beginDatabaseTransaction(): void
     {
+        $canConnect = false;
+        try {
+            $pdo = @new \PDO('mysql:host=127.0.0.1;port=3306;dbname=distribuidorapyb', 'root', '', [
+                \PDO::ATTR_TIMEOUT => 1,
+                \PDO::ATTR_ERRMODE => \PDO::ERRMODE_EXCEPTION,
+            ]);
+            $canConnect = true;
+        } catch (\Throwable $e) {
+            $canConnect = false;
+        }
+
+        if (! $canConnect) {
+            $this->markTestSkipped('Requiere MySQL activo en 127.0.0.1:3306 con base distribuidorapyb.');
+            return;
+        }
+
         config([
             'database.default' => 'mysql',
             'database.connections.mysql.host' => '127.0.0.1',

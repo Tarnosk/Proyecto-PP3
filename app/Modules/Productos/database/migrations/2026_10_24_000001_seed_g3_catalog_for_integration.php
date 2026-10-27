@@ -63,7 +63,11 @@ return new class extends Migration
             return;
         }
 
-        $idUsuario = (int) (DB::table('usuario')->value('id_usuario') ?? 1);
+        $idUsuario = (int) (
+            (Schema::hasTable('usuarios') ? DB::table('usuarios')->value('id') : null)
+            ?? (Schema::hasTable('usuario') ? DB::table('usuario')->value('id_usuario') : null)
+            ?? 1
+        );
         $hoy = '2026-09-01';
 
         if (Schema::hasTable('categoria')) {
