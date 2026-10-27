@@ -285,6 +285,8 @@ La documentación técnica y operativa del proyecto está organizada en `docs/` 
 - [Índice de documentación](docs/README.md)
 - [Guía de instalación](docs/guia-instalacion.md)
 - [Arquitectura del sistema](docs/arquitectura.md)
+- [Registro de Decisiones de Arquitectura (ADR)](docs/registro-decisiones-arquitectura.md)
+- [Glosario de Términos del Dominio](docs/glosario-terminos.md)
 - [Estructura del proyecto](docs/estructura-proyecto.md)
 - [Módulos funcionales](docs/modulos.md)
 - [Flujo de negocio](docs/flujo-negocio.md)

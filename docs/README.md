@@ -12,6 +12,8 @@ Esta carpeta reúne la documentación técnica y operativa del sistema ERP.
 ### Guías Generales de Desarrollo
 - [Guía de instalación](./guia-instalacion.md)
 - [Arquitectura del sistema](./arquitectura.md)
+- [Registro de Decisiones de Arquitectura (ADR)](./registro-decisiones-arquitectura.md)
+- [Glosario de Términos del Dominio](./glosario-terminos.md)
 - [Diagramas de Flujo, Estados y Secuencia (Mermaid)](./diagramas-flujo.md)
 - [Estructura del proyecto](./estructura-proyecto.md)
 - [Módulos funcionales](./modulos.md)
