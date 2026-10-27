@@ -1,0 +1,153 @@
+/* Componente compartido. Sin dependencia de los estilos de G1/G3/G4. */
+body.erp-shell {
+    --erp-sidebar-width: 260px;
+    --erp-toolbar-height: 64px;
+    display: block;
+    margin: 0;
+    padding-left: var(--erp-sidebar-width);
+    padding-top: var(--erp-toolbar-height);
+    background-image: none;
+    min-height: 100vh;
+    min-height: 100dvh;
+}
+body.erp-shell.erp-sidebar-collapsed { padding-left: 0; }
+.erp-toolbar {
+    position: fixed;
+    inset: 0 0 auto var(--erp-sidebar-width);
+    z-index: 35;
+    height: var(--erp-toolbar-height);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 10px 20px;
+    box-sizing: border-box;
+    background: #fff;
+    border-bottom: 1px solid #dfd0b8;
+    font-family: Arial, Helvetica, sans-serif;
+}
+.erp-sidebar-collapsed .erp-toolbar { left: 0; }
+.erp-toolbar-controls { display: flex; flex: none; gap: 10px; }
+.erp-toolbar .erp-icon-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    width: 44px;
+    height: 44px;
+    min-height: 44px;
+    padding: 10px;
+    border: 1px solid #dfd0b8;
+    border-radius: 8px;
+    background: #fffaf0;
+    color: #075bd8;
+    cursor: pointer;
+    text-decoration: none;
+}
+.erp-toolbar .erp-icon-button[hidden] { display: none; }
+.erp-toolbar .erp-icon-button:hover { background: #dbeafe; border-color: #075bd8; }
+.erp-toolbar .erp-icon-button:focus-visible { outline: 3px solid #075bd8; outline-offset: 2px; }
+.erp-icon-button svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.erp-toolbar-actions { min-width: 0; overflow-wrap: anywhere; }
+.erp-toolbar-actions:empty { display: none; }
+.erp-shell .erp-workspace > header { top: var(--erp-toolbar-height); }
+.erp-sidebar {
+    position: fixed;
+    inset: 0 auto 0 0;
+    z-index: 30;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    box-sizing: border-box;
+    width: var(--erp-sidebar-width);
+    height: 100vh;
+    height: 100dvh;
+    padding: 24px 16px 16px;
+    background: linear-gradient(180deg, #075bd8, #052f78);
+    color: #fff;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 15px;
+    line-height: 1.5;
+}
+.erp-sidebar .erp-sidebar-brand {
+    display: grid;
+    gap: 2px;
+    flex: none;
+    color: #fff;
+    text-decoration: none;
+}
+.erp-sidebar-brand strong { font-size: 22px; font-weight: 700; }
+.erp-sidebar-brand span, .erp-sidebar-user > span, .erp-sidebar-user small {
+    color: #d5e5ff;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+.erp-sidebar-user {
+    display: grid;
+    gap: 5px;
+    flex: none;
+    padding: 14px;
+    border: 1px solid rgba(255, 255, 255, .18);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, .1);
+    overflow-wrap: anywhere;
+}
+.erp-sidebar-user small { width: fit-content; padding: 2px 7px; border-radius: 6px; background: rgba(255, 255, 255, .15); }
+.erp-sidebar-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-color: #90b6f1 transparent;
+}
+.erp-sidebar .erp-nav-link, .erp-sidebar-footer button {
+    display: block;
+    flex: none;
+    width: 100%;
+    box-sizing: border-box;
+    padding: 11px 12px;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: #e5eeff;
+    font: inherit;
+    font-weight: 700;
+    text-align: left;
+    text-decoration: none;
+    white-space: normal;
+    cursor: pointer;
+}
+.erp-sidebar .erp-nav-link:hover, .erp-sidebar .erp-nav-link[aria-current="page"], .erp-sidebar-footer button:hover {
+    color: #fff;
+    background: rgba(255, 255, 255, .17);
+}
+.erp-sidebar a:focus-visible, .erp-sidebar button:focus-visible {
+    outline: 2px solid #fff;
+    outline-offset: -3px;
+}
+.erp-sidebar-footer { flex: none; margin: 0; padding-top: 10px; border-top: 1px solid rgba(255, 255, 255, .18); }
+.erp-sidebar-collapsed .erp-sidebar { transform: translateX(-100%); visibility: hidden; pointer-events: none; }
+.erp-workspace, .erp-shell > .app-workspace { min-width: 0; }
+@media (max-width: 760px) {
+    body.erp-shell { --erp-sidebar-width: 180px; }
+    .erp-sidebar { gap: 12px; padding: 16px 10px 10px; font-size: 13px; }
+    .erp-sidebar-brand strong { font-size: 18px; }
+    .erp-sidebar-user { padding: 10px; }
+    .erp-sidebar .erp-nav-link, .erp-sidebar-footer button { padding: 10px 8px; }
+}
+@media (max-width: 480px) {
+    body.erp-shell { --erp-sidebar-width: 148px; }
+    .erp-sidebar { padding-inline: 8px; font-size: 12px; }
+    .erp-sidebar-brand strong { font-size: 16px; }
+    .erp-sidebar-brand span, .erp-sidebar-user > span, .erp-sidebar-user small { font-size: 10px; }
+    .erp-sidebar-user { padding: 8px; }
+}
+@media (max-height: 540px) {
+    .erp-sidebar { gap: 8px; padding-block: 10px; }
+    .erp-sidebar-user { padding: 6px 10px; gap: 1px; }
+}

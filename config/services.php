@@ -42,9 +42,11 @@ return [
     'sales' => [
         'url' => env('SALES_SERVICE_URL'),
         'token' => env('SALES_SERVICE_TOKEN'),
-        'history_path' => env('SALES_HISTORY_PATH', '/api/v1/ventas'),
-        'buyers_path' => env('SALES_BUYERS_PATH', '/api/v1/reportes/productos/{id}/compradores'),
-        'ranking_path' => env('SALES_RANKING_PATH', '/api/v1/reportes/ranking-productos'),
+        'auth_required' => env('SALES_AUTH_REQUIRED', false),
+        'history_path' => env('SALES_HISTORY_PATH', '/api/ventas'),
+        // Opcionales: si estan vacios, G1 deriva compradores y ranking de history_path.
+        'buyers_path' => env('SALES_BUYERS_PATH'),
+        'ranking_path' => env('SALES_RANKING_PATH'),
     ],
 
     'catalog' => [
@@ -52,6 +54,14 @@ return [
         'token' => env('CATALOG_SERVICE_TOKEN'),
         'auth_required' => false,
         'products_path' => env('CATALOG_PRODUCTS_PATH', '/api/v1/productos'),
+    ],
+
+    // Consumidor G1 independiente del contrato de pagos confirmados de billing.
+    'rendiciones' => [
+        'url' => env('G1_RENDICIONES_URL'),
+        'token' => env('G1_RENDICIONES_TOKEN'),
+        'auth_required' => true,
+        'path' => env('G1_RENDICIONES_PATH', '/api/v1/rendiciones'),
     ],
 
     'billing' => [

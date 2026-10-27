@@ -2,7 +2,12 @@
 
 @section('titulo', 'Detalle de cierre')
 
+@push('styles')
+<link rel="stylesheet" href="{{ asset('css/g2-finanzas.css') }}">
+@endpush
+
 @section('contenido')
+<div class="g2-page">
     @php
         $etiquetasMedio = ['efectivo' => 'Efectivo', 'cheque' => 'Cheque', 'transferencia' => 'Transferencia', 'otro' => 'Otro'];
         $etiquetasTipo = ['reversion' => 'Reversión de cobro', 'ingreso_manual' => 'Ingreso manual', 'pago_proveedor' => 'Pago a proveedor', 'extraccion' => 'Extracción'];
@@ -153,4 +158,5 @@
             });
         });
     </script>
+</div>
 @endsection

@@ -5,10 +5,11 @@ namespace App\Modules\ConciliacionBancaria\Controllers;
 use App\Modules\ConciliacionBancaria\Services\ConciliacionService;
 use App\Modules\Shared\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use App\Modules\Shared\Auth\G2Identity;
 
 class ConciliacionWebController extends Controller
 {
-    private const ID_USUARIO_PROVISORIO = 1;
+
 
     public function __construct(private ConciliacionService $service)
     {
@@ -16,12 +17,16 @@ class ConciliacionWebController extends Controller
 
     public function index(Request $request)
     {
-        // Crea el periodo automatico del mes si todavia no existe.
-        $this->service->asegurarPeriodoAutomaticoDelMes(self::ID_USUARIO_PROVISORIO);
-
         $periodos = $this->service->listarPeriodos($request->query('estado'));
 
         return view('conciliacion.index', compact('periodos'));
+    }
+
+    public function asegurarMes()
+    {
+        $this->service->asegurarPeriodoAutomaticoDelMes(G2Identity::id());
+
+        return redirect()->route('conciliacion.index')->with('mensaje', 'Período del mes disponible.');
     }
 
     public function create()
@@ -36,7 +41,7 @@ class ConciliacionWebController extends Controller
             'fecha_hasta' => ['required', 'date', 'after_or_equal:fecha_desde'],
         ]);
 
-        $datos['id_usuario'] = self::ID_USUARIO_PROVISORIO;
+        $datos['id_usuario'] = G2Identity::id();
 
         $resultado = $this->service->crearPeriodo($datos);
 
@@ -99,7 +104,7 @@ class ConciliacionWebController extends Controller
 
         $payload = [
             $mapaCampos[$datos['tipo_origen']] => $datos['id_origen'],
-            'id_usuario' => self::ID_USUARIO_PROVISORIO,
+            'id_usuario' => G2Identity::id(),
         ];
 
         $resultado = $this->service->conciliarManual($id, $payload);

@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Stock\Models;
 
+use App\Modules\Login\Models\User;
 use App\Modules\Productos\Models\Producto;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -46,7 +47,7 @@ class MovimientoStock extends Model
 
     public function usuario(): BelongsTo
     {
-        return $this->belongsTo(\App\Models\Usuario::class, 'id_usuario', 'id_usuario');
+        return $this->belongsTo(User::class, 'id_usuario', 'id');
     }
 
     public function producto(): BelongsTo

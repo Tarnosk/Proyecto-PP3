@@ -3,30 +3,35 @@
 @section('title', 'Clientes por producto | Reportes')
 
 @section('content')
+    @include('reports.partials.navigation')
     <section class="page-heading">
         <p class="eyebrow">Reportes</p>
         <h1>Clientes por producto</h1>
+        <p>Compras en ventas confirmadas, preparadas, entregadas, pagadas o facturadas. Cada cliente registrado se cuenta una sola vez; se excluyen pendientes y canceladas.</p>
+        @if ($productsFromSales)
+            <p>Se muestran productos con ventas confirmadas o posteriores, según los datos históricos de Ventas. No incluye productos sin ventas ni reemplaza el catálogo completo.</p>
+        @endif
     </section>
 
     <form class="toolbar-form report-filter" action="{{ route('reports.client-product-reach') }}" method="get">
         <div class="field client-filter">
-            <label for="producto_id">Producto</label>
+            <label for="producto_id">{{ $productsFromSales ? 'Productos con ventas' : 'Producto' }}</label>
             <select id="producto_id" name="producto_id" required @disabled($productos->isEmpty())>
                 <option value="">Seleccionar...</option>
                 @foreach ($productos as $opcion)
-                    <option value="{{ $opcion->id }}" @selected($producto?->id === $opcion->id)>{{ $opcion->nombre }} ({{ $opcion->codigo }})</option>
+                    <option value="{{ $opcion->id }}" @selected($producto?->id === $opcion->id)>{{ $opcion->nombre }} ({{ $opcion->codigo ?: 'ID '.$opcion->id }})</option>
                 @endforeach
             </select>
         </div>
         <div class="toolbar-actions">
-            <button class="button button-primary" type="submit" @disabled($productos->isEmpty())>Consultar</button>
+            <button class="button button-primary" type="submit" @disabled(! $ready || $productos->isEmpty())>Consultar</button>
         </div>
     </form>
 
     @if (! $ready)
-        <section class="table-panel"><p class="empty-state">Este reporte estara disponible cuando G3 publique el catalogo y G4 publique los compradores por producto.</p></section>
+        <section class="table-panel"><p class="empty-state">@if ($catalogReady) El catálogo está conectado. Falta conectar la API de Ventas para consultar compradores. @else Este reporte estara disponible cuando G3 publique el catalogo y este conectada la API de Ventas. @endif</p></section>
     @elseif ($productos->isEmpty())
-        <section class="table-panel"><p class="empty-state">No hay productos registrados.</p></section>
+        <section class="table-panel"><p class="empty-state">{{ $productsFromSales ? 'No hay productos con ventas confirmadas o posteriores.' : 'No hay productos registrados.' }}</p></section>
     @elseif ($producto)
         <section class="product-reach-summary" aria-label="Porcentaje de clientes">
             <strong>{{ number_format($porcentaje, 2, ',', '.') }}%</strong>

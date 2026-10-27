@@ -1,39 +1,25 @@
 <?php
+
 namespace App\Modules\Shared\Http;
 
-/**
- * Helper para responder en formato JSON estándar:
- * { "data": ..., "error": bool, "mensaje": "...", "codigo": int }
- */
+use Illuminate\Http\JsonResponse;
+
+/** Conserva el contrato de G2 y permite terminar el ciclo HTTP de Laravel. */
 class Response
 {
-    public static function json($data, int $status = 200, ?string $mensaje = null): void
+    public static function json($data, int $status = 200, ?string $mensaje = null): JsonResponse
     {
-        if (!headers_sent()) {
-            http_response_code($status);
-            header('Content-Type: application/json; charset=utf-8');
-        }
-        echo json_encode([
-            'error' => false,
-            'codigo' => $status,
-            'mensaje' => $mensaje ?? 'Operación exitosa',
-            'data' => $data
-        ], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
-        exit;
+        return response()->json([
+            'error' => false, 'codigo' => $status,
+            'mensaje' => $mensaje ?? 'Operación exitosa', 'data' => $data,
+        ], $status);
     }
 
-    public static function error(string $mensaje, int $status = 400, $detalles = null): void
+    public static function error(string $mensaje, int $status = 400, $detalles = null): JsonResponse
     {
-        if (!headers_sent()) {
-            http_response_code($status);
-            header('Content-Type: application/json; charset=utf-8');
-        }
-        echo json_encode([
-            'error' => true,
-            'codigo' => $status,
-            'mensaje' => $mensaje,
-            'detalles' => $detalles
-        ], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
-        exit;
+        return response()->json([
+            'error' => true, 'codigo' => $status,
+            'mensaje' => $mensaje, 'detalles' => $detalles,
+        ], $status);
     }
 }

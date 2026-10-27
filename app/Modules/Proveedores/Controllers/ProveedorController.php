@@ -14,7 +14,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use App\Support\UsuarioActual;
-use App\Models\LogAuditoria;
+use App\Modules\Productos\Models\LogAuditoria;
 use App\Support\AuditoriaLogger;
 
 /**
@@ -659,43 +659,6 @@ class ProveedorController extends Controller
             } elseif ($precio !== null && $asoc->precio_acordado === null) {
                 $asoc->update(['precio_acordado' => $precio]);
                 $actualizadas++;
-            }
-        }
-
-        // 4. Afinidad automática por rubro/categoría para productos activos
-        $provBebidas = Proveedor::where('estado', 'activo')->where('razon_social', 'LIKE', '%Bebidas%')->first();
-        $provLacteos = Proveedor::where('estado', 'activo')->where('razon_social', 'LIKE', '%Lácteos%')->first();
-        $provLimpieza = Proveedor::where('estado', 'activo')->where('razon_social', 'LIKE', '%Limpieza%')->first();
-        $provDefault = Proveedor::where('estado', 'activo')->orderBy('id_proveedor')->first();
-
-        $productosActivos = Producto::with('categoria')->where('estado', 'activo')->get();
-        foreach ($productosActivos as $p) {
-            $catNom = strtolower($p->categoria?->nombre ?? '');
-            $targetProv = null;
-            if (str_contains($catNom, 'bebida') && $provBebidas) {
-                $targetProv = $provBebidas;
-            } elseif (str_contains($catNom, 'lácteo') && $provLacteos) {
-                $targetProv = $provLacteos;
-            } elseif (str_contains($catNom, 'limpieza') && $provLimpieza) {
-                $targetProv = $provLimpieza;
-            } elseif ($provDefault) {
-                $targetProv = $provDefault;
-            }
-
-            if ($targetProv) {
-                $yaTiene = ProductoProveedor::where('id_producto', $p->id_producto)->where('activo', true)->exists();
-                if (!$yaTiene) {
-                    ProductoProveedor::create([
-                        'id_producto' => $p->id_producto,
-                        'id_proveedor' => $targetProv->id_proveedor,
-                        'es_proveedor_principal' => true,
-                        'precio_acordado' => $p->precio_unitario ? round((float) $p->precio_unitario * 0.75, 2) : null,
-                        'activo' => true,
-                        'fecha_asociacion' => $hoy,
-                        'id_usuario' => $idUsuario,
-                    ]);
-                    $nuevas++;
-                }
             }
         }
 

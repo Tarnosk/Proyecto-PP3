@@ -4,14 +4,12 @@ namespace Tests\Feature;
 
 use App\Modules\Login\Enums\UserRole;
 use App\Modules\Login\Models\User;
-use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 class LoginRoleVisibilityTest extends TestCase
 {
-    use DatabaseTransactions, \Tests\UsesG3Database {
-        \Tests\UsesG3Database::beginDatabaseTransaction insteadof DatabaseTransactions;
-    }
+    use RefreshDatabase;
 
     public function test_each_role_receives_its_own_dashboard_content(): void
     {
@@ -41,7 +39,7 @@ class LoginRoleVisibilityTest extends TestCase
             ->get(route('dashboard'))
             ->assertOk()
             ->assertSeeText('Panel contador')
-            ->assertSeeText('Reportes contables')
+            ->assertSeeText('Reportes de clientes')
             ->assertSeeText('Finanzas y Tesorería')
             ->assertDontSeeText('Lista de Usuarios')
             ->assertDontSeeText('Ventas y Pedidos');
@@ -59,6 +57,7 @@ class LoginRoleVisibilityTest extends TestCase
         $this->get(route('reports.index'))->assertRedirect(route('dashboard'));
         $this->get(route('clientes.index'))->assertOk();
         $this->get(route('ventas.index'))->assertOk();
-        $this->get(route('stock.index'))->assertOk();
+        $this->get(route('stock.index'))->assertRedirect('/inventario');
+        $this->get('/inventario')->assertOk();
     }
 }

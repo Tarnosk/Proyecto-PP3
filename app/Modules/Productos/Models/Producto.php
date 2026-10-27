@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Productos\Models;
 
+use App\Modules\Login\Models\User;
 use App\Modules\Stock\Models\Lote;
 use App\Modules\Stock\Models\MovimientoStock;
 use App\Modules\Stock\Models\Ubicacion;
@@ -174,12 +175,12 @@ class Producto extends Model
 
     public function usuarioCarga(): BelongsTo
     {
-        return $this->belongsTo(\App\Models\Usuario::class, 'id_usuario_carga', 'id_usuario');
+        return $this->belongsTo(User::class, 'id_usuario_carga', 'id');
     }
 
     public function usuarioModificacion(): BelongsTo
     {
-        return $this->belongsTo(\App\Models\Usuario::class, 'id_usuario_modificacion', 'id_usuario');
+        return $this->belongsTo(User::class, 'id_usuario_modificacion', 'id');
     }
 
     /**

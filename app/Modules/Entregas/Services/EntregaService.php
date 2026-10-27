@@ -7,7 +7,7 @@ use App\Modules\Entregas\Models\Entrega;
 use App\Modules\Entregas\Models\Remito;
 use App\Modules\Entregas\Repositories\EntregaRepository;
 use App\Modules\Entregas\Repositories\RemitoRepository;
-use App\Modules\Ventas\Services\VentasApiClient;
+use App\Modules\Entregas\Integraciones\VentasApiClient;
 
 /**
  * Servicio de Negocio: Entregas y Remitos
@@ -52,7 +52,7 @@ class EntregaService
         int $idRepartidor,
         array $pedidosIds,
         string $fechaSalida,
-        int $idUsuarioCreacion = 1,
+        int $idUsuarioCreacion,
         ?string $observaciones = null
     ): array {
         if (empty($pedidosIds)) {
@@ -207,8 +207,8 @@ class EntregaService
     public function confirmarPedidoEntregado(
         int $idEntrega,
         int $idVenta,
-        ?string $observaciones = null,
-        int $idUsuarioAuditoria = 1
+        ?string $observaciones,
+        int $idUsuarioAuditoria
     ): array {
         if ($idEntrega <= 0) {
             throw new Exception("El ID de entrega es inválido.");
@@ -281,4 +281,3 @@ class EntregaService
         return $this->entregaRepo->obtenerEntregasListasParaRendicion($idRepartidor);
     }
 }
-

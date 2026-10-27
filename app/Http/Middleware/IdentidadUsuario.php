@@ -5,28 +5,22 @@ declare(strict_types=1);
 namespace App\Http\Middleware;
 
 use App\Modules\Login\Enums\UserRole;
+use App\Modules\Login\Models\User;
 use App\Modules\Login\Services\ApiTokenService;
 use App\Support\UsuarioActual;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Middleware de identidad (contrato con G1 - autenticación).
+ * Middleware de identidad (integrado con App\Modules\Login de G1).
  *
- * G1 autentica (login, token o sesión) y este middleware traduce esa
- * identidad a un atributo confiable de request ('usuario_autenticado_id'),
- * que los módulos leen via UsuarioActual::id(). Si G1 usa un guard de
- * Laravel contra la tabla USUARIO, se detecta aquí automáticamente
- * (guard 'proyecto' o el guard por defecto).
- *
- * Mientras G1 no integre el login no hay identidad marcada y
- * UsuarioActual cae al fallback de usuario administrativo activo.
+ * Resuelve el usuario autenticado desde el módulo Login (tabla usuarios / modelo User)
+ * o token de servicio interno, y lo expone en el atributo de request 'usuario_autenticado_id'
+ * consumido por UsuarioActual::id().
  */
 class IdentidadUsuario
 {
@@ -43,7 +37,7 @@ class IdentidadUsuario
 
     private function idDisponible(Request $request): ?int
     {
-        // 1. Token Bearer (G1 / llamadas autenticadas entre módulos)
+        // 1. Token Bearer (ApiTokenService de G1 / llamadas autenticadas entre módulos)
         $bearer = $request->bearerToken();
         if (! empty($bearer)) {
             $idToken = $this->resolverTokenG1($bearer);
@@ -52,54 +46,39 @@ class IdentidadUsuario
             }
         }
 
-        // 2. Encabezado directo de ID de usuario
-        $headerId = $request->header('X-User-Id');
-        if (! empty($headerId) && is_numeric($headerId) && (int) $headerId > 0) {
-            return (int) $headerId;
-        }
-
-        // 3. Identidad enviada desde el frontend SPA / cliente HTTP
-        $headerUsername = $request->header('X-User-Username');
-        $headerNameRaw = $request->header('X-User-Name');
-        $headerName = $headerNameRaw ? urldecode($headerNameRaw) : null;
-        $headerRole = $request->header('X-User-Role');
-
-        if (! empty($headerUsername) || ! empty($headerName)) {
-            $resolvedId = $this->resolverOCrearUsuario($headerUsername, $headerName, $headerRole);
-            if ($resolvedId !== null) {
-                return $resolvedId;
-            }
-        }
-
-        // 4. Guard de Laravel configurado
+        // 2. Guard de Laravel configurado ('proyecto' o guard web por defecto de G1)
         $guard = config('auth.guards.proyecto') !== null ? Auth::guard('proyecto') : null;
-
         if ($guard !== null && $guard->check()) {
             return (int) $guard->id();
         }
 
         if (Auth::check()) {
-            $user = Auth::user();
-            if ($user && ! empty($user->usuario)) {
-                $rolStr = $user->rol instanceof UserRole ? $user->rol->value : (string) ($user->rol ?? 'administrativo');
-                $resolvedId = $this->resolverOCrearUsuario($user->usuario, $user->nombre ?? null, $rolStr);
-                if ($resolvedId !== null) {
-                    return $resolvedId;
-                }
-            }
-
             return (int) Auth::id();
+        }
+
+        // 3. Encabezado directo de ID de usuario (compatibilidad de pruebas internas)
+        $headerId = $request->header('X-User-Id');
+        if (! empty($headerId) && is_numeric($headerId) && (int) $headerId > 0) {
+            return (int) $headerId;
+        }
+
+        // 4. Búsqueda de sólo lectura por nombre de usuario en headers (sin aprovisionar en GET)
+        $headerUsername = $request->header('X-User-Username');
+        $headerNameRaw = $request->header('X-User-Name');
+        $headerName = $headerNameRaw ? urldecode($headerNameRaw) : null;
+
+        if (! empty($headerUsername) || ! empty($headerName)) {
+            $resolvedId = $this->buscarUsuarioExistente($headerUsername, $headerName);
+            if ($resolvedId !== null) {
+                return $resolvedId;
+            }
         }
 
         return null;
     }
 
     /**
-     * Resuelve un token emitido por el módulo de autenticación (Grupo 1).
-     * Soporta:
-     * - Token interno de servicio entre grupos (services.internal_api.token).
-     * - Token de sesión registrado en tabla usuario (current_session_id sha256).
-     * - Token cifrado de G1 con payload JSON (user_id + expires_at).
+     * Resuelve un token emitido por el módulo de autenticación (App\Modules\Login de G1).
      */
     private function resolverTokenG1(?string $token): ?int
     {
@@ -114,155 +93,65 @@ class IdentidadUsuario
                 return 1;
             }
 
-            // B) Token emitido por ApiTokenService (G1)
-            try {
-                $apiTokenService = app(ApiTokenService::class);
-                $authUser = $apiTokenService->resolve($token);
-                if ($authUser !== null) {
-                    $rolStr = $authUser->rol instanceof UserRole ? $authUser->rol->value : (string) ($authUser->rol ?? 'administrativo');
-                    $legacyId = $this->resolverOCrearUsuario($authUser->usuario, $authUser->nombre, $rolStr);
-                    if ($legacyId !== null) {
-                        return $legacyId;
-                    }
-
-                    return (int) $authUser->id;
-                }
-            } catch (\Throwable $e) {
+            // B) Token emitido y validado por ApiTokenService (G1)
+            $apiTokenService = app(ApiTokenService::class);
+            $authUser = $apiTokenService->resolve($token);
+            if ($authUser !== null) {
+                return (int) $authUser->id;
             }
 
-            // C) Token registrado en sesión activa de usuario (tabla usuarios o usuario)
+            // C) Token registrado en sesión activa de tabla usuarios (G1)
             $hashToken = hash('sha256', $token);
             if (Schema::hasTable('usuarios') && Schema::hasColumn('usuarios', 'current_session_id')) {
-                $userByToken = DB::table('usuarios')->where('current_session_id', $hashToken)->where('estado', 'activo')->first();
-                if ($userByToken) {
-                    $legacyId = $this->resolverOCrearUsuario($userByToken->usuario, $userByToken->nombre ?? null, $userByToken->rol ?? 'administrativo');
-                    if ($legacyId !== null) {
-                        return $legacyId;
-                    }
-
-                    return (int) $userByToken->id;
-                }
-            }
-
-            $tablaUsuario = Schema::hasTable('usuario') ? 'usuario' : (Schema::hasTable('users') ? 'users' : null);
-            if ($tablaUsuario !== null && Schema::hasColumn($tablaUsuario, 'current_session_id')) {
-                $campoId = Schema::hasColumn($tablaUsuario, 'id_usuario') ? 'id_usuario' : 'id';
-                $usuarioPorSession = DB::table($tablaUsuario)
+                $userId = User::query()
                     ->where('current_session_id', $hashToken)
-                    ->where(function ($q) use ($tablaUsuario) {
-                        if (Schema::hasColumn($tablaUsuario, 'estado')) {
-                            $q->where('estado', 'activo');
-                        }
-                    })
-                    ->value($campoId);
-
-                if ($usuarioPorSession !== null) {
-                    return (int) $usuarioPorSession;
-                }
-            }
-
-            // D) Desencriptar payload de token si fue emitido con Crypt de Laravel
-            $payloadJson = Crypt::decryptString($token);
-            $payload = json_decode($payloadJson, true);
-
-            if (is_array($payload) && isset($payload['user_id'])) {
-                if (! isset($payload['expires_at']) || (int) $payload['expires_at'] > time()) {
-                    return (int) $payload['user_id'];
+                    ->where('estado', 'activo')
+                    ->value('id');
+                if ($userId !== null) {
+                    return (int) $userId;
                 }
             }
         } catch (\Throwable $e) {
-            // Silencioso: si el token no es compatible, continúa la cadena de resolución
+            // Silencioso: si el token no es válido, no autentica
         }
 
         return null;
     }
 
-    private function resolverOCrearUsuario(?string $username, ?string $nombre, ?string $rol): ?int
+    private function buscarUsuarioExistente(?string $username, ?string $nombre): ?int
     {
         try {
-            $columnas = Schema::getConnection()->getSchemaBuilder()->getColumnListing('usuario');
-            $nombreExiste = in_array('nombre', $columnas, true);
-            $campoUsuario = in_array('user', $columnas, true) ? 'user' : 'usuario';
-            $campoPassword = in_array('password', $columnas, true) ? 'password' : 'password_hash';
-
-            $query = DB::table('usuario');
-            if (! empty($username)) {
-                $query->where($campoUsuario, $username);
-            } elseif (! empty($nombre) && $nombreExiste) {
-                $query->where('nombre', $nombre);
-            }
-
-            $user = $query->first();
-
-            if ($user) {
-                if (! empty($nombre) && $nombreExiste && ($user->nombre === 'Administrador' || empty($user->nombre))) {
-                    DB::table('usuario')
-                        ->where('id_usuario', $user->id_usuario)
-                        ->update(['nombre' => $nombre]);
+            if (Schema::hasTable('usuarios')) {
+                $query = User::query();
+                if (! empty($username)) {
+                    $query->where('usuario', $username);
+                } elseif (! empty($nombre)) {
+                    $query->where('nombre', $nombre);
                 }
-
-                return (int) $user->id_usuario;
-            }
-
-            if (! empty($nombre) && $nombreExiste) {
-                $userByNombre = DB::table('usuario')
-                    ->where('nombre', $nombre)
-                    ->first();
-                if ($userByNombre) {
-                    return (int) $userByNombre->id_usuario;
+                $id = $query->value('id');
+                if ($id !== null) {
+                    return (int) $id;
                 }
             }
 
-            $nombreFinal = ! empty($nombre) ? $nombre : ($username ?: 'Usuario');
-            $userLogin = ! empty($username) ? $username : strtolower(preg_replace('/[^a-zA-Z0-9]/', '', $nombreFinal));
-            if (empty($userLogin)) {
-                $userLogin = 'usr_'.time();
+            if (Schema::hasTable('usuario')) {
+                $columnas = Schema::getColumnListing('usuario');
+                $campoUsuario = in_array('user', $columnas, true) ? 'user' : 'usuario';
+                $query = DB::table('usuario');
+                if (! empty($username)) {
+                    $query->where($campoUsuario, $username);
+                } elseif (! empty($nombre) && in_array('nombre', $columnas, true)) {
+                    $query->where('nombre', $nombre);
+                }
+                $id = $query->value('id_usuario');
+                if ($id !== null) {
+                    return (int) $id;
+                }
             }
-
-            $rolEnum = match (strtolower((string) $rol)) {
-                'repartidor' => 'repartidor',
-                'vendedor', 'preventista' => 'vendedor',
-                'contador' => 'contador',
-                'deposito' => 'deposito',
-                default => 'administrativo',
-            };
-
-            $insertData = [
-                $campoUsuario => $userLogin,
-                'rol' => $rolEnum,
-                'estado' => 'activo',
-                $campoPassword => Hash::make('secret123'),
-            ];
-
-            if ($nombreExiste) {
-                $insertData['nombre'] = $nombreFinal;
-            }
-
-            $newId = $this->crearUsuarioConClienteCompatible($insertData, $nombreFinal, $userLogin);
-
-            return (int) $newId;
         } catch (\Throwable $e) {
             return null;
         }
-    }
 
-    private function crearUsuarioConClienteCompatible(array $insertData, string $nombreFinal, string $userLogin): int
-    {
-        if (Schema::hasTable('cliente')) {
-            $clienteMax = (int) DB::table('cliente')->max('id_cliente');
-            $usuarioMax = (int) DB::table('usuario')->max('id_usuario');
-            $proximoId = max($clienteMax, $usuarioMax) + 1;
-            $insertData['id_usuario'] = $proximoId;
-
-            DB::table('cliente')->insertOrIgnore([
-                'id_cliente' => $proximoId,
-                'nombre' => $nombreFinal,
-                'estado' => 'activo',
-            ]);
-
-            return (int) DB::table('usuario')->insertGetId($insertData);
-        }
-
-        return (int) DB::table('usuario')->insertGetId($insertData);
+        return null;
     }
 }

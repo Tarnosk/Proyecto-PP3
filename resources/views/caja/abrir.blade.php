@@ -2,7 +2,12 @@
 
 @section('titulo', 'Abrir Caja')
 
+@push('styles')
+<link rel="stylesheet" href="{{ asset('css/g2-finanzas.css') }}">
+@endpush
+
 @section('contenido')
+<div class="g2-page">
     <div class="clay-card card-angosta">
         <h2>Abrir caja del dia</h2>
 
@@ -61,4 +66,5 @@
             });
         });
     </script>
+</div>
 @endsection

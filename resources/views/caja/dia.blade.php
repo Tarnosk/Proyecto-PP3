@@ -34,7 +34,12 @@
         && $vencimiento->lte(now()->addHours(24));
 @endphp
 
+@push('styles')
+<link rel="stylesheet" href="{{ asset('css/g2-finanzas.css') }}">
+@endpush
+
 @section('contenido')
+<div class="g2-page">
     @if ($porVencer)
         <div class="alerta" style="background:#FFF4D6;color:#6B4E00;border:1px solid #F0D98A;margin-bottom:16px;">
             <strong>Recordatorio:</strong> esta caja vence el {{ $vencimiento->format('d/m/Y H:i') }} (faltan menos de 24 horas).
@@ -278,4 +283,5 @@
                 });
         });
     </script>
+</div>
 @endsection

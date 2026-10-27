@@ -398,7 +398,7 @@ class RendicionService
 
         $cobrosSugeridos = [];
         $totalRendidoSugerido = 0.0;
-        $ventasClient = new \App\Modules\Ventas\Services\VentasApiClient();
+        $ventasClient = new \App\Modules\Entregas\Integraciones\VentasApiClient();
 
         foreach ($pedidosRaw as $p) {
             $venta = $ventasClient->obtenerVentaPorId((int)$p->id_venta);
@@ -507,4 +507,3 @@ class RendicionService
         ];
     }
 }
-

@@ -42,12 +42,21 @@ class ReportController extends Controller
             'producto_id' => ['nullable', 'integer', 'min:1'],
             'page' => ['nullable', 'integer', 'min:1'],
         ]);
-        $ready = $catalog->isConfigured() && $reports->salesAvailable();
-        $productos = $ready ? $catalog->products() : collect();
+        $catalogReady = $catalog->isConfigured();
+        $ready = $catalogReady && $reports->buyersAvailable();
+        $productos = $catalogReady ? $catalog->products() : collect();
+        $productsFromSales = ! $catalogReady && $reports->salesAvailable() && filled(config('services.sales.history_path'));
+        $derivedBuyerIds = null;
+        if ($productsFromSales) {
+            $reach = $reports->salesProductReach(isset($filters['producto_id']) ? (int) $filters['producto_id'] : null);
+            $productos = $reach['products'];
+            $derivedBuyerIds = $reach['buyer_ids'];
+            $ready = true;
+        }
         $producto = isset($filters['producto_id'])
             ? $productos->firstWhere('id', (int) $filters['producto_id'])
             : null;
-        if ($ready && isset($filters['producto_id'])) {
+        if (($catalogReady || $productsFromSales) && isset($filters['producto_id'])) {
             abort_unless($producto, 404);
         }
         $totalClientes = Cliente::query()->count();
@@ -55,7 +64,7 @@ class ReportController extends Controller
         $porcentaje = null;
 
         if ($ready && $producto) {
-            $buyerIds = $reports->productBuyerIds($producto->id);
+            $buyerIds = $derivedBuyerIds ?? $reports->productBuyerIds($producto->id);
             $clientes = Cliente::query()
                 ->whereIn('id', $buyerIds)
                 ->orderBy('apellido_razon_social')
@@ -70,6 +79,8 @@ class ReportController extends Controller
 
         return view('reports.client-product-reach', [
             'ready' => $ready,
+            'catalogReady' => $catalogReady,
+            'productsFromSales' => $productsFromSales,
             'productos' => $productos,
             'producto' => $producto,
             'clientes' => $clientes,
@@ -125,7 +136,7 @@ class ReportController extends Controller
             'hasta' => ['nullable', 'date', 'after_or_equal:desde'],
             'page' => ['nullable', 'integer', 'min:1'],
         ]);
-        $ready = $finance->isConfigured('sales');
+        $ready = $finance->productRankingAvailable();
         $ranking = $ready
             ? collect($finance->productRanking($filters['desde'] ?? null, $filters['hasta'] ?? null))
                 ->sortByDesc('cantidad_vendida')->values()

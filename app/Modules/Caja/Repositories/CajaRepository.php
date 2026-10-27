@@ -97,18 +97,18 @@ class CajaRepository
             ->where('fecha_hora_vencimiento', '<', $ahora)
             ->whereIn(
                 'id_usuario',
-                \App\Modules\Shared\Models\Usuario::where('rol', Caja::ROL_REPARTIDOR)->select('id_usuario')
+                \App\Modules\Login\Models\User::where('rol', Caja::ROL_REPARTIDOR)->select('id')
             )
             ->get();
     }
 
     /**
-     * Rol del usuario dueño de una caja (tabla USUARIO, de G1). Lo usa el
+     * Rol del usuario dueño de una caja (directorio de G1). Lo usa el
      * Service para saber si un admin puede cerrar esa caja.
      */
     public function rolDeUsuario(int $idUsuario): ?string
     {
-        return \App\Modules\Shared\Models\Usuario::where('id_usuario', $idUsuario)->value('rol');
+        return \App\Modules\Shared\Services\UsuarioService::obtenerUsuario($idUsuario)['rol'] ?? null;
     }
 
     public function crear(array $datos): Caja

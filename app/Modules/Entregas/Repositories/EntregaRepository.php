@@ -5,7 +5,7 @@ use PDO;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use App\Modules\Entregas\Models\Entrega;
-use App\Modules\Ventas\Services\VentasApiClient;
+use App\Modules\Entregas\Integraciones\VentasApiClient;
 use App\Modules\Shared\Services\UsuarioService;
 
 class EntregaRepository
@@ -66,42 +66,7 @@ class EntregaRepository
             return $venta['items'];
         }
 
-        // Fallback si la tabla detalle_venta existiera localmente
-        if (Schema::hasTable('detalle_venta') && Schema::hasTable('producto')) {
-            try {
-                $sql = "
-                    SELECT 
-                        dv.id_detalle_venta,
-                        dv.id_producto,
-                        p.codigo,
-                        p.nombre AS producto_nombre,
-                        p.descripcion AS producto_descripcion,
-                        dv.cantidad,
-                        dv.precio_unitario,
-                        dv.subtotal,
-                        dv.bultos,
-                        dv.unidades_sueltas
-                    FROM detalle_venta dv
-                    INNER JOIN producto p ON dv.id_producto = p.id_producto
-                    WHERE dv.id_venta = :id_venta
-                ";
-                $stmt = $this->db->prepare($sql);
-                $stmt->execute([':id_venta' => $idVenta]);
-                return $stmt->fetchAll(PDO::FETCH_ASSOC);
-            } catch (\Throwable) {}
-        }
-
-        return [
-            [
-                'id_producto' => 1,
-                'codigo' => 'ART-' . $idVenta,
-                'producto_nombre' => 'Mercadería consolidada Pedido #' . $idVenta,
-                'cantidad' => 1,
-                'precio_unitario' => (float)($venta['total'] ?? 10000.00),
-                'subtotal' => (float)($venta['total'] ?? 10000.00),
-                'bultos' => (int)($venta['total_bultos'] ?? 1)
-            ]
-        ];
+        throw new \UnexpectedValueException('Ventas no devolvió los artículos reales del pedido.');
     }
 
     /**
@@ -167,16 +132,6 @@ class EntregaRepository
     {
         $this->ventasClient->actualizarEstadoVenta($idVenta, $nuevoEstado);
 
-        if (Schema::hasTable('venta')) {
-            try {
-                $sql = "UPDATE venta SET estado = :estado WHERE id_venta = :id_venta";
-                $stmt = $this->db->prepare($sql);
-                $stmt->execute([
-                    ':estado' => $nuevoEstado,
-                    ':id_venta' => $idVenta
-                ]);
-            } catch (\Throwable) {}
-        }
     }
 
     /**
@@ -295,12 +250,12 @@ class EntregaRepository
     }
 
     /**
-     * Listar Zonas (Tabla propia G2)
+     * Listar zonas del catálogo de G1 (sólo lectura)
      */
     public function listarZonas(): array
     {
-        $stmt = $this->db->query("SELECT * FROM zona ORDER BY nombre ASC");
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+                return \App\Modules\Clientes\Models\Zona::orderBy('nombre')->get()
+            ->map(fn ($zone) => ['id_zona' => (int) $zone->getKey(), 'nombre' => $zone->nombre, 'descripcion' => $zone->descripcion])->all();
     }
 
     /**

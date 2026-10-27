@@ -1,0 +1,213 @@
+
+
+/* Variables generales */
+:root {
+    --bg-general: #EBF4FC;
+    --text-main: #1E293B;
+    --brand-blue: #0D6EFD;
+    --brand-blue-dark: #0b5ed7;
+    --brand-orange: #ea580c;
+}
+
+body {
+    background-color: var(--bg-general);
+    color: var(--text-main);
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-size: 1rem;
+}
+
+/* Reglas de accesibilidad */
+button,
+input,
+select,
+a.clay-btn-primary,
+.btn {
+    min-height: 40px;
+}
+
+button:focus,
+input:focus,
+a:focus {
+    outline: 3px solid var(--brand-blue);
+    outline-offset: 2px;
+}
+
+/* Claymorfismo */
+.clay-card {
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(16px);
+    border-radius: 20px;
+    box-shadow:
+        inset 2px 2px 5px rgba(255, 255, 255, 0.7),
+        inset -2px -2px 5px rgba(0, 0, 0, 0.05),
+        6px 6px 12px rgba(0, 0, 0, 0.06);
+    padding: 1.25rem;
+    margin-bottom: 1.25rem;
+    border: 1px solid rgba(255, 255, 255, 0.6);
+}
+
+.clay-input {
+    background: #f8fafc;
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    padding: 0.5rem 0.8rem;
+    font-size: 0.9rem;
+}
+
+.clay-btn-primary {
+    background-color: var(--brand-blue);
+    color: #ffffff;
+    border: none;
+    border-radius: 10px;
+    padding: 0.5rem 1rem;
+    font-weight: 700;
+    font-size: 0.85rem;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    cursor: pointer;
+    box-shadow: 0 4px 6px -1px rgba(13, 110, 253, 0.3);
+}
+
+.clay-btn-primary:hover {
+    background-color: var(--brand-blue-dark);
+}
+
+/* Tablas */
+.table-custom {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.table-custom th {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    color: #94a3b8;
+    letter-spacing: 0.05em;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.table-custom td {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+/* Filas e interacciones */
+.promo-row {
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    border-left: 4px solid transparent;
+}
+
+.promo-row:hover {
+    background-color: #f8fafc;
+}
+
+.promo-row.row-selected {
+    background-color: #fff7ed !important;
+    border-left-color: var(--brand-blue) !important;
+}
+
+/* Badges y Botones de la tabla */
+.badge-discount {
+    background-color: #ffedd5;
+    color: var(--brand-orange);
+    padding: 0.2rem 0.6rem;
+    border-radius: 9999px;
+    font-weight: bold;
+    font-size: 0.85rem;
+}
+
+/* AGRUPACIÓN HORIZONTAL DE BOTONES */
+.actions-group {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.btn-action {
+    border: none;
+    border-radius: 8px;
+    padding: 0.4rem 0.75rem;
+    color: white;
+    font-weight: 600;
+    font-size: 0.85rem;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    white-space: nowrap;
+}
+
+.btn-cart {
+    background-color: var(--brand-blue);
+}
+
+.btn-cart:hover {
+    background-color: var(--brand-blue-dark);
+}
+
+.btn-edit {
+    background-color: #3b82f6;
+}
+
+.btn-edit:hover {
+    background-color: #2563eb;
+}
+
+.btn-danger {
+    background-color: #ef4444;
+}
+
+.btn-danger:hover {
+    background-color: #dc2626;
+}
+
+/* Precios */
+.price-cell .old-price {
+    display: block;
+    color: #cbd5e1;
+    font-size: 0.8rem;
+    text-decoration: line-through;
+}
+
+.price-cell .current-price {
+    color: var(--brand-orange);
+    font-weight: bold;
+}
+
+.text-right {
+    text-align: right;
+}
+
+.text-center {
+    text-align: center;
+}
+
+/* Integración de las vistas de los grupos con la navegación de G1. */
+.app-workspace { min-width: 0; }
+.layout:has(.pv-container), .layout:has(.hv-container), .layout:has(.cc-container) {
+    width: calc(100% - 32px);
+    max-width: 1440px;
+}
+.clay-btn-secondary {
+    display: inline-flex; align-items: center; padding: .5rem 1rem;
+    background: #e2e8f0; color: #1e293b; border: 0; border-radius: 10px;
+    text-decoration: none; cursor: pointer; font-weight: 700;
+}
+.subtitulo, .vacio { color: #64748b; }
+.vacio { padding: 1.5rem; text-align: center; }
+.fila-acciones, .encabezado-flex { display: flex; gap: 1rem; flex-wrap: wrap; }
+.card-angosta { max-width: 680px; margin-inline: auto; }
+.alerta { padding: 1rem; margin-block: 1rem; border-radius: 10px; }
+.alerta-error { background: #fff1f0; color: #b42318; }
+.alerta-exito { background: #ecfdf3; color: #067647; }
+@media (max-width: 760px) {
+    .layout { padding-top: 24px; }
+    .promociones-container { overflow-x: auto; }
+    #modal-promo .clay-card { padding: 1rem !important; }
+    #form-promocion > div { flex-wrap: wrap; }
+}

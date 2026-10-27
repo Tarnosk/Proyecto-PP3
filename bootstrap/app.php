@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\PresentG2Rendiciones;
 use App\Modules\Login\Middleware\AuthenticateApiRequest;
 use App\Modules\Login\Middleware\EnsureApiAudience;
 use App\Modules\Login\Middleware\EnsureApiUser;
@@ -10,6 +11,7 @@ use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
+use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -19,6 +21,7 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->web(append: [PresentG2Rendiciones::class]);
         $middleware->alias([
             'session.current' => EnsureCurrentSession::class,
             'role' => EnsureRole::class,
@@ -28,6 +31,14 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
+        $exceptions->render(function (HttpExceptionInterface $exception, Request $request) {
+            if (! $request->expectsJson() && $request->isMethod('GET') && $request->routeIs('reports.*')
+                && in_array($exception->getStatusCode(), [502, 503], true)) {
+                return response()->view('reports.unavailable', [], $exception->getStatusCode());
+            }
+
+            return null;
+        });
         $exceptions->render(function (AuthorizationException $exception, Request $request) {
             if ($request->expectsJson()) {
                 return null;

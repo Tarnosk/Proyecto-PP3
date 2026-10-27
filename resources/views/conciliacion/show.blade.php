@@ -2,7 +2,12 @@
 
 @section('titulo', 'Detalle de período')
 
+@push('styles')
+<link rel="stylesheet" href="{{ asset('css/g2-finanzas.css') }}">
+@endpush
+
 @section('contenido')
+<div class="g2-page">
     <a href="{{ route('conciliacion.index') }}" class="clay-btn-secondary link-volver">← Volver al listado</a>
 
     <div class="clay-card">
@@ -142,4 +147,5 @@
             </div>
         @endif
     @endforeach
+</div>
 @endsection

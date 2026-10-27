@@ -2,7 +2,12 @@
 
 @section('titulo', 'Historial de Cierres')
 
+@push('styles')
+<link rel="stylesheet" href="{{ asset('css/g2-finanzas.css') }}">
+@endpush
+
 @section('contenido')
+<div class="g2-page">
     <div class="clay-card">
         <h2>Historial de cierres de caja</h2>
         <p class="subtitulo">Cajas cerradas, de la mas reciente a la mas antigua.</p>
@@ -60,4 +65,5 @@
             </table>
         @endif
     </div>
+</div>
 @endsection
