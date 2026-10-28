@@ -2,7 +2,9 @@
 
 namespace App\Services\Gateways;
 
+use App\Modules\Catalogo\Services\InternalCatalogApi;
 use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Validator;
 
@@ -10,6 +12,10 @@ class ExternalJsonClient
 {
     public function isConfigured(string $service): bool
     {
+        if ($service === 'catalog' && config('catalogo.transport') === 'internal') {
+            return true;
+        }
+
         return filter_var(config("services.{$service}.url"), FILTER_VALIDATE_URL) !== false
             && (! config("services.{$service}.auth_required", true)
                 || (is_string(config("services.{$service}.token")) && config("services.{$service}.token") !== ''));
@@ -59,7 +65,7 @@ class ExternalJsonClient
         abort(502, 'El listado externo supera el limite de paginas permitido.');
     }
 
-    private function body(string $service, string $path, array $query): array
+    public function request(string $service, string $path, array $query = []): Response
     {
         $url = config("services.{$service}.url");
         $token = config("services.{$service}.token");
@@ -71,6 +77,10 @@ class ExternalJsonClient
         // Las rutas son relativas a la base configurada; no aceptar otra URL.
         abort_unless(str_starts_with($path, '/') && ! str_starts_with($path, '//') && ! str_contains($path, '://'),
             503, 'La ruta del servicio externo no es valida.');
+
+        if ($service === 'catalog' && config('catalogo.transport') === 'internal') {
+            return app(InternalCatalogApi::class)->get($path, $query);
+        }
 
         try {
             $request = Http::baseUrl(rtrim($url, '/'))
@@ -85,6 +95,13 @@ class ExternalJsonClient
         } catch (ConnectionException) {
             abort(503, 'El servicio externo no esta disponible.');
         }
+
+        return $response;
+    }
+
+    private function body(string $service, string $path, array $query): array
+    {
+        $response = $this->request($service, $path, $query);
 
         if (! $response->successful()) {
             abort(502, 'El servicio externo respondio con un error.');

@@ -167,20 +167,18 @@ class ApiAuthAndClientWriteTest extends TestCase
         $contador = User::factory()->create(['rol' => UserRole::CONTADOR]);
         $this->withToken($this->tokenFor($contador));
 
-        $this->getJson('/api/v1/clientes')->assertOk();
+        $this->getJson('/api/v1/clientes')->assertForbidden();
         $this->getJson('/api/v1/reclamos')->assertForbidden();
         $this->getJson("/api/v1/usuarios/{$contador->id}")->assertForbidden();
     }
 
-    public function test_client_list_is_public_but_client_details_and_writes_stay_protected(): void
+    public function test_client_list_details_and_writes_require_authentication(): void
     {
         $admin = User::factory()->create(['rol' => UserRole::ADMINISTRATIVO]);
         $client = Cliente::factory()->create(['creado_por' => $admin->id]);
 
         $this->getJson('/api/v1/clientes')
-            ->assertOk()
-            ->assertJsonPath('meta.total', 1)
-            ->assertJsonPath('data.0.id', $client->id);
+            ->assertUnauthorized()->assertJsonMissingPath('data');
         $this->getJson("/api/v1/clientes/{$client->id}")->assertUnauthorized();
         $this->postJson('/api/v1/clientes', $this->clientData())->assertUnauthorized();
     }

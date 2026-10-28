@@ -51,6 +51,10 @@ class EnsureCurrentSession
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
+        if ($request->expectsJson()) {
+            return response()->json(['message' => 'No autorizado.'], 401);
+        }
+
         return redirect()->route('login', ['reason' => $reason]);
     }
 }

@@ -21,6 +21,7 @@ class ClientController extends Controller
             'tipo' => ['nullable', 'in:minorista,mayorista'],
             'zona_id' => ['nullable', 'integer', 'min:1'],
             'per_page' => ['nullable', 'integer', 'between:1,100'],
+            'page' => ['nullable', 'integer', 'min:1'],
         ]);
         $search = trim($filters['buscar'] ?? '');
         $clients = Cliente::query()
@@ -46,12 +47,13 @@ class ClientController extends Controller
                 'per_page' => $clients->perPage(),
                 'total' => $clients->total(),
             ],
-        ]);
+        ])->header('Cache-Control', 'no-store');
     }
 
     public function show(Request $request, Cliente $cliente): JsonResponse
     {
-        return response()->json(['data' => (new ClientResource($cliente))->toArray($request)]);
+        return response()->json(['data' => (new ClientResource($cliente))->toArray($request)])
+            ->header('Cache-Control', 'no-store');
     }
 
     public function store(ClientWriteRequest $request, ClientWriter $writer): JsonResponse
