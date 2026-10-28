@@ -1,0 +1,298 @@
+openapi: 3.0.3
+info:
+  title: API REST ERP Juan23 - Distribuidora PyB
+  description: >-
+    Especificación OpenAPI de las APIs REST del ERP Juan23. Incluye módulos de
+    Productos, Stock, Lotes, Conteo Físico, Proveedores, Compras, Pedidos de
+    Compra y Auditoría.
+  version: 1.0.0
+servers:
+  - url: http://localhost:8000/api/v1
+    description: Servidor de desarrollo local (v1 unificado)
+  - url: http://localhost:8000/api
+    description: Acceso retrocompatible directo
+
+paths:
+  /productos:
+    get:
+      summary: Listar productos con filtros y paginación (P05)
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+          description: Búsqueda por código o nombre
+        - name: categoria_id
+          in: query
+          schema:
+            type: integer
+        - name: marca_id
+          in: query
+          schema:
+            type: integer
+        - name: estado
+          in: query
+          schema:
+            type: string
+            enum: [activo, inactivo, todos]
+      responses:
+        '200':
+          description: Catálogo de productos obtenido exitosamente
+    post:
+      summary: Crear nuevo producto (P01)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [codigo, descripcion, precio_unitario, id_categoria, id_marca]
+              properties:
+                codigo: { type: string, example: "BEB-COCA-2L" }
+                nombre: { type: string, example: "Coca Cola 2.25L" }
+                descripcion: { type: string, example: "Gaseosa Cola botella descartable" }
+                precio_unitario: { type: number, example: 2500.00 }
+                precio_mayorista: { type: number, example: 2200.00 }
+                precio_minorista: { type: number, example: 2800.00 }
+                id_categoria: { type: integer, example: 1 }
+                id_marca: { type: integer, example: 1 }
+                stock_disponible: { type: integer, example: 50 }
+                stock_minimo: { type: integer, example: 10 }
+      responses:
+        '201':
+          description: Producto creado exitosamente
+        '400':
+          description: Error de validación en parámetros de entrada
+
+  /productos/aumento-masivo:
+    post:
+      summary: Aplicar aumento masivo porcentual con reglas de redondeo (P07)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [porcentaje]
+              properties:
+                porcentaje: { type: number, example: 15.5 }
+                categoria_id: { type: integer, example: 2 }
+                marca_id: { type: integer }
+                regla_redondeo:
+                  type: string
+                  enum: [sin_redondeo, redondeo, ceil, floor, decenas, centenas]
+                  default: sin_redondeo
+      responses:
+        '200':
+          description: Aumento aplicado con éxito a los productos seleccionados
+
+  /stock:
+    get:
+      summary: Consulta general de stock e inventario (S01 / S15)
+      parameters:
+        - name: stock_min
+          in: query
+          schema: { type: integer }
+        - name: stock_max
+          in: query
+          schema: { type: integer }
+        - name: estado_alerta
+          in: query
+          schema: { type: string, enum: [normal, bajo, sin_stock] }
+      responses:
+        '200':
+          description: Listado general de stock con semáforo de disponibilidad
+
+  /stock/ingresos:
+    post:
+      summary: Registrar ingreso manual de mercadería (S03)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [id_producto, cantidad, motivo]
+              properties:
+                id_producto: { type: integer, example: 5 }
+                cantidad: { type: integer, example: 20 }
+                motivo: { type: string, example: "Ingreso de mercadería por reposición" }
+                id_lote: { type: integer }
+                nro_lote: { type: string }
+      responses:
+        '201':
+          description: Ingreso registrado en Kardex y stock sumado
+
+  /stock/devoluciones:
+    post:
+      summary: Registrar devolución de cliente o a proveedor con asignación de lote (S05)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [id_producto, cantidad, motivo, tipo_devolucion]
+              properties:
+                id_producto: { type: integer, example: 10 }
+                tipo_devolucion: { type: string, enum: [cliente, proveedor], example: "cliente" }
+                cantidad: { type: integer, example: 3 }
+                motivo: { type: string, example: "Producto devuelto por empaque fallado" }
+                id_lote: { type: integer, example: 1 }
+      responses:
+        '201':
+          description: Devolución registrada y stock imputado en producto y lote
+
+  /stock/lotes:
+    get:
+      summary: Listar lotes registrados (S09)
+      responses:
+        '200':
+          description: Listado de partidas y lotes
+    post:
+      summary: Crear nuevo lote asociado a producto (S09 / S10)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [id_producto, nro_lote, cantidad_inicial, fecha_vencimiento]
+              properties:
+                id_producto: { type: integer, example: 3 }
+                nro_lote: { type: string, example: "LOT-2026-X45" }
+                cantidad_inicial: { type: integer, example: 100 }
+                fecha_vencimiento: { type: string, format: date, example: "2026-12-31" }
+      responses:
+        '201':
+          description: Lote creado exitosamente
+
+  /sesiones:
+    post:
+      summary: Iniciar sesión de conteo físico a ciegas (S13)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                observaciones: { type: string, example: "Conteo trimestral Depósito Central" }
+      responses:
+        '201':
+          description: Sesión de conteo iniciada en estado abierta
+
+  /sesiones/{id}/finalizar:
+    post:
+      summary: Finalizar conteo físico y aplicar ajustes por discrepancia (S13)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Conteo consolidado, discrepancias calculadas y stock ajustado
+
+  /proveedores:
+    get:
+      summary: Listar proveedores comerciales (PV01)
+      responses:
+        '200':
+          description: Directorio de proveedores
+    post:
+      summary: Registrar proveedor con CUIT validado por Módulo 11 (PV01)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [cuit, razon_social]
+              properties:
+                cuit: { type: string, example: "30-71123456-8" }
+                razon_social: { type: string, example: "Distribuidora Mayorista del Sur S.A." }
+                telefono: { type: string, example: "+54 291 4567890" }
+                email: { type: string, example: "ventas@mayodelsur.com.ar" }
+                direccion: { type: string, example: "Av. Alem 1250, Bahía Blanca" }
+      responses:
+        '201':
+          description: Proveedor registrado exitosamente
+
+  /proveedores/{id}/productos/{idProducto}/historial-precios:
+    get:
+      summary: Consultar historial de cotizaciones de un proveedor para un producto (PV06)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+        - name: idProducto
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Evolución cronológica de precios pactados y variaciones
+
+  /ordenes-compra:
+    get:
+      summary: Listar órdenes de compra con filtros (PC02)
+      responses:
+        '200':
+          description: Listado de órdenes de compra
+    post:
+      summary: Crear orden de compra a proveedor (PC01)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [id_proveedor, items]
+              properties:
+                id_proveedor: { type: integer, example: 2 }
+                fecha_entrega_esperada: { type: string, format: date, example: "2026-11-05" }
+                observaciones: { type: string, example: "Entrega en portón 2 de 8 a 12hs" }
+                items:
+                  type: array
+                  items:
+                    type: object
+                    required: [id_producto, cantidad, precio_unitario]
+                    properties:
+                      id_producto: { type: integer, example: 1 }
+                      cantidad: { type: integer, example: 50 }
+                      precio_unitario: { type: number, example: 1800.00 }
+      responses:
+        '201':
+          description: Orden de compra creada con estado pendiente
+
+  /ordenes-compra/{id}/cambiar-estado:
+    patch:
+      summary: Avanzar estado de la orden en timeline interactivo (PC06)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [estado]
+              properties:
+                estado:
+                  type: string
+                  enum: [enviada, recibida_parcialmente, completada, cancelada]
+      responses:
+        '200':
+          description: Estado de la orden actualizado exitosamente
+
+  /sugerencias-reposicion:
+    get:
+      summary: Obtener sugerencias automáticas de compra basadas en stock mínimo (PC07)
+      responses:
+        '200':
+          description: Lista de artículos que requieren reposición urgente o programada

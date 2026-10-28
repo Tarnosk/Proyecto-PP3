@@ -1,0 +1,327 @@
+{
+	"info": {
+		"_postman_id": "erp-juan23-g3-apis",
+		"name": "ERP Juan23 - Colección de APIs REST",
+		"description": "Colección completa de endpoints para pruebas y demostraciones del ERP Juan23 (Módulos de Productos, Stock, Lotes, Conteo Físico, Proveedores, Compras y Pedidos de Compra).",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Productos",
+			"item": [
+				{
+					"name": "Listar Productos (P05)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Accept", "value": "application/json" }
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/productos?estado=activo",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "productos"],
+							"query": [
+								{ "key": "estado", "value": "activo" }
+							]
+						}
+					}
+				},
+				{
+					"name": "Crear Producto (P01)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "X-User-Id", "value": "1" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"codigo\": \"PROD-DEMO-01\",\n    \"nombre\": \"Yerba Mate Especial 1kg\",\n    \"descripcion\": \"Yerba mate con palo estacionamiento natural\",\n    \"precio_unitario\": 3500.00,\n    \"id_categoria\": 1,\n    \"id_marca\": 1,\n    \"stock_disponible\": 100,\n    \"stock_minimo\": 15\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/productos",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "productos"]
+						}
+					}
+				},
+				{
+					"name": "Aumento Masivo de Precios (P07)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "X-User-Id", "value": "1" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"porcentaje\": 10.5,\n    \"categoria_id\": 1,\n    \"regla_redondeo\": \"redondeo\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/productos/aumento-masivo",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "productos", "aumento-masivo"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Stock e Inventario",
+			"item": [
+				{
+					"name": "Consulta General de Stock (S01 / S15)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Accept", "value": "application/json" }
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/stock?stock_min=0&stock_max=50",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "stock"],
+							"query": [
+								{ "key": "stock_min", "value": "0" },
+								{ "key": "stock_max", "value": "50" }
+							]
+						}
+					}
+				},
+				{
+					"name": "Ingreso Manual de Mercadería (S03)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "X-User-Id", "value": "1" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"id_producto\": 1,\n    \"cantidad\": 25,\n    \"motivo\": \"Ingreso por ajuste de proveedor\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/stock/ingresos",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "stock", "ingresos"]
+						}
+					}
+				},
+				{
+					"name": "Registro de Devolución con Lote (S05)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "X-User-Id", "value": "1" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"id_producto\": 1,\n    \"tipo_devolucion\": \"cliente\",\n    \"cantidad\": 2,\n    \"motivo\": \"Devolución por embalaje húmedo\",\n    \"id_lote\": 1\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/stock/devoluciones",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "stock", "devoluciones"]
+						}
+					}
+				},
+				{
+					"name": "Lotes por Vencer / Semáforo (S10)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Accept", "value": "application/json" }
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/stock/lotes-por-vencer",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "stock", "lotes-por-vencer"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Conteo Físico a Ciegas (S13)",
+			"item": [
+				{
+					"name": "Iniciar Sesión de Conteo",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "X-User-Id", "value": "1" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"observaciones\": \"Relevamiento físico de fin de mes\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/sesiones",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "sesiones"]
+						}
+					}
+				},
+				{
+					"name": "Registrar Ítem Contado",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "X-User-Id", "value": "1" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"id_producto\": 1,\n    \"cantidad_contada\": 48\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/sesiones/1/items",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "sesiones", "1", "items"]
+						}
+					}
+				},
+				{
+					"name": "Finalizar Conteo e Imputar Diferencias",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "X-User-Id", "value": "1" }
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/sesiones/1/finalizar",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "sesiones", "1", "finalizar"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Proveedores",
+			"item": [
+				{
+					"name": "Listar Proveedores (PV01)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Accept", "value": "application/json" }
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/proveedores",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "proveedores"]
+						}
+					}
+				},
+				{
+					"name": "Crear Proveedor con CUIT Módulo 11 (PV01)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "X-User-Id", "value": "1" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"cuit\": \"30-71123456-8\",\n    \"razon_social\": \"Distribuidora Mayorista S.A.\",\n    \"telefono\": \"0291-4556677\",\n    \"email\": \"ventas@distrimay.com.ar\",\n    \"direccion\": \"Av. Colón 500\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/proveedores",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "proveedores"]
+						}
+					}
+				},
+				{
+					"name": "Historial de Precios de Compra (PV06)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Accept", "value": "application/json" }
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/proveedores/1/productos/1/historial-precios",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "proveedores", "1", "productos", "1", "historial-precios"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Compras y Órdenes",
+			"item": [
+				{
+					"name": "Crear Orden de Compra (PC01)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "X-User-Id", "value": "1" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"id_proveedor\": 1,\n    \"observaciones\": \"Entrega en depósito central\",\n    \"items\": [\n        {\n            \"id_producto\": 1,\n            \"cantidad\": 50,\n            \"precio_unitario\": 2100.00\n        }\n    ]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/ordenes-compra",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "ordenes-compra"]
+						}
+					}
+				},
+				{
+					"name": "Avanzar Estado en Timeline (PC06)",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Accept", "value": "application/json" },
+							{ "key": "X-User-Id", "value": "1" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"estado\": \"enviada\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/ordenes-compra/1/cambiar-estado",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "ordenes-compra", "1", "cambiar-estado"]
+						}
+					}
+				},
+				{
+					"name": "Sugerencias de Reposición (PC07)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Accept", "value": "application/json" }
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/sugerencias-reposicion",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "sugerencias-reposicion"]
+						}
+					}
+				}
+			]
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:8000"
+		}
+	]
+}

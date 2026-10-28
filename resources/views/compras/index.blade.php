@@ -2947,21 +2947,25 @@
         }
 
         tbody.innerHTML = sugerenciasCache.map(s => {
+            const idSug = s.id_sugerencia ?? s.id;
+            const stockAct = s.stock_actual ?? s.producto?.stock ?? 0;
+            const stockMin = s.cantidad_minima ?? s.producto?.stock_minimo ?? 0;
+            const nombreProv = s.proveedor?.razon_social || s.proveedor?.nombre || `Proveedor #${s.id_proveedor ?? s.proveedor?.id}`;
             const esPendiente = s.estado === 'pendiente';
             const estadoBadge = esPendiente ? 'clay-badge-warning' : (s.estado === 'procesada' ? 'clay-badge-success' : 'clay-badge-danger');
             
             return `
                 <tr>
                     <td>
-                        <div class="font-black text-slate-800">${s.producto?.nombre || `Prod #${s.id_producto}`}</div>
+                        <div class="font-black text-slate-800">${s.producto?.nombre || `Prod #${s.id_producto ?? s.producto?.id}`}</div>
                         <div class="text-[11px] text-slate-400 font-bold">${s.producto?.codigo || ''}</div>
                     </td>
                     <td class="text-center font-bold">
-                        <span class="${s.stock_actual <= s.cantidad_minima ? 'text-rose-600 font-black' : 'text-slate-700'}">${s.stock_actual}</span>
-                        <span class="text-slate-400 text-xs">/ ${s.cantidad_minima}</span>
+                        <span class="${stockAct <= stockMin ? 'text-rose-600 font-black' : 'text-slate-700'}">${stockAct}</span>
+                        <span class="text-slate-400 text-xs">/ ${stockMin}</span>
                     </td>
                     <td class="text-center font-black text-indigo-700 text-sm">${s.cantidad_sugerida}</td>
-                    <td class="font-bold text-slate-700">${s.proveedor?.razon_social || `Proveedor #${s.id_proveedor}`}</td>
+                    <td class="font-bold text-slate-700">${nombreProv}</td>
                     <td class="text-right font-black">$${Number(s.precio_unitario || 0).toFixed(2)}</td>
                     <td class="text-right font-black text-emerald-700">$${Number(s.costo_total || 0).toFixed(2)}</td>
                     <td class="text-center">
@@ -2970,10 +2974,10 @@
                     <td class="text-center">
                         ${esPendiente ? `
                         <div class="flex items-center justify-center gap-1.5">
-                            <button onclick="generarOrdenDesdeSugerencia(${s.id_sugerencia})" class="clay-btn-primary px-2.5 py-1 text-[11px] font-black shadow-sm" title="Generar Orden de Compra">
+                            <button onclick="generarOrdenDesdeSugerencia(${idSug})" class="clay-btn-primary px-2.5 py-1 text-[11px] font-black shadow-sm" title="Generar Orden de Compra">
                                 <i data-lucide="file-plus" class="w-3.5 h-3.5 inline mr-1"></i>Emitir Orden
                             </button>
-                            <button onclick="rechazarSugerencia(${s.id_sugerencia})" class="p-1 text-slate-400 hover:text-rose-600 rounded" title="Rechazar">
+                            <button onclick="rechazarSugerencia(${idSug})" class="p-1 text-slate-400 hover:text-rose-600 rounded" title="Rechazar">
                                 <i data-lucide="x" class="w-4 h-4"></i>
                             </button>
                         </div>

@@ -14,8 +14,6 @@
         ['inventario.index', 'Inventario y Stock', $operational],
         ['compras.index', 'Compras y Órdenes', $operational],
         ['proveedores.index', 'Proveedores', $operational],
-        ['sugerencias-reposicion.index', 'Sugerencias Reposición', $operational],
-        ['dashboard-reposicion.index', 'Métricas Reposición', $operational],
         ['entregas.index', 'Entregas y Despacho', $operational],
         ['rendiciones.index', 'Rendiciones y Cobros', $operational],
         ['caja.dia', 'Caja y Tesorería', $operational],
