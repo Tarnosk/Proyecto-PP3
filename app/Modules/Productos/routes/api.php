@@ -17,11 +17,9 @@ use App\Modules\Proveedores\Controllers\PlazoEntregaController;
 use App\Modules\Proveedores\Controllers\ProveedorController;
 use App\Modules\Stock\Controllers\AjusteStockController;
 use App\Modules\Stock\Controllers\AlertaStockController;
-use App\Modules\Stock\Controllers\ConsultaVencimientosController;
 use App\Modules\Stock\Controllers\ConteoFisicoController;
 use App\Modules\Stock\Controllers\DevolucionController;
 use App\Modules\Stock\Controllers\IngresoMercaderiaController;
-use App\Modules\Stock\Controllers\LoteController;
 use App\Modules\Stock\Controllers\StockController;
 use App\Modules\Stock\Controllers\UbicacionController;
 use App\Modules\Stock\Controllers\UnidadController;
@@ -43,10 +41,12 @@ $registrarRutasG3 = function (): void {
                 'GET /api/marcas',
                 'GET /api/productos',
                 'GET /api/productos/{id}',
+                'GET /api/productos/codigo/{codigo}',
                 'GET /api/productos/{id}/historial',
                 'POST /api/productos/aumento-masivo',
                 'GET /api/stock',
-                'GET /api/stock/{id}/disponibilidad',
+                'GET /api/stock/{id}',
+                'POST /api/stock/movimientos',
                 'POST /api/stock/ingresos',
                 'POST /api/stock/ventas',
                 'POST /api/stock/devoluciones',
@@ -146,14 +146,15 @@ $registrarRutasG3 = function (): void {
     Route::post('productos/aumento-masivo', [ProductoController::class, 'aumentoMasivo']);
     Route::patch('productos/{id}/desactivar', [ProductoController::class, 'desactivar']);
     Route::patch('productos/{id}/activar', [ProductoController::class, 'activar']);
+    Route::get('productos/codigo/{codigo}', [ProductoController::class, 'showByCodigo']);
     Route::apiResource('productos', ProductoController::class);
 
     // ========== MÓDULO STOCK (S01 a S08) ==========
     Route::get('stock', [StockController::class, 'consultaGeneral']);
-    Route::get('stock/{id}/disponibilidad', [StockController::class, 'disponibilidadParaVenta']);
-    Route::get('stock/{id}', [StockController::class, 'disponibilidadParaVenta'])->whereNumber('id');
-    Route::get('stock/productos/{id}', [StockController::class, 'disponibilidadParaVenta'])->whereNumber('id');
+    Route::get('stock/{id}', [StockController::class, 'show'])->whereNumber('id');
+    Route::get('stock/productos/{id}', [StockController::class, 'show'])->whereNumber('id');
     Route::get('stock/movimientos', [StockController::class, 'todosLosMovimientos']);
+    Route::post('stock/movimientos', [StockController::class, 'registrarMovimientosLote']);
     Route::get('stock/{id}/historial-movimientos', [StockController::class, 'historial']);
     Route::post('stock/ingresos', [IngresoMercaderiaController::class, 'store']);
     Route::post('stock/ventas', [VentaStockController::class, 'store']);
@@ -181,12 +182,6 @@ $registrarRutasG3 = function (): void {
     Route::patch('stock/alertas/{id}/minimo', [AlertaStockController::class, 'configurarMinimo']);
     Route::post('stock/alertas/recalcular', [AlertaStockController::class, 'recalcular']);
 
-    Route::get('stock/lotes', [LoteController::class, 'index']);
-    Route::post('stock/lotes', [LoteController::class, 'store']);
-    Route::get('stock/lotes/{id}', [LoteController::class, 'show']);
-    Route::get('stock/productos/{id}/lotes', [LoteController::class, 'lotesPorProducto']);
-    Route::get('stock/lotes-por-vencer', [LoteController::class, 'porVencer']);
-
     Route::get('unidades/convertir', [UnidadController::class, 'convertir']);
     Route::post('productos/{id}/unidades/{idUnidad}/seleccionar', [UnidadController::class, 'seleccionar']);
     Route::apiResource('productos/{id}/unidades', UnidadController::class);
@@ -197,13 +192,6 @@ $registrarRutasG3 = function (): void {
     Route::delete('ubicaciones/{id}', [UbicacionController::class, 'destroy']);
     Route::post('productos/{id}/ubicacion', [UbicacionController::class, 'asignarProducto']);
     Route::delete('productos/{id}/ubicacion', [UbicacionController::class, 'desasignarProducto']);
-
-    Route::prefix('vencimientos')->group(function () {
-        Route::get('proximos', [ConsultaVencimientosController::class, 'proximosAVencer']);
-        Route::get('por-criticidad', [ConsultaVencimientosController::class, 'porCriticidad']);
-        Route::get('alertas', [ConsultaVencimientosController::class, 'alertas']);
-        Route::get('reporte', [ConsultaVencimientosController::class, 'reporte']);
-    });
 
     Route::prefix('sugerencias-reposicion')->group(function () {
         Route::get('/', [SugerenciasReposicionController::class, 'listar']);

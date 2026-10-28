@@ -109,7 +109,6 @@ return new class extends Migration
                 'precio_unitario' => 2500.00,
                 'stock' => 48,
                 'stock_minimo' => 10,
-                'dias_alerta_vencimiento' => 30,
                 'estado' => 'activo',
                 'fecha_alta' => '2026-09-01',
                 'id_categoria' => $catBebidas,
@@ -126,7 +125,6 @@ return new class extends Migration
                 'precio_unitario' => 1800.00,
                 'stock' => 30,
                 'stock_minimo' => 8,
-                'dias_alerta_vencimiento' => 15,
                 'estado' => 'activo',
                 'fecha_alta' => '2026-09-02',
                 'id_categoria' => $catPanaderia,
@@ -143,7 +141,6 @@ return new class extends Migration
                 'precio_unitario' => 4200.00,
                 'stock' => 25,
                 'stock_minimo' => 10,
-                'dias_alerta_vencimiento' => 60,
                 'estado' => 'activo',
                 'fecha_alta' => '2026-09-05',
                 'id_categoria' => $catAlmacen,
@@ -160,7 +157,6 @@ return new class extends Migration
                 'precio_unitario' => 2100.00,
                 'stock' => 60,
                 'stock_minimo' => 12,
-                'dias_alerta_vencimiento' => 60,
                 'estado' => 'activo',
                 'fecha_alta' => '2026-09-10',
                 'id_categoria' => $catAlmacen,
@@ -177,7 +173,6 @@ return new class extends Migration
                 'precio_unitario' => 1300.00,
                 'stock' => 80,
                 'stock_minimo' => 15,
-                'dias_alerta_vencimiento' => 90,
                 'estado' => 'activo',
                 'fecha_alta' => '2026-09-12',
                 'id_categoria' => $catAlmacen,
@@ -194,7 +189,6 @@ return new class extends Migration
                 'precio_unitario' => 950.00,
                 'stock' => 100,
                 'stock_minimo' => 20,
-                'dias_alerta_vencimiento' => 90,
                 'estado' => 'activo',
                 'fecha_alta' => '2026-09-15',
                 'id_categoria' => $catAlmacen,
@@ -206,6 +200,43 @@ return new class extends Migration
         ];
 
         DB::table('producto')->insertOrIgnore($productos);
+
+        if (Schema::hasTable('proveedor')) {
+            DB::table('proveedor')->insertOrIgnore([
+                [
+                    'id_proveedor' => 1,
+                    'razon_social' => 'Distribuidora Central SA',
+                    'contacto' => 'Juan Pérez',
+                    'cuit' => '30-71234567-8',
+                    'telefono' => '1145550101',
+                    'email' => 'ventas@distribuidoracentral.com.ar',
+                    'direccion' => 'Av. Industrial 1200',
+                    'estado' => 'activo',
+                    'fecha_alta' => $hoy,
+                    'plazo_entrega_dias' => 3,
+                    'id_usuario_carga' => $idUsuario,
+                ],
+            ]);
+        }
+
+        if (Schema::hasTable('unidad_medida')) {
+            DB::table('unidad_medida')->insertOrIgnore([
+                [
+                    'id_unidad' => 1,
+                    'id_producto' => 1,
+                    'nombre_unidad' => 'Unidad suelta',
+                    'es_base' => 1,
+                    'equivalencia_base' => 1,
+                ],
+                [
+                    'id_unidad' => 2,
+                    'id_producto' => 1,
+                    'nombre_unidad' => 'Pack x6',
+                    'es_base' => 0,
+                    'equivalencia_base' => 6,
+                ],
+            ]);
+        }
     }
 
     public function down(): void

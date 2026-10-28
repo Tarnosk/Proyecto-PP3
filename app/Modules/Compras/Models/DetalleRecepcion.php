@@ -15,8 +15,8 @@ class DetalleRecepcion extends Model
 
     protected $fillable = [
         'id_recepcion',
+        'id_detalle_compra',
         'id_producto',
-        'id_lote',
         'id_unidad',
         'cantidad_recibida',
     ];

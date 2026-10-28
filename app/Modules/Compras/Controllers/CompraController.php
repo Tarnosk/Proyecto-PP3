@@ -87,6 +87,16 @@ class CompraController extends Controller
      */
     public function store(Request $request): JsonResponse
     {
+        if (!$request->has('items') && $request->has('detalles')) {
+            $request->merge(['items' => $request->input('detalles')]);
+        }
+        if (!$request->has('fecha_compra') && $request->has('fecha')) {
+            $request->merge(['fecha_compra' => $request->input('fecha')]);
+        }
+        if (!$request->has('numero_comprobante') && $request->has('numero_factura')) {
+            $request->merge(['numero_comprobante' => $request->input('numero_factura')]);
+        }
+
         $validator = Validator::make($request->all(), [
             'id_proveedor' => 'required|integer',
             'id_orden' => 'nullable|integer|exists:ORDEN_COMPRA,id_orden',
@@ -594,6 +604,16 @@ class CompraController extends Controller
                 'status' => 'error',
                 'message' => 'No se puede modificar una compra de un proveedor inactivo. (PV04)',
             ], 400);
+        }
+
+        if (!$request->has('items') && $request->has('detalles')) {
+            $request->merge(['items' => $request->input('detalles')]);
+        }
+        if (!$request->has('fecha_compra') && $request->has('fecha')) {
+            $request->merge(['fecha_compra' => $request->input('fecha')]);
+        }
+        if (!$request->has('numero_comprobante') && $request->has('numero_factura')) {
+            $request->merge(['numero_comprobante' => $request->input('numero_factura')]);
         }
 
         $validator = Validator::make($request->all(), [

@@ -49,6 +49,22 @@ class OrdenCompraController extends Controller
         ];
     }
 
+    private function normalizarItems(array $items): array
+    {
+        return array_map(function ($item) {
+            if (is_array($item)) {
+                if (!isset($item['cantidad_solicitada'])) {
+                    if (isset($item['cantidad_pedida'])) {
+                        $item['cantidad_solicitada'] = $item['cantidad_pedida'];
+                    } elseif (isset($item['cantidad'])) {
+                        $item['cantidad_solicitada'] = $item['cantidad'];
+                    }
+                }
+            }
+            return $item;
+        }, $items);
+    }
+
     /**
      * Valida los ítems de una orden. Devuelve null si es válido o un array de error.
      */
@@ -101,6 +117,13 @@ class OrdenCompraController extends Controller
      */
     public function store(Request $request): JsonResponse
     {
+        if (!$request->has('items') && $request->has('detalles')) {
+            $request->merge(['items' => $request->input('detalles')]);
+        }
+        if (is_array($request->input('items'))) {
+            $request->merge(['items' => $this->normalizarItems($request->input('items'))]);
+        }
+
         $validator = Validator::make($request->all(), [
             'id_proveedor' => 'required|integer',
             'fecha_creacion' => 'nullable|date|before_or_equal:today',
@@ -290,6 +313,13 @@ class OrdenCompraController extends Controller
                 'status' => 'error',
                 'message' => 'No se puede editar una orden de compra de un proveedor inactivo. (PV04)',
             ], 400);
+        }
+
+        if (!$request->has('items') && $request->has('detalles')) {
+            $request->merge(['items' => $request->input('detalles')]);
+        }
+        if (is_array($request->input('items'))) {
+            $request->merge(['items' => $this->normalizarItems($request->input('items'))]);
         }
 
         $validator = Validator::make($request->all(), [

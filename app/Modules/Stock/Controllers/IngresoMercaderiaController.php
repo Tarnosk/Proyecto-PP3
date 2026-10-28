@@ -7,7 +7,6 @@ use App\Http\Controllers\Controller;
 use App\Modules\Productos\Models\Producto;
 use App\Modules\Proveedores\Models\ProductoProveedor;
 use App\Modules\Proveedores\Models\Proveedor;
-use App\Modules\Stock\Models\Lote;
 use App\Modules\Stock\Services\StockService;
 use App\Support\UsuarioActual;
 use Illuminate\Http\JsonResponse;
@@ -43,7 +42,7 @@ class IngresoMercaderiaController extends Controller
         }
 
         $validator = Validator::make($request->all(), [
-            'id_proveedor' => 'required|integer|exists:PROVEEDOR,id_proveedor',
+            'id_proveedor' => 'nullable|integer|exists:PROVEEDOR,id_proveedor',
             'fecha' => [
                 'nullable',
                 'date',
@@ -59,10 +58,7 @@ class IngresoMercaderiaController extends Controller
             'items.*.id_producto' => 'required|integer|exists:PRODUCTO,id_producto',
             'items.*.cantidad' => 'required|integer|min:1',
             'items.*.id_unidad' => 'nullable|integer|exists:UNIDAD_MEDIDA,id_unidad',
-            'items.*.id_lote' => 'nullable|integer',
             'items.*.motivo' => 'nullable|string|max:255',
-            'items.*.nro_lote' => 'nullable|string|max:100',
-            'items.*.fecha_vencimiento' => 'nullable|date',
         ], [
             'id_proveedor.required' => 'Debe seleccionar un proveedor.',
             'id_proveedor.exists' => 'El proveedor seleccionado no existe.',
@@ -82,18 +78,21 @@ class IngresoMercaderiaController extends Controller
         }
 
         // PV04: impedir nuevas operaciones con proveedores inactivos.
-        $proveedor = Proveedor::find((int) $request->input('id_proveedor'));
-        if (!$proveedor) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'El proveedor seleccionado no existe.',
-            ], 404);
-        }
-        if ($proveedor->estado !== 'activo') {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'No se puede registrar un ingreso con un proveedor inactivo. (PV04)',
-            ], 400);
+        $proveedor = null;
+        if ($request->filled('id_proveedor')) {
+            $proveedor = Proveedor::find((int) $request->input('id_proveedor'));
+            if (!$proveedor) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'El proveedor seleccionado no existe.',
+                ], 404);
+            }
+            if ($proveedor->estado !== 'activo') {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'No se puede registrar un ingreso con un proveedor inactivo. (PV04)',
+                ], 400);
+            }
         }
 
         $idUsuario = UsuarioActual::id($request);
@@ -154,34 +153,36 @@ class IngresoMercaderiaController extends Controller
                 });
 
                 // PV05: Asociar automáticamente el producto al proveedor al ingresar mercadería si no está asociado
-                $asocProv = ProductoProveedor::where('id_producto', $producto->id_producto)
-                    ->where('id_proveedor', $proveedor->id_proveedor)
-                    ->first();
+                if ($proveedor) {
+                    $asocProv = ProductoProveedor::where('id_producto', $producto->id_producto)
+                        ->where('id_proveedor', $proveedor->id_proveedor)
+                        ->first();
 
-                $fechaAsoc = $fechaIngreso ? $fechaIngreso->toDateString() : \Carbon\Carbon::now()->toDateString();
+                    $fechaAsoc = $fechaIngreso ? $fechaIngreso->toDateString() : \Carbon\Carbon::now()->toDateString();
 
-                if (!$asocProv) {
-                    $tieneOtroPrincipal = ProductoProveedor::where('id_producto', $producto->id_producto)
-                        ->where('activo', true)
-                        ->where('es_proveedor_principal', true)
-                        ->exists();
+                    if (!$asocProv) {
+                        $tieneOtroPrincipal = ProductoProveedor::where('id_producto', $producto->id_producto)
+                            ->where('activo', true)
+                            ->where('es_proveedor_principal', true)
+                            ->exists();
 
-                    ProductoProveedor::create([
-                        'id_producto' => $producto->id_producto,
-                        'id_proveedor' => $proveedor->id_proveedor,
-                        'es_proveedor_principal' => !$tieneOtroPrincipal,
-                        'precio_acordado' => null,
-                        'activo' => true,
-                        'fecha_asociacion' => $fechaAsoc,
-                        'id_usuario' => $idUsuario,
-                    ]);
-                } elseif (!$asocProv->activo) {
-                    $asocProv->update([
-                        'activo' => true,
-                        'fecha_asociacion' => $fechaAsoc,
-                        'fecha_desasociacion' => null,
-                        'id_usuario' => $idUsuario,
-                    ]);
+                        ProductoProveedor::create([
+                            'id_producto' => $producto->id_producto,
+                            'id_proveedor' => $proveedor->id_proveedor,
+                            'es_proveedor_principal' => !$tieneOtroPrincipal,
+                            'precio_acordado' => null,
+                            'activo' => true,
+                            'fecha_asociacion' => $fechaAsoc,
+                            'id_usuario' => $idUsuario,
+                        ]);
+                    } elseif (!$asocProv->activo) {
+                        $asocProv->update([
+                            'activo' => true,
+                            'fecha_asociacion' => $fechaAsoc,
+                            'fecha_desasociacion' => null,
+                            'id_usuario' => $idUsuario,
+                        ]);
+                    }
                 }
 
                 $producto->refresh();
@@ -202,9 +203,6 @@ class IngresoMercaderiaController extends Controller
                     'nombre_unidad' => $unidadObj ? $nombreUnidad : 'u.',
                     'cantidad_base' => $cantidadBase,
                     'equivalencia_texto' => $equivalenciaTexto,
-                    'id_lote' => null,
-                    'nro_lote' => null,
-                    'fecha_vencimiento' => null,
                     'stock_disponible' => $producto->stock_disponible,
                     'estado_alerta' => $producto->estado_alerta,
                 ];

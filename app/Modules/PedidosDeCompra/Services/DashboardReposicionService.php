@@ -4,13 +4,11 @@ declare(strict_types=1);
 namespace App\Modules\PedidosDeCompra\Services;
 
 use App\Modules\PedidosDeCompra\Repositories\SugerenciaCompraRepository;
-use App\Modules\Stock\Repositories\LoteVencimientoRepository;
 
 class DashboardReposicionService
 {
     public function __construct(
-        private SugerenciaCompraRepository $sugerencias,
-        private ?LoteVencimientoRepository $lotes = null
+        private SugerenciaCompraRepository $sugerencias
     ) {
     }
 

@@ -11,7 +11,6 @@ use App\Modules\Productos\Models\Marca;
 use App\Modules\Proveedores\Models\Proveedor;
 use App\Modules\Proveedores\Models\ProductoProveedor;
 use App\Modules\Stock\Models\Ubicacion;
-use App\Modules\Stock\Models\Lote;
 use App\Modules\Stock\Models\UnidadMedida;
 use App\Modules\Stock\Models\MovimientoStock;
 use App\Modules\Compras\Models\Compra;
@@ -109,6 +108,8 @@ class UserStoriesFrontendTest extends TestCase
         $viewRes->assertSee('prodCategoria');
         $viewRes->assertSee('prodMarca');
         $viewRes->assertSee('prodPrecioUnitario');
+        $viewRes->assertSee('prodImagen');
+        $viewRes->assertSee('prodImagenArchivo');
         $viewRes->assertSee('prodStockMin');
         $viewRes->assertSee('filtroSearch');
         $viewRes->assertSee('filtroCategoria');
@@ -123,13 +124,14 @@ class UserStoriesFrontendTest extends TestCase
         $marca = Marca::first();
         $codigoTest = 'TEST-P01-' . uniqid();
 
-        // P01: Crear Producto vía API (consumida por modalProducto)
+        // P01: Crear Producto vía API (consumida por modalProducto) incluyendo imagen
         $storeRes = $this->postJson('/api/productos', [
             'codigo' => $codigoTest,
             'nombre' => 'Producto Test Automatizado P01',
             'descripcion' => 'Descripción detallada P01',
             'precio_unitario' => 1500.50,
             'precio_mayorista' => 1350.00,
+            'imagen' => '/assets/catalogo/test-p01.webp',
             'id_categoria' => $categoria->id_categoria,
             'id_marca' => $marca->id_marca,
             'stock_disponible' => 20,
@@ -138,6 +140,14 @@ class UserStoriesFrontendTest extends TestCase
         $storeRes->assertStatus(201);
         $prodId = $storeRes->json('data.id_producto');
         $this->assertNotNull($prodId);
+        $this->assertEquals('/assets/catalogo/test-p01.webp', $storeRes->json('data.imagen'));
+        $this->assertEquals('/assets/catalogo/test-p01.webp', $storeRes->json('data.imagen_url'));
+
+        // Consulta directa por código y por id_producto
+        $byCodRes = $this->getJson("/api/productos/codigo/{$codigoTest}");
+        $byCodRes->assertOk()
+            ->assertJsonPath('data.id_producto', $prodId)
+            ->assertJsonPath('data.imagen_url', '/assets/catalogo/test-p01.webp');
 
         // Validación P01: Código duplicado debe ser rechazado
         $dupRes = $this->postJson('/api/productos', [
@@ -408,7 +418,7 @@ class UserStoriesFrontendTest extends TestCase
     // =========================================================================
 
     /**
-     * S01, S02 - Consulta de Stock y Disponibilidad para Venta.
+     * S01 - Consulta de Stock General y por Producto (integración G4).
      */
     public function test_s01_s02_consulta_stock_y_disponibilidad_venta(): void
     {
@@ -417,18 +427,21 @@ class UserStoriesFrontendTest extends TestCase
         $viewRes->assertSee('tabBtn-stock');
         $viewRes->assertSee('pestana-stock');
         $viewRes->assertSee('Stock y Alertas');
+        $viewRes->assertSee('Inventario Completo de Stock en Tiempo Real');
+        $viewRes->assertDontSee('Disponibilidad para Venta en Tiempo Real');
 
         // S01: Consulta general de stock
         $stockRes = $this->getJson('/api/stock');
         $stockRes->assertOk();
         $this->assertIsArray($stockRes->json('data'));
 
-        // S02: Disponibilidad para venta
+        // Consulta de stock de un producto por ID (compatible con G4 HttpStockApi)
         $producto = Producto::where('estado', 'activo')->first();
         if ($producto) {
-            $dispRes = $this->getJson("/api/stock/{$producto->id_producto}/disponibilidad");
+            $dispRes = $this->getJson("/api/stock/{$producto->id_producto}");
             $dispRes->assertOk();
-            $this->assertArrayHasKey('stock_disponible', $dispRes->json('data'));
+            $this->assertArrayHasKey('stock', $dispRes->json('data'));
+            $this->assertSame((int) $producto->stock, (int) $dispRes->json('disponible'));
         }
     }
 
@@ -482,7 +495,7 @@ class UserStoriesFrontendTest extends TestCase
         $this->assertTrue($flatRes->json('status') === 'success');
         $this->assertEquals($stockAntes2 + 10, (int) $producto->fresh()->stock);
 
-        // Verificar que el movimiento quedó registrado en el Kardex (S12) con id_lote nulo
+        // Verificar que el movimiento quedó registrado en el Kardex (S12)
         $movsRes = $this->getJson('/api/stock/movimientos');
         $movsRes->assertOk();
         $this->assertNotEmpty($movsRes->json('data'));
@@ -492,7 +505,6 @@ class UserStoriesFrontendTest extends TestCase
             ->latest('id_movimiento')
             ->first();
         $this->assertNotNull($movIngreso);
-        $this->assertNull($movIngreso->id_lote);
     }
 
     /**
@@ -520,6 +532,30 @@ class UserStoriesFrontendTest extends TestCase
 
         $producto->refresh();
         $this->assertEquals($stockInicial - 2, $producto->stock);
+
+        // Contrato de integración G4 (POST /api/stock/movimientos con items[])
+        $batchVentaRes = $this->postJson('/api/stock/movimientos', [
+            'origen' => 'ventas',
+            'venta_id' => 999,
+            'motivo' => 'confirmacion_venta',
+            'items' => [
+                ['id_producto' => $producto->id_producto, 'cantidad' => -3],
+            ],
+        ]);
+        $batchVentaRes->assertOk();
+        $this->assertEquals($stockInicial - 5, (int) $producto->fresh()->stock);
+
+        // Anulación/devolución vía POST /api/stock/movimientos (cantidad positiva)
+        $batchAnulRes = $this->postJson('/api/stock/movimientos', [
+            'origen' => 'ventas',
+            'venta_id' => 999,
+            'motivo' => 'anulacion',
+            'items' => [
+                ['id_producto' => $producto->id_producto, 'cantidad' => 3],
+            ],
+        ]);
+        $batchAnulRes->assertOk();
+        $this->assertEquals($stockInicial - 2, (int) $producto->fresh()->stock);
     }
 
     /**
@@ -552,13 +588,12 @@ class UserStoriesFrontendTest extends TestCase
         $this->assertTrue($devRes->json('status') === 'success');
         $this->assertEquals($stockProdAntes + 3, (int) $producto->fresh()->stock_disponible);
 
-        // Verificar que el movimiento en Kardex se registró con id_lote null
+        // Verificar que el movimiento en Kardex se registró
         $mov = MovimientoStock::where('id_producto', $producto->id_producto)
             ->where('tipo', 'devolucion')
             ->latest('id_movimiento')
             ->first();
         $this->assertNotNull($mov);
-        $this->assertNull($mov->id_lote);
 
         // 2. Devolución a proveedor: decrementa stock del producto
         $stockProdAntesProv = (int) $producto->fresh()->stock_disponible;
@@ -630,7 +665,6 @@ class UserStoriesFrontendTest extends TestCase
             'motivo' => 'Merma de depósito',
         ]);
         $ajusteDisRes->assertStatus(201)
-            ->assertJsonPath('data.id_lote', null)
             ->assertJsonPath('data.stock_disponible', 17);
         $this->assertSame(17, (int) $producto->fresh()->stock_disponible);
 
@@ -639,7 +673,6 @@ class UserStoriesFrontendTest extends TestCase
             ->latest('id_movimiento')
             ->first();
         $this->assertNotNull($movimientoDis);
-        $this->assertNull($movimientoDis->id_lote);
 
         // 2. Intentar disminuir más unidades que las disponibles en stock -> Error 400
         $ajusteExcesoRes = $this->postJson('/api/stock/ajustes', [
@@ -659,7 +692,6 @@ class UserStoriesFrontendTest extends TestCase
             'motivo' => 'Recuperación de mercadería extraviada',
         ]);
         $ajusteAumRes->assertStatus(201)
-            ->assertJsonPath('data.id_lote', null)
             ->assertJsonPath('data.stock_disponible', 22);
         $this->assertSame(22, (int) $producto->fresh()->stock_disponible);
 
@@ -672,7 +704,6 @@ class UserStoriesFrontendTest extends TestCase
             'motivo' => 'Conteo físico exacto',
         ]);
         $ajusteFijarRes->assertStatus(201)
-            ->assertJsonPath('data.id_lote', null)
             ->assertJsonPath('data.stock_disponible', $nuevoValor);
         $this->assertSame($nuevoValor, (int) $producto->fresh()->stock_disponible);
     }
@@ -974,7 +1005,7 @@ class UserStoriesFrontendTest extends TestCase
     }
 
     /**
-     * S10, S11 - Compatibilidad y Redirección de Rutas de Vencimientos.
+     * S10, S11 - Verificar eliminación de lotes y vencimientos.
      */
     public function test_s10_s11_consulta_lotes_vencimientos_y_criticidad(): void
     {
@@ -985,16 +1016,6 @@ class UserStoriesFrontendTest extends TestCase
 
         // /vencimientos redirige ordenadamente a /inventario
         $this->get('/vencimientos')->assertRedirect('/inventario');
-
-        // Endpoints S11 responden neutro/vacío sin error 500
-        $proxRes = $this->getJson('/api/vencimientos/proximos');
-        $proxRes->assertOk();
-
-        $critRes = $this->getJson('/api/vencimientos/por-criticidad');
-        $critRes->assertOk();
-
-        $alertRes = $this->getJson('/api/vencimientos/alertas');
-        $alertRes->assertOk();
     }
 
     /**
@@ -1596,12 +1617,11 @@ class UserStoriesFrontendTest extends TestCase
         $estadoPostRes->assertOk();
         $this->assertEquals('parcialmente_recibida', $estadoPostRes->json('data.estado'));
 
-        // Verificar incremento directo en stock y detalle_recepcion con id_lote null
+        // Verificar incremento directo en stock y detalle_recepcion
         $this->assertEquals($stockAntesRecep + 5, (int) $producto->fresh()->stock_actual);
         $this->assertDatabaseHas('DETALLE_RECEPCION', [
             'id_producto' => $producto->id_producto,
             'cantidad_recibida' => 5,
-            'id_lote' => null,
         ]);
     }
 

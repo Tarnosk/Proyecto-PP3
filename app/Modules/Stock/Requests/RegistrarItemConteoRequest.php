@@ -12,6 +12,15 @@ class RegistrarItemConteoRequest extends FormRequest
         return true;
     }
 
+    protected function prepareForValidation(): void
+    {
+        if (!$this->has('cantidad_fisica') && $this->has('stock_fisico')) {
+            $this->merge([
+                'cantidad_fisica' => $this->input('stock_fisico'),
+            ]);
+        }
+    }
+
     public function rules(): array
     {
         return [

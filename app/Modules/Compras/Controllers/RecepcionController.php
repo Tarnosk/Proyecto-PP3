@@ -54,6 +54,10 @@ class RecepcionController extends Controller
             return response()->json(['status' => 'error', 'message' => 'No se puede recibir de un proveedor inactivo. (PV04)'], 400);
         }
 
+        if (!$request->has('items') && $request->has('detalles')) {
+            $request->merge(['items' => $request->input('detalles')]);
+        }
+
         $validator = Validator::make($request->all(), [
             'fecha_recepcion' => 'nullable|date|before_or_equal:today',
             'items' => 'required|array|min:1',
@@ -87,8 +91,6 @@ class RecepcionController extends Controller
             $itemsNormalizados[] = [
                 'id_producto' => $idProducto,
                 'cantidad' => $cantidad,
-                'nro_lote' => trim((string) ($item['nro_lote'] ?? $item['numero_lote'] ?? '')),
-                'fecha_vencimiento' => $item['fecha_vencimiento'] ?? null,
             ];
         }
 
@@ -140,13 +142,10 @@ class RecepcionController extends Controller
                         throw new RuntimeException("El producto con ID {$idProducto} no existe o no está activo.");
                     }
 
-                    $idLote = null;
-
                     // Registrar detalle de recepción.
                     DetalleRecepcion::create([
                         'id_recepcion' => $recepcion->id_recepcion,
                         'id_producto' => $idProducto,
-                        'id_lote' => null,
                         'id_unidad' => $detalle->id_unidad,
                         'cantidad_recibida' => $cantidadRecibida,
                     ]);
@@ -156,7 +155,7 @@ class RecepcionController extends Controller
                     $detalle->save();
 
                     // Sumar al stock como ingreso (C06 depende de S03).
-                    $this->sumarStock($producto, $cantidadRecibida, $idUsuario, $detalle->id_unidad, $recepcion->id_recepcion, $fecha, $idLote);
+                    $this->sumarStock($producto, $cantidadRecibida, $idUsuario, $detalle->id_unidad, $recepcion->id_recepcion, $fecha);
 
                     // PV05: Asociar automáticamente el producto al proveedor si aún no lo está
                     $asocProv = ProductoProveedor::where('id_producto', $idProducto)
@@ -193,8 +192,6 @@ class RecepcionController extends Controller
                         'descripcion' => $producto->descripcion,
                         'cantidad_recibida' => $cantidadRecibida,
                         'cantidad_pendiente' => max(0, $pendiente - $cantidadRecibida),
-                        'id_lote' => null,
-                        'nro_lote' => null,
                     ];
                 }
 
@@ -263,8 +260,7 @@ class RecepcionController extends Controller
         int $idUsuario,
         ?int $idUnidad = null,
         ?int $idRecepcion = null,
-        \Carbon\Carbon|string|null $fecha = null,
-        ?int $idLote = null
+        \Carbon\Carbon|string|null $fecha = null
     ): void {
         $this->stockService->registrarMovimiento(
             $producto,
@@ -276,8 +272,7 @@ class RecepcionController extends Controller
             null,
             $idRecepcion,
             $fecha,
-            false,
-            $idLote
+            false
         );
     }
 }

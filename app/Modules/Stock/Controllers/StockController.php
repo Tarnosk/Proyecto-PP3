@@ -6,13 +6,17 @@ namespace App\Modules\Stock\Controllers;
 use App\Http\Controllers\Controller;
 use App\Modules\Productos\Models\Producto;
 use App\Modules\Stock\Models\MovimientoStock;
-use Carbon\Carbon;
+use App\Modules\Stock\Services\StockService;
+use App\Support\UsuarioActual;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class StockController extends Controller
 {
+    public function __construct(private StockService $stockService)
+    {
+    }
     /**
      * S01 - Consultar stock disponible de todos los productos.
      * Permite buscar por nombre o código y muestra la cantidad disponible actualizada.
@@ -61,10 +65,10 @@ class StockController extends Controller
     }
 
     /**
-     * S02 - Disponibilidad para venta de un producto concreto.
-     * Incluye conversión entre unidades configuradas (S08) para ventas minoristas/mayoristas.
+     * S01/S02 - Consultar stock actual de un producto concreto por su ID.
+     * Incluye equivalencias de unidades configuradas (S08) y compatibilidad con G4 (HttpStockApi).
      */
-    public function disponibilidadParaVenta(Request $request, int $id): JsonResponse
+    public function show(Request $request, int $id): JsonResponse
     {
         $producto = Producto::with('unidades')->find($id);
 
@@ -78,39 +82,157 @@ class StockController extends Controller
         if ($producto->estado !== 'activo') {
             return response()->json([
                 'status' => 'error',
-                'message' => 'El producto no se encuentra activo y no está disponible para la venta.',
+                'message' => 'El producto no se encuentra activo.',
             ], 400);
         }
 
-        $disponible = $producto->stock_disponible;
+        $stockActual = (int) $producto->stock;
 
-        // Unidades y su equivalencia en disponibilidad (S08)
-        $unidades = $producto->unidades->map(function ($u) use ($disponible) {
+        $unidades = $producto->unidades->map(function ($u) use ($stockActual) {
             $equivalencia = (float) $u->equivalencia_base;
             return [
                 'id_unidad' => $u->id_unidad,
                 'nombre_unidad' => $u->nombre_unidad,
                 'equivalencia_base' => $equivalencia,
                 'descripcion' => $u->descripcion,
-                'disponible_en_unidad' => $this->disponibleEnUnidad($disponible, $equivalencia),
+                'disponible_en_unidad' => $this->disponibleEnUnidad($stockActual, $equivalencia),
             ];
         });
 
         return response()->json([
             'status' => 'success',
+            'stock' => $stockActual,
+            'disponible' => $stockActual,
             'data' => [
+                'id' => $producto->id_producto,
                 'id_producto' => $producto->id_producto,
                 'codigo' => $producto->codigo,
+                'nombre' => $producto->nombre,
                 'descripcion' => $producto->descripcion,
                 'precio_unitario' => (float) $producto->precio_unitario,
                 'precio_mayorista' => (float) $producto->precio_mayorista,
                 'precio_minorista' => (float) $producto->precio_minorista,
-                'stock_disponible' => $disponible,
+                'stock' => $stockActual,
+                'stock_disponible' => $stockActual,
+                'disponible' => $stockActual,
                 'stock_minimo' => $producto->stock_minimo,
                 'estado_alerta' => $producto->estado_alerta,
                 'unidades' => $unidades,
             ],
         ]);
+    }
+
+    public function disponibilidadParaVenta(Request $request, int $id): JsonResponse
+    {
+        return $this->show($request, $id);
+    }
+
+    /**
+     * S04 / Integración G4 - Registrar uno o múltiples movimientos de stock (POST /api/stock/movimientos).
+     * Soporta el contrato de HttpStockApi::ajustar() con arreglo 'items' [{id_producto, cantidad}]
+     * donde cantidad < 0 descuenta stock (venta) y cantidad > 0 repone stock (devolución/anulacion).
+     */
+    public function registrarMovimientosLote(Request $request): JsonResponse
+    {
+        $items = $request->input('items');
+        if (!is_array($items) || empty($items)) {
+            if ($request->filled('id_producto') && $request->filled('cantidad')) {
+                $items = [[
+                    'id_producto' => (int) $request->input('id_producto'),
+                    'cantidad' => (int) $request->input('cantidad'),
+                    'id_unidad' => $request->input('id_unidad'),
+                    'tipo' => $request->input('tipo'),
+                ]];
+            } else {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Debe proporcionar al menos un ítem en items[] con id_producto y cantidad.',
+                ], 400);
+            }
+        }
+
+        $idUsuario = UsuarioActual::id($request);
+        $idVenta = $request->filled('venta_id')
+            ? (int) $request->input('venta_id')
+            : ($request->filled('id_venta') ? (int) $request->input('id_venta') : null);
+        if ($idVenta !== null && $idVenta <= 0) {
+            $idVenta = null;
+        }
+        $origen = trim((string) $request->input('origen', 'ventas'));
+        $motivoBase = trim((string) ($request->input('motivo') ?? 'Movimiento de stock por API'));
+
+        try {
+            $resultados = DB::transaction(function () use ($items, $idUsuario, $idVenta, $origen, $motivoBase) {
+                $procesados = [];
+
+                foreach ($items as $idx => $item) {
+                    $idProducto = (int) ($item['id_producto'] ?? $item['producto_id'] ?? 0);
+                    $cantidadRaw = (int) ($item['cantidad'] ?? 0);
+
+                    if ($idProducto <= 0 || $cantidadRaw === 0) {
+                        throw new \RuntimeException("Ítem #{$idx} inválido: requiere id_producto > 0 y cantidad distinta de 0.");
+                    }
+
+                    $producto = Producto::lockForUpdate()->find($idProducto);
+                    if (!$producto || $producto->estado !== 'activo') {
+                        throw new \RuntimeException("El producto #{$idProducto} no existe o se encuentra inactivo.");
+                    }
+
+                    $tipoExplicito = isset($item['tipo']) ? strtolower(trim((string) $item['tipo'])) : null;
+                    if ($tipoExplicito && in_array($tipoExplicito, StockService::TIPOS, true)) {
+                        $tipo = $tipoExplicito;
+                        $esIncremento = in_array($tipo, ['ingreso', 'devolucion'], true) && $cantidadRaw > 0;
+                    } else {
+                        $esIncremento = $cantidadRaw > 0;
+                        $tipo = $esIncremento
+                            ? ($origen === 'ventas' ? 'devolucion' : 'ajuste')
+                            : 'venta';
+                    }
+
+                    $cantidadAbs = abs($cantidadRaw);
+                    $idUnidad = isset($item['id_unidad']) && (int) $item['id_unidad'] > 0 ? (int) $item['id_unidad'] : null;
+
+                    $mov = $this->stockService->registrarMovimiento(
+                        $producto,
+                        $tipo,
+                        $cantidadAbs,
+                        $motivoBase !== '' ? $motivoBase : "Movimiento ({$tipo})",
+                        $idUsuario,
+                        $idUnidad,
+                        $idVenta,
+                        null,
+                        null,
+                        $esIncremento
+                    );
+
+                    $producto->refresh();
+
+                    $procesados[] = [
+                        'id_movimiento' => $mov->id_movimiento,
+                        'id_producto' => $producto->id_producto,
+                        'codigo' => $producto->codigo,
+                        'tipo' => $tipo,
+                        'cantidad' => $cantidadAbs,
+                        'stock' => (int) $producto->stock,
+                        'stock_disponible' => (int) $producto->stock,
+                        'disponible' => (int) $producto->stock,
+                    ];
+                }
+
+                return $procesados;
+            });
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Movimientos de stock registrados correctamente.',
+                'data' => $resultados,
+            ], 200);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => $e->getMessage(),
+            ], 400);
+        }
     }
 
     /**
@@ -222,71 +344,5 @@ class StockController extends Controller
     private function disponibleEnUnidad(int $disponible, float $equivalencia): float
     {
         return (float) $disponible / $equivalencia;
-    }
-
-    /**
-     * S06 - Lotes próximos a vencer (para el dashboard "Próximos a vencer").
-     * Devuelve los lotes vigentes cuyo vencimiento está dentro de
-     * dias_alerta_vencimiento (30 por defecto) a partir de hoy, junto al producto.
-     */
-    public function lotesPorVencer(Request $request): JsonResponse
-    {
-        $dias = (int) $request->input('dias', 30);
-        if ($dias < 1) {
-            $dias = 30;
-        }
-        $hasta = now()->copy()->addDays($dias)->toDateString();
-        $hoy = now()->toDateString();
-
-        $lotes = DB::table('lote as l')
-            ->join('producto as p', 'p.id_producto', '=', 'l.id_producto')
-            ->leftJoin('unidad_medida as u', function ($join) use ($hoy) {
-                $join->on('u.id_producto', '=', 'l.id_producto')->where('u.es_base', 1);
-            })
-            ->where('p.estado', 'activo')
-            ->where('l.cantidad_actual', '>', 0)
-            ->whereBetween('l.fecha_vencimiento', [$hoy, $hasta])
-            ->select(
-                'l.id_lote',
-                'l.nro_lote',
-                'l.fecha_vencimiento',
-                'l.cantidad_inicial',
-                'l.cantidad_actual',
-                'p.id_producto',
-                'p.codigo',
-                'p.nombre',
-                'p.descripcion',
-                'u.nombre_unidad'
-            )
-            ->orderBy('l.fecha_vencimiento', 'asc')
-            ->get()
-            ->map(function ($lote) use ($hoy) {
-                $estado = ((string) $lote->fecha_vencimiento < $hoy)
-                    ? 'vencido'
-                    : (((int) $lote->cantidad_actual === 0) ? 'consumido' : 'vigente');
-
-                return [
-                    'id_lote' => (int) $lote->id_lote,
-                    'nro_lote' => (string) $lote->nro_lote,
-                    'id_producto' => (int) $lote->id_producto,
-                    'codigo_producto' => (string) $lote->codigo,
-                    'descripcion_producto' => (string) ($lote->nombre ?: $lote->descripcion),
-                    'producto_codigo' => (string) $lote->codigo,
-                    'producto_nombre' => (string) ($lote->codigo . ' - ' . ($lote->nombre ?: $lote->descripcion)),
-                    'fecha_vencimiento' => (string) $lote->fecha_vencimiento,
-                    'cantidad' => (int) $lote->cantidad_actual,
-                    'cantidad_actual' => (int) $lote->cantidad_actual,
-                    'cantidad_inicial' => (int) $lote->cantidad_inicial,
-                    'unidades' => (string) ($lote->nombre_unidad ?? ''),
-                    'dias_para_vencer' => (int) Carbon::parse($hoy)
-                        ->diffInDays(Carbon::parse((string) $lote->fecha_vencimiento), false),
-                    'estado' => $estado,
-                ];
-            });
-
-        return response()->json([
-            'status' => 'success',
-            'data' => $lotes,
-        ]);
     }
 }
