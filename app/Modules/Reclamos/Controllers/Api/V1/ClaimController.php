@@ -17,6 +17,7 @@ class ClaimController extends Controller
             'cliente_id' => ['nullable', 'integer', 'min:1'],
             'estado' => ['nullable', Rule::enum(ClaimStatus::class)],
             'per_page' => ['nullable', 'integer', 'between:1,100'],
+            'page' => ['nullable', 'integer', 'min:1'],
         ]);
         $claims = Reclamo::query()
             ->when(isset($filters['cliente_id']), fn ($query) => $query->where('cliente_id', $filters['cliente_id']))
@@ -42,9 +43,14 @@ class ClaimController extends Controller
 
     public function store(Request $request): JsonResponse
     {
+        $isService = $request->attributes->get('api_service') === true;
+        if (! $isService) {
+            $request->mergeIfMissing(['usuario_id' => $request->user()->id]);
+        }
         $data = $request->validate([
             'cliente_id' => ['required', 'integer', Rule::exists('clientes', 'id')->where('estado', 'activo')],
-            'usuario_id' => ['required', 'integer', Rule::exists('usuarios', 'id')->where('estado', 'activo')->whereIn('rol', ['administrativo', 'repartidor'])],
+            'usuario_id' => ['required', 'integer', Rule::exists('usuarios', 'id')->where('estado', 'activo')->whereIn('rol', ['administrativo', 'repartidor']),
+                ...($isService ? [] : [Rule::in([$request->user()->id])])],
             'asunto' => ['required', 'string', 'max:160'],
             'descripcion' => ['required', 'string'],
             'prioridad' => ['required', 'in:baja,media,alta'],

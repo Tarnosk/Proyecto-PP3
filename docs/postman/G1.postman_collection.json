@@ -1,0 +1,635 @@
+{
+  "info": {
+    "name": "ERP Juan23 - G1",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Importar tambien G1.local.postman_environment.json. Completar credenciales locales. Enviar login primero; el Bearer se guarda automaticamente. No usar Run collection sin querer ejecutar las escrituras reales. Saldo y cobros externos quedan fuera."
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{access_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "const publicRequest = pm.request.auth && pm.request.auth.type === 'noauth';",
+          "if (!publicRequest) {",
+          "    const token = pm.environment.get('access_token');",
+          "    const expiry = pm.environment.get('expires_at');",
+          "    if (!token || (expiry && Date.parse(expiry) <= Date.now())) {",
+          "        pm.execution.skipRequest();",
+          "        throw new Error('Ejecutar primero 01 - Obtener Bearer (POST login).');",
+          "    }",
+          "}",
+          "const rawUrl = pm.request.url.toString();",
+          "for (const key of ['cliente_id', 'reclamo_id', 'producto_id', 'usuario_id', 'cliente_creado_id', 'reclamo_creado_id']) {",
+          "    if (rawUrl.includes('{{' + key + '}}') && !/^[1-9][0-9]*$/.test(String(pm.variables.get(key) || ''))) {",
+          "        pm.execution.skipRequest();",
+          "        throw new Error('Completar ' + key + ' con un ID existente, o ejecutar el alta de prueba correspondiente.');",
+          "    }",
+          "}"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "01 - Obtener Bearer (POST login)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{base_url}}/api/v1/auth/login",
+        "description": "G1. Las escrituras guardan cambios reales al pulsar Send.",
+        "auth": {
+          "type": "noauth"
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{{login_json}}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "['access_token', 'expires_at', 'usuario_id'].forEach(k => pm.environment.unset(k));",
+              "const usuario = pm.environment.get('usuario');",
+              "const password = pm.environment.get('password');",
+              "if (!usuario || !password) {",
+              "    pm.execution.skipRequest();",
+              "    throw new Error('Completar usuario y password en el entorno G1 local.');",
+              "}",
+              "pm.variables.set('login_json', JSON.stringify({usuario: usuario, password: password}));"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+              "",
+              "if (pm.response.code === 200) {",
+              "    const data = pm.response.json().data;",
+              "    pm.test('Bearer y usuario presentes', function () {",
+              "        pm.expect(data.access_token).to.be.a('string').and.not.empty;",
+              "        pm.expect(data.usuario.id).to.be.a('number');",
+              "    });",
+              "    if (data.access_token && data.usuario && data.usuario.id) {",
+              "        pm.environment.set('access_token', data.access_token);",
+              "        pm.environment.set('expires_at', data.expires_at);",
+              "        pm.environment.set('usuario_id', String(data.usuario.id));",
+              "    }",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "02 - Consultas GET",
+      "item": [
+        {
+          "name": "Health",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/api/v1/health",
+            "description": "G1. Usar IDs existentes."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Clientes - listado",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/api/v1/clientes",
+            "description": "G1. Usar IDs existentes."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Clientes - detalle",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/api/v1/clientes/{{cliente_id}}",
+            "description": "G1. Usar IDs existentes."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Zonas",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/api/v1/zonas",
+            "description": "G1. Usar IDs existentes."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Reclamos - listado",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/api/v1/reclamos",
+            "description": "G1. Usar IDs existentes."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Reclamos - detalle",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/api/v1/reclamos/{{reclamo_id}}",
+            "description": "G1. Usar IDs existentes."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Usuario del login",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/api/v1/usuarios/{{usuario_id}}",
+            "description": "G1. Usar IDs existentes."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Catalogo publico - listado",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/api/v1/catalogo",
+            "description": "G1. Usar IDs existentes.",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Catalogo publico - detalle",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/api/v1/catalogo/{{producto_id}}",
+            "description": "G1. Usar IDs existentes.",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "03 - Escrituras REALES (administrativo; ejecutar en orden)",
+      "item": [
+        {
+          "name": "01 - POST cliente de prueba (crea un registro real)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/api/v1/clientes",
+            "description": "G1. Las escrituras guardan cambios reales al pulsar Send.",
+            "body": {
+              "mode": "raw",
+              "raw": "{{cliente_post_json}}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "['cliente_creado_id', 'reclamo_creado_id', 'cliente_put_json'].forEach(k => pm.environment.unset(k));",
+                  "const documento = String(70000000 + Math.floor(Math.random() * 9999999));",
+                  "pm.variables.set('cliente_post_json', JSON.stringify({",
+                  "    nombre: 'Prueba', apellido_razon_social: 'Postman G1', tipo_documento: 'dni',",
+                  "    dni_cuit: documento, telefono: '2923123456', email: 'prueba.' + documento + '@erp.example',",
+                  "    tipo_cliente: 'minorista', localidad: 'Pigue', zona: 'Pruebas API',",
+                  "    direccion_calle: 'San Martin', direccion_numero: '150'",
+                  "}));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 201', function () { pm.response.to.have.status(201); });",
+                  "",
+                  "if (pm.response.code === 201) {",
+                  "    const client = pm.response.json().data;",
+                  "    const input = JSON.parse(pm.variables.get('cliente_post_json'));",
+                  "    delete input.zona;",
+                  "    input.nombre = 'Prueba editada';",
+                  "    input.estado = client.estado;",
+                  "    input.zona_id = client.zona_id;",
+                  "    input.condicion_iva = client.condicion_iva;",
+                  "    pm.environment.set('cliente_creado_id', String(client.id));",
+                  "    pm.environment.set('cliente_id', String(client.id));",
+                  "    pm.environment.set('cliente_put_json', JSON.stringify(input));",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "02 - PUT cliente creado (ficha completa)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/api/v1/clientes/{{cliente_creado_id}}",
+            "description": "G1. Las escrituras guardan cambios reales al pulsar Send.",
+            "body": {
+              "mode": "raw",
+              "raw": "{{cliente_put_json}}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.environment.get('cliente_put_json')) {",
+                  "    pm.execution.skipRequest();",
+                  "    throw new Error('Crear primero un cliente desde POST cliente de prueba.');",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "03 - PATCH cliente creado (telefono)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/api/v1/clientes/{{cliente_creado_id}}",
+            "description": "G1. Las escrituras guardan cambios reales al pulsar Send.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"telefono\": \"2923445566\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "04 - POST reclamo del cliente creado",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/api/v1/reclamos",
+            "description": "G1. Las escrituras guardan cambios reales al pulsar Send.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cliente_id\": \"{{cliente_creado_id}}\",\n  \"asunto\": \"Prueba Postman\",\n  \"descripcion\": \"Control de entrega\",\n  \"prioridad\": \"media\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.environment.unset('reclamo_creado_id');",
+                  "if (!/^[1-9][0-9]*$/.test(String(pm.environment.get('cliente_creado_id') || ''))) {",
+                  "    pm.execution.skipRequest();",
+                  "    throw new Error('Crear primero un cliente desde POST cliente de prueba.');",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 201', function () { pm.response.to.have.status(201); });",
+                  "",
+                  "if (pm.response.code === 201) {",
+                  "    const id = String(pm.response.json().data.id);",
+                  "    pm.environment.set('reclamo_creado_id', id);",
+                  "    pm.environment.set('reclamo_id', id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "05 - PATCH cerrar reclamo creado",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/api/v1/reclamos/{{reclamo_creado_id}}/estado",
+            "description": "G1. Las escrituras guardan cambios reales al pulsar Send.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"estado\": \"cerrado\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "04 - Cerrar sesion y limpiar Bearer",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{base_url}}/api/v1/auth/logout",
+        "description": "G1. Las escrituras guardan cambios reales al pulsar Send."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+              "",
+              "if (pm.response.code === 200 || pm.response.code === 401) {",
+              "    ['access_token', 'expires_at', 'usuario_id'].forEach(k => pm.environment.unset(k));",
+              "}"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

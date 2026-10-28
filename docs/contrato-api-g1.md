@@ -5,12 +5,15 @@ Este documento describe las rutas implementadas en `routes/api.php` bajo `/api/v
 ## Convenciones
 
 - Enviar `Accept: application/json` siempre. En `POST`, `PUT` y `PATCH`, enviar ademas `Content-Type: application/json`.
-- Salvo `POST /auth/login`, enviar `Authorization: Bearer <token>`. El token de usuario sale del login; el token interno de servicio se configura en `INTERNAL_API_TOKEN` y no se obtiene por HTTP.
+- Para integraciones, salvo `POST /auth/login`, enviar `Authorization: Bearer <token>`. El token de usuario sale del login; el token interno de servicio se configura en `INTERNAL_API_TOKEN` y no se obtiene por HTTP. El listado de clientes dejó de ser público: requiere el mismo acceso que su detalle.
+- `GET /health`, `/clientes`, `/clientes/{id}`, `/zonas`, `/reclamos`, `/reclamos/{id}` y `/usuarios/{id}` aceptan también la sesión web vigente del frontend, respetando sus roles. Las escrituras y consultas financieras siguen exigiendo Bearer. Un encabezado `Authorization` explícito inválido produce `401` aunque exista una cookie válida.
+- `GET /catalogo` y `/catalogo/{id}` de esta API son públicos: devuelven la misma proyección comercial que el Catálogo web, sin usuarios, auditoría, costos ni cantidades internas de stock. Ver [APIs funcionales de G1](apis-funcionales-g1.md) para el contrato y las pruebas actuales.
 - `administrativo`, `repartidor` y `contador` son los valores de rol. Un usuario inactivo o con token vencido/reemplazado no se autentica.
 - El token interno puede leer clientes, zonas, reclamos y usuarios, y crear/cambiar reclamos. No puede crear/cambiar clientes ni hacer logout.
 - Los importes (`saldo`, `monto_total`) son cadenas decimales de dos posiciones, no numeros JSON. Fechas y horas son cadenas ISO 8601. Los campos opcionales de una respuesta pueden valer `null`.
-- En las listas paginadas, `page` selecciona la pagina (por defecto 1) y `per_page` admite enteros de 1 a 100 (por defecto 20). `page` lo procesa el paginador de Laravel; no tiene una regla de validacion propia. Una lista vacia devuelve `data: []` y `meta`, no `404`.
+- En las listas paginadas, `page` selecciona la pagina (por defecto 1) y `per_page` admite enteros de 1 a 100 (por defecto 20). Clientes valida `page` como entero mayor o igual a 1. Una lista vacia devuelve `data: []` y `meta`, no `404`.
 - `{id}` es un segmento numerico de ruta. Un recurso inexistente devuelve `404`.
+- Las siete lecturas privadas y las dos consultas públicas del Catálogo envían `Cache-Control: no-store` en sus respuestas exitosas. La autenticación se comprueba antes de resolver modelos por ID: sin credenciales se devuelve `401` aunque el ID numérico no exista.
 
 ## Estados y errores
 
@@ -18,7 +21,7 @@ Este documento describe las rutas implementadas en `routes/api.php` bajo `/api/v
 | --- | --- | --- |
 | `200 OK` | Consulta, login, logout o modificacion exitosa | JSON especifico de la ruta |
 | `201 Created` | Alta de cliente o reclamo | `{"data": {...}}`; el alta de cliente agrega cabecera `Location: .../api/v1/clientes/{id}` |
-| `401 Unauthorized` | Falta el Bearer, es invalido o vencio; no aplica al login publico | `{"message":"No autorizado."}` |
+| `401 Unauthorized` | Faltan credenciales, el Bearer es inválido/venció o la sesión web permitida no es vigente; no aplica al login | `{"message":"No autorizado."}` |
 | `403 Forbidden` | Token valido pero rol no permitido; token interno en ruta reservada a usuario | `{"message":"No tiene permisos para esta operacion."}` |
 | `404 Not Found` | ID inexistente o ruta no encontrada | Error JSON de Laravel, normalmente `{"message":"No query results for model ..."}` para un ID inexistente; el texto exacto no es parte estable del contrato |
 | `422 Unprocessable Content` | Campos invalidos, faltantes, duplicados o credenciales incorrectas/bloqueadas | `{"message":"...","errors":{"campo":["..."]}}`; el texto depende de la validacion/traducciones |
@@ -41,7 +44,7 @@ El segundo ejemplo ilustra la estructura de `422`, no garantiza ese idioma ni es
 
 ## Esquemas reutilizados
 
-**Cliente:** `id`, `nombre`, `apellido_razon_social`, `dni_cuit`, `telefono`, `email`, `direccion`, `localidad` (nullable), `zona_id` (nullable), `condicion_iva` (nullable), `tipo_cliente` (`minorista`/`mayorista`) y `estado` (`activo`/`inactivo`). `saldo` ya no se expone en la ficha de G1: se consulta por su ruta especifica, delegada a G4. `saldo` y `creado_por` no son editables por esta API.
+**Cliente:** `id`, `nombre`, `apellido_razon_social`, `dni_cuit`, `tipo_documento`, `telefono`, `email`, `direccion`, `direccion_calle`, `direccion_numero`, `localidad` (nullable), `zona_id` (nullable), `condicion_iva` (nullable), `tipo_cliente` (`minorista`/`mayorista`) y `estado` (`activo`/`inactivo`). Los campos separados de domicilio pueden ser nulos en registros históricos. `saldo` no se expone en la ficha de G1: se consulta por su ruta especifica, delegada a G4. `saldo` y `creado_por` no son editables por esta API.
 
 **Reclamo:** `id`, `cliente_id`, `usuario_id`, `asunto`, `descripcion`, `prioridad` (`baja`/`media`/`alta`), `estado` (`abierto`/`en_proceso`/`cerrado`), `created_at`, `updated_at`.
 
@@ -53,10 +56,13 @@ El segundo ejemplo ilustra la estructura de `422`, no garantiza ese idioma ni es
 | --- | --- | --- | --- | --- |
 | `nombre` | Cadena, max. 120 | Obligatorio | Obligatorio | Opcional |
 | `apellido_razon_social` | Cadena, max. 160 | Obligatorio | Obligatorio | Opcional |
-| `dni_cuit` | Cadena unica, 6-20 caracteres: digitos, puntos, guiones o espacios | Obligatorio | Obligatorio | Opcional |
-| `telefono` | Cadena, 6-30 caracteres: digitos, espacios, `+`, `-`, `(`, `)` | Obligatorio | Obligatorio | Opcional |
+| `dni_cuit` | Documento único: DNI 7/8 dígitos o CUIT 11; admite separadores históricos y normaliza el formato | Obligatorio | Obligatorio | Opcional |
+| `tipo_documento` | `dni` o `cuit`; se infiere del documento si se omite | Opcional | Opcional | Opcional |
+| `telefono` | De 6 a 15 dígitos; máximo 30 caracteres, con `+` inicial, espacios, guiones o paréntesis | Obligatorio | Obligatorio | Opcional |
 | `email` | Email unico, max. 160 | Obligatorio | Obligatorio | Opcional |
-| `direccion` | Cadena, max. 255 | Obligatorio | Obligatorio | Opcional |
+| `direccion` | Cadena, max. 255; se genera si se envían calle y número | Obligatorio o generado | Obligatorio o generado | Opcional |
+| `direccion_calle`, `direccion_numero` | Se envían juntos; calle max. 200, altura de 1 a 6 dígitos | Opcional | Opcional | Opcional |
+| `zona` | Nombre de zona existente o nueva; no combinar con `zona_id` no nulo | Opcional | Opcional | Opcional |
 | `tipo_cliente` | `minorista` o `mayorista` | Obligatorio | Obligatorio | Opcional |
 | `estado` | `activo` o `inactivo` | Prohibido; se crea `activo` | Obligatorio | Opcional |
 | `localidad` | Cadena max. 120 o `null` | Opcional | Debe estar presente; puede ser `null` | Opcional |
@@ -94,7 +100,7 @@ En `PATCH` debe enviarse al menos un campo. Los campos desconocidos en escritura
 
 ### `GET /api/v1/health`
 
-- Acceso: token interno o usuario autenticado de cualquier rol. No es publico.
+- Acceso: token interno o usuario autenticado de cualquier rol, mediante Bearer o sesión web vigente. No es publico.
 - Body, query y parametros de ruta: ninguno.
 - Exito: `200`.
 
@@ -108,7 +114,7 @@ En `PATCH` debe enviarse al menos un campo. Los campos desconocidos en escritura
 
 ### `GET /api/v1/clientes`
 
-- Acceso: token interno, administrativo o repartidor.
+- Acceso: token interno de servicio, usuario administrativo o repartidor. El usuario puede utilizar Bearer o su sesión web vigente del frontend. El contador recibe `403`; sin credenciales válidas se devuelve `401`.
 - Query obligatoria: ninguna. Opcionales: `buscar` (cadena max. 160, busca nombre, razon social o DNI/CUIT), `estado` (`activo`/`inactivo`), `tipo` (`minorista`/`mayorista`), `zona_id` (entero >= 1), `page`, `per_page`.
 - Exito: `200`, orden por ID ascendente.
 
@@ -132,7 +138,7 @@ En `PATCH` debe enviarse al menos un campo. Los campos desconocidos en escritura
 
 ### `GET /api/v1/clientes/{id}`
 
-- Acceso: token interno, administrativo o repartidor.
+- Acceso: token interno, administrativo o repartidor. El usuario puede utilizar Bearer o su sesión web vigente del frontend.
 - Ruta obligatoria: `{id}` numerico de un cliente existente. Body y query: ninguno.
 - Exito: `200`.
 
@@ -239,8 +245,8 @@ La respuesta proviene de G4, no de `clientes.saldo` local. Sin integracion confi
 ### `POST /api/v1/reclamos`
 
 - Acceso: token interno, administrativo o repartidor.
-- Body obligatorio: `cliente_id` (entero de cliente **activo** existente), `usuario_id` (entero de usuario **activo** con rol administrativo/repartidor), `asunto` (cadena max. 160), `descripcion` (cadena), `prioridad` (`baja`, `media`, `alta`). Opcionales: ninguno. Los demas campos enviados no se usan para crear el reclamo.
-- Exito: `201`; nace con estado `abierto`. `usuario_id` se toma del body, **no** del token del llamador; el servicio consumidor debe enviar el autor correcto.
+- Body obligatorio: `cliente_id` (cliente activo existente), `asunto` (cadena max. 160), `descripcion` y `prioridad` (`baja`, `media`, `alta`). Con token de usuario, `usuario_id` se completa con el actor autenticado; si se envía debe coincidir con ese actor. Un token interno de servicio sí debe enviar `usuario_id` explícito de un administrativo/repartidor activo. Los demás campos enviados no se usan para crear el reclamo.
+- Éxito: `201`; nace con estado `abierto`. Un usuario no puede atribuir su reclamo a otra cuenta mediante el body.
 
 ```json
 {"data":{"id":9,"cliente_id":12,"usuario_id":4,"asunto":"Mercaderia incompleta","descripcion":"Faltaron dos unidades","prioridad":"alta","estado":"abierto","created_at":"2026-10-06T10:00:00-03:00","updated_at":"2026-10-06T10:00:00-03:00"}}

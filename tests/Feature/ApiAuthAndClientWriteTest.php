@@ -37,7 +37,7 @@ class ApiAuthAndClientWriteTest extends TestCase
 
         $this->withToken($token)->getJson('/api/v1/clientes')->assertOk();
         $this->postJson('/api/v1/auth/logout')->assertOk()->assertJsonPath('message', 'Sesion cerrada.');
-        $this->getJson('/api/v1/clientes')->assertUnauthorized();
+        $this->getJson('/api/v1/zonas')->assertUnauthorized();
     }
 
     public function test_api_login_uses_existing_failed_attempt_lockout(): void
@@ -76,11 +76,11 @@ class ApiAuthAndClientWriteTest extends TestCase
             'usuario' => 'admin2', 'password' => 'ClaveSegura123',
         ])->json('data.access_token');
 
-        $this->withToken($first)->getJson('/api/v1/clientes')->assertUnauthorized();
-        $this->withToken($second)->getJson('/api/v1/clientes')->assertOk();
+        $this->withToken($first)->getJson('/api/v1/zonas')->assertUnauthorized();
+        $this->withToken($second)->getJson('/api/v1/zonas')->assertOk();
 
         $this->travel(121)->minutes();
-        $this->getJson('/api/v1/clientes')->assertUnauthorized();
+        $this->getJson('/api/v1/zonas')->assertUnauthorized();
     }
 
     public function test_admin_can_create_replace_and_patch_client_without_editing_balance_or_creator(): void
@@ -170,6 +170,17 @@ class ApiAuthAndClientWriteTest extends TestCase
         $this->getJson('/api/v1/clientes')->assertForbidden();
         $this->getJson('/api/v1/reclamos')->assertForbidden();
         $this->getJson("/api/v1/usuarios/{$contador->id}")->assertForbidden();
+    }
+
+    public function test_client_list_details_and_writes_require_authentication(): void
+    {
+        $admin = User::factory()->create(['rol' => UserRole::ADMINISTRATIVO]);
+        $client = Cliente::factory()->create(['creado_por' => $admin->id]);
+
+        $this->getJson('/api/v1/clientes')
+            ->assertUnauthorized()->assertJsonMissingPath('data');
+        $this->getJson("/api/v1/clientes/{$client->id}")->assertUnauthorized();
+        $this->postJson('/api/v1/clientes', $this->clientData())->assertUnauthorized();
     }
 
     private function tokenFor(User $user): string

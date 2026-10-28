@@ -6,9 +6,7 @@ namespace App\Modules\Catalogo\Services;
 
 use App\Modules\Catalogo\Data\ProductoCatalogo;
 use App\Services\Gateways\ExternalJsonClient;
-use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Http;
 
 final class CatalogoGateway
 {
@@ -40,16 +38,7 @@ final class CatalogoGateway
         abort_unless($this->client->isConfigured('catalog'), 503, 'El catálogo no está conectado.');
         $path = rtrim((string) config('services.catalog.products_path'), '/').'/'.$id;
         abort_unless(str_starts_with($path, '/') && ! str_starts_with($path, '//') && ! str_contains($path, '://'), 503);
-        try {
-            $request = Http::baseUrl(rtrim(config('services.catalog.url'), '/'))->acceptJson()->withoutRedirecting()->connectTimeout(2)->timeout(5);
-            $token = config('services.catalog.token');
-            if (is_string($token) && $token !== '') {
-                $request = $request->withToken($token);
-            }
-            $response = $request->get($path);
-        } catch (ConnectionException) {
-            abort(503, 'El servicio de productos no está disponible.');
-        }
+        $response = $this->client->request('catalog', $path);
         abort_if($response->status() === 404, 404);
         abort_unless($response->successful(), 502, 'No se pudo consultar el producto.');
         $body = $response->json();

@@ -1,20 +1,30 @@
 # ERP Juan23
 
-## Base local de G1 y consumo de APIs (27/10/2026)
+## Entorno local integrado (27/10/2026)
 
-G1 volvió a usar `sistema_gestion`, el esquema local anterior de 17 tablas. Se retiraron de la copia de trabajo las 25 tablas de G3 que había agregado el instalador de G1; se respaldaron el producto de prueba y su movimiento y se conservaron cuatro registros nuevos de acceso de G1. No se modificaron las bases administradas por los otros equipos ni sus archivos de código.
+Por autorización del usuario se instalaron los esquemas locales de G2, G3 y G4 en `sistema_gestion`, conservando los registros existentes. La base tiene 61 tablas, 11 clientes y cinco productos reales con stock, precios iniciales y movimientos de ingreso. El retiro anterior de G3 queda como antecedente histórico: esta instalación fue autorizada nuevamente.
 
-En el panel de XAMPP, pulsar **Start** en **MySQL** y en **Apache**. Apache ya tiene configurado el ERP en un único puerto: `8000`. No se necesitan terminales con `artisan serve`.
+Para trabajar con las APIs de G1 y el Catálogo, iniciar **MySQL** en XAMPP y ejecutar desde la raíz del proyecto:
 
-Abrir `http://127.0.0.1:8000` para entrar al ERP. El Catálogo público de G1 sigue disponible en `/catalogo`, pero mostrará indisponibilidad hasta configurar una API de G3 operativa y administrada por ese equipo. `CATALOG_SERVICE_URL` quedó vacío: G1 no usará como proveedor la API local de G3 sobre su propia base. `APP_URL` y el consumidor de Ventas de G1 conservan la configuración Apache en 8000.
+```powershell
+C:\xampp\php\php.exe -d extension=gd -d extension=zip artisan serve
+```
 
-La pantalla `/inventario` pertenece a G3 y requiere su esquema: ya no se considera operativa sobre la base de G1. No volver a instalar sus tablas para resolverlo; solicitar a G3 su API y un entorno propio. G1 se limita a consumir las APIs autorizadas.
+El Catálogo usa `CATALOG_TRANSPORT=internal` en este entorno: consulta la ruta API de Productos dentro de Laravel, sin una llamada HTTP al mismo proceso. Apache es opcional para este circuito. No iniciar Apache y `artisan serve` al mismo tiempo en 8000.
 
-Para apagar el servidor web, pulsar **Stop** en **Apache**. Se dejó apagado después de verificarlo. No iniciar simultáneamente `artisan serve` en 8000 porque ese puerto queda reservado para Apache cuando esté activo.
+Abrir `http://127.0.0.1:8000` para entrar al ERP. El Catálogo público está en `/catalogo`; su API JSON de G1 está en `/api/v1/catalogo` y `/api/v1/catalogo/{id}`. En modo interno consumen la API real de Productos registrada en la copia local. Para un proveedor remoto, usar `CATALOG_TRANSPORT=http` y configurar su URL.
+
+La pantalla `/inventario` pertenece a G3 y ahora dispone de su esquema local. Los archivos originales de negocio de los otros equipos se conservaron. La instalación de tablas no certifica todos sus circuitos financieros y comerciales.
+
+Para apagar `artisan serve`, pulsar **Ctrl+C** en su terminal. Si se elige Apache, detenerlo desde XAMPP. En esta última revisión se cerraron los servidores web de prueba; no quedó la web iniciada.
 
 Configuración de XAMPP, pruebas y reversión: [informe de puerto único](docs/informe-apache-puerto-unico-g1.md).
 
-No ejecutar migraciones globales, `migrate:fresh`, `migrate:refresh`, semillas globales ni rollback general sobre esta base como paso de arranque: el autodescubrimiento incluye archivos de otros grupos. Se retiró la herramienta G1 que preparaba la copia integrada. Estado actual y respaldo: [informe de retiro de la integración local de G3](docs/informe-retiro-integracion-local-g3.md). El [informe de preparación G1 + G3](docs/informe-preparacion-base-g1-g3.md) queda como antecedente histórico, no como procedimiento vigente.
+APIs verificadas, permisos, pruebas POST/PUT/PATCH y ejemplos manuales: [APIs funcionales de G1](docs/apis-funcionales-g1.md). La adaptación interna cubre Productos para el Catálogo y consumidores de catálogo de G1. Otros consumidores HTTP —por ejemplo Ventas en reportes— siguen necesitando un proveedor que pueda atender la consulta; si apuntan al mismo proceso único de PHP, usar Apache o un proveedor separado para ese circuito.
+
+No ejecutar migraciones globales, `migrate:fresh`, `migrate:refresh`, semillas globales ni rollback general como paso de arranque. Se aplicaron rutas seleccionadas y dependencias ordenadas; la semilla de seis productos de G3 se excluyó para cargar únicamente los cinco solicitados. Fuentes, compatibilidad, pruebas y reversión: [informe de instalación local G2/G3/G4](docs/informe-instalacion-local-g2-g3-g4.md).
+
+El 28/10/2026 se retiraron, por pedido del usuario, las nueve migraciones nuevas de esa instalación local (compatibilidad de stock, siete importadas de G2 y promociones de G4). Se conservaron las migraciones previamente versionadas y la base local existente, sin rollback. Esos archivos locales no se compartirán con el código de G1; esta copia no permite reproducir por sí sola el esquema integrado desde cero. Detalles y respaldo: [APIs funcionales de G1](docs/apis-funcionales-g1.md#qué-cambia-con-commitpush-y-cómo-revertir).
 
 Sistema web de gestión comercial en Laravel. Incluye autenticación segura, recuperación de contraseña por email, permisos por rol, clientes, reclamos y reportes. Los cobros y facturas pertenecen a G2; los saldos y ventas, a G4.
 
@@ -83,11 +93,11 @@ En XAMPP, habilitar `extension=gd` y `extension=zip` en `C:\xampp\php\php.ini`. 
 
 ### Instalación nueva
 
-Preparar únicamente el esquema aprobado por G1 en una base propia, con respaldo y una selección explícita de migraciones de su dominio. No utilizar una migración o semilla global: el proveedor modular descubre también archivos de otros equipos. La instalación conjunta G1 + G3 que figuraba en este README fue retirada el 27/10/2026.
+Preparar el esquema aprobado en una base propia, con respaldo y una selección explícita y ordenada de migraciones. No utilizar una migración o semilla global: el proveedor modular descubre también archivos de otros equipos. La instalación local actual de G2/G3/G4 y las dependencias de su secuencia se documentan en [el informe de instalación](docs/informe-instalacion-local-g2-g3-g4.md).
 
 ### Base existente del proyecto
 
-La base `sistema_gestion` ya está preparada; no necesita migraciones o semillas como paso de arranque. Cualquier migración posterior debe identificarse como propiedad de G1 y ejecutarse con una ruta explícita revisada, preservando datos existentes. No volver a importar los SQL históricos ni reinstalar tablas de otros grupos.
+La base `sistema_gestion` ya está preparada; no necesita migraciones o semillas como paso de arranque. Cualquier modificación posterior requiere alcance autorizado y una ruta explícita revisada, preservando datos existentes. No volver a importar SQL históricos completos ni reinstalar tablas ya existentes.
 
 La migration de recuperación agrega un email opcional y único a `usuarios`. El administrador puede asignar los emails reales desde **Lista de Usuarios** en su panel, sin utilizar phpMyAdmin.
 
@@ -97,7 +107,7 @@ La migration de recuperación agrega un email opcional y único a `usuarios`. El
 
 Las pantallas internas usan el menú lateral compartido. El relevamiento de APIs de G1 quedó en el chat. La conexión de G2, sus requisitos pendientes y la reversión se detallan en [informe de integración de G2](docs/informe-integracion-operativa-g2.md).
 
-En este equipo, iniciar **Apache y MySQL desde XAMPP**, según la configuración de puerto único indicada al principio. Apache sirve exclusivamente `ERP-Juan23/public` y atiende también las consultas HTTP de G1 a las APIs locales.
+Para las APIs de G1 y el Catálogo, iniciar MySQL en XAMPP y ejecutar `artisan serve`, según las instrucciones iniciales. También puede usarse Apache, que sirve exclusivamente `ERP-Juan23/public`.
 
 Abrir:
 
@@ -105,7 +115,7 @@ Abrir:
 http://127.0.0.1:8000
 ```
 
-Laravel debe servirse desde `public/`. El servidor integrado de `artisan serve` en Windows no reemplaza esta configuración concurrente: apuntar el consumidor HTTP al mismo proceso puede bloquear la consulta del Catálogo.
+Laravel debe servirse desde `public/`. El Catálogo interno ya no depende de concurrencia HTTP. Mantener el modo HTTP contra el mismo proceso de `artisan serve` sí puede bloquear una consulta; esa configuración no se utiliza para el Catálogo local.
 
 ### Ventas, Historial y Cuentas corrientes: modo de integración
 
