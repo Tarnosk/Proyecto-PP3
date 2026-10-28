@@ -372,14 +372,21 @@ class GeneradorSugerenciasReposicionService
     {
         return [
             'id' => $s->id_sugerencia,
+            'id_sugerencia' => $s->id_sugerencia,
+            'id_producto' => $s->id_producto,
+            'id_proveedor' => $s->id_proveedor,
+            'stock_actual' => (int) ($s->producto?->stock_disponible ?? 0),
             'producto' => [
                 'id' => $s->id_producto,
                 'codigo' => $s->producto?->codigo,
                 'nombre' => $s->producto?->nombre ?? $s->producto?->descripcion,
+                'stock' => (int) ($s->producto?->stock_disponible ?? 0),
+                'stock_minimo' => (int) ($s->producto?->stock_minimo ?? $s->cantidad_minima ?? 0),
             ],
             'proveedor' => [
                 'id' => $s->id_proveedor,
                 'nombre' => $s->proveedor?->razon_social,
+                'razon_social' => $s->proveedor?->razon_social,
             ],
             'cantidad_sugerida' => $s->cantidad_sugerida,
             'cantidad_minima' => $s->cantidad_minima,
