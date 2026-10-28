@@ -63,7 +63,6 @@ class StockService
         ?int $idRecepcion = null,
         \Carbon\Carbon|string|null $fechaPersonalizada = null,
         bool $esIncremento = false,
-        ?int $idLote = null,
         ?int $idSesionConteo = null
     ): MovimientoStock {
         $idUnidad = ($idUnidad !== null && (int) $idUnidad > 0) ? (int) $idUnidad : null;
@@ -78,7 +77,6 @@ class StockService
             'id_usuario' => $idUsuario,
             'id_venta' => $idVenta,
             'id_recepcion' => $idRecepcion,
-            'id_lote' => $idLote,
         ];
 
         if (Schema::hasColumn('MOVIMIENTO_STOCK', 'id_sesion_conteo')) {
@@ -113,9 +111,15 @@ class StockService
         }
 
         // Transacción atómica: actualizar stock embebido + registrar movimiento
-        DB::beginTransaction();
-
-        try {
+        return DB::transaction(function () use (
+            $producto,
+            $tipo,
+            $cantidad,
+            $idUnidad,
+            $esIncremento,
+            $datosMovimiento,
+            $fecha
+        ) {
             $disponible = $producto->stock_disponible;
 
             // PRODUCTO.stock se mantiene en unidades base (OB3), por lo que el delta
@@ -135,7 +139,6 @@ class StockService
 
             // S04: impedir stock negativo en ventas. En ajustes negativos también se impide.
             if ($nuevoDisponible < 0) {
-                DB::rollBack();
                 throw new RuntimeException(
                     "Stock insuficiente para {$producto->codigo}. Disponible: {$disponible}, solicitado: {$cantidadBase}."
                 );
@@ -146,17 +149,8 @@ class StockService
             $this->recalcularAlerta($producto);
 
             $datosMovimiento['fecha'] = $fecha;
-            $movimiento = MovimientoStock::create($datosMovimiento);
-
-            DB::commit();
-
-            return $movimiento;
-        } catch (\Throwable $e) {
-            if (DB::transactionLevel() > 0) {
-                DB::rollBack();
-            }
-            throw $e;
-        }
+            return MovimientoStock::create($datosMovimiento);
+        });
     }
 
     /**

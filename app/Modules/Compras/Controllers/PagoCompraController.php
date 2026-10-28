@@ -28,6 +28,18 @@ class PagoCompraController extends Controller
      */
     public function store(Request $request, int $compra): JsonResponse
     {
+        if (!$request->has('importe') && $request->has('monto')) {
+            $request->merge(['importe' => $request->input('monto')]);
+        }
+        if ($request->has('pagos') && is_array($request->input('pagos')) && count($request->input('pagos')) > 0 && !$request->has('metodo_pago')) {
+            $primerPago = $request->input('pagos')[0];
+            $request->merge([
+                'metodo_pago' => $primerPago['metodo_pago'] ?? null,
+                'importe' => $primerPago['importe'] ?? ($primerPago['monto'] ?? null),
+                'fecha_pago' => $primerPago['fecha_pago'] ?? ($primerPago['fecha'] ?? null),
+            ]);
+        }
+
         $validator = Validator::make($request->all(), [
             'metodo_pago' => 'required|string|in:' . implode(',', \App\Modules\Compras\Models\PagoProveedor::METODOS),
             'importe' => 'required|numeric|min:0.01',

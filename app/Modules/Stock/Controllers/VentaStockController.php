@@ -30,7 +30,7 @@ class VentaStockController extends Controller
             'id_producto' => 'required|integer|exists:PRODUCTO,id_producto',
             'cantidad' => 'required|integer|min:1',
             'id_unidad' => 'nullable|integer|exists:UNIDAD_MEDIDA,id_unidad',
-            'id_venta' => 'nullable|integer|exists:VENTA,id_venta',
+            'id_venta' => 'nullable|integer|min:1',
             'motivo' => 'nullable|string|max:255',
         ], [
             'id_producto.required' => 'Debe indicar el producto vendido.',
@@ -42,7 +42,7 @@ class VentaStockController extends Controller
             'id_unidad.integer' => 'La unidad de medida debe ser un identificador numérico.',
             'id_unidad.exists' => 'La unidad de medida indicada no existe.',
             'id_venta.integer' => 'El identificador de la venta debe ser numérico.',
-            'id_venta.exists' => 'La venta indicada no existe.',
+            'id_venta.min' => 'El identificador de la venta debe ser mayor a cero.',
         ]);
 
         if ($validator->fails()) {
@@ -67,7 +67,7 @@ class VentaStockController extends Controller
             $idVenta = $request->filled('id_venta') ? (int) $request->input('id_venta') : null;
             $motivo = $request->input('motivo') ?? 'Venta registrada';
 
-            $this->stockService->registrarMovimiento(
+            $movimiento = $this->stockService->registrarMovimiento(
                 $producto,
                 'venta',
                 (int) $request->input('cantidad'),
@@ -78,6 +78,7 @@ class VentaStockController extends Controller
             );
 
             $producto->refresh();
+            $cantidadDescontada = (int) ($movimiento->cantidad_base ?? $movimiento->cantidad);
 
             return response()->json([
                 'status' => 'success',
@@ -87,6 +88,7 @@ class VentaStockController extends Controller
                     'codigo' => $producto->codigo,
                     'descripcion' => $producto->descripcion,
                     'cantidad_vendida' => (int) $request->input('cantidad'),
+                    'cantidad_descontada' => $cantidadDescontada,
                     'stock_disponible' => $producto->stock_disponible,
                     'estado_alerta' => $producto->estado_alerta,
                 ],

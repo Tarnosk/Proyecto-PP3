@@ -11,7 +11,6 @@ use App\Modules\Productos\Models\Producto;
 use App\Modules\Proveedores\Models\ProductoProveedor;
 use App\Modules\Stock\Models\MovimientoStock;
 use App\Modules\Stock\Models\UnidadMedida;
-use App\Modules\Stock\Repositories\LoteVencimientoRepository;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
@@ -30,8 +29,7 @@ use Throwable;
 class GeneradorSugerenciasReposicionService
 {
     public function __construct(
-        private SugerenciaCompraRepository $sugerencias,
-        private ?LoteVencimientoRepository $lotes = null
+        private SugerenciaCompraRepository $sugerencias
     ) {
     }
 

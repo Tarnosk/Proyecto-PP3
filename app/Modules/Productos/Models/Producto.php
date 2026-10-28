@@ -4,7 +4,6 @@ declare(strict_types=1);
 namespace App\Modules\Productos\Models;
 
 use App\Modules\Login\Models\User;
-use App\Modules\Stock\Models\Lote;
 use App\Modules\Stock\Models\MovimientoStock;
 use App\Modules\Stock\Models\Ubicacion;
 use App\Modules\Stock\Models\UnidadMedida;
@@ -69,6 +68,7 @@ class Producto extends Model
         'equivalencia_unidad',
         'id_unidad_activa',
         'presentacion_texto',
+        'imagen_url',
     ];
 
     protected $fillable = [
@@ -81,7 +81,6 @@ class Producto extends Model
         'imagen',
         'stock',
         'stock_minimo',
-        'dias_alerta_vencimiento',
         'formato_bulto',
         'unidades_por_bulto',
         'estado',
@@ -99,7 +98,6 @@ class Producto extends Model
         'precio_unitario' => 'decimal:2',
         'stock' => 'integer',
         'stock_minimo' => 'integer',
-        'dias_alerta_vencimiento' => 'integer',
         'unidades_por_bulto' => 'integer',
         'id_categoria' => 'integer',
         'id_marca' => 'integer',
@@ -329,12 +327,11 @@ class Producto extends Model
         return $this->hasMany(ProductoProveedor::class, 'id_producto', 'id_producto');
     }
 
-    /**
-     * Lotes y vencimientos del producto (S09)
-     */
-    public function lotes(): HasMany
+    public function getImagenUrlAttribute(): ?string
     {
-        return $this->hasMany(Lote::class, 'id_producto', 'id_producto');
+        $valor = is_string($this->imagen) ? trim($this->imagen) : '';
+
+        return $valor !== '' ? $valor : null;
     }
 
     /**

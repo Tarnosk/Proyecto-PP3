@@ -284,12 +284,12 @@
             </div>
         </div>
 
-        <!-- VISTA 1: TABLA COMPLETA DE STOCK Y DISPONIBILIDAD PARA VENTAS (S01, S02, S16) -->
+        <!-- VISTA 1: TABLA COMPLETA DE STOCK (S01, S16) -->
         <div id="contenedorStockCompleto" class="clay-card overflow-hidden">
             <div class="p-3.5 border-b border-slate-100 flex items-center justify-between">
                 <span class="text-xs font-black text-slate-700 uppercase tracking-wider flex items-center gap-2">
                     <i data-lucide="package-check" class="w-4 h-4 text-blue-600"></i>
-                    Inventario Completo y Disponibilidad para Venta en Tiempo Real
+                    Inventario Completo de Stock en Tiempo Real
                 </span>
                 <span id="totalStockProductosTag" class="text-xs font-bold text-slate-500">0 artículos</span>
             </div>
@@ -301,9 +301,7 @@
                             <th>Producto / Descripción</th>
                             <th>Ubicación Física</th>
                             <th class="text-center">Formato de Venta</th>
-                            <th class="text-center">Stock Físico</th>
-                            <th class="text-center">Comprometido</th>
-                            <th class="text-center bg-blue-50/50">Disponible Venta</th>
+                            <th class="text-center">Stock Actual</th>
                             <th class="text-center">Stock Mínimo</th>
                             <th class="text-center">Nivel Semáforo</th>
                             <th class="text-center">Acciones</th>
@@ -311,7 +309,7 @@
                     </thead>
                     <tbody id="tablaStockCompletoBody">
                         <tr>
-                            <td colspan="10" class="text-center py-6 text-slate-400 font-bold">Cargando inventario de stock...</td>
+                            <td colspan="8" class="text-center py-6 text-slate-400 font-bold">Cargando inventario de stock...</td>
                         </tr>
                     </tbody>
                 </table>
@@ -620,9 +618,23 @@
                 </div>
             </div>
 
-            <div>
-                <label class="block text-[11px] font-extrabold text-slate-600 uppercase mb-1">Precio Unitario ($)</label>
-                <input type="number" step="0.01" min="0" id="prodPrecioUnitario" required class="clay-input w-full font-black text-sm" placeholder="0.00">
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-[11px] font-extrabold text-slate-600 uppercase mb-1">Precio Unitario ($)</label>
+                    <input type="number" step="0.01" min="0" id="prodPrecioUnitario" required class="clay-input w-full font-black text-sm" placeholder="0.00">
+                </div>
+                <div>
+                    <label class="block text-[11px] font-extrabold text-slate-600 uppercase mb-1">Imagen (Ruta o URL)</label>
+                    <input type="text" id="prodImagen" oninput="actualizarPreviewImagenProducto()" class="clay-input w-full text-xs font-bold" placeholder="/assets/catalogo/producto.webp">
+                </div>
+            </div>
+
+            <div class="flex items-center justify-between gap-3 p-2.5 bg-slate-50/80 rounded-xl border border-slate-200/70">
+                <div class="flex-1">
+                    <label class="block text-[10px] font-extrabold text-slate-500 uppercase mb-1">O subir archivo de imagen (JPG, PNG, WEBP)</label>
+                    <input type="file" id="prodImagenArchivo" accept=".png,.jpg,.jpeg,.webp" onchange="actualizarPreviewImagenProducto()" class="text-xs text-slate-600 file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                </div>
+                <img id="prodImagenPreview" src="" alt="Vista previa" class="w-11 h-11 rounded-lg object-cover border border-slate-200 hidden">
             </div>
 
             <div class="grid grid-cols-2 gap-3">
@@ -1550,17 +1562,26 @@
             }
 
             const ubicacionTexto = p.ubicacion?.descripcion || p.ubicacion_nombre || 'Sin asignar';
+            const imgUrl = p.imagen_url || p.imagen || '';
+            const thumbHtml = imgUrl
+                ? `<img src="${imgUrl}" alt="${p.nombre}" class="w-9 h-9 rounded-lg object-cover border border-slate-200 shrink-0" onerror="this.style.display='none'">`
+                : `<div class="w-9 h-9 rounded-lg bg-slate-100 border border-slate-200/80 flex items-center justify-center text-slate-400 shrink-0"><i data-lucide="image" class="w-4 h-4"></i></div>`;
 
             return `
                 <tr>
                     <td class="font-extrabold text-slate-800">${p.codigo}</td>
                     <td>
-                        <div class="font-black text-slate-800 text-sm leading-tight">${p.nombre}</div>
-                        <div class="text-[11px] text-slate-400 flex flex-wrap items-center gap-1.5 mt-0.5">
-                            <span>${p.descripcion || '-'}</span>
-                            <span class="text-slate-300">•</span>
-                            <span class="text-slate-500 font-bold flex items-center gap-0.5" title="Ubicación en depósito"><i data-lucide="map-pin" class="w-3 h-3 text-slate-400"></i>${ubicacionTexto}</span>
-                            ${Number(p.unidades_por_bulto || p.equivalencia_unidad || 1) > 1 ? `<span class="text-slate-300">•</span><span class="text-indigo-600 font-extrabold flex items-center gap-0.5" title="Presentación"><i data-lucide="package" class="w-3 h-3"></i>${obtenerTextoPresentacion(p)}</span>` : ''}
+                        <div class="flex items-center gap-2.5">
+                            ${thumbHtml}
+                            <div>
+                                <div class="font-black text-slate-800 text-sm leading-tight">${p.nombre}</div>
+                                <div class="text-[11px] text-slate-400 flex flex-wrap items-center gap-1.5 mt-0.5">
+                                    <span>${p.descripcion || '-'}</span>
+                                    <span class="text-slate-300">•</span>
+                                    <span class="text-slate-500 font-bold flex items-center gap-0.5" title="Ubicación en depósito"><i data-lucide="map-pin" class="w-3 h-3 text-slate-400"></i>${ubicacionTexto}</span>
+                                    ${Number(p.unidades_por_bulto || p.equivalencia_unidad || 1) > 1 ? `<span class="text-slate-300">•</span><span class="text-indigo-600 font-extrabold flex items-center gap-0.5" title="Presentación"><i data-lucide="package" class="w-3 h-3"></i>${obtenerTextoPresentacion(p)}</span>` : ''}
+                                </div>
+                            </div>
                         </div>
                     </td>
                     <td><span class="text-xs font-bold text-slate-600">${p.categoria?.nombre || p.categoria_nombre || '-'}</span></td>
@@ -1646,23 +1667,21 @@
         if (!tbody) return;
 
         if (lista.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="9" class="text-center py-6 text-slate-400 font-bold">No se encontraron productos coincidentes en el inventario.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="8" class="text-center py-6 text-slate-400 font-bold">No se encontraron productos coincidentes en el inventario.</td></tr>`;
             return;
         }
 
         tbody.innerHTML = lista.map(p => {
-            const stockFisico = Number(p.stock ?? p.stock_disponible ?? 0);
-            const comprometido = Number(p.stock_comprometido || 0);
-            const disponibleVenta = Math.max(0, stockFisico - comprometido);
+            const stockActual = Number(p.stock ?? p.stock_disponible ?? 0);
             const stockMin = Number(p.stock_minimo || 5);
             const ubicacionTexto = p.ubicacion?.descripcion || p.ubicacion_nombre || 'Sin asignar';
 
             let semaforoBadge = '';
-            if (disponibleVenta === 0) {
+            if (stockActual === 0) {
                 semaforoBadge = '<span class="clay-badge clay-badge-danger font-black"><span class="w-1.5 h-1.5 rounded-full bg-red-600 inline-block mr-1"></span>Agotado</span>';
-            } else if (disponibleVenta <= stockMin) {
+            } else if (stockActual <= stockMin) {
                 semaforoBadge = '<span class="clay-badge clay-badge-danger font-black"><span class="w-1.5 h-1.5 rounded-full bg-rose-500 inline-block mr-1"></span>Crítico</span>';
-            } else if (disponibleVenta <= stockMin * 1.5) {
+            } else if (stockActual <= stockMin * 1.5) {
                 semaforoBadge = '<span class="clay-badge clay-badge-warning font-black"><span class="w-1.5 h-1.5 rounded-full bg-amber-500 inline-block mr-1"></span>Bajo</span>';
             } else {
                 semaforoBadge = '<span class="clay-badge clay-badge-success font-black"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block mr-1"></span>Suficiente</span>';
@@ -1681,10 +1700,8 @@
                             ${ubicacionTexto}
                         </span>
                     </td>
-                    <td class="text-center">${renderColumnaFormatoVenta(p, stockFisico)}</td>
-                    <td class="text-center font-black text-slate-800 text-xs">${stockFisico} u.</td>
-                    <td class="text-center font-bold text-slate-400 text-xs">${comprometido} u.</td>
-                    <td class="text-center font-black text-blue-700 bg-blue-50/40 text-xs">${disponibleVenta} u.</td>
+                    <td class="text-center">${renderColumnaFormatoVenta(p, stockActual)}</td>
+                    <td class="text-center font-black text-slate-800 text-xs">${stockActual} u.</td>
                     <td class="text-center font-bold text-slate-600 text-xs">${stockMin} u.</td>
                     <td class="text-center">${semaforoBadge}</td>
                     <td class="text-center">
@@ -1999,6 +2016,24 @@
         }
     }
 
+    function actualizarPreviewImagenProducto() {
+        const preview = document.getElementById('prodImagenPreview');
+        if (!preview) return;
+        const fileInput = document.getElementById('prodImagenArchivo');
+        const urlInput = document.getElementById('prodImagen');
+
+        if (fileInput?.files && fileInput.files[0]) {
+            preview.src = URL.createObjectURL(fileInput.files[0]);
+            preview.classList.remove('hidden');
+        } else if (urlInput?.value && urlInput.value.trim() !== '') {
+            preview.src = urlInput.value.trim();
+            preview.classList.remove('hidden');
+        } else {
+            preview.src = '';
+            preview.classList.add('hidden');
+        }
+    }
+
     // --- ACCIONES Y MODALES ---
     function abrirModalProducto() {
         document.getElementById('modalProductoTitulo').textContent = 'Nuevo Producto';
@@ -2009,6 +2044,10 @@
         document.getElementById('prodCategoria').value = '';
         document.getElementById('prodMarca').value = '';
         document.getElementById('prodPrecioUnitario').value = '';
+        document.getElementById('prodImagen').value = '';
+        const fileInput = document.getElementById('prodImagenArchivo');
+        if (fileInput) fileInput.value = '';
+        actualizarPreviewImagenProducto();
         document.getElementById('prodStockMin').value = '10';
         document.getElementById('prodUbicacion').value = '';
         document.getElementById('prodFormatoBulto').value = 'Unidad';
@@ -2031,6 +2070,10 @@
         document.getElementById('prodCategoria').value = prod.id_categoria || '';
         document.getElementById('prodMarca').value = prod.id_marca || '';
         document.getElementById('prodPrecioUnitario').value = prod.precio_unitario ?? prod.precio_minorista ?? '';
+        document.getElementById('prodImagen').value = prod.imagen_url || prod.imagen || '';
+        const fileInput = document.getElementById('prodImagenArchivo');
+        if (fileInput) fileInput.value = '';
+        actualizarPreviewImagenProducto();
         document.getElementById('prodStockMin').value = prod.stock_minimo || 10;
         document.getElementById('prodUbicacion').value = prod.id_ubicacion || '';
         document.getElementById('prodFormatoBulto').value = prod.formato_bulto || 'Unidad';
@@ -2058,6 +2101,9 @@
         const precioUnitario = Number(document.getElementById('prodPrecioUnitario').value);
         const formatoBulto = document.getElementById('prodFormatoBulto')?.value || 'Unidad';
         const unidadesPorBulto = Math.max(1, parseInt(document.getElementById('prodUnidadesPorBulto')?.value || '1', 10));
+        const imagenTexto = document.getElementById('prodImagen')?.value.trim() || '';
+        const archivoInput = document.getElementById('prodImagenArchivo');
+        const tieneArchivo = archivoInput?.files && archivoInput.files.length > 0;
 
         const payload = {
             codigo: document.getElementById('prodCodigo').value.trim(),
@@ -2068,6 +2114,7 @@
             precio_unitario: precioUnitario,
             precio_minorista: precioUnitario,
             precio_mayorista: precioUnitario,
+            imagen: imagenTexto || null,
             stock_minimo: Number(document.getElementById('prodStockMin').value || 10),
             id_ubicacion: document.getElementById('prodUbicacion').value || null,
             formato_bulto: formatoBulto,
@@ -2076,14 +2123,28 @@
 
         const csrf = document.querySelector('meta[name="csrf-token"]').content;
         const url = id ? `${API_BASE}/productos/${id}` : `${API_BASE}/productos`;
-        const method = id ? 'PUT' : 'POST';
 
         try {
-            const res = await fetch(url, {
-                method,
-                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': csrf },
-                body: JSON.stringify(payload)
-            });
+            let res;
+            if (tieneArchivo) {
+                const formData = new FormData();
+                if (id) formData.append('_method', 'PUT');
+                Object.entries(payload).forEach(([k, v]) => {
+                    if (v !== null && v !== undefined) formData.append(k, String(v));
+                });
+                formData.append('imagen_archivo', archivoInput.files[0]);
+                res = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': csrf },
+                    body: formData
+                });
+            } else {
+                res = await fetch(url, {
+                    method: id ? 'PUT' : 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': csrf },
+                    body: JSON.stringify(payload)
+                });
+            }
             const data = await res.json();
             if (data.status === 'success') {
                 cerrarModalProducto();

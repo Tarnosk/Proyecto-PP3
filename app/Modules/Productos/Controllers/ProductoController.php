@@ -26,7 +26,8 @@ class ProductoController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $search = $request->input('search');
+        $search = $request->input('search') ?? $request->input('buscar') ?? $request->input('q');
+        $codigo = $request->filled('codigo') ? trim((string) $request->input('codigo')) : null;
         $categoriaId = $request->filled('categoria_id') ? (int) $request->input('categoria_id') : null;
         $marcaId = $request->filled('marca_id') ? (int) $request->input('marca_id') : null;
         $estado = $request->input('estado');
@@ -34,11 +35,17 @@ class ProductoController extends Controller
             $estado = null;
         }
 
-        $productos = Producto::with(['categoria', 'marca', 'usuarioCarga', 'usuarioModificacion', 'ubicaciones', 'unidades'])
+        $query = Producto::with(['categoria', 'marca', 'usuarioCarga', 'usuarioModificacion', 'ubicaciones', 'unidades'])
             ->search($search)
             ->filterCategoria($categoriaId)
             ->filterMarca($marcaId)
-            ->filterEstado($estado)
+            ->filterEstado($estado);
+
+        if ($codigo !== null && $codigo !== '') {
+            $query->where('codigo', $codigo);
+        }
+
+        $productos = $query
             ->orderBy('id_producto', 'desc')
             ->get()
             ->map(function (Producto $p) {
@@ -48,9 +55,13 @@ class ProductoController extends Controller
                     'codigo' => $p->codigo,
                     'descripcion' => $p->descripcion,
                     'nombre' => $p->nombre,
+                    'imagen' => $p->imagen,
+                    'imagen_url' => $p->imagen_url,
                     'precio_unitario' => (float) $p->precio_unitario,
                     'precio_mayorista' => (float) $p->precio_mayorista,
                     'precio_minorista' => (float) $p->precio_minorista,
+                    'precioMay' => (float) $p->precio_mayorista,
+                    'precioMin' => (float) $p->precio_minorista,
                     'estado' => $p->estado,
                     'fecha_alta' => $p->fecha_alta ? ($p->fecha_alta instanceof \Carbon\CarbonInterface ? $p->fecha_alta->format('Y-m-d H:i:s') : (string) $p->fecha_alta) : null,
                     'fecha_modificacion' => $p->fecha_modificacion ? ($p->fecha_modificacion instanceof \Carbon\CarbonInterface ? $p->fecha_modificacion->format('Y-m-d H:i:s') : (string) $p->fecha_modificacion) : null,
@@ -72,6 +83,9 @@ class ProductoController extends Controller
                     'unidad_medida' => $p->unidad_medida,
                     'equivalencia_unidad' => $p->equivalencia_unidad,
                     'id_unidad_activa' => $p->id_unidad_activa,
+                    'formato_bulto' => $p->formato_bulto,
+                    'unidades_por_bulto' => (int) ($p->unidades_por_bulto ?? 1),
+                    'presentacion_texto' => $p->presentacion_texto,
                 ];
             });
 
@@ -98,6 +112,9 @@ class ProductoController extends Controller
             'stock_minimo' => 'nullable|integer|min:0',
             'formato_bulto' => 'nullable|string|max:50',
             'unidades_por_bulto' => 'nullable|integer|min:1',
+            'imagen' => 'nullable',
+            'imagen_url' => 'nullable|string|max:255',
+            'imagen_archivo' => 'nullable|file|mimes:jpg,jpeg,png,webp|max:4096',
         ], [
             'codigo.required' => 'El código del producto es obligatorio.',
             'codigo.unique' => "El código ':input' ya se encuentra registrado.",
@@ -110,6 +127,7 @@ class ProductoController extends Controller
             'id_marca.required' => 'Debe seleccionar una marca.',
             'id_marca.exists' => 'La marca seleccionada no existe.',
             'unidades_por_bulto.min' => 'Las unidades por bulto deben ser al menos 1.',
+            'imagen_archivo.mimes' => 'La imagen debe ser un archivo JPG, PNG o WEBP.',
         ]);
 
         if ($validator->fails()) {
@@ -121,7 +139,7 @@ class ProductoController extends Controller
 
         try {
             $now = Carbon::now()->toDateTimeString();
-            $stockInicial = (int) ($request->input('stock_disponible', 0));
+            $stockInicial = (int) ($request->input('stock_disponible', $request->input('stock', 0)));
             $stockMinimo = (int) ($request->input('stock_minimo', 5));
             $formatoBulto = trim((string) $request->input('formato_bulto', 'Unidad')) ?: 'Unidad';
             $unidadesPorBulto = max(1, (int) $request->input('unidades_por_bulto', 1));
@@ -131,18 +149,19 @@ class ProductoController extends Controller
             $nombre = trim((string) $request->input('nombre')) !== ''
                 ? trim((string) $request->input('nombre'))
                 : $descripcion;
+            $codigoLimpio = trim((string) $request->input('codigo'));
+            $imagenRuta = $this->resolverImagen($request, $codigoLimpio, null);
 
-            $producto = DB::transaction(function () use ($request, $now, $stockInicial, $stockMinimo, $formatoBulto, $unidadesPorBulto, $idUsuario, $precioUnitario, $descripcion, $nombre) {
+            $producto = DB::transaction(function () use ($request, $now, $stockInicial, $stockMinimo, $formatoBulto, $unidadesPorBulto, $idUsuario, $precioUnitario, $descripcion, $nombre, $codigoLimpio, $imagenRuta) {
                 // 1. Crear Producto (P01). El stock queda embebido en PRODUCTO (OB3).
                 $prod = Producto::create([
-                    'codigo' => trim($request->input('codigo')),
+                    'codigo' => $codigoLimpio,
                     'nombre' => $nombre,
                     'descripcion' => $descripcion,
                     'precio_unitario' => $precioUnitario,
-                    'imagen' => null,
+                    'imagen' => $imagenRuta,
                     'stock' => $stockInicial,
                     'stock_minimo' => $stockMinimo,
-                    'dias_alerta_vencimiento' => 30,
                     'formato_bulto' => $formatoBulto,
                     'unidades_por_bulto' => $unidadesPorBulto,
                     'estado' => 'activo',
@@ -241,9 +260,13 @@ class ProductoController extends Controller
                 'codigo' => $producto->codigo,
                 'descripcion' => $producto->descripcion,
                 'nombre' => $producto->nombre,
+                'imagen' => $producto->imagen,
+                'imagen_url' => $producto->imagen_url,
                 'precio_unitario' => (float) $producto->precio_unitario,
                 'precio_mayorista' => (float) $producto->precio_mayorista,
                 'precio_minorista' => (float) $producto->precio_minorista,
+                'precioMay' => (float) $producto->precio_mayorista,
+                'precioMin' => (float) $producto->precio_minorista,
                 'estado' => $producto->estado,
                 'fecha_alta' => $producto->fecha_alta ? ($producto->fecha_alta instanceof \Carbon\CarbonInterface ? $producto->fecha_alta->format('Y-m-d H:i:s') : (string) $producto->fecha_alta) : null,
                 'fecha_modificacion' => $producto->fecha_modificacion ? ($producto->fecha_modificacion instanceof \Carbon\CarbonInterface ? $producto->fecha_modificacion->format('Y-m-d H:i:s') : (string) $producto->fecha_modificacion) : null,
@@ -274,6 +297,23 @@ class ProductoController extends Controller
     }
 
     /**
+     * Obtener detalle de un producto por su código comercial único
+     */
+    public function showByCodigo(string $codigo): JsonResponse
+    {
+        $producto = Producto::where('codigo', trim($codigo))->first();
+
+        if (!$producto) {
+            return response()->json([
+                'status' => 'error',
+                'message' => "Producto con código '{$codigo}' no encontrado.",
+            ], 404);
+        }
+
+        return $this->show((int) $producto->id_producto);
+    }
+
+    /**
      * Modificar producto existente y registrar historial de precios si varía (P04)
      */
     public function update(Request $request, int $id): JsonResponse
@@ -298,6 +338,9 @@ class ProductoController extends Controller
             'stock_minimo' => 'nullable|integer|min:0',
             'formato_bulto' => 'nullable|string|max:50',
             'unidades_por_bulto' => 'nullable|integer|min:1',
+            'imagen' => 'nullable',
+            'imagen_url' => 'nullable|string|max:255',
+            'imagen_archivo' => 'nullable|file|mimes:jpg,jpeg,png,webp|max:4096',
         ], [
             'codigo.required' => 'El código del producto es obligatorio.',
             'codigo.unique' => "El código ':input' ya está siendo utilizado por otro producto.",
@@ -310,6 +353,7 @@ class ProductoController extends Controller
             'id_marca.required' => 'Debe seleccionar una marca.',
             'id_marca.exists' => 'La marca seleccionada no existe.',
             'unidades_por_bulto.min' => 'Las unidades por bulto deben ser al menos 1.',
+            'imagen_archivo.mimes' => 'La imagen debe ser un archivo JPG, PNG o WEBP.',
         ]);
 
         if ($validator->fails()) {
@@ -328,6 +372,8 @@ class ProductoController extends Controller
             $nombre = trim((string) $request->input('nombre')) !== ''
                 ? trim((string) $request->input('nombre'))
                 : $descripcion;
+            $codigoLimpio = trim((string) $request->input('codigo'));
+            $nuevaImagen = $this->resolverImagen($request, $codigoLimpio, $producto->imagen);
 
             $valoresAnteriores = [
                 'codigo' => $producto->codigo,
@@ -337,19 +383,21 @@ class ProductoController extends Controller
                 'id_categoria' => (int) $producto->id_categoria,
                 'id_marca' => (int) $producto->id_marca,
                 'stock_minimo' => (int) $producto->stock_minimo,
+                'imagen' => $producto->imagen,
             ];
 
             $valoresNuevos = [
-                'codigo' => trim($request->input('codigo')),
+                'codigo' => $codigoLimpio,
                 'nombre' => $nombre,
                 'descripcion' => $descripcion,
                 'precio_unitario' => $nuevoPrecio,
                 'id_categoria' => (int) $request->input('id_categoria'),
                 'id_marca' => (int) $request->input('id_marca'),
                 'stock_minimo' => $request->has('stock_minimo') ? (int) $request->input('stock_minimo') : (int) $producto->stock_minimo,
+                'imagen' => $nuevaImagen,
             ];
 
-            DB::transaction(function () use ($producto, $request, $now, $idUsuario, $nuevoPrecio, $anteriorPrecio, $descripcion, $nombre, $valoresAnteriores, $valoresNuevos) {
+            DB::transaction(function () use ($producto, $request, $now, $idUsuario, $nuevoPrecio, $anteriorPrecio, $descripcion, $nombre, $codigoLimpio, $nuevaImagen, $valoresAnteriores, $valoresNuevos) {
                 // Si cambió el precio unitario, se registra en HISTORIAL_PRECIO (P04)
                 if (abs($nuevoPrecio - $anteriorPrecio) >= 0.001) {
                     $porcentaje = 0.0;
@@ -370,10 +418,11 @@ class ProductoController extends Controller
                 }
 
                 $datosUpdate = [
-                    'codigo' => trim($request->input('codigo')),
+                    'codigo' => $codigoLimpio,
                     'nombre' => $nombre,
                     'descripcion' => $descripcion,
                     'precio_unitario' => $nuevoPrecio,
+                    'imagen' => $nuevaImagen,
                     'id_categoria' => (int) $request->input('id_categoria'),
                     'id_marca' => (int) $request->input('id_marca'),
                     'fecha_modificacion' => $now,
@@ -912,5 +961,40 @@ class ProductoController extends Controller
         }
 
         return $candidato / 100;
+    }
+
+    private function resolverImagen(Request $request, ?string $codigo = null, ?string $imagenActual = null): ?string
+    {
+        $archivo = $request->file('imagen_archivo') ?? ($request->hasFile('imagen') ? $request->file('imagen') : null);
+
+        if ($archivo && $archivo->isValid()) {
+            $ext = strtolower($archivo->getClientOriginalExtension() ?: 'webp');
+            if (! in_array($ext, ['png', 'jpg', 'jpeg', 'webp'], true)) {
+                $ext = 'png';
+            }
+            $slugCodigo = preg_replace('/[^a-zA-Z0-9_-]/', '_', (string) ($codigo ?: 'prod'));
+            $nombreArchivo = 'prod_' . strtolower($slugCodigo) . '_' . time() . '.' . $ext;
+            $directorio = public_path('assets/catalogo');
+            if (! is_dir($directorio)) {
+                @mkdir($directorio, 0775, true);
+            }
+            $archivo->move($directorio, $nombreArchivo);
+
+            return '/assets/catalogo/' . $nombreArchivo;
+        }
+
+        if ($request->exists('imagen') && ! $request->hasFile('imagen')) {
+            $valor = trim((string) $request->input('imagen', ''));
+
+            return $valor !== '' ? $valor : null;
+        }
+
+        if ($request->exists('imagen_url')) {
+            $valor = trim((string) $request->input('imagen_url', ''));
+
+            return $valor !== '' ? $valor : null;
+        }
+
+        return $imagenActual;
     }
 }

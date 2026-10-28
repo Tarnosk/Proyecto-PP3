@@ -5,7 +5,6 @@ namespace App\Modules\Stock\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Modules\Productos\Models\Producto;
-use App\Modules\Stock\Models\Lote;
 use App\Modules\Stock\Services\StockService;
 use App\Support\UsuarioActual;
 use Illuminate\Http\JsonResponse;
@@ -37,8 +36,6 @@ class DevolucionController extends Controller
             'motivo' => 'required|string|max:255',
             'tipo_devolucion' => 'nullable|string|in:cliente,proveedor',
             'id_unidad' => 'nullable|integer|exists:UNIDAD_MEDIDA,id_unidad',
-            'id_lote' => 'nullable|integer',
-            'nro_lote' => 'nullable|string|max:100',
             'fecha' => 'nullable|date|before_or_equal:today',
         ], [
             'id_producto.required' => 'Debe seleccionar el producto devuelto.',
@@ -154,9 +151,6 @@ class DevolucionController extends Controller
                     'motivo' => $motivoFinal,
                     'stock_disponible' => $producto->stock_disponible,
                     'estado_alerta' => $producto->estado_alerta,
-                    'id_lote' => null,
-                    'nro_lote' => null,
-                    'lote_cantidad_actual' => null,
                 ],
             ], 201);
         } catch (\Throwable $e) {

@@ -5,7 +5,6 @@ namespace App\Modules\Stock\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Modules\Productos\Models\Producto;
-use App\Modules\Stock\Models\Lote;
 use App\Modules\Stock\Models\MovimientoStock;
 use App\Modules\Stock\Services\StockService;
 use App\Support\UsuarioActual;
@@ -31,15 +30,22 @@ class AjusteStockController extends Controller
             $request->merge(['id_unidad' => null]);
         }
 
+        if (!$request->has('tipo') && $request->has('tipo_ajuste')) {
+            $alias = match ($request->input('tipo_ajuste')) {
+                'incremento', 'aumentar' => 'aumentar',
+                'decremento', 'disminuir' => 'disminuir',
+                'fijar', 'establecer' => 'fijar',
+                default => $request->input('tipo_ajuste'),
+            };
+            $request->merge(['tipo' => $alias]);
+        }
+
         $validator = Validator::make($request->all(), [
             'id_producto' => 'required|integer|exists:PRODUCTO,id_producto',
             'cantidad' => 'required|numeric|min:0',
             'tipo' => 'required|in:aumentar,disminuir,fijar,establecer',
             'motivo' => 'required|string|max:255',
             'id_unidad' => 'nullable|integer|exists:UNIDAD_MEDIDA,id_unidad',
-            'id_lote' => 'nullable|integer',
-            'nro_lote' => 'nullable|string|max:100',
-            'fecha_vencimiento' => 'nullable|date',
             'fecha' => [
                 'nullable',
                 'date',
@@ -125,8 +131,6 @@ class AjusteStockController extends Controller
                             'codigo' => $producto->codigo,
                             'descripcion' => $producto->descripcion,
                             'stock_disponible' => $producto->stock_disponible,
-                            'id_lote' => null,
-                            'lote_cantidad_actual' => null,
                             'diferencia' => 0,
                         ],
                     ], 200);
@@ -193,9 +197,8 @@ class AjusteStockController extends Controller
                     'equivalencia_texto' => $equivTexto,
                     'motivo' => $motivoFinal,
                     'stock_disponible' => $producto->stock_disponible,
+                    'stock_nuevo' => $producto->stock_disponible,
                     'estado_alerta' => $producto->estado_alerta,
-                    'id_lote' => null,
-                    'nro_lote' => null,
                 ],
             ], 201);
         } catch (\Throwable $e) {

@@ -14,3 +14,6 @@ app/Modules/Stock/
 └── database/
     └── migrations/      # Migraciones específicas del módulo
 ```
+
+## Contrato de APIs para Integración (G1, G2 y G4)
+👉 **Documentación completa de endpoints, payloads y ejemplos JSON:** Ver [`docs/contrato-api-g3.md`](../../../docs/contrato-api-g3.md).

@@ -73,7 +73,6 @@ CREATE TABLE IF NOT EXISTS `producto` (
   `imagen` varchar(255) DEFAULT NULL,
   `stock` int(11) NOT NULL DEFAULT 0,
   `stock_minimo` int(11) NOT NULL DEFAULT 0,
-  `dias_alerta_vencimiento` int(11) NOT NULL DEFAULT 30,
   `estado` enum('activo','inactivo') NOT NULL DEFAULT 'activo',
   `fecha_alta` date NOT NULL,
   `fecha_modificacion` date DEFAULT NULL,
@@ -175,23 +174,6 @@ CREATE TABLE IF NOT EXISTS `producto_ubicacion` (
 SQL);
         }
 
-        if (! Schema::hasTable('lote')) {
-            DB::unprepared(<<<'SQL'
-CREATE TABLE IF NOT EXISTS `lote` (
-  `id_lote` int(11) NOT NULL AUTO_INCREMENT,
-  `id_producto` int(11) NOT NULL,
-  `nro_lote` varchar(50) NOT NULL,
-  `cantidad_inicial` int(11) NOT NULL,
-  `cantidad_actual` int(11) NOT NULL,
-  `fecha_vencimiento` date NOT NULL,
-  PRIMARY KEY (`id_lote`),
-  UNIQUE KEY `uq_lote_producto_nro` (`id_producto`,`nro_lote`),
-  KEY `idx_lote_producto_vencimiento` (`id_producto`,`fecha_vencimiento`),
-  CONSTRAINT `fk_lote_producto` FOREIGN KEY (`id_producto`) REFERENCES `producto` (`id_producto`) ON DELETE NO ACTION
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Lotes con vencimiento en unidad base. Rompe referencia circular (S09)'
-SQL);
-        }
-
         if (! Schema::hasTable('movimiento_stock')) {
             DB::unprepared(<<<'SQL'
 CREATE TABLE IF NOT EXISTS `movimiento_stock` (
@@ -208,11 +190,9 @@ CREATE TABLE IF NOT EXISTS `movimiento_stock` (
   `id_entrega` int(11) DEFAULT NULL,
   `id_recepcion` int(11) DEFAULT NULL,
   `id_sesion_conteo` int(11) DEFAULT NULL,
-  `id_lote` int(11) DEFAULT NULL,
   PRIMARY KEY (`id_movimiento`),
   KEY `idx_mov_stock_producto_fecha` (`id_producto`,`fecha`),
   KEY `idx_mov_stock_tipo` (`tipo`),
-  KEY `idx_mov_stock_lote` (`id_lote`),
   KEY `idx_mov_stock_recepcion` (`id_recepcion`),
   KEY `fk_mov_stock_unidad` (`id_unidad`),
   KEY `fk_mov_stock_usuario` (`id_usuario`),
@@ -220,13 +200,10 @@ CREATE TABLE IF NOT EXISTS `movimiento_stock` (
   KEY `fk_mov_stock_entrega` (`id_entrega`),
   KEY `fk_mov_stock_conteo` (`id_sesion_conteo`),
   CONSTRAINT `fk_mov_stock_conteo` FOREIGN KEY (`id_sesion_conteo`) REFERENCES `sesion_conteo` (`id_sesion`) ON DELETE SET NULL,
-  CONSTRAINT `fk_mov_stock_entrega` FOREIGN KEY (`id_entrega`) REFERENCES `entrega` (`id_entrega`) ON DELETE SET NULL,
-  CONSTRAINT `fk_mov_stock_lote` FOREIGN KEY (`id_lote`) REFERENCES `lote` (`id_lote`) ON DELETE SET NULL,
   CONSTRAINT `fk_mov_stock_producto` FOREIGN KEY (`id_producto`) REFERENCES `producto` (`id_producto`) ON DELETE NO ACTION,
   CONSTRAINT `fk_mov_stock_recepcion` FOREIGN KEY (`id_recepcion`) REFERENCES `recepcion` (`id_recepcion`) ON DELETE SET NULL,
   CONSTRAINT `fk_mov_stock_unidad` FOREIGN KEY (`id_unidad`) REFERENCES `unidad_medida` (`id_unidad`) ON DELETE SET NULL,
-  CONSTRAINT `fk_mov_stock_usuario` FOREIGN KEY (`id_usuario`) REFERENCES `usuario` (`id_usuario`) ON DELETE NO ACTION,
-  CONSTRAINT `fk_mov_stock_venta` FOREIGN KEY (`id_venta`) REFERENCES `venta` (`id_venta`) ON DELETE SET NULL
+  CONSTRAINT `fk_mov_stock_usuario` FOREIGN KEY (`id_usuario`) REFERENCES `usuario` (`id_usuario`) ON DELETE NO ACTION
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Libro kardex de auditoria de inventario (S12)'
 SQL);
         }
@@ -491,17 +468,14 @@ CREATE TABLE IF NOT EXISTS `detalle_recepcion` (
   `id_recepcion` int(11) NOT NULL,
   `id_detalle_compra` int(11) DEFAULT NULL,
   `id_producto` int(11) NOT NULL,
-  `id_lote` int(11) DEFAULT NULL,
   `id_unidad` int(11) NOT NULL,
   `cantidad_recibida` int(11) NOT NULL,
   PRIMARY KEY (`id_det_rec`),
   KEY `idx_det_rec_recepcion` (`id_recepcion`),
   KEY `idx_det_rec_det_compra` (`id_detalle_compra`),
   KEY `idx_det_rec_producto` (`id_producto`),
-  KEY `idx_det_rec_lote` (`id_lote`),
   KEY `fk_det_rec_unidad` (`id_unidad`),
   CONSTRAINT `fk_det_rec_det_compra` FOREIGN KEY (`id_detalle_compra`) REFERENCES `detalle_compra` (`id_detalle_compra`) ON DELETE SET NULL,
-  CONSTRAINT `fk_det_rec_lote` FOREIGN KEY (`id_lote`) REFERENCES `lote` (`id_lote`) ON DELETE SET NULL,
   CONSTRAINT `fk_det_rec_producto` FOREIGN KEY (`id_producto`) REFERENCES `producto` (`id_producto`) ON DELETE NO ACTION,
   CONSTRAINT `fk_det_rec_recepcion` FOREIGN KEY (`id_recepcion`) REFERENCES `recepcion` (`id_recepcion`) ON DELETE CASCADE,
   CONSTRAINT `fk_det_rec_unidad` FOREIGN KEY (`id_unidad`) REFERENCES `unidad_medida` (`id_unidad`) ON DELETE NO ACTION

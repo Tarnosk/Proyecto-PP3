@@ -697,12 +697,24 @@ class ProveedorController extends Controller
             ], 400);
         }
 
-        // Compatibilidad: aceptar tanto 'id_producto' singular como 'id_productos' array
+        // Compatibilidad: aceptar tanto 'id_producto' singular, 'id_productos' array o 'productos' array de objetos
         if ($request->has('id_producto') && !$request->has('id_productos')) {
             $val = $request->input('id_producto');
             if ($val !== null && $val !== '') {
                 $request->merge(['id_productos' => [$val]]);
             }
+        } elseif ($request->has('productos') && is_array($request->input('productos')) && !$request->has('id_productos')) {
+            $prods = $request->input('productos');
+            $ids = array_values(array_filter(array_map(fn ($p) => is_array($p) ? ($p['id_producto'] ?? null) : $p, $prods)));
+            $first = is_array($prods[0] ?? null) ? $prods[0] : [];
+            $merge = ['id_productos' => $ids];
+            if (! $request->has('precio_acordado') && (isset($first['precio_acordado']) || isset($first['precio_compra']))) {
+                $merge['precio_acordado'] = $first['precio_acordado'] ?? $first['precio_compra'];
+            }
+            if (! $request->has('es_proveedor_principal') && (isset($first['es_proveedor_principal']) || isset($first['es_principal']))) {
+                $merge['es_proveedor_principal'] = $first['es_proveedor_principal'] ?? $first['es_principal'];
+            }
+            $request->merge($merge);
         }
 
         $validator = Validator::make($request->all(), [
