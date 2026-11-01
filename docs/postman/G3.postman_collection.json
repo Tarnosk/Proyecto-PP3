@@ -1,0 +1,439 @@
+{
+  "info": {
+    "_postman_id": "g3-erp-juan23-integracion-2026",
+    "name": "ERP Juan 23 - APIs de Integración Grupo 3 (Productos y Stock)",
+    "description": "Colección oficial de Postman con las APIs de integración que el Grupo 3 expone para los Grupos 1 (Catálogo/Reportes), 2 (Entregas/Rendiciones) y 4 (Ventas/Promociones).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://127.0.0.1:8000",
+      "type": "string"
+    },
+    {
+      "key": "id_producto",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "codigo_producto",
+      "value": "P001",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "01 - Índice de APIs de Integración G3 (GET /api)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200 OK', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "pm.test('Devuelve listado de endpoints de integración G3', function () {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.status).to.eql('success');",
+              "    pm.expect(json.endpoints).to.be.an('array');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api"
+          ]
+        }
+      }
+    },
+    {
+      "name": "02 - Listar Productos Activos (G1 Catálogo / G4 POS) (GET /api/productos)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200 OK', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "pm.test('Estructura compatible con G1 y G4 (status=success y arreglo data)', function () {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.status).to.eql('success');",
+              "    pm.expect(json.data).to.be.an('array');",
+              "    if (json.data.length > 0) {",
+              "        const p = json.data.find(item => Number(item.stock) > 0) || json.data[0];",
+              "        pm.expect(p).to.have.property('id');",
+              "        pm.expect(p).to.have.property('id_producto');",
+              "        pm.expect(p).to.have.property('codigo');",
+              "        pm.expect(p).to.have.property('nombre');",
+              "        pm.expect(p).to.have.property('precio_unitario');",
+              "        pm.expect(p).to.have.property('precioMin');",
+              "        pm.expect(p).to.have.property('precioMay');",
+              "        pm.expect(p).to.have.property('stock');",
+              "        pm.expect(p).to.have.property('stock_disponible');",
+              "        pm.collectionVariables.set('id_producto', String(p.id_producto));",
+              "        pm.collectionVariables.set('codigo_producto', String(p.codigo));",
+              "    }",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/productos?estado=activo",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "productos"
+          ],
+          "query": [
+            {
+              "key": "estado",
+              "value": "activo"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "03 - Detalle de Producto por ID (G1 / G4) (GET /api/productos/{id})",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200 OK', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "pm.test('Devuelve detalle del producto solicitado', function () {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.status).to.eql('success');",
+              "    pm.expect(json.data).to.be.an('object');",
+              "    pm.expect(String(json.data.id_producto)).to.eql(String(pm.collectionVariables.get('id_producto')));",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/productos/{{id_producto}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "productos",
+            "{{id_producto}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "04 - Detalle de Producto por Código SKU (GET /api/productos/codigo/{codigo})",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200 OK', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "pm.test('Coincide el código SKU buscado', function () {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.status).to.eql('success');",
+              "    pm.expect(json.data.codigo).to.eql(pm.collectionVariables.get('codigo_producto'));",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/productos/codigo/{{codigo_producto}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "productos",
+            "codigo",
+            "{{codigo_producto}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "05 - Listado General de Stock (GET /api/stock)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200 OK', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "pm.test('Devuelve listado de stock y alertas', function () {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.status).to.eql('success');",
+              "    pm.expect(json.data).to.be.an('array');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/stock",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "stock"
+          ]
+        }
+      }
+    },
+    {
+      "name": "06 - Disponibilidad de Stock de un Producto (G4 HttpStockApi) (GET /api/stock/{id})",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200 OK', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "pm.test('Incluye disponible en raíz (requerido por G4 HttpStockApi)', function () {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.status).to.eql('success');",
+              "    pm.expect(json).to.have.property('disponible');",
+              "    pm.expect(json.data).to.have.property('stock_disponible');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/stock/{{id_producto}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "stock",
+            "{{id_producto}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "07 - Descontar Stock por Venta en Lote (G4 HttpStockApi) (POST /api/stock/movimientos)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200 OK', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "pm.test('Registra movimiento de salida por venta', function () {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.status).to.eql('success');",
+              "    pm.expect(json.data).to.be.an('array');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"origen\": \"ventas\",\n  \"venta_id\": 101,\n  \"motivo\": \"venta\",\n  \"items\": [\n    {\n      \"id_producto\": {{id_producto}},\n      \"cantidad\": -1\n    }\n  ]\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/stock/movimientos",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "stock",
+            "movimientos"
+          ]
+        }
+      }
+    },
+    {
+      "name": "08 - Reponer Stock por Anulación o Devolución (G4 / G2) (POST /api/stock/movimientos)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200 OK', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "pm.test('Reintegra stock al depósito', function () {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.status).to.eql('success');",
+              "    pm.expect(json.data).to.be.an('array');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"origen\": \"ventas\",\n  \"venta_id\": 101,\n  \"motivo\": \"anulacion\",\n  \"items\": [\n    {\n      \"id_producto\": {{id_producto}},\n      \"cantidad\": 1\n    }\n  ]\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/stock/movimientos",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "stock",
+            "movimientos"
+          ]
+        }
+      }
+    },
+    {
+      "name": "09 - Devolución Unitaria de Cliente en Reparto (G2) (POST /api/stock/devoluciones)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 201 Created', function () {",
+              "    pm.response.to.have.status(201);",
+              "});",
+              "pm.test('Suma unidades devueltas al stock', function () {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.status).to.eql('success');",
+              "    pm.expect(json.data.tipo_devolucion).to.eql('cliente');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"id_producto\": {{id_producto}},\n  \"cantidad\": 1,\n  \"tipo_devolucion\": \"cliente\",\n  \"motivo\": \"Devolución en reparto de prueba Postman\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/stock/devoluciones",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "stock",
+            "devoluciones"
+          ]
+        }
+      }
+    }
+  ]
+}

@@ -1,8 +1,10 @@
-# Contrato HTTP/JSON y Documentación de APIs — Grupo 3 (Inventario, Productos, Stock, Proveedores y Compras)
+# Contrato HTTP/JSON de APIs de Integración — Grupo 3 (Productos y Stock)
 
-Este documento constituye la referencia técnica oficial y detallada de todas las APIs REST publicadas por el **Grupo 3 (G3)** en [`app/Modules/Productos/routes/api.php`](../app/Modules/Productos/routes/api.php).
+Este documento constituye la referencia técnica oficial de las **APIs de integración entre grupos** publicadas por el **Grupo 3 (G3)** en [`app/Modules/Productos/routes/api.php`](../app/Modules/Productos/routes/api.php).
 
-Está diseñado tanto para que los **Grupos 1, 2 y 4** integren sus módulos sin realizar consultas SQL directas a las tablas de G3, como para documentar el funcionamiento interno de los submódulos de **Productos, Stock, Proveedores, Compras y Pedidos de Compra**.
+Siguiendo el criterio arquitectónico del proyecto:
+- **Hacia los demás grupos (G1, G2 y G4):** G3 expone en `routes/api.php` **únicamente las APIs que necesitan consumir los otros grupos** (consulta de catálogo/productos, disponibilidad de stock y movimientos de descuento/reingreso por ventas o devoluciones).
+- **Hacia adentro de G3:** Los módulos propios de G3 (*ABM de Productos, Categorías, Marcas, Stock/Conteos, Proveedores, Compras y Órdenes de Compra*) operan desde sus pantallas web en [`app/Modules/Productos/routes/web.php`](../app/Modules/Productos/routes/web.php) **modificando directamente la base de datos** mediante sus controladores y servicios con Eloquent / `DB::transaction`.
 
 ---
 
@@ -10,27 +12,20 @@ Está diseñado tanto para que los **Grupos 1, 2 y 4** integren sus módulos sin
 
 1. [Convenciones Generales de la API de G3](#1-convenciones-generales-de-la-api-de-g3)
 2. [Criterio de Búsqueda: `id` / `id_producto` vs. `codigo`](#2-criterio-de-búsqueda-id--id_producto-vs-codigo)
-3. [APIs Principales para Consumo de Otros Grupos (G1, G2 y G4)](#3-apis-principales-para-consumo-de-otros-grupos-g1-g2-y-g4)
+3. [APIs de Integración para los Grupos 1, 2 y 4](#3-apis-principales-para-consumo-de-otros-grupos-g1-g2-y-g4)
    - [3.1. `GET /api/productos` — Listar y buscar productos del catálogo](#31-get-apiproductos--listar-y-buscar-productos-del-catálogo)
    - [3.2. `GET /api/productos/{id}` — Detalle de un producto por ID](#32-get-apiproductosid--detalle-de-un-producto-por-id)
    - [3.3. `GET /api/productos/codigo/{codigo}` — Detalle de un producto por Código SKU](#33-get-apiproductoscodigocodigo--detalle-de-un-producto-por-código-sku)
    - [3.4. `GET /api/stock/{id}` — Consultar stock actual de un producto](#34-get-apistockid--consultar-stock-actual-de-un-producto)
    - [3.5. `POST /api/stock/movimientos` — Descontar o reponer stock en lote (Ventas / Devoluciones)](#35-post-apistockmovimientos--descontar-o-reponer-stock-en-lote-ventas--devoluciones)
    - [3.6. `POST /api/stock/ventas` — Descuento puntual de stock por venta](#36-post-apistockventas--descuento-puntual-de-stock-por-venta)
-   - [3.7. `POST /api/stock/devoluciones` — Registro de devolución de cliente o a proveedor](#37-post-apistockdevoluciones--registro-de-devolución-de-cliente-o-a-proveedor)
-   - [3.8. `GET /api/categorias` y `GET /api/marcas` — Maestros de Categorías y Marcas](#38-get-apicategorias-y-get-apimarcas--maestros-de-categorías-y-marcas)
-   - [3.9. `GET /api/stock` — Listado general de stock y estados de alerta](#39-get-apistock--listado-general-de-stock-y-estados-de-alerta)
+   - [3.7. `POST /api/stock/devoluciones` — Registro de devolución de cliente](#37-post-apistockdevoluciones--registro-de-devolución-de-cliente-o-a-proveedor)
+   - [3.8. `GET /api/stock` — Listado general de stock y estados de alerta](#39-get-apistock--listado-general-de-stock-y-estados-de-alerta)
 4. [Guía de Integración Específica por Grupo](#4-guía-de-integración-específica-por-grupo)
    - [4.1. Integración con Grupo 1 (Clientes, Catálogo Público y Reportes)](#41-integración-con-grupo-1-clientes-catálogo-público-y-reportes)
    - [4.2. Integración con Grupo 4 (Ventas, Promociones y Cuenta Corriente)](#42-integración-con-grupo-4-ventas-promociones-y-cuenta-corriente)
    - [4.3. Integración con Grupo 2 (Entregas, Remitos, Rendiciones y Caja)](#43-integración-con-grupo-2-entregas-remitos-rendiciones-y-caja)
-5. [Referencia de APIs Operativas Internas de G3](#5-referencia-de-apis-operativas-internas-de-g3)
-   - [5.1. Módulo Productos, Precios y Auditoría](#51-módulo-productos-precios-y-auditoría)
-   - [5.2. Módulo Stock, Kardex, Alertas, Unidades, Ubicaciones y Conteos](#52-módulo-stock-kardex-alertas-unidades-ubicaciones-y-conteos)
-   - [5.3. Módulo Proveedores, Asociaciones, Plazos e Historial de Costos](#53-módulo-proveedores-asociaciones-plazos-e-historial-de-costos)
-   - [5.4. Módulo Compras, Recepciones y Pagos a Proveedores](#54-módulo-compras-recepciones-y-pagos-a-proveedores)
-   - [5.5. Módulo Órdenes de Compra, Sugerencias y Dashboard de Reposición](#55-módulo-órdenes-de-compra-sugerencias-y-dashboard-de-reposición)
-6. [Ejemplos Prácticos de Prueba (PowerShell y cURL)](#6-ejemplos-prácticos-de-prueba-powershell-y-curl)
+5. [Ejemplos Prácticos de Prueba (PowerShell y cURL)](#6-ejemplos-prácticos-de-prueba-powershell-y-curl)
 
 ---
 
@@ -439,46 +434,7 @@ Toda la lista `items` se ejecuta dentro de una **única transacción atómica (`
 
 ---
 
-### 3.8. `GET /api/categorias` y `GET /api/marcas` — Maestros de Categorías y Marcas
-
-- **Rutas equivalentes:**
-  - `GET /api/categorias` | `GET /api/v1/categorias` ([`CategoriaController@index`](../app/Modules/Productos/Controllers/CategoriaController.php))
-  - `GET /api/marcas` | `GET /api/v1/marcas` ([`MarcaController@index`](../app/Modules/Productos/Controllers/MarcaController.php))
-- **Parámetros Query opcionales:** `?search=` (filtra por nombre).
-- **Respuesta `GET /api/categorias` (`200 OK`):**
-  ```json
-  {
-    "status": "success",
-    "data": [
-      {
-        "id_categoria": 1,
-        "nombre": "Bebidas",
-        "fecha_creacion": "2026-09-01 00:00:00",
-        "fecha_modificacion": null,
-        "total_productos": 1
-      }
-    ]
-  }
-  ```
-- **Respuesta `GET /api/marcas` (`200 OK`):**
-  ```json
-  {
-    "status": "success",
-    "data": [
-      {
-        "id_marca": 1,
-        "nombre": "Coca-Cola",
-        "fecha_creacion": "2026-09-01 00:00:00",
-        "fecha_modificacion": null,
-        "total_productos": 1
-      }
-    ]
-  }
-  ```
-
----
-
-### 3.9. `GET /api/stock` — Listado general de stock y estados de alerta
+### 3.8. `GET /api/stock` — Listado general de stock y estados de alerta
 
 - **Rutas equivalentes:** `GET /api/stock` | `GET /api/v1/stock`
 - **Controlador:** [`App\Modules\Stock\Controllers\StockController@consultaGeneral`](../app/Modules/Stock/Controllers/StockController.php)
@@ -551,99 +507,7 @@ Toda la lista `items` se ejecuta dentro de una **única transacción atómica (`
 
 ---
 
-## 5. Referencia de APIs Operativas Internas de G3
-
-Además de las APIs inter-grupo detalladas en la Sección 3, el backend de G3 expone los siguientes endpoints para la operatoria completa de administración de inventario, compras y proveedores.
-
-### 5.1. Módulo Productos, Precios y Auditoría
-
-| Método | Ruta | Controlador | Descripción y Payload |
-| :--- | :--- | :--- | :--- |
-| `POST` | `/api/productos` | `ProductoController@store` | **Alta de producto (P01).** Acepta JSON o `multipart/form-data`. Campos: `codigo` (req, único), `nombre`, `descripcion` (req), `precio_unitario` (req), `id_categoria` (req), `id_marca` (req), `stock_disponible` (stock inicial), `stock_minimo`, `formato_bulto`, `unidades_por_bulto`, `id_ubicacion`, `imagen` (ruta/URL) o `imagen_archivo` (`jpg/png/webp` máx 4 MB). |
-| `PUT` / `PATCH` | `/api/productos/{id}` | `ProductoController@update` | **Edición de producto (P04).** Si varía `precio_unitario`, genera automáticamente un registro en `historial_precio`. Soporta actualización de `imagen` / `imagen_archivo`. |
-| `PATCH` / `DELETE` | `/api/productos/{id}/desactivar` *(o `DELETE /api/productos/{id}`)* | `ProductoController@desactivar` | **Baja lógica (P06).** Cambia `estado` a `"inactivo"` y registra `fecha_desactivacion`. |
-| `PATCH` | `/api/productos/{id}/activar` | `ProductoController@activar` | **Reactivación.** Cambia `estado` a `"activo"` y limpia `fecha_desactivacion`. |
-| `POST` | `/api/productos/aumento-masivo` | `ProductoController@aumentoMasivo` | **Aumento masivo de precios (P07).** Body: `{ "porcentaje": 15, "tipo_precio": "ambos" \| "mayorista" \| "minorista", "id_categoria": 1, "id_marca": 2, "ids": [1,2], "regla_redondeo": "sin_redondeo" \| "peso_mas_cercano" \| "peso_superior" \| "terminar_90" \| "terminar_99" }`. |
-| `GET` | `/api/productos/historial` | `ProductoController@historialPreciosGlobal` | **Historial global de precios (P08).** Filtros: `?id_producto=`, `?origen=manual\|masivo`. |
-| `GET` | `/api/productos/{id}/historial` | `ProductoController@historialPrecios` | **Historial cronológico de precios de un producto (P08).** |
-| `GET` | `/api/productos/auditoria` | `ProductoController@auditoriaGlobal` | **Log de auditoría global de productos.** Filtro opcional: `?id_producto=`. |
-| `GET` | `/api/productos/{id}/auditoria` | `ProductoController@auditoria` | **Log de auditoría de un producto específico.** |
-| `POST` / `PUT` / `DELETE` | `/api/categorias`, `/api/categorias/{id}` | `CategoriaController` | ABM de categorías de productos (P02). |
-| `POST` / `PUT` / `DELETE` | `/api/marcas`, `/api/marcas/{id}` | `MarcaController` | ABM de marcas de productos (P03). |
-
----
-
-### 5.2. Módulo Stock, Kardex, Alertas, Unidades, Ubicaciones y Conteos
-
-| Método | Ruta | Controlador | Descripción y Payload |
-| :--- | :--- | :--- | :--- |
-| `POST` | `/api/stock/ingresos` | `IngresoMercaderiaController@store` | **Ingreso manual de mercadería (S03).** Body: `{ "id_proveedor": 1, "id_producto": 1, "cantidad": 10, "id_unidad": null, "motivo": "Ingreso remito proveedor" }` (o con arreglo `items: [...]`; `id_proveedor` es opcional). Incrementa `producto.stock`. |
-| `POST` | `/api/stock/ajustes` | `AjusteStockController@store` | **Ajuste manual positivo o negativo (S06).** Body: `{ "id_producto": 1, "tipo": "aumentar" \| "disminuir" \| "fijar", "cantidad": 3, "motivo": "Rotura en depósito" }` *(también acepta alias `tipo_ajuste`: `"incremento"` / `"decremento"`)*. |
-| `GET` | `/api/stock/movimientos` | `StockController@todosLosMovimientos` | **Kardex global de movimientos (S12).** Filtros: `?id_producto=`, `?tipo=ingreso\|venta\|devolucion\|ajuste`, `?limit=150`. |
-| `GET` | `/api/stock/{id}/historial-movimientos` | `StockController@historial` | **Kardex histórico de un producto específico (S12).** |
-| `GET` | `/api/stock/alertas` *(alias: `/api/stock/bajo`)* | `AlertaStockController@index` | **Alertas de stock mínimo y crítico (S07/S15/S16).** Filtro: `?nivel=bajo\|critico`. Devuelve listado de productos activos en estado de alerta (`bajo` o `critico`). |
-| `PATCH` | `/api/stock/alertas/{id}/minimo` | `AlertaStockController@configurarMinimo` | **Configurar stock mínimo de un producto (S07).** Body: `{ "stock_minimo": 15 }`. |
-| `GET` / `POST` / `PUT` / `DELETE` | `/api/productos/{id}/unidades` | `UnidadController` | **ABM de unidades de medida y equivalencias de un producto (S08).** Body: `{ "nombre_unidad": "Caja x 12", "equivalencia_base": 12, "descripcion": "..." }`. |
-| `POST` | `/api/productos/{id}/unidades/{idUnidad}/seleccionar` | `UnidadController@seleccionar` | Define qué unidad de medida queda marcada como activa (`es_base = 1`) para el producto. |
-| `GET` | `/api/unidades/convertir` | `UnidadController@convertir` | Calculadora de equivalencias (`?id_unidad_origen=2&id_unidad_destino=1&cantidad=3`). |
-| `GET` / `POST` / `PUT` / `DELETE` | `/api/ubicaciones` | `UbicacionController` | **ABM de ubicaciones físicas del depósito (S14).** Body: `{ "descripcion": "Pasillo A - Estantería 1 - Nivel 2" }`. |
-| `POST` / `DELETE` | `/api/productos/{id}/ubicacion` | `UbicacionController` | Asigna (`POST` con `{ "id_ubicacion": 1 }`) o desasigna (`DELETE`) la ubicación de un producto. |
-| `GET` / `POST` | `/api/stock/conteos/sesiones` | `ConteoFisicoController` | **Sesiones de Conteo Físico de Inventario (S13):** iniciar sesión (`POST /sesiones`), listar (`GET /sesiones`), ver detalle (`GET /sesiones/{id}`), cargar ítem contado (`POST /sesiones/{id}/items` con `{ "id_producto": 1, "cantidad_fisica": 48 }`), eliminar ítem (`DELETE /sesiones/{id}/items/{idProducto}`) y finalizar aplicando ajustes automáticos (`POST /sesiones/{id}/finalizar` con `{ "aplicar_ajustes": true }`). |
-
----
-
-### 5.3. Módulo Proveedores, Asociaciones, Plazos e Historial de Costos
-
-| Método | Ruta | Controlador | Descripción y Payload |
-| :--- | :--- | :--- | :--- |
-| `GET` | `/api/proveedores` | `ProveedorController@index` | **Listar/buscar proveedores (PV03).** Filtros: `?search=`, `?estado=activo\|inactivo`. |
-| `GET` | `/api/proveedores/{id}` | `ProveedorController@show` | **Detalle de proveedor (PV02)** con sus productos asociados, plazos e historial. |
-| `POST` | `/api/proveedores` | `ProveedorController@store` | **Alta de proveedor (PV01).** Body: `{ "razon_social": "...", "cuit": "30-...", "contacto": "...", "telefono": "...", "email": "...", "direccion": "...", "plazo_entrega_dias": 3 }`. |
-| `PUT` / `PATCH` | `/api/proveedores/{id}` | `ProveedorController@update` | **Modificar proveedor (PV02).** |
-| `PATCH` | `/api/proveedores/{id}/desactivar` y `/activar` | `ProveedorController` | **Baja lógica y reactivación de proveedor (PV04).** |
-| `GET` / `POST` | `/api/proveedores/{id}/productos` | `ProveedorController` | **Listar o asociar productos que comercializa un proveedor (PV05).** Body `POST`: `{ "id_producto": 1, "precio_acordado": 1800, "es_proveedor_principal": true }` *(también acepta `id_productos: [1, 2]` o `productos: [...]`)*. |
-| `PUT` / `PATCH` / `DELETE` | `/api/proveedores/productos/{idAsociacion}` | `ProveedorController` | Modificar precio/plazo o eliminar una asociación producto-proveedor. |
-| `POST` | `/api/proveedores/productos/{idAsociacion}/principal` | `ProveedorController@definirPrincipal` | Marca ese proveedor como el proveedor principal del producto. |
-| `POST` | `/api/proveedores/sincronizar-asociaciones` | `ProveedorController@sincronizarAsociaciones` | Sincroniza asociaciones producto-proveedor a partir de las compras y órdenes históricas. |
-| `GET` / `POST` | `/api/proveedores/{id}/plazos` y `/plazo` | `PlazoEntregaController` | **Consulta y registro de plazos de entrega del proveedor (PV06/PV07).** |
-| `GET` / `POST` | `/api/proveedores/{id}/precios-historicos` | `HistorialPrecioController` | **Historial de precios de compra por proveedor** y comparativa de aumentos (`/comparativa-aumentos`). |
-| `GET` | `/api/proveedores/historial` | `ProveedorController@historialGlobal` | Auditoría global de altas, bajas y modificaciones de proveedores. |
-
----
-
-### 5.4. Módulo Compras, Recepciones y Pagos a Proveedores
-
-| Método | Ruta | Controlador | Descripción y Payload |
-| :--- | :--- | :--- | :--- |
-| `GET` | `/api/compras` | `CompraController@index` | **Listado de compras a proveedores (C02).** Filtros: `?id_proveedor=`, `?estado=pendiente\|parcial\|recibida\|cancelada`, `?estado_pago=pendiente\|parcial\|pagada`, `?desde=`, `?hasta=`. |
-| `GET` | `/api/compras/{id}` | `CompraController@show` | **Detalle completo de una compra (C03)** con sus renglones, recepciones de mercadería y pagos registrados. |
-| `POST` | `/api/compras` | `CompraController@store` | **Registrar compra (C01).** Body: `{ "id_proveedor": 1, "fecha_compra": "2026-10-28", "numero_comprobante": "FC-A-0001-00001234", "id_orden": null, "items": [{ "id_producto": 1, "cantidad": 20, "precio_unitario": 1800 }] }` *(también acepta alias `fecha`, `numero_factura` y `detalles`)*. |
-| `PUT` / `PATCH` | `/api/compras/{id}` | `CompraController@update` | **Modificar compra pendiente (C04).** |
-| `PATCH` | `/api/compras/{id}/cancelar` | `CompraController@cancelar` | **Cancelar compra pendiente (C05).** |
-| `POST` | `/api/compras/{id}/recepciones` | `RecepcionController@store` | **Registrar recepción parcial o total de mercadería (C06/C07).** Body: `{ "fecha_recepcion": "2026-10-28", "items": [{ "id_producto": 1, "cantidad": 20 }] }` *(también acepta `detalles` y `cantidad_recibida`)*. **Impacta automáticamente el ingreso en `producto.stock` y en el Kardex (`movimiento_stock`).** |
-| `GET` | `/api/compras/{id}/estado` | `CompraController@estado` | Consulta el avance de recepción (cantidad pedida vs. recibida por ítem) y estado de la compra. |
-| `GET` / `POST` | `/api/compras/{id}/pagos` | `PagoCompraController` | **Registrar y listar pagos a proveedores (C08/C09)** soportando múltiples medios de pago (`efectivo`, `transferencia`, `cheque`, `tarjeta`). Body `POST`: `{ "metodo_pago": "transferencia", "importe": 18000, "fecha_pago": "2026-10-28" }` *(también acepta `monto` o arreglo `pagos`)*. |
-| `GET` | `/api/compras/{id}/pagos/resumen` | `PagoCompraController@resumen` | Resumen de total comprado, total abonado y saldo pendiente de la compra. |
-| `GET` | `/api/compras/deudas` *(alias: `/api/proveedores/deudas`)* | `CompraController@deudas` | Estado de deuda consolidado por proveedor. |
-
----
-
-### 5.5. Módulo Órdenes de Compra, Sugerencias y Dashboard de Reposición
-
-| Método | Ruta | Controlador | Descripción y Payload |
-| :--- | :--- | :--- | :--- |
-| `GET` | `/api/ordenes-compra` | `OrdenCompraController@index` | **Listar órdenes de compra (PC02).** Filtros: `?id_proveedor=`, `?estado=borrador\|emitida\|enviada\|recibida_parcial\|completada\|cancelada`. |
-| `GET` | `/api/ordenes-compra/{id}` | `OrdenCompraController@show` | **Detalle de orden de compra (PC03).** |
-| `POST` | `/api/ordenes-compra` | `OrdenCompraController@store` | **Emitir orden de compra (PC01).** Body: `{ "id_proveedor": 1, "fecha_creacion": "2026-10-28", "items": [{ "id_producto": 1, "cantidad_solicitada": 30, "precio_estimado": 1800 }] }` *(también acepta `detalles` y `cantidad_pedida` / `cantidad`)*. |
-| `PUT` / `PATCH` | `/api/ordenes-compra/{id}` | `OrdenCompraController@update` | **Editar orden de compra en borrador/emitida (PC04).** |
-| `PATCH` | `/api/ordenes-compra/{id}/enviar` | `OrdenCompraController@enviar` | Marca la orden como `"enviada"` al proveedor (PC06). |
-| `PATCH` | `/api/ordenes-compra/{id}/cancelar` | `OrdenCompraController@cancelar` | Cancela una orden de compra con motivo (PC05). |
-| `GET` / `POST` | `/api/sugerencias-reposicion/*` | `SugerenciasReposicionController` | **Sugerencias automáticas de reposición (PC07):** `/generar` detecta productos con `stock <= stock_minimo`, `/` lista sugerencias, `/{id}/generar-orden` convierte la sugerencia en una Orden de Compra formal. |
-| `GET` | `/api/dashboard-reposicion/*` | `DashboardReposicionController` | KPIs y series para gráficos de reposición (`/resumen`, `/grafico-motivos`, `/grafico-tendencia`, `/grafico-criticidad`). |
-
----
-
-## 6. Ejemplos Prácticos de Prueba (PowerShell y cURL)
+## 5. Ejemplos Prácticos de Prueba (PowerShell y cURL)
 
 Podés ejecutar cualquiera de estos comandos en PowerShell teniendo el servidor levantado (`C:\xampp\php\php.exe artisan serve`):
 
