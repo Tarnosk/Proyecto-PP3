@@ -2,6 +2,7 @@
 
 namespace App\Modules\Ventas\Resources;
 
+use App\Modules\Login\Models\User;
 use App\Modules\Ventas\Contracts\ClienteGateway;
 use App\Modules\Ventas\Contracts\ProductoGateway;
 use App\Modules\Ventas\Enums\EstadoVenta;
@@ -23,14 +24,13 @@ use Illuminate\Http\Resources\Json\JsonResource;
  *   "numero_comprobante": "POS-01M4VQNAJ6N36B4A...",
  *   "fecha": "2026-10-13",
  *   "cliente": { "id": 472891, "nombre": "Supermercado El Norte SRL", "cuit": "30-71234567-8" },
- *   "usuario": { "id": 1, "nombre": "Administrador" },
+ *   "usuario": { "id": 1, "nombre": "Usuario Administrativo" },
  *   "estado": { "valor": "confirmada", "etiqueta": "Confirmada" },
  *   "anulada": false,
  *   "total": 159960, "descuento_global": 0, "observaciones": "anotacion aaaa",
  *   "cantidad_articulos": 118,
  *   "detalles": [ { "id_producto": 2, "codigo": "P002", "producto": "Pan lactal grande", "cantidad": 3, ... } ],
  *   "acciones": { "puede_modificar": true, "puede_eliminar": true, "puede_restaurar": false },
- *   "transiciones_posibles": ["preparada", "entregada", "pagada"],
  *   "historial": [ ... ]   ← solo en GET /api/ventas/{id} y en las respuestas de cambios
  * }
  *
@@ -57,7 +57,7 @@ class VentaResource extends JsonResource
             ],
             'usuario' => [
                 'id' => (int) $this->id_usuario,
-                'nombre' => $usuarios->nombre((int) $this->id_usuario),
+                'nombre' => User::query()->whereKey($this->id_usuario)->value('nombre') ?? "Usuario #{$this->id_usuario}",
             ],
             'estado' => [
                 'valor' => $this->estado,
@@ -74,7 +74,6 @@ class VentaResource extends JsonResource
                 'puede_eliminar' => $acciones['puede_eliminar'],
                 'puede_restaurar' => $acciones['puede_restaurar'],
             ],
-            'transiciones_posibles' => array_map(fn (EstadoVenta $e) => $e->value, $estado?->siguientes() ?? []),
             // whenLoaded: el historial solo aparece si se cargó (en el listado no, para que sea liviano).
             'historial' => $this->whenLoaded('historial', fn () => $this->historial->map(fn (VentaHistorial $h) => [
                 'accion' => $h->accion,

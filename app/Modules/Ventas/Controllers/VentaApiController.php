@@ -46,10 +46,15 @@ class VentaApiController extends Controller
 
     /**
      * GET /api/ventas?estado=&cliente_id=&desde=&hasta=&texto=&por_pagina=&page=
+     *
+     * Sin "page" devuelve solo "data". Con "page" agrega "meta" y "links":
+     * Reportes y Entregas los usan para recorrer todas las páginas.
      */
-    public function index(ListarVentasRequest $request): AnonymousResourceCollection
+    public function index(ListarVentasRequest $request): AnonymousResourceCollection|JsonResponse
     {
-        return VentaResource::collection($this->ventas->listar($request->validated()));
+        $ventas = VentaResource::collection($this->ventas->listar($request->validated()));
+
+        return $request->has('page') ? $ventas : response()->json(['data' => $ventas->resolve()]);
     }
 
     /**

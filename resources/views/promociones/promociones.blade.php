@@ -185,5 +185,8 @@
         </div>
     </div>
 
-    @vite(['resources/js/promociones.js'])
 @endsection
+
+@push('scripts')
+    <script src="{{ asset('js/promociones.js') }}" defer></script>
+@endpush

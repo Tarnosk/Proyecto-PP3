@@ -96,8 +96,9 @@ class VentaController extends Controller
         }
 
         $observaciones = trim($datos['observaciones'] ?? '') ?: 'Venta POS a cuenta corriente';
+        $idUsuario = $request->user()->id;
 
-        $ventaId = DB::transaction(function () use ($cliente, $detalles, $total, $montoDescuentoGlobal, $observaciones): int {
+        $ventaId = DB::transaction(function () use ($cliente, $detalles, $total, $montoDescuentoGlobal, $observaciones, $idUsuario): int {
             $ventaId = DB::table('venta')->insertGetId([
                 'id_cliente' => $cliente['id'],
                 'fecha' => now()->toDateString(),
@@ -106,7 +107,7 @@ class VentaController extends Controller
                 'numFactura' => 'POS-'.Str::ulid(),
                 'estado' => 'confirmada',
                 'observaciones' => $observaciones,
-                'id_usuario' => config('cuenta_corriente.id_usuario_prueba'),
+                'id_usuario' => $idUsuario,
             ], 'id_venta');
 
             foreach ($detalles as $detalle) {

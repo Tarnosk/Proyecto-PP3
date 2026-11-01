@@ -388,8 +388,7 @@ class VentaService
             'estado_nuevo' => $estadoNuevo,
             'motivo' => $motivo,
             'datos' => $datos,
-            // Usuario de prueba hasta que exista el login (mismo que usa VentaController@store).
-            'id_usuario' => config('cuenta_corriente.id_usuario_prueba'),
+            'id_usuario' => auth()->id(),
         ]);
     }
 
