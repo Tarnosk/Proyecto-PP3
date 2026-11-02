@@ -2,6 +2,11 @@
 
 Esta matriz vincula cada Historia de Usuario (HU) con su endpoint en la API REST, el controlador y servicio responsable, el test automatizado que valida sus criterios de aceptación y la vista Blade donde se materializa en la interfaz.
 
+> **Nota de Arquitectura de Rutas (Sprint 5):**
+> Siguiendo el desacople modular acordado:
+> - **APIs Públicas Inter-Grupos (`app/Modules/Productos/routes/api.php`):** Expuestas para G1, G2 y G4 bajo `/api/` y `/api/v1/` (`productos`, `stock`, `movimientos` en lote, `ventas` y `devoluciones`). Referenciadas en [`docs/contrato-api-g3.md`](./contrato-api-g3.md).
+> - **Rutas Web Operativas (`app/Modules/Productos/routes/web.php`):** Canales internos con sesión autenticada y transacciones atómicas `DB::transaction()` para ABMs de catálogo, órdenes de compra, recepciones y conteo físico a ciegas.
+
 ---
 
 ## 1. Módulo Productos (P01 – P08)
@@ -26,7 +31,7 @@ Esta matriz vincula cada Historia de Usuario (HU) con su endpoint en la API REST
 | **S01** | Visualización de Stock General | `GET /api/v1/stock` | `StockController@index` | `UserStoriesFrontendTest@test_s01_consulta_stock` | `inventario/index.blade.php` |
 | **S02** | Disponibilidad en Tiempo Real | `GET /api/v1/stock/{id}/disponibilidad` | `StockController@disponibilidad` | `UserStoriesFrontendTest@test_s02_disponibilidad` | `inventario/index.blade.php` |
 | **S03** | Ingreso Manual de Mercadería | `POST /api/v1/stock/ingresos` | `IngresoMercaderiaController@store` | `UserStoriesFrontendTest@test_s03_ingreso_mercaderia` | `inventario/index.blade.php` |
-| **S04** | Salida de Stock por Venta | `POST /api/v1/stock/ventas` | `VentaStockController@store` | `UserStoriesFrontendTest@test_s04_descuento_venta` | `inventario/index.blade.php` |
+| **S04** | Salida de Stock por Venta | `POST /api/v1/stock/ventas`<br>`POST /api/v1/stock/movimientos` (lote G4) | `VentaStockController@store`<br>`StockController@registrarMovimientosLote` | `UserStoriesFrontendTest@test_s04_descuento_venta` | `inventario/index.blade.php` |
 | **S05** | Registro de Devoluciones | `POST /api/v1/stock/devoluciones` | `DevolucionController@store` | `UserStoriesFrontendTest@test_s05_registro_devoluciones` | `inventario/index.blade.php` |
 | **S06** | Ajustes Manuales de Inventario | `POST /api/v1/stock/ajustes` | `AjusteStockController@store` | `UserStoriesFrontendTest@test_s06_ajustes_stock` | `inventario/index.blade.php` |
 | **S07** | Alertas de Stock Mínimo | `GET /api/v1/stock/alertas` | `AlertaStockController@index` | `UserStoriesFrontendTest@test_s07_alertas_stock` | `inventario/index.blade.php` |
