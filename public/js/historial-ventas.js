@@ -3,7 +3,7 @@ const normalizeText = (value) => String(value ?? '')
     .replace(/\p{Diacritic}/gu, '')
     .toLocaleLowerCase();
 
-export function filterSales(sales, filters) {
+function filterSales(sales, filters) {
     const search = normalizeText(filters.search).trim();
 
     return sales.filter((sale) => {
@@ -37,12 +37,12 @@ function formatCurrency(value) {
     })}`;
 }
 
-export function initializeSalesHistory() {
+function initializeSalesHistory() {
     const dataElement = document.getElementById('ventasHistorialData');
-    if (!dataElement) return;
+    const form = document.getElementById('formFiltros');
+    if (!dataElement || !form) return;
 
     const sales = JSON.parse(dataElement.textContent);
-    const form = document.getElementById('formFiltros');
     const searchInput = document.getElementById('fTexto');
     const clientSelect = document.getElementById('fCliente');
     const productSelect = document.getElementById('fProducto');
@@ -53,6 +53,9 @@ export function initializeSalesHistory() {
     const clearButton = document.getElementById('limpiarFiltros');
     const noResults = document.getElementById('sinResultados');
     const counter = document.getElementById('contadorVentas');
+    if (!searchInput || !clientSelect || !productSelect || !localitySelect
+        || !startDateInput || !endDateInput || !cancelledToggle || !clearButton
+        || !noResults || !counter) return;
     const saleRows = new Map(
         Array.from(document.querySelectorAll('.hv-grupo'), (row) => [row.dataset.ventaId, row])
     );

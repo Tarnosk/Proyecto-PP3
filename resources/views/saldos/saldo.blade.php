@@ -107,6 +107,7 @@
         color: #cbd5e1;
         text-align: center;
     }
+    .detalle-vacio[hidden] { display: none; }
     .detalle-vacio .icono { font-size: 2.6rem; }
     .detalle-vacio p { margin: 0; }
     .resumen-cuenta {

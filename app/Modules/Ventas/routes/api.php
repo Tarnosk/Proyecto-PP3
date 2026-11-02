@@ -25,6 +25,7 @@ Route::prefix('ventas')->controller(VentaApiController::class)->name('api.ventas
     Route::get('/', 'index')->name('index');                                              // Lista con filtros y paginación
     Route::get('/estados', 'estados')->name('estados');                                   // Catálogo de estados y sus reglas
     Route::get('/productos', 'productos')->name('productos');                             // Catálogo para "Agregar producto" al modificar
+    Route::get('/clientes', 'clientes')->name('clientes');                                // Clientes reales para el selector de Ventas
     Route::get('/{id}', 'show')->whereNumber('id')->name('show');                         // Una venta con detalle, botones e historial
     Route::put('/{id}', 'update')->whereNumber('id')->name('update');                     // Botón "Modificar"
     Route::delete('/{id}', 'destroy')->whereNumber('id')->name('destroy');                // Botón "Eliminar" (anula, no borra)

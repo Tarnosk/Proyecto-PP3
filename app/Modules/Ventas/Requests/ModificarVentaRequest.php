@@ -36,6 +36,7 @@ class ModificarVentaRequest extends VentaRequest
             'items.*.id' => ['required', 'integer', 'min:1'],
             'items.*.cantidad' => ['required', 'integer', 'min:1', 'max:9999'],
             'items.*.descuento' => ['required', 'numeric', 'min:0'],
+            'items.*.id_promocion' => ['nullable', 'integer', 'exists:promocion,id_promocion'],
             'descuento_global' => ['sometimes', 'array'],
             'descuento_global.modo' => ['required_with:descuento_global', Rule::in(['porcentaje', 'monto'])],
             'descuento_global.valor' => ['required_with:descuento_global', 'numeric', 'min:0'],

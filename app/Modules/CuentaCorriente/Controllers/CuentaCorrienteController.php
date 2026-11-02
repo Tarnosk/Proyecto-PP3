@@ -3,7 +3,7 @@
 namespace App\Modules\CuentaCorriente\Controllers;
 
 use App\Http\Controllers\Controller;
-use App\Services\MockClienteApi;
+use App\Modules\Ventas\Contracts\ClienteGateway;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -11,7 +11,7 @@ use Illuminate\Validation\ValidationException;
 
 class CuentaCorrienteController extends Controller
 {
-    public function index(MockClienteApi $clientes)
+    public function index(ClienteGateway $clientes)
     {
         $listado = $clientes->todos();
         $ids = array_column($listado, 'id');
@@ -39,7 +39,7 @@ class CuentaCorrienteController extends Controller
         return view('saldos.saldo', ['clientes' => $listado]);
     }
 
-    public function registrarMovimiento(Request $request, int $cliente, MockClienteApi $clientes): JsonResponse
+    public function registrarMovimiento(Request $request, int $cliente, ClienteGateway $clientes): JsonResponse
     {
         $datos = $request->validate([
             'tipo' => ['required', 'in:pago,nota_credito'],

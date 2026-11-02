@@ -1399,6 +1399,7 @@
                     items: carrito.map(item => ({
                         id: item.id,
                         cantidad: item.cantidad,
+                        id_promocion: item.esPromocion ? (Number(item.promocionId) || null) : null,
 
                         // Siempre enviamos el descuento como monto fijo ($)
                         descuento: Number(
