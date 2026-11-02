@@ -64,6 +64,22 @@ paths:
         '400':
           description: Error de validación en parámetros de entrada
 
+  /productos/codigo/{codigo}:
+    get:
+      summary: Consultar detalle de un producto por Código SKU (Inter-grupos G1/G4)
+      parameters:
+        - name: codigo
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Código SKU del producto
+      responses:
+        '200':
+          description: Producto obtenido exitosamente
+        '404':
+          description: Producto no encontrado
+
   /productos/aumento-masivo:
     post:
       summary: Aplicar aumento masivo porcentual con reglas de redondeo (P07)
@@ -102,6 +118,52 @@ paths:
       responses:
         '200':
           description: Listado general de stock con semáforo de disponibilidad
+
+  /stock/{id}:
+    get:
+      summary: Consultar stock disponible de un producto por ID (Inter-grupos G4)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Información de stock y disponibilidad del producto
+        '404':
+          description: Producto no encontrado
+
+  /stock/movimientos:
+    post:
+      summary: Descontar o reponer stock en lote para Ventas o Devoluciones (Inter-grupos G4/G2)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [movimientos]
+              properties:
+                tipo:
+                  type: string
+                  enum: [venta, devolucion]
+                  default: venta
+                motivo:
+                  type: string
+                  example: "Descuento por Venta #1052"
+                movimientos:
+                  type: array
+                  items:
+                    type: object
+                    required: [id_producto, cantidad]
+                    properties:
+                      id_producto: { type: integer, example: 1 }
+                      cantidad: { type: integer, example: 5 }
+      responses:
+        '200':
+          description: Movimientos de stock procesados atómicamente
+        '400':
+          description: Stock insuficiente o parámetros inválidos
 
   /stock/ingresos:
     post:

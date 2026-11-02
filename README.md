@@ -248,6 +248,59 @@ tests/Feature/    Pruebas automatizadas
 
 Todos los módulos, incluido `Login`, siguen el mismo criterio: las clases PHP se agrupan en `app/Modules/{Modulo}/`, y las rutas, vistas, migraciones, factories, seeders y assets permanecen en sus carpetas generales. Cada módulo contiene las subcarpetas necesarias para su funcionalidad. Ver [estructura-modular.md](docs/estructura-modular.md) para la distribución y el alcance.
 
+## Documentación
+
+La documentación técnica y operativa del proyecto está organizada en `docs/` y `Documentacion/`:
+
+### Guías de Operación y Exposición
+- [Manual de Usuario y Guía Operativa](docs/manual-usuario.md)
+- [Guía de Solución de Problemas y FAQ (Troubleshooting)](docs/troubleshooting.md)
+- [Guía de Defensa y Presentación del Proyecto (Pitch Guide)](docs/guia-defensa-proyecto.md)
+- [Diagramas de Flujo, Estados y Secuencia en Mermaid](docs/diagramas-flujo.md)
+
+### Guías del Sistema (`docs/`)
+- [Índice de documentación](docs/README.md)
+- [Guía de instalación](docs/guia-instalacion.md)
+- [Arquitectura del sistema](docs/arquitectura.md)
+- [Registro de Decisiones de Arquitectura (ADR)](docs/registro-decisiones-arquitectura.md)
+- [Glosario de Términos del Dominio](docs/glosario-terminos.md)
+- [Estructura del proyecto](docs/estructura-proyecto.md)
+- [Módulos funcionales](docs/modulos.md)
+- [Flujo de negocio](docs/flujo-negocio.md)
+- [Seguridad y accesos](docs/seguridad.md)
+- [Despliegue](docs/despliegue.md)
+- [Roadmap del proyecto](docs/roadmap.md)
+- [Guía de colaboradores](docs/guia-colaboradores.md)
+- [Guía de migración](MIGRATION.md)
+
+### Especificaciones de API y Contratos de Integración
+- [Contrato de APIs de Integración G3](docs/contrato-api-g3.md)
+- [Colección Postman Oficial G3](docs/postman/G3.postman_collection.json)
+- [Especificación OpenAPI 3.0 (YAML)](docs/openapi.yaml)
+- [Colección Postman REST API Completa](docs/contracts/ERP_Juan23_API_Collection.postman_collection.json)
+- [Investigación: Precio Unitario, Costo y Margen Comercial](docs/investigacion-precio-costo-margen.md)
+- [Plan de Estandarización de Migraciones ERP](docs/plan-estandarizacion-migraciones-erp.md)
+- [Contrato API G1](docs/contrato-api-g1.md)
+- [Contratos Sprint 4 G1](docs/contratos-sprint4-g1.md)
+- [Guía de Integración Modular](docs/GUIA_INTEGRACION_MODULAR.md)
+- [Informe Técnico Integral](docs/informe-tecnico-integral-erp-juan23.md)
+
+### Requisitos, Datos y Evidencias de Pruebas
+- [Matriz de Trazabilidad de Requisitos (RTM)](docs/matriz-trazabilidad-requisitos.md)
+- [Diccionario de Datos de la Base de Datos](docs/diccionario-datos.md)
+- [Reporte de Pruebas: Stock y Productos (S01-S16 / P01-P08)](docs/reporte-pruebas-stock-inventario.md)
+- [Reporte de Pruebas: Proveedores y Compras (PV01-PV08 / C01-C09)](docs/reporte-pruebas-proveedores-compras.md)
+- [Reportes de Pruebas: Órdenes de Compra (PC01 a PC07)](docs/reporte-pruebas-pc01-ordenes-compra.md)
+
+### Entregas Académicas y Sprints (`Documentacion/`)
+- [Historias de Usuario (PDF)](Documentacion/Historias%20de%20Usuario.pdf)
+- [Control de Versiones y Evolución de Sprints](Documentacion/CONTROL_DE_VERSIONES_EVOLUCION_SPRINTS.md)
+- [Presentación Sprints 2 y 3](Documentacion/PRESENTACION_SPRINT_2_Y_3.md)
+- [Plan de Pruebas de Validación y Verificación](Documentacion/plan%20de%20prueba%20de%20validacion%20y%20verificacion.md)
+- [Criterios de Accesibilidad y Usabilidad](Documentacion/criterios%20de%20accesibilidad%20y%20usabilidad.md)
+- [Contrato G1 Auditoría](Documentacion/CONTRATO_G1_AUDITORIA.md)
+- [Estado y Cumplimiento de Historias de Usuario](Documentacion/PENDIENTES_PROYECTO.md)
+
 ## Configuración de producción
 
 Configurar credenciales reales en `.env`, utilizar `APP_DEBUG=false`, habilitar HTTPS y definir `SESSION_SECURE_COOKIE=true`. Nunca subir `.env` al repositorio.

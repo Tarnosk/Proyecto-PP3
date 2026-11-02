@@ -31,8 +31,12 @@ Esta carpeta reúne la documentación técnica y operativa del sistema ERP.
 - [Reportes de Pruebas: Órdenes de Compra (PC01 a PC07)](./reporte-pruebas-pc01-ordenes-compra.md)
 
 ### Especificaciones de API y Contratos
+- [Contrato de APIs de Integración G3](./contrato-api-g3.md)
+- [Colección Postman Oficial G3](./postman/G3.postman_collection.json)
 - [Especificación OpenAPI 3.0 (YAML)](./openapi.yaml)
-- [Colección Postman REST API](./contracts/ERP_Juan23_API_Collection.postman_collection.json)
+- [Colección Postman REST API (Completa)](./contracts/ERP_Juan23_API_Collection.postman_collection.json)
+- [Investigación: Precio Unitario, Costo y Margen](./investigacion-precio-costo-margen.md)
+- [Plan de Estandarización de Migraciones ERP](./plan-estandarizacion-migraciones-erp.md)
 - [Contrato API G1](./contrato-api-g1.md)
 - [Contratos Sprint 4 G1](./contratos-sprint4-g1.md)
 - [Guía de Integración Modular](./GUIA_INTEGRACION_MODULAR.md)
