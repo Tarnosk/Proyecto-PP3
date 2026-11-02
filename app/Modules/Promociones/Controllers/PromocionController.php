@@ -4,8 +4,8 @@ namespace App\Modules\Promociones\Controllers;
 
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
-use App\Modules\Promociones\Models\Promocion;
 use App\Modules\Ventas\Contracts\ProductoGateway;
+use App\Modules\Promociones\Models\Promocion;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
@@ -22,9 +22,10 @@ class PromocionController extends Controller
                 ->get();
 
             $productosArray = $detallesPivot->map(function ($pivot) use ($productos) {
+                $producto = $productos->buscar((int) $pivot->id_producto);
                 return [
                     'id_producto' => $pivot->id_producto,
-                    'nombre' => $productos->buscar((int) $pivot->id_producto)['nombre'] ?? "Producto #{$pivot->id_producto}",
+                    'nombre'      => $producto['nombre'] ?? 'Producto no encontrado',
                     'cantidad'    => $pivot->cantidad
                 ];
             });
@@ -32,8 +33,8 @@ class PromocionController extends Controller
             return [
                 'id_promocion'   => $promo->id_promocion,
                 'nombre'         => $promo->nombre,
-                'tipo_descuento' => $promo->total < 0 ? 'porcentaje' : 'monto_fijo',
-                'valor'          => abs($promo->total),
+                'tipo_descuento' => $promo->tipo_descuento,
+                'valor'          => (float) $promo->valor_descuento,
                 'vigencia_desde' => $promo->vigencia_desde,
                 'vigencia_hasta' => $promo->vigencia_hasta,
                 'condiciones'    => $promo->descripcion,
@@ -51,14 +52,12 @@ class PromocionController extends Controller
         $datos = $this->validarPromocion($request, $productos);
         DB::beginTransaction();
         try {
-            $valorRecibido = $datos['valor'];
-            $esPorcentaje = $datos['tipo_descuento'] === 'porcentaje';
-            $totalConMemoria = $esPorcentaje ? -abs($valorRecibido) : abs($valorRecibido);
-
             $promocion = Promocion::create([
                 'nombre'         => $datos['nombre'],
                 'descripcion'    => $datos['descripcion'] ?? '',
-                'total'          => $totalConMemoria,
+                'total'          => $this->calcularPrecioFinal($datos, $productos),
+                'tipo_descuento' => $datos['tipo_descuento'],
+                'valor_descuento' => $datos['valor'],
                 'vigencia_desde' => $datos['vigencia_desde'],
                 'vigencia_hasta' => $datos['vigencia_hasta'],
                 'estado'         => ($datos['estado'] ?? 'activa') === 'activa' ? 1 : 0
@@ -88,9 +87,10 @@ class PromocionController extends Controller
 
         $detallesPivot = DB::table('promocion_producto')->where('id_promocion', $id)->get();
         $productosArray = $detallesPivot->map(function ($pivot) use ($productos) {
+            $producto = $productos->buscar((int) $pivot->id_producto);
             return [
                 'id_producto' => $pivot->id_producto,
-                'nombre' => $productos->buscar((int) $pivot->id_producto)['nombre'] ?? "Producto #{$pivot->id_producto}",
+                'nombre'      => $producto['nombre'] ?? 'Producto no encontrado',
                 'cantidad'    => $pivot->cantidad
             ];
         });
@@ -98,8 +98,8 @@ class PromocionController extends Controller
         $respuesta = [
             'id_promocion'   => $promo->id_promocion,
             'nombre'         => $promo->nombre,
-            'tipo_descuento' => $promo->total < 0 ? 'porcentaje' : 'monto_fijo',
-            'valor'          => abs($promo->total),
+            'tipo_descuento' => $promo->tipo_descuento,
+            'valor'          => (float) $promo->valor_descuento,
             'vigencia_desde' => $promo->vigencia_desde,
             'vigencia_hasta' => $promo->vigencia_hasta,
             'condiciones'    => $promo->descripcion,
@@ -119,14 +119,12 @@ class PromocionController extends Controller
         $datos = $this->validarPromocion($request, $productos);
         DB::beginTransaction();
         try {
-            $valorRecibido = $datos['valor'];
-            $esPorcentaje = $datos['tipo_descuento'] === 'porcentaje';
-            $totalConMemoria = $esPorcentaje ? -abs($valorRecibido) : abs($valorRecibido);
-
             $promocion->update([
                 'nombre'         => $datos['nombre'],
                 'descripcion'    => $datos['descripcion'] ?? '',
-                'total'          => $totalConMemoria,
+                'total'          => $this->calcularPrecioFinal($datos, $productos),
+                'tipo_descuento' => $datos['tipo_descuento'],
+                'valor_descuento' => $datos['valor'],
                 'vigencia_desde' => $datos['vigencia_desde'],
                 'vigencia_hasta' => $datos['vigencia_hasta'],
                 'estado'         => ($datos['estado'] ?? 'activa') === 'activa' ? 1 : 0
@@ -163,6 +161,7 @@ class PromocionController extends Controller
             'valor' => ['required', 'numeric', 'min:0'],
             'estado' => ['sometimes', Rule::in(['activa', 'inactiva'])],
             'productos' => ['required', 'array', 'min:1'],
+            // Validamos contra el catálogo elegido por ProductoGateway (mock o HTTP).
             'productos.*.id_producto' => ['required', 'integer', Rule::in(array_column($todosLosProductos, 'id'))],
             'productos.*.cantidad' => ['required', 'integer', 'min:1', 'max:9999'],
         ]);
@@ -173,7 +172,64 @@ class PromocionController extends Controller
             ]);
         }
 
+        if ($datos['tipo_descuento'] === 'monto_fijo') {
+            $subtotal = 0.0;
+            foreach ($datos['productos'] as $productoPromo) {
+                $producto = $productos->buscar((int) $productoPromo['id_producto']);
+                if ($producto !== null) {
+                    $subtotal += (float) $producto['precioMin'] * (int) $productoPromo['cantidad'];
+                }
+            }
+
+            if ((float) $datos['valor'] > $subtotal) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'valor' => ['El descuento no puede ser mayor que el total de los productos.'],
+                ]);
+            }
+        }
+
         return $datos;
+    }
+
+    private function calcularPrecioFinal(array $datos, ProductoGateway $productos): float
+    {
+        $valor = (float) $datos['valor'];
+        $lineas = [];
+        $subtotal = 0.0;
+        foreach ($datos['productos'] as $productoPromo) {
+            $producto = $productos->buscar((int) $productoPromo['id_producto']);
+            if ($producto !== null) {
+                $precio = (float) $producto['precioMin'];
+                $cantidad = (int) $productoPromo['cantidad'];
+                $bruto = $precio * $cantidad;
+                $subtotal += $bruto;
+                $lineas[] = ['precio' => $precio, 'cantidad' => $cantidad, 'bruto' => $bruto];
+            }
+        }
+
+        $descuentoSolicitado = $datos['tipo_descuento'] === 'porcentaje'
+            ? $subtotal * min(max($valor, 0), 100) / 100
+            : min(max($valor, 0), $subtotal);
+
+        $descuentoRestante = (int) round($descuentoSolicitado * 100);
+        $totalFinal = 0.0;
+        foreach ($lineas as $index => $linea) {
+            $descuentoAsignado = $index === count($lineas) - 1
+                ? $descuentoRestante
+                : min(
+                    $descuentoRestante,
+                    (int) round($descuentoSolicitado * $linea['bruto'] / ($subtotal ?: 1) * 100)
+                );
+            $descuentoRestante -= $descuentoAsignado;
+
+            $descuentoUnitario = $linea['cantidad'] > 0
+                ? min($linea['precio'], round(($descuentoAsignado / 100) / $linea['cantidad'] * 100) / 100)
+                : 0;
+            $precioConDescuento = max(0, $linea['precio'] - $descuentoUnitario);
+            $totalFinal += round($precioConDescuento * $linea['cantidad'] * 100) / 100;
+        }
+
+        return round($totalFinal, 2);
     }
 
     // DELETE /api/promociones/{id}

@@ -111,44 +111,69 @@
 
                 <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 1.5rem 0;">
 
-                <div style="display: flex; gap: 1.5rem; margin-bottom: 1.5rem;">
-                    <!-- Columna Izquierda: Productos con Cantidad -->
-                    <div style="flex: 2;">
-                        <label style="display:block; margin-bottom:0.5rem; font-size: 0.85rem; font-weight: 600;">Agregar
-                            Productos a la promo</label>
-                        <div style="display: flex; gap: 0.5rem; margin-bottom: 0.5rem;">
-                            <input type="text" id="input-nuevo-producto" class="clay-input" placeholder="Buscar por nombre o código..."
-                                autocomplete="off" aria-label="Buscar producto para la promoción"
-                                style="flex: 1;">
-                            <!-- Nuevo input de cantidad -->
-                            <input type="number" id="input-cantidad-producto" class="clay-input" value="1" min="1"
-                                style="width: 70px;" title="Cantidad">
-                            <button type="button" class="clay-btn-primary" onclick="agregarProductoArray()"
-                                style="padding: 0 1rem; font-size: 1.2rem;">+</button>
+                <section style="margin-bottom: 1.5rem;">
+                    <h3 style="margin: 0 0 0.75rem; font-size: 0.95rem; color: #1e293b;">Productos de la promo (<span
+                            id="contador-productos-promo">0</span>)</h3>
+                    <div style="display: flex; align-items: flex-end; gap: 0.75rem; margin-bottom: 0.35rem;">
+                        <div style="flex: 1;">
+                            <label for="input-nuevo-producto"
+                                style="display:block; margin-bottom:0.35rem; font-size: 0.85rem; font-weight: 600;">Producto</label>
+                            <input type="text" id="input-nuevo-producto" class="clay-input"
+                                placeholder="Buscar por nombre o código…" autocomplete="off"
+                                aria-label="Buscar producto para la promoción" aria-controls="sugerencias-productos-promo"
+                                style="width: 100%; box-sizing: border-box;">
                         </div>
-                        <div id="sugerencias-productos-promo"
-                            style="display: none; flex-direction: column; max-height: 180px; overflow-y: auto; margin: -0.25rem 0 0.5rem; border: 1px solid #cbd5e1; border-radius: 8px; background: white;">
+                        <div>
+                            <label for="input-cantidad-producto"
+                                style="display:block; margin-bottom:0.35rem; font-size: 0.85rem; font-weight: 600;">Cant.</label>
+                            <input type="number" id="input-cantidad-producto" class="clay-input" value="1"
+                                min="1" max="9999" aria-label="Cantidad del producto" style="width: 76px; box-sizing: border-box;">
                         </div>
-                        <div id="lista-productos-tags"
-                            style="display: flex; flex-direction: column; gap: 0.4rem; min-height: 40px; padding: 0.5rem; background: #f8fafc; border-radius: 8px; border: 1px dashed #cbd5e1;">
-                        </div>
-                        <input type="hidden" id="promo-productos-oculto" required>
+                        <button type="button" id="btn-agregar-producto" class="clay-btn-primary"
+                            aria-label="Agregar producto seleccionado" title="Agregar producto"
+                            style="padding: 0 1rem; font-size: 1.2rem;">+</button>
                     </div>
+                    <p id="error-productos-promo" role="alert"
+                        style="display: none; margin: 0 0 0.5rem; color: #dc2626; font-size: 0.82rem;"></p>
+                    <div id="sugerencias-productos-promo" role="listbox" aria-label="Resultados de productos"
+                        style="display: none; flex-direction: column; max-height: 180px; overflow-y: auto; margin: 0 0 0.75rem; border: 1px solid #cbd5e1; border-radius: 8px; background: white;">
+                    </div>
+                    <div id="lista-productos-tags"
+                        style="display: flex; flex-direction: column; gap: 0.4rem; max-height: 240px; min-height: 52px; overflow-y: auto; padding: 0.5rem; background: #f8fafc; border-radius: 8px; border: 1px dashed #cbd5e1;">
+                    </div>
+                    <input type="hidden" id="promo-productos-oculto">
+                </section>
 
-                    <!-- Columna Derecha: Precio -->
-                    <div style="flex: 1;">
-                        <label style="display:block; margin-bottom:0.5rem; font-size: 0.85rem; font-weight: 600;">Tipo y
-                            Valor</label>
-                        <div style="display: flex; gap: 0.5rem;">
-                            <select id="promo-tipo-valor" class="clay-input" style="width: 80px;">
-                                <option value="$">$</option>
-                                <option value="%">%</option>
-                            </select>
-                            <input type="text" id="promo-valor-numero" class="clay-input" required placeholder="Ej: 10.500"
-                                style="flex: 1;">
-                        </div>
+                <section style="margin-bottom: 1.25rem;">
+                    <h3 style="margin: 0 0 0.75rem; font-size: 0.95rem; color: #1e293b;">Descuento</h3>
+                    <div style="display: flex; align-items: center; gap: 0.5rem; max-width: 440px;">
+                        <select id="promo-tipo-valor" class="clay-input" aria-label="Tipo de descuento" style="width: 90px;">
+                            <option value="$">$</option>
+                            <option value="%">%</option>
+                        </select>
+                        <input type="text" id="promo-valor-numero" class="clay-input" required
+                            placeholder="Valor del descuento" aria-label="Valor del descuento" style="width: 150px;">
+                        <span style="font-size: 0.85rem; color: #64748b;">sobre el total de los productos</span>
                     </div>
-                </div>
+                    <p id="error-descuento-promo" role="alert" aria-live="polite"
+                        style="display: none; margin: 0.5rem 0 0; color: #dc2626; font-size: 0.82rem;"></p>
+                </section>
+
+                <section aria-label="Resumen de la promoción"
+                    style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0.75rem; padding: 0.9rem 1rem; margin-bottom: 1.5rem; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px;">
+                    <div>
+                        <span style="display: block; color: #64748b; font-size: 0.8rem;">Precio normal</span>
+                        <strong id="resumen-precio-normal">$ 0,00</strong>
+                    </div>
+                    <div>
+                        <span style="display: block; color: #64748b; font-size: 0.8rem;">Descuento</span>
+                        <strong id="resumen-descuento">−$ 0,00</strong>
+                    </div>
+                    <div>
+                        <span style="display: block; color: #64748b; font-size: 0.8rem;">Precio de la promo</span>
+                        <strong id="resumen-precio-promo" style="color: var(--brand-blue);">$ 0,00</strong>
+                    </div>
+                </section>
 
                 <div style="display: flex; gap: 1rem; justify-content: flex-end; margin-top: 2rem;">
                     <button type="button" class="btn-action btn-danger" onclick="cerrarModal()"

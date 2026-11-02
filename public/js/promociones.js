@@ -20,10 +20,15 @@ document.addEventListener("DOMContentLoaded", () => {
     const inputFin = document.getElementById("promo-fin");
     const inputTipoValor = document.getElementById("promo-tipo-valor");
     const inputValorNumero = document.getElementById("promo-valor-numero");
+    const resumenPrecioNormal = document.getElementById("resumen-precio-normal");
+    const resumenDescuento = document.getElementById("resumen-descuento");
+    const resumenPrecioPromo = document.getElementById("resumen-precio-promo");
+    const contadorProductosPromo = document.getElementById("contador-productos-promo");
 
     // Inputs Productos
     const inputNuevoProd = document.getElementById("input-nuevo-producto");
     const inputCantidadProd = document.getElementById("input-cantidad-producto");
+    const btnAgregarProducto = document.getElementById("btn-agregar-producto");
     const sugerenciasProductos = document.getElementById("sugerencias-productos-promo");
     const contenedorTags = document.getElementById("lista-productos-tags");
     const inputProductosOculto = document.getElementById("promo-productos-oculto");
@@ -67,9 +72,10 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     async function cargarProductosDisponibles() {
-        const response = await fetch('/api/ventas/productos-simulados');
+        const response = await fetch('/api/ventas/productos');
         if (!response.ok) throw new Error('No se pudieron cargar los productos disponibles.');
-        productosDisponibles = await response.json();
+        const payload = await response.json();
+        productosDisponibles = Array.isArray(payload) ? payload : (payload.data ?? []);
     }
 
     // --- RENDERIZAR TABLA PRINCIPAL ---
@@ -314,6 +320,7 @@ document.addEventListener("DOMContentLoaded", () => {
         sugerenciasProductos.style.display = "none";
         actualizarTagsProductos();
     };
+    btnAgregarProducto?.addEventListener("click", window.agregarProductoArray);
 
     window.quitarProductoArray = (index) => {
         productosTemporales.splice(index, 1);
@@ -339,7 +346,31 @@ document.addEventListener("DOMContentLoaded", () => {
         });
 
         inputProductosOculto.value = productosTemporales.length > 0 ? "ok" : "";
+        actualizarResumenPromocion();
     }
+
+    function actualizarResumenPromocion() {
+        const precioNormal = productosTemporales.reduce((total, item) => {
+            const producto = productosDisponibles.find((disponible) => disponible.id === Number(item.id_producto));
+            return total + (Number(producto?.precioMin) || 0) * (Number(item.cantidad) || 0);
+        }, 0);
+
+        const valorTexto = inputValorNumero.value.trim().replace(",", ".");
+        const valor = Number(valorTexto);
+        const valorValido = Number.isFinite(valor) ? Math.max(valor, 0) : 0;
+        const descuento = inputTipoValor.value === "%"
+            ? precioNormal * Math.min(valorValido, 100) / 100
+            : Math.min(valorValido, precioNormal);
+        const precioPromo = Math.max(0, precioNormal - descuento);
+
+        contadorProductosPromo.textContent = productosTemporales.length;
+        resumenPrecioNormal.textContent = formatearMoneda(precioNormal);
+        resumenDescuento.textContent = `−${formatearMoneda(descuento)}`;
+        resumenPrecioPromo.textContent = formatearMoneda(precioPromo);
+    }
+
+    inputValorNumero.addEventListener("input", actualizarResumenPromocion);
+    inputTipoValor.addEventListener("change", actualizarResumenPromocion);
 
     // --- FUNCIONES DEL MODAL ---
     window.abrirModal = () => {
@@ -637,7 +668,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
         detallePromo.lineas.forEach((linea) => {
             const productoId = Number(linea.producto.id);
-            const existente = carrito.find((item) => Number(item.id) === productoId);
+            const existente = carrito.find((item) =>
+                Number(item.id) === productoId
+                && item.esPromocion === true
+                && Number(item.promocionId) === Number(promo.id)
+            );
 
             if (existente) {
                 existente.cantidad = Number(existente.cantidad) + linea.cantidad;
@@ -651,6 +686,10 @@ document.addEventListener("DOMContentLoaded", () => {
                     nombre: linea.producto.nombre,
                     cantidad: linea.cantidad,
                     precioUnit: linea.precioUnitario,
+                    esPromocion: true,
+                    promocionId: Number(promo.id),
+                    promocionNombre: promo.nombre,
+                    promocionInstanciaId: `promo-${promo.id}-${Date.now()}`,
                     descuentoMonto: linea.descuentoLinea,
                     descuentoInputModo: promo.tipoValor === "%" ? "porcentaje" : "monto",
                     descuentoInputValor: promo.tipoValor === "%" ? Number(promo.valor) : linea.descuentoLinea,
@@ -669,8 +708,9 @@ document.addEventListener("DOMContentLoaded", () => {
         window.location.href = "/ventas";
     }
 
-    // Cargamos el catálogo mock y las promociones desde sus endpoints.
+    // Cargamos el catálogo de productos configurado por Ventas y las promociones desde sus endpoints.
     Promise.all([cargarProductosDisponibles(), cargarPromocionesDesdeAPI()])
+        .then(() => actualizarResumenPromocion())
         .catch((error) => {
             console.error("No se pudieron inicializar las promociones:", error);
             alert("No se pudieron cargar los productos de venta. Recargá la pantalla e intentá nuevamente.");

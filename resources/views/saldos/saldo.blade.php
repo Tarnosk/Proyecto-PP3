@@ -107,6 +107,7 @@
         color: #cbd5e1;
         text-align: center;
     }
+    .detalle-vacio[hidden] { display: none; }
     .detalle-vacio .icono { font-size: 2.6rem; }
     .detalle-vacio p { margin: 0; }
     .resumen-cuenta {
@@ -332,8 +333,15 @@
                 <select id="tipoMovimiento" class="clay-input" required>
                     <option value="pago">Registrar pago de deuda</option>
                     <option value="nota_credito">Agregar nota de crédito</option>
+                    <option value="cobro_rendicion">Aplicar cobro de rendición</option>
                 </select>
             </label>
+            <div id="contenedorCobroRendicion" hidden>
+                <label for="cobroRendicion">
+                    Cobro aprobado
+                    <select id="cobroRendicion" class="clay-input"></select>
+                </label>
+            </div>
             <div id="contenedorMetodoPago">
                 <label for="metodoPago">
                     Método de pago
@@ -348,11 +356,13 @@
                     </select>
                 </label>
             </div>
-            <label for="montoMovimiento">
-                Monto
-                <input id="montoMovimiento" class="clay-input" type="number" min="0.01" step="0.01"
-                    inputmode="decimal" placeholder="Ingresá el monto" required>
-            </label>
+            <div id="contenedorMonto">
+                <label for="montoMovimiento">
+                    Monto
+                    <input id="montoMovimiento" class="clay-input" type="number" min="0.01" step="0.01"
+                        inputmode="decimal" placeholder="Ingresá el monto" required>
+                </label>
+            </div>
             <p class="ayuda" id="ayudaMovimiento"></p>
             <p class="pago-feedback error" id="errorMovimiento" role="alert" hidden></p>
             <div class="modal-acciones">
@@ -368,6 +378,7 @@
 <script>
     const CLIENTES = @json($clientes);
     const URL_MOVIMIENTOS = @json(route('saldo.movimientos', ['cliente' => '__CLIENTE__']));
+    const URL_COBROS = @json(route('saldo.cobros'));
     const CSRF_TOKEN = document.querySelector('meta[name="csrf-token"]').content;
     const $ = (id) => document.getElementById(id);
     const moneda = new Intl.NumberFormat('es-AR', {
@@ -608,9 +619,30 @@
 
     function actualizarAyudaMovimiento() {
         const esPago = tipoMovimiento.value === 'pago';
+        const esCobro = tipoMovimiento.value === 'cobro_rendicion';
         const saldo = clienteSeleccionado ? saldoDe(clienteSeleccionado) : 0;
+        const cobros = clienteSeleccionado?.cobros_rendicion ?? [];
         $('contenedorMetodoPago').hidden = !esPago;
         $('metodoPago').required = esPago;
+        $('contenedorCobroRendicion').hidden = !esCobro;
+        $('cobroRendicion').required = esCobro;
+        $('contenedorMonto').hidden = esCobro;
+        montoMovimiento.required = !esCobro;
+        botonGuardarMovimiento.disabled = esCobro && cobros.length === 0;
+
+        if (esCobro) {
+            $('cobroRendicion').innerHTML = cobros.map(cobro => `
+                <option value="${cobro.id}">
+                    Rendición #${escaparHtml(cobro.id_rendicion)} - Venta #${escaparHtml(cobro.id_venta)} -
+                    ${formatoSaldo(Number(cobro.monto))} (${escaparHtml(cobro.medio_pago)})
+                </option>
+            `).join('');
+            $('ayudaMovimiento').textContent = cobros.length
+                ? 'El importe sale de la rendición aprobada y baja la deuda del cliente.'
+                : 'Este cliente no tiene cobros aprobados pendientes de aplicar.';
+            return;
+        }
+
         montoMovimiento.max = esPago && saldo < 0 ? Math.abs(saldo).toFixed(2) : '';
         $('ayudaMovimiento').textContent = esPago && saldo < 0
             ? `El pago no puede superar la deuda de ${formatoSaldo(Math.abs(saldo))}.`
@@ -644,15 +676,19 @@
         errorMovimientoElement.textContent = '';
         errorMovimientoElement.hidden = true;
 
+        const esCobro = tipo === 'cobro_rendicion';
+        const idCobro = Number($('cobroRendicion').value);
+
         try {
-            const respuesta = await fetch(URL_MOVIMIENTOS.replace('__CLIENTE__', clienteSeleccionado.id), {
+            const url = esCobro ? URL_COBROS : URL_MOVIMIENTOS.replace('__CLIENTE__', clienteSeleccionado.id);
+            const respuesta = await fetch(url, {
                 method: 'POST',
                 headers: {
                     'Accept': 'application/json',
                     'Content-Type': 'application/json',
                     'X-CSRF-TOKEN': CSRF_TOKEN
                 },
-                body: JSON.stringify({
+                body: JSON.stringify(esCobro ? { id: idCobro } : {
                     tipo,
                     monto,
                     ...(tipo === 'pago' ? { metodo_pago: metodoPago } : {})
@@ -664,18 +700,27 @@
                 const mensaje = resultado.errors?.monto?.[0]
                     || resultado.errors?.metodo_pago?.[0]
                     || resultado.errors?.tipo?.[0]
+                    || resultado.errors?.id?.[0]
                     || resultado.message
                     || 'No se pudo guardar el movimiento.';
                 throw new Error(mensaje);
             }
 
-            clienteSeleccionado.movimientos.push(resultado.movimiento);
+            if (resultado.movimiento) {
+                clienteSeleccionado.movimientos.push(resultado.movimiento);
+            }
+            if (esCobro) {
+                clienteSeleccionado.cobros_rendicion = clienteSeleccionado.cobros_rendicion
+                    .filter(cobro => cobro.id !== idCobro);
+            }
             modalMovimiento.close();
             renderDetalle();
             const feedback = $('pagoFeedback');
-            feedback.textContent = tipo === 'pago'
-                ? 'Pago registrado en el historial.'
-                : 'Nota de crédito registrada en el historial.';
+            feedback.textContent = esCobro
+                ? (resultado.mensaje || 'Cobro registrado en el historial.')
+                : tipo === 'pago'
+                    ? 'Pago registrado en el historial.'
+                    : 'Nota de crédito registrada en el historial.';
             feedback.className = 'pago-feedback success';
             feedback.hidden = false;
         } catch (error) {

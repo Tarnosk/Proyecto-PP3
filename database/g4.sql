@@ -15,6 +15,8 @@ CREATE TABLE PROMOCION (
 id_promocion int primary key auto_increment,
 nombre varchar(50) NOT NULL,
 total decimal NOT NULL,
+tipo_descuento varchar(20) NOT NULL DEFAULT 'monto_fijo',
+valor_descuento decimal(12,2) NOT NULL DEFAULT 0,
 vigencia_desde date NOT NULL,
 vigencia_hasta date NOT NULL,
 descripcion varchar(150),

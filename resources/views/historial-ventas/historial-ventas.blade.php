@@ -456,7 +456,12 @@
                                     @foreach ($v['detalle'] as $d)
                                         <tr>
                                             <td>{{ $d['codigo'] }}</td>
-                                            <td>{{ $d['producto'] }}</td>
+                                            <td>
+                                                {{ $d['producto'] }}
+                                                @if (!empty($d['id_promocion']))
+                                                    <span class="badge estado-confirmada">PROMO: {{ $d['promocion'] ?? "Promoción #{$d['id_promocion']}" }}</span>
+                                                @endif
+                                            </td>
                                             <td class="num">{{ $d['cantidad'] }}</td>
                                             <td class="num">$ {{ number_format($d['precio_unitario'], 2, ',', '.') }}</td>
                                             <td class="num">
@@ -530,21 +535,6 @@
 
 @push('scripts')
 <script>
-
-    // ---------- Auto-submit de filtros con debounce ----------
-    const form = document.getElementById('formFiltros');
-    const fTexto = document.getElementById('fTexto');
-    let timer = null;
-
-    fTexto.addEventListener('input', () => {
-        clearTimeout(timer);
-        timer = setTimeout(() => form.submit(), 500);
-    });
-
-    ['fCliente', 'fProducto', 'fDesde', 'fHasta'].forEach(id => {
-        document.getElementById(id).addEventListener('change', () => form.submit());
-    });
-
     // ---------- BOTONES DE PRUEBA: modificar / eliminar / restaurar / cambiar estado ----------
     // Llaman a la API de app/Modules/Ventas/Controllers/VentaApiController.php (ver docs/VENTAS-BACKEND.md).
     // Muestran la respuesta del back en un alert y recargan la página.
@@ -609,7 +599,7 @@
         const editor = {
             lista,
             descuentoGlobal: venta.descuento_global,
-            items: venta.detalles.map(d => ({ id: d.id_producto, cantidad: d.cantidad, descuento: d.descuento })),
+            items: venta.detalles.map(d => ({ id: d.id_producto, cantidad: d.cantidad, descuento: d.descuento, id_promocion: d.id_promocion })),
         };
 
         const precio = idProducto => {
@@ -811,4 +801,5 @@
     });
 </script>
 <script type="application/json" id="ventasHistorialData">@json($ventas, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT)</script>
+<script src="{{ asset('js/historial-ventas.js') }}" defer></script>
 @endpush

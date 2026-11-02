@@ -2,13 +2,15 @@
 
 namespace App\Modules\Ventas\Resources;
 
+use App\Modules\Login\Models\User;
 use App\Modules\Ventas\Contracts\ClienteGateway;
 use App\Modules\Ventas\Contracts\ProductoGateway;
 use App\Modules\Ventas\Enums\EstadoVenta;
 use App\Modules\Ventas\Models\VentaHistorial;
-use App\Services\MockUsuarioApi;
+use App\Modules\Shared\Services\UsuarioService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Facades\DB;
 
 /**
  * FORMATO JSON DE UNA VENTA (lo que recibe el front)
@@ -23,26 +25,23 @@ use Illuminate\Http\Resources\Json\JsonResource;
  *   "numero_comprobante": "POS-01M4VQNAJ6N36B4A...",
  *   "fecha": "2026-10-13",
  *   "cliente": { "id": 472891, "nombre": "Supermercado El Norte SRL", "cuit": "30-71234567-8" },
- *   "usuario": { "id": 1, "nombre": "Administrador" },
+ *   "usuario": { "id": 1, "nombre": "Usuario Administrativo" },
  *   "estado": { "valor": "confirmada", "etiqueta": "Confirmada" },
  *   "anulada": false,
  *   "total": 159960, "descuento_global": 0, "observaciones": "anotacion aaaa",
  *   "cantidad_articulos": 118,
  *   "detalles": [ { "id_producto": 2, "codigo": "P002", "producto": "Pan lactal grande", "cantidad": 3, ... } ],
  *   "acciones": { "puede_modificar": true, "puede_eliminar": true, "puede_restaurar": false },
- *   "transiciones_posibles": ["preparada", "entregada", "pagada"],
  *   "historial": [ ... ]   ← solo en GET /api/ventas/{id} y en las respuestas de cambios
  * }
  *
- * Clientes y productos salen de ClienteGateway / ProductoGateway
- * (hoy mocks; mañana las APIs reales, sin tocar este archivo).
+ * Clientes y productos salen de ClienteGateway / ProductoGateway.
  */
 class VentaResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
         $cliente = app(ClienteGateway::class)->buscar((int) $this->id_cliente);
-        $usuarios = app(MockUsuarioApi::class);
         $estado = EstadoVenta::desdeTexto($this->estado);
         $acciones = EstadoVenta::accionesPara($this->estado);
 
@@ -57,7 +56,7 @@ class VentaResource extends JsonResource
             ],
             'usuario' => [
                 'id' => (int) $this->id_usuario,
-                'nombre' => $usuarios->nombre((int) $this->id_usuario),
+                'nombre' => UsuarioService::obtenerNombre((int) $this->id_usuario),
             ],
             'estado' => [
                 'valor' => $this->estado,
@@ -74,7 +73,6 @@ class VentaResource extends JsonResource
                 'puede_eliminar' => $acciones['puede_eliminar'],
                 'puede_restaurar' => $acciones['puede_restaurar'],
             ],
-            'transiciones_posibles' => array_map(fn (EstadoVenta $e) => $e->value, $estado?->siguientes() ?? []),
             // whenLoaded: el historial solo aparece si se cargó (en el listado no, para que sea liviano).
             'historial' => $this->whenLoaded('historial', fn () => $this->historial->map(fn (VentaHistorial $h) => [
                 'accion' => $h->accion,
@@ -82,7 +80,7 @@ class VentaResource extends JsonResource
                 'estado_nuevo' => $h->estado_nuevo,
                 'motivo' => $h->motivo,
                 'datos' => $h->datos,
-                'usuario' => $h->id_usuario ? $usuarios->nombre((int) $h->id_usuario) : null,
+                'usuario' => $h->id_usuario ? UsuarioService::obtenerNombre((int) $h->id_usuario) : null,
                 'fecha' => $h->created_at?->format('Y-m-d H:i:s'),
             ])->values()->all()),
         ];
@@ -94,9 +92,14 @@ class VentaResource extends JsonResource
     private function detalle($d): array
     {
         $producto = app(ProductoGateway::class)->buscar((int) $d->id_producto);
+        $promocion = $d->id_promocion
+            ? DB::table('promocion')->where('id_promocion', $d->id_promocion)->value('nombre')
+            : null;
 
         return [
             'id_producto' => (int) $d->id_producto,
+            'id_promocion' => $d->id_promocion ? (int) $d->id_promocion : null,
+            'promocion' => $promocion,
             'codigo' => $producto['codigo'] ?? null,
             'producto' => $producto['nombre'] ?? "Producto #{$d->id_producto}",
             'cantidad' => (int) $d->cantidad,

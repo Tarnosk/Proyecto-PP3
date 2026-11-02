@@ -1,0 +1,150 @@
+{
+    "info": {
+        "name": "ERP-Juan23 - Cuenta Corriente Cobros",
+        "description": "Aplica cobros de rendiciones aprobadas a la cuenta corriente. Ejecutar primero 'Login API' con un usuario activo, o cargar el token interno en la variable token. Ajustar cobroId antes de ejecutar: un cobro real cambia datos.",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "auth": {
+        "type": "bearer",
+        "bearer": [
+            {
+                "key": "token",
+                "value": "{{token}}",
+                "type": "string"
+            }
+        ]
+    },
+    "variable": [
+        {
+            "key": "baseUrl",
+            "value": "http://127.0.0.1:8000",
+            "type": "string"
+        },
+        {
+            "key": "usuario",
+            "value": "admin",
+            "type": "string"
+        },
+        {
+            "key": "password",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "token",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "cobroId",
+            "value": "1",
+            "type": "string"
+        }
+    ],
+    "item": [
+        {
+            "name": "Login API (guarda token)",
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                            "const j = pm.response.json();",
+                            "const t = j && j.data && j.data.access_token;",
+                            "if (t) { pm.collectionVariables.set(\"token\", t); }",
+                            "pm.test(\"Login correcto y token guardado\", () => { pm.response.to.have.status(200); pm.expect(t).to.be.a(\"string\"); });"
+                        ]
+                    }
+                }
+            ],
+            "request": {
+                "auth": {
+                    "type": "noauth"
+                },
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Accept",
+                        "value": "application/json"
+                    },
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    }
+                ],
+                "url": {
+                    "raw": "{{baseUrl}}/api/v1/auth/login",
+                    "host": [
+                        "{{baseUrl}}"
+                    ],
+                    "path": [
+                        "api",
+                        "v1",
+                        "auth",
+                        "login"
+                    ]
+                },
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n    \"usuario\": \"{{usuario}}\",\n    \"password\": \"{{password}}\"\n}",
+                    "options": {
+                        "raw": {
+                            "language": "json"
+                        }
+                    }
+                }
+            },
+            "response": []
+        },
+        {
+            "name": "POST /api/cuenta-corriente/cobros",
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                            "pm.test(\"Cobro registrado o ya procesado\", () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));"
+                        ]
+                    }
+                }
+            ],
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Accept",
+                        "value": "application/json"
+                    },
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    }
+                ],
+                "url": {
+                    "raw": "{{baseUrl}}/api/cuenta-corriente/cobros",
+                    "host": [
+                        "{{baseUrl}}"
+                    ],
+                    "path": [
+                        "api",
+                        "cuenta-corriente",
+                        "cobros"
+                    ]
+                },
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n    \"id\": {{cobroId}}\n}",
+                    "options": {
+                        "raw": {
+                            "language": "json"
+                        }
+                    }
+                },
+                "description": "Aplica un cobro de rendicion_cobro a la cuenta corriente. cobroId es id_rendicion_cobro y su rendición debe estar aprobada. El monto, el cliente y la venta salen de ese cobro. La venta pasa a pagada solo cuando se cobró completa. Repetir el mismo id devuelve 200 con 'Este pago ya fue procesado.' y no cambia datos."
+            },
+            "response": []
+        }
+    ]
+}
