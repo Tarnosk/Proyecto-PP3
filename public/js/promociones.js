@@ -72,9 +72,10 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     async function cargarProductosDisponibles() {
-        const response = await fetch('/api/ventas/productos-simulados');
+        const response = await fetch('/api/ventas/productos');
         if (!response.ok) throw new Error('No se pudieron cargar los productos disponibles.');
-        productosDisponibles = await response.json();
+        const payload = await response.json();
+        productosDisponibles = Array.isArray(payload) ? payload : (payload.data ?? []);
     }
 
     // --- RENDERIZAR TABLA PRINCIPAL ---
@@ -707,7 +708,7 @@ document.addEventListener("DOMContentLoaded", () => {
         window.location.href = "/ventas";
     }
 
-    // Cargamos el catálogo mock y las promociones desde sus endpoints.
+    // Cargamos el catálogo de productos configurado por Ventas y las promociones desde sus endpoints.
     Promise.all([cargarProductosDisponibles(), cargarPromocionesDesdeAPI()])
         .then(() => actualizarResumenPromocion())
         .catch((error) => {
