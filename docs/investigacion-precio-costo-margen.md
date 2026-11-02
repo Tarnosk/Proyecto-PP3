@@ -111,7 +111,7 @@ $$\text{Margen} = \frac{\text{Markup}}{1 + \text{Markup}}$$
 | Nuevas columnas en `producto` | `costo` (costo de reposición/último costo) y `markup` (% sobre costo, nullable) |
 | Markup por defecto en `categoria` | `markup_defecto`: si el producto no tiene markup propio, hereda el de su categoría |
 | Cálculo | `precio_unitario = redondeo(costo × (1 + markup))`, reutilizando las reglas de redondeo de P07 |
-| Actualización automática del costo | Al **recibir una compra** (C06/C07), `costo` toma el `precio_unitario` de `detalle_compra` y se recalcula el precio de venta (registrándolo en `historial_precio` con `origen = 'costo'`) |
+| Actualización automática del costo | Cuando cambia el `precio_acordado` del **proveedor principal** (PV05/PV06) o se define otro principal, `costo` toma ese valor y se recalcula el precio de venta (registrándolo en `historial_precio` con `origen = 'costo'`) |
 | UI de Inventario | Mostrar costo, markup y **margen resultante**; alerta visual si el precio queda por debajo del costo |
 | Aumento masivo (P07) | Poder aplicarlo sobre el **costo** (ej. "el proveedor aumentó 12%") además de sobre el precio |
 
@@ -135,10 +135,24 @@ Todo lo de A, más:
 
 ---
 
-## 4. Decisiones a validar con el profesor
+## 4. Decisiones tomadas por el grupo
 
-1. **¿Qué costo tomamos como base?** Último costo de compra (más simple, ya tenemos el dato en `detalle_compra`) o costo de reposición (`precio_acordado` del proveedor principal).
+| Tema | Decisión | Implicancia |
+| :--- | :--- | :--- |
+| Costo base | **Costo de reposición** | `costo = producto_proveedor.precio_acordado` del proveedor con `es_proveedor_principal = 1` (activo). El precio de venta se recalcula cuando cambia ese precio (PV05/PV06) o cuando se cambia el proveedor principal, sin esperar a una compra. |
+| IVA | **Precios netos, sin IVA** | `precio_unitario`, `costo` y `precio_acordado` se guardan netos. El IVA lo agrega la facturación (G2). Hay que documentarlo en el [contrato de API](contrato-api-g3.md) y avisarles a G2 y G4. |
+
+> [!NOTE]
+> El último costo de compra (`detalle_compra.precio_unitario`) se puede seguir usando para reportes de rentabilidad real, pero no para fijar el precio.
+
+Casos borde a resolver:
+- **Producto sin proveedor principal o sin `precio_acordado`:** el precio queda como carga manual (comportamiento actual), con una alerta de "sin costo".
+- **Baja del proveedor principal (PV04):** hoy se desmarca como principal. El producto queda sin costo hasta que se defina otro principal.
+
+## 5. Decisiones a validar con el profesor
+
+1. ~~**¿Qué costo tomamos como base?**~~ Decidido: costo de reposición (ver sección 4).
 2. **¿Markup o margen?** Recomendación: el usuario configura **markup** y el sistema muestra **margen**.
 3. **¿Recálculo automático o precio sugerido con aprobación?** Recomendación: automático al recibir la compra, con registro en el historial de precios.
 4. **¿Diferenciamos mayorista y minorista (opción B)?** Es poco esfuerzo y G4 ya lo soporta.
-5. **¿Los precios son netos o con IVA?** Hoy no está definido en ningún lado. En distribuidoras B2B lo habitual es guardar el **neto** y que la facturación (G2) agregue el IVA.
+5. ~~**¿Los precios son netos o con IVA?**~~ Decidido: netos, sin IVA (ver sección 4).
