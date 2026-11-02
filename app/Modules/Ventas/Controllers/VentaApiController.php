@@ -15,6 +15,7 @@ use App\Modules\Ventas\Requests\ModificarVentaRequest;
 use App\Modules\Ventas\Resources\VentaResource;
 use App\Modules\Ventas\Logging\VentaLogger;
 use App\Modules\Ventas\Models\Venta;
+use App\Modules\Ventas\Services\EstadisticasVentaService;
 use App\Modules\Ventas\Services\VentaService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -28,6 +29,9 @@ use Throwable;
  *   GET    /api/ventas                   → index()         lista con filtros y paginación
  *   GET    /api/ventas/estados           → estados()       catálogo de estados y sus reglas
  *   GET    /api/ventas/productos         → productos()     catálogo para "Agregar producto" al modificar
+ *   GET    /api/ventas/cliente/{id}      → porCliente()    ventas de un cliente (con desde/hasta opcionales)
+ *   GET    /api/ventas/localidades       → localidades()   estadísticas: resumen por localidad
+ *   GET    /api/ventas/localidad/{nombre}→ localidad()     estadísticas de una localidad
  *   GET    /api/ventas/{id}              → show()          una venta con detalle, botones e historial
  *   PUT    /api/ventas/{id}              → update()        botón "Modificar"
  *   DELETE /api/ventas/{id}              → destroy()       botón "Eliminar" (ANULA, no borra)
@@ -49,12 +53,59 @@ class VentaApiController extends Controller
     /**
      * GET /api/ventas?estado=&cliente_id=&desde=&hasta=&texto=&por_pagina=&page=
      *
-     * Sin "page" devuelve solo "data". Con "page" agrega "meta" y "links":
-     * Reportes y Entregas los usan para recorrer todas las páginas.
+     * Sin "page" devuelve en "data" todas las ventas que cumplen el filtro.
+     * Con "page" pagina y agrega "meta" y "links": Reportes y Entregas los
+     * usan para recorrer todas las páginas.
      */
     public function index(ListarVentasRequest $request): AnonymousResourceCollection|JsonResponse
     {
-        $ventas = VentaResource::collection($this->ventas->listar($request->validated()));
+        return $this->listado($request, $request->validated());
+    }
+
+    /**
+     * GET /api/ventas/cliente/{id}?desde=&hasta=
+     *
+     * Ventas de un cliente, opcionalmente en un período. Usa la misma búsqueda
+     * y el mismo formato que index(); además avisa con 404 si el cliente no existe.
+     */
+    public function porCliente(ListarVentasRequest $request, int $id, ClienteGateway $clientes): AnonymousResourceCollection|JsonResponse
+    {
+        if ($clientes->buscar($id) === null) {
+            return response()->json(['message' => 'El cliente no existe.'], 404);
+        }
+
+        return $this->listado($request, ['cliente_id' => $id] + $request->validated());
+    }
+
+    /**
+     * GET /api/ventas/localidades?desde=&hasta= → resumen de ventas por localidad (estadísticas).
+     */
+    public function localidades(ListarVentasRequest $request, EstadisticasVentaService $estadisticas): JsonResponse
+    {
+        return response()->json([
+            'data' => $estadisticas->localidades($request->validated('desde'), $request->validated('hasta')),
+        ]);
+    }
+
+    /**
+     * GET /api/ventas/localidad/{nombre}?desde=&hasta= → estadísticas de una localidad.
+     *
+     * La localidad se busca por nombre (sin mayúsculas ni tildes): Clientes no le da un id.
+     */
+    public function localidad(ListarVentasRequest $request, string $nombre, EstadisticasVentaService $estadisticas): JsonResponse
+    {
+        $datos = $estadisticas->localidad($nombre, $request->validated('desde'), $request->validated('hasta'));
+
+        if ($datos === null) {
+            return response()->json(['message' => 'La localidad no existe o no tiene clientes.'], 404);
+        }
+
+        return response()->json(['data' => $datos]);
+    }
+
+    private function listado(ListarVentasRequest $request, array $filtros): AnonymousResourceCollection|JsonResponse
+    {
+        $ventas = VentaResource::collection($this->ventas->listar($filtros));
 
         return $request->has('page') ? $ventas : response()->json(['data' => $ventas->resolve()]);
     }

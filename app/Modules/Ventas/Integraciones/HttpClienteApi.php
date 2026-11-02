@@ -26,6 +26,9 @@ class HttpClienteApi implements ClienteGateway
 {
     private ?array $cache = null;
 
+    /** Clientes ya buscados en este pedido (null = no existe): se pide cada id una sola vez. */
+    private array $buscados = [];
+
     public function todos(): array
     {
         if ($this->cache !== null) {
@@ -57,6 +60,15 @@ class HttpClienteApi implements ClienteGateway
     }
 
     public function buscar(int $id): ?array
+    {
+        if (array_key_exists($id, $this->buscados)) {
+            return $this->buscados[$id];
+        }
+
+        return $this->buscados[$id] = $this->pedir($id);
+    }
+
+    private function pedir(int $id): ?array
     {
         try {
             $respuesta = $this->cliente()->get("/api/v1/clientes/{$id}");
