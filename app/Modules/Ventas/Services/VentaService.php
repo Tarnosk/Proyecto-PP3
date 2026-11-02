@@ -11,6 +11,7 @@ use App\Modules\Ventas\Exceptions\VentaNoEncontradaException;
 use App\Modules\Ventas\Logging\VentaLogger;
 use App\Modules\Ventas\Models\Venta;
 use App\Modules\Ventas\Models\VentaHistorial;
+use App\Support\UsuarioActual;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 use Throwable;
@@ -388,7 +389,7 @@ class VentaService
             'estado_nuevo' => $estadoNuevo,
             'motivo' => $motivo,
             'datos' => $datos,
-            'id_usuario' => auth()->id(),
+            'id_usuario' => UsuarioActual::id(),
         ]);
     }
 

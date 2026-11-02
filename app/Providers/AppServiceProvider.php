@@ -30,12 +30,12 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(SalesGateway::class, HttpSalesGateway::class);
 
         // Registro original de G4: una instancia por petición, según config/ventas.php.
+        $this->app->scoped(ClienteGateway::class, fn ($app) => match (config('ventas.integracion')) {
+            'http' => $app->make(HttpClienteApi::class),
+            default => $app->make(MockClienteApi::class),
+        });
+
         $usarApisReales = fn (): bool => config('ventas.integracion') === 'http';
-
-        $this->app->scoped(ClienteGateway::class, fn ($app) => $usarApisReales()
-            ? $app->make(HttpClienteApi::class)
-            : $app->make(MockClienteApi::class));
-
         $this->app->scoped(ProductoGateway::class, fn ($app) => $usarApisReales()
             ? $app->make(HttpProductoApi::class)
             : $app->make(MockProductoApi::class));

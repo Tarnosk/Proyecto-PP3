@@ -20,9 +20,9 @@ return [
     | Direcciones de las APIs de los otros módulos (solo se usan con "http").
     */
     'servicios' => [
-        'productos' => ['url' => env('VENTAS_PRODUCTOS_URL', 'http://localhost:8001')],
-        'clientes' => ['url' => env('VENTAS_CLIENTES_URL', 'http://localhost:8002')],
-        'stock' => ['url' => env('VENTAS_STOCK_URL', 'http://localhost:8003')],
+        'productos' => ['url' => env('VENTAS_PRODUCTOS_URL', env('APP_URL', 'http://127.0.0.1:8002'))],
+        'clientes' => ['url' => env('VENTAS_CLIENTES_URL', env('APP_URL', 'http://127.0.0.1:8001'))],
+        'stock' => ['url' => env('VENTAS_STOCK_URL', 'http://127.0.0.1:8002')],
     ],
 
     /*

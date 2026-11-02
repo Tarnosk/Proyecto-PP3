@@ -33,20 +33,33 @@ class HttpClienteApi implements ClienteGateway
         }
 
         try {
-            $respuesta = $this->cliente()->get('/api/clientes')->throw()->json();
+            $clientes = [];
+            $page = 1;
+
+            do {
+                $respuesta = $this->cliente()
+                    ->get('/api/v1/clientes', ['estado' => 'activo', 'per_page' => 100, 'page' => $page])
+                    ->throw()
+                    ->json();
+
+                $clientes = array_merge($clientes, $respuesta['data'] ?? []);
+                $lastPage = (int) ($respuesta['meta']['last_page'] ?? 1);
+                $page++;
+            } while ($page <= $lastPage);
         } catch (Throwable $e) {
             throw new IntegracionNoDisponibleException('clientes', $e);
         }
 
-        $lista = $respuesta['data'] ?? $respuesta;
-
-        return $this->cache = array_values(array_map(fn (array $c) => $this->normalizar($c), $lista));
+        return $this->cache = array_values(array_map(
+            fn (array $cliente) => $this->normalizar($cliente),
+            $clientes
+        ));
     }
 
     public function buscar(int $id): ?array
     {
         try {
-            $respuesta = $this->cliente()->get("/api/clientes/{$id}");
+            $respuesta = $this->cliente()->get("/api/v1/clientes/{$id}");
         } catch (Throwable $e) {
             throw new IntegracionNoDisponibleException('clientes', $e);
         }
@@ -62,22 +75,27 @@ class HttpClienteApi implements ClienteGateway
         return $this->normalizar($respuesta->json('data') ?? $respuesta->json());
     }
 
-    /**
-     * Traduce el formato del otro módulo al formato que usa Ventas.
-     */
-    private function normalizar(array $c): array
+    private function normalizar(array $cliente): array
     {
         return [
-            'id' => (int) ($c['id'] ?? $c['id_cliente']),
-            'nombre' => (string) ($c['nombre'] ?? $c['razon_social'] ?? ''),
-            'cuit' => (string) ($c['cuit'] ?? ''),
+            'id' => (int) ($cliente['id'] ?? 0),
+            'nombre' => trim((string) (($cliente['nombre'] ?? '').' '.($cliente['apellido_razon_social'] ?? ''))),
+            'cuit' => (string) ($cliente['dni_cuit'] ?? ''),
+            'condicion' => (string) ($cliente['condicion_iva'] ?? ''),
+            'domicilio' => (string) ($cliente['direccion'] ?? ''),
+            'localidad' => (string) ($cliente['localidad'] ?? ''),
+            'movimientos' => [],
         ];
     }
 
     private function cliente(): PendingRequest
     {
-        return Http::baseUrl((string) config('ventas.servicios.clientes.url'))
+        $cliente = Http::baseUrl(rtrim((string) config('ventas.servicios.clientes.url'), '/'))
             ->timeout((int) config('ventas.timeout'))
             ->acceptJson();
+
+        $token = config('services.internal_api.token');
+
+        return is_string($token) && $token !== '' ? $cliente->withToken($token) : $cliente;
     }
 }

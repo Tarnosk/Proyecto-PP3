@@ -3,9 +3,11 @@
 namespace App\Modules\Ventas\Controllers;
 
 use App\Http\Controllers\Controller;
-use App\Services\MockClienteApi;
-use App\Services\MockProductoApi;
-use App\Services\MockUsuarioApi;
+use App\Modules\Ventas\Contracts\ClienteGateway;
+use App\Modules\Ventas\Contracts\ProductoGateway;
+use App\Modules\Ventas\Contracts\StockGateway;
+use App\Modules\Shared\Services\UsuarioService;
+use App\Support\UsuarioActual;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -14,20 +16,36 @@ use Illuminate\Validation\ValidationException;
 
 class VentaController extends Controller
 {
-    public function index(MockClienteApi $clientes, MockProductoApi $productos)
+    public function index(ClienteGateway $clientes, ProductoGateway $productos, StockGateway $stock)
     {
+        $productosDisponibles = collect($productos->todos())->map(function (array $producto) use ($stock): array {
+            $disponible = $stock->disponible((int) $producto['id']);
+            if ($disponible !== null) {
+                $producto['stock'] = $disponible;
+            }
+            return $producto;
+        })->all();
+
         return view('ventas.ventas', [
-            'productos' => $productos->todos(),
+            'productos' => $productosDisponibles,
             'clientes' => $clientes->todos(),
         ]);
     }
 
-    public function obtenerProductosSimulados(MockProductoApi $productos)
+    public function obtenerProductosSimulados(ProductoGateway $productos, StockGateway $stock)
     {
-        return response()->json($productos->todos());
+        $catalogo = collect($productos->todos())->map(function (array $producto) use ($stock): array {
+            $disponible = $stock->disponible((int) $producto['id']);
+            if ($disponible !== null) {
+                $producto['stock'] = $disponible;
+            }
+            return $producto;
+        })->values()->all();
+
+        return response()->json($catalogo);
     }
 
-    public function store(Request $request, MockClienteApi $clientes, MockProductoApi $productos)
+    public function store(Request $request, ClienteGateway $clientes, ProductoGateway $productos, StockGateway $stock)
     {
         $todosLosProductos = $productos->todos();
         $datos = $request->validate([
@@ -38,6 +56,7 @@ class VentaController extends Controller
             'items.*.id' => ['required', 'integer', Rule::in(array_column($todosLosProductos, 'id'))],
             'items.*.cantidad' => ['required', 'integer', 'min:1', 'max:9999'],
             'items.*.descuento' => ['required', 'numeric', 'min:0'],
+            'items.*.id_promocion' => ['nullable', 'integer', 'exists:promocion,id_promocion'],
             'descuento_global' => ['sometimes', 'array'],
             'descuento_global.modo' => ['required_with:descuento_global', Rule::in(['porcentaje', 'monto'])],
             'descuento_global.valor' => ['required_with:descuento_global', 'numeric', 'min:0'],
@@ -68,12 +87,29 @@ class VentaController extends Controller
 
             return [
                 'id_producto' => $producto['id'],
+                'id_promocion' => isset($item['id_promocion']) ? (int) $item['id_promocion'] : null,
                 'cantidad' => (int) $item['cantidad'],
                 'precio_unitario' => $precio,
                 'descuento' => $descuento,
                 'subtotal' => $subtotal,
             ];
         });
+
+        $cantidadesPorProducto = [];
+        foreach ($detalles as $detalle) {
+            $idProducto = (int) $detalle['id_producto'];
+            $cantidadesPorProducto[$idProducto] = ($cantidadesPorProducto[$idProducto] ?? 0) + (int) $detalle['cantidad'];
+        }
+
+        foreach ($cantidadesPorProducto as $idProducto => $cantidadSolicitada) {
+            $disponible = $stock->disponible($idProducto);
+            if ($disponible !== null && $cantidadSolicitada > $disponible) {
+                throw ValidationException::withMessages([
+                    'items' => ["Stock insuficiente para el producto #{$idProducto}: disponible {$disponible}, solicitado {$cantidadSolicitada}."],
+                ]);
+            }
+        }
+
         $subtotalConDescuentosDeLinea = round($detalles->sum('subtotal'), 2);
         $descuentoGlobal = $datos['descuento_global'] ?? ['modo' => 'monto', 'valor' => 0];
         $valorDescuentoGlobal = (float) $descuentoGlobal['valor'];
@@ -96,25 +132,24 @@ class VentaController extends Controller
         }
 
         $observaciones = trim($datos['observaciones'] ?? '') ?: 'Venta POS a cuenta corriente';
-        $idUsuario = $request->user()->id;
 
-        $ventaId = DB::transaction(function () use ($cliente, $detalles, $total, $montoDescuentoGlobal, $observaciones, $idUsuario): int {
+        $ventaId = DB::transaction(function () use ($request, $cliente, $detalles, $cantidadesPorProducto, $stock, $total, $montoDescuentoGlobal, $observaciones): int {
             $ventaId = DB::table('venta')->insertGetId([
                 'id_cliente' => $cliente['id'],
                 'fecha' => now()->toDateString(),
                 'total' => $total,
                 'descuento_global' => $montoDescuentoGlobal,
                 'numFactura' => 'POS-'.Str::ulid(),
-                'estado' => 'confirmada',
+                'estado' => 'pendiente',
                 'observaciones' => $observaciones,
-                'id_usuario' => $idUsuario,
+                'id_usuario' => UsuarioActual::id($request),
             ], 'id_venta');
 
             foreach ($detalles as $detalle) {
                 DB::table('detalle_venta')->insert([
                     'id_venta' => $ventaId,
                     'id_producto' => $detalle['id_producto'],
-                    'id_promocion' => null,
+                    'id_promocion' => $detalle['id_promocion'],
                     'cantidad' => $detalle['cantidad'],
                     'precio_unitario' => $detalle['precio_unitario'],
                     'descuento' => $detalle['descuento'],
@@ -132,6 +167,12 @@ class VentaController extends Controller
                 'updated_at' => now(),
             ]);
 
+            $cambiosStock = [];
+            foreach ($cantidadesPorProducto as $idProducto => $cantidad) {
+                $cambiosStock[(int) $idProducto] = -((int) $cantidad);
+            }
+            $stock->ajustar($cambiosStock, $ventaId, 'venta');
+
             return (int) $ventaId;
         });
 
@@ -144,7 +185,7 @@ class VentaController extends Controller
         ], 201);
     }
 
-    public function historial(MockClienteApi $clientes, MockUsuarioApi $usuarios, MockProductoApi $productos)
+    public function historial(ClienteGateway $clientes, ProductoGateway $productos)
     {
         $ventas = DB::table('venta as v')
             ->select(
@@ -162,8 +203,8 @@ class VentaController extends Controller
             ->orderByDesc('v.id_venta')
             ->get();
 
-        $clientesMock = collect($clientes->todos())->keyBy('id');
-        $productosMock = $productos->indexado();
+        $clientesPorId = collect($clientes->todos())->keyBy('id');
+        $productosPorId = collect($productos->todos())->keyBy('id');
         $idsVentas = $ventas->pluck('id_venta')->all();
         $detalles = empty($idsVentas)
             ? collect()
@@ -172,6 +213,7 @@ class VentaController extends Controller
                 ->select(
                     'dv.id_venta',
                     'dv.id_producto',
+                    'dv.id_promocion',
                     'dv.cantidad',
                     'dv.precio_unitario',
                     'dv.descuento',
@@ -200,18 +242,23 @@ class VentaController extends Controller
         $ventas = $ventas->map(function ($venta) use (
             $detalles,
             $metodosPago,
-            $clientesMock,
-            $usuarios,
-            $productosMock
+            $clientesPorId,
+            $productosPorId
         ) {
-            $cliente = $clientesMock->get($venta->id_cliente);
+            $cliente = $clientesPorId->get($venta->id_cliente);
 
             $detalle = ($detalles->get($venta->id_venta) ?? collect())
-                ->map(function ($item) use ($productosMock) {
-                    $producto = $productosMock[$item->id_producto] ?? null;
+                ->map(function ($item) use ($productosPorId) {
+                    $producto = $productosPorId->get($item->id_producto);
+                    $idPromocion = property_exists($item, 'id_promocion') ? $item->id_promocion : null;
+                    $promocion = $idPromocion
+                        ? DB::table('promocion')->where('id_promocion', $item->id_promocion)->value('nombre')
+                        : null;
 
                     return [
                         'id_producto' => (int) $item->id_producto,
+                        'id_promocion' => $idPromocion ? (int) $idPromocion : null,
+                        'promocion' => $promocion,
                         'codigo' => $producto['codigo'] ?? '',
                         'producto' => $producto['nombre'] ?? "Producto #{$item->id_producto}",
                         'cantidad' => (int) $item->cantidad,
@@ -237,7 +284,7 @@ class VentaController extends Controller
                     + collect($detalle)->sum(fn ($item) => $item['descuento'] * $item['cantidad']),
                 'estado' => $venta->estado ?? 'pendiente',
                 'observaciones' => $venta->observaciones,
-                'usuario' => $usuarios->nombre((int) $venta->id_usuario),
+                'usuario' => UsuarioService::obtenerNombre((int) $venta->id_usuario),
                 'metodo' => $esCC
                     ? 'Cuenta Corriente'
                     : ucfirst(str_replace('_', ' ', $medios[0])),

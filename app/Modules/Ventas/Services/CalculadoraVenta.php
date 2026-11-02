@@ -66,7 +66,7 @@ class CalculadoraVenta
             // Fila tal cual se guarda en la tabla detalle_venta.
             $detalles[] = [
                 'id_producto' => (int) $producto['id'],
-                'id_promocion' => null,
+                'id_promocion' => isset($item['id_promocion']) ? (int) $item['id_promocion'] : null,
                 'cantidad' => $cantidad,
                 'precio_unitario' => $precio,
                 'descuento' => $descuento,

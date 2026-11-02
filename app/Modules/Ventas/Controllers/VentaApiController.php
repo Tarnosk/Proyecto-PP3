@@ -3,6 +3,8 @@
 namespace App\Modules\Ventas\Controllers;
 
 use App\Modules\Ventas\Contracts\ProductoGateway;
+use App\Modules\Ventas\Contracts\StockGateway;
+use App\Modules\Ventas\Contracts\ClienteGateway;
 use App\Modules\Ventas\Enums\EstadoVenta;
 use App\Modules\Ventas\Exceptions\VentaException;
 use App\Http\Controllers\Controller;
@@ -71,21 +73,29 @@ class VentaApiController extends Controller
      * GET /api/ventas/productos → catálogo de productos para el editor de "Modificar"
      * (el selector de "Agregar producto").
      *
-     * Sale de ProductoGateway: hoy el mock (MockProductoApi), mañana la API real
-     * de Productos, sin cambiar nada en el front.
+     * Sale de ProductoGateway, con la implementación HTTP o mock según la configuración.
      */
-    public function productos(ProductoGateway $productos): JsonResponse
+    public function productos(ProductoGateway $productos, StockGateway $stock): JsonResponse
     {
-        $catalogo = array_map(fn (array $p) => [
+        $catalogo = array_map(function (array $p) use ($stock): array {
+            $disponible = $stock->disponible((int) $p['id']);
+
+            return [
             'id' => (int) $p['id'],
             'codigo' => $p['codigo'] ?? null,
             'nombre' => $p['nombre'],
             'precioMin' => (float) $p['precioMin'],
             'precioMay' => (float) $p['precioMay'],
-            'stock' => isset($p['stock']) ? (int) $p['stock'] : null,
-        ], $productos->todos());
+            'stock' => $disponible ?? (isset($p['stock']) ? (int) $p['stock'] : null),
+            ];
+        }, $productos->todos());
 
         return response()->json(['data' => array_values($catalogo)]);
+    }
+
+    public function clientes(ClienteGateway $clientes): JsonResponse
+    {
+        return response()->json(['data' => $clientes->todos()]);
     }
 
     /**
