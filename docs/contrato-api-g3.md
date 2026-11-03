@@ -62,6 +62,11 @@ Las respuestas exitosas de G3 siguen la envoltura estándar:
 | `404 Not Found` | El producto, compra, orden o proveedor solicitado no existe | `{"status": "error", "message": "Producto no encontrado."}` |
 | `500 Internal Server Error` | Error inesperado de infraestructura o base de datos | `{"status": "error", "message": "..."}` |
 
+### 1.4. Tratamiento de Precios e IVA (Precios Netos)
+- **Todos los precios expuestos por G3 son netos, sin IVA** (`precio_unitario`, `precio_mayorista`, `precio_minorista`, `precioMay`, `precioMin`).
+- La distribuidora maneja una lista de precios base única; las condiciones mayoristas/minoristas se establecen mediante **descuentos y promociones** (procesados por G4 en ventas) y la discriminación del IVA la realiza la facturación (G2).
+- La formación del precio se basa en el **costo de reposición** del proveedor principal y el **recargo porcentual (markup)** del producto. Ambos son datos operativos internos y sensibles de G3, por lo que **no se exponen en las APIs de integración pública** preservando la confidencialidad comercial del catálogo.
+
 ---
 
 ## 2. Criterio de Búsqueda: `id` / `id_producto` vs. `codigo`

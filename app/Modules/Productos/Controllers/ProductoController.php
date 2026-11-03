@@ -62,6 +62,9 @@ class ProductoController extends Controller
                     'precio_minorista' => (float) $p->precio_minorista,
                     'precioMay' => (float) $p->precio_mayorista,
                     'precioMin' => (float) $p->precio_minorista,
+                    'costo' => $p->costo !== null ? (float) $p->costo : null,
+                    'recargo' => $p->recargo !== null ? (float) $p->recargo : null,
+                    'margen_ganancia' => $p->margen_ganancia !== null ? (float) $p->margen_ganancia : null,
                     'estado' => $p->estado,
                     'fecha_alta' => $p->fecha_alta ? ($p->fecha_alta instanceof \Carbon\CarbonInterface ? $p->fecha_alta->format('Y-m-d H:i:s') : (string) $p->fecha_alta) : null,
                     'fecha_modificacion' => $p->fecha_modificacion ? ($p->fecha_modificacion instanceof \Carbon\CarbonInterface ? $p->fecha_modificacion->format('Y-m-d H:i:s') : (string) $p->fecha_modificacion) : null,
@@ -100,12 +103,22 @@ class ProductoController extends Controller
      */
     public function store(Request $request): JsonResponse
     {
+        if ($request->filled('costo') && $request->filled('recargo') && !$request->filled('precio_unitario')) {
+            $costoCalc = (float) $request->input('costo');
+            $recargoCalc = (float) $request->input('recargo');
+            $request->merge([
+                'precio_unitario' => round($costoCalc * (1 + $recargoCalc / 100), 2),
+            ]);
+        }
+
         $validator = Validator::make($request->all(), [
             'codigo' => 'required|string|max:50|unique:PRODUCTO,codigo',
             'nombre' => 'nullable|string|max:255',
             'descripcion' => 'required|string|max:255',
             'precio_unitario' => 'required|numeric|min:0',
             'precio_minorista' => 'nullable|numeric|min:0',
+            'costo' => 'nullable|numeric|min:0',
+            'recargo' => 'nullable|numeric|min:0',
             'id_categoria' => 'required|integer|exists:CATEGORIA,id_categoria',
             'id_marca' => 'required|integer|exists:MARCA,id_marca',
             'stock_disponible' => 'nullable|integer|min:0',
@@ -145,6 +158,15 @@ class ProductoController extends Controller
             $unidadesPorBulto = max(1, (int) $request->input('unidades_por_bulto', 1));
             $idUsuario = UsuarioActual::id($request);
             $precioUnitario = (float) ($request->input('precio_unitario') ?? $request->input('precioMay') ?? 0.0);
+            $costo = $request->filled('costo') ? (float) $request->input('costo') : null;
+            $recargo = $request->filled('recargo') ? (float) $request->input('recargo') : null;
+
+            if ($costo !== null && $costo > 0 && $recargo !== null && !$request->filled('precio_unitario')) {
+                $precioUnitario = round($costo * (1 + $recargo / 100), 2);
+            } elseif ($precioUnitario > 0 && $costo !== null && $costo > 0 && $recargo === null) {
+                $recargo = round((($precioUnitario - $costo) / $costo) * 100, 2);
+            }
+
             $descripcion = trim($request->input('descripcion'));
             $nombre = trim((string) $request->input('nombre')) !== ''
                 ? trim((string) $request->input('nombre'))
@@ -152,13 +174,15 @@ class ProductoController extends Controller
             $codigoLimpio = trim((string) $request->input('codigo'));
             $imagenRuta = $this->resolverImagen($request, $codigoLimpio, null);
 
-            $producto = DB::transaction(function () use ($request, $now, $stockInicial, $stockMinimo, $formatoBulto, $unidadesPorBulto, $idUsuario, $precioUnitario, $descripcion, $nombre, $codigoLimpio, $imagenRuta) {
+            $producto = DB::transaction(function () use ($request, $now, $stockInicial, $stockMinimo, $formatoBulto, $unidadesPorBulto, $idUsuario, $precioUnitario, $costo, $recargo, $descripcion, $nombre, $codigoLimpio, $imagenRuta) {
                 // 1. Crear Producto (P01). El stock queda embebido en PRODUCTO (OB3).
                 $prod = Producto::create([
                     'codigo' => $codigoLimpio,
                     'nombre' => $nombre,
                     'descripcion' => $descripcion,
                     'precio_unitario' => $precioUnitario,
+                    'costo' => $costo,
+                    'recargo' => $recargo,
                     'imagen' => $imagenRuta,
                     'stock' => $stockInicial,
                     'stock_minimo' => $stockMinimo,
@@ -267,6 +291,9 @@ class ProductoController extends Controller
                 'precio_minorista' => (float) $producto->precio_minorista,
                 'precioMay' => (float) $producto->precio_mayorista,
                 'precioMin' => (float) $producto->precio_minorista,
+                'costo' => $producto->costo !== null ? (float) $producto->costo : null,
+                'recargo' => $producto->recargo !== null ? (float) $producto->recargo : null,
+                'margen_ganancia' => $producto->margen_ganancia !== null ? (float) $producto->margen_ganancia : null,
                 'estado' => $producto->estado,
                 'fecha_alta' => $producto->fecha_alta ? ($producto->fecha_alta instanceof \Carbon\CarbonInterface ? $producto->fecha_alta->format('Y-m-d H:i:s') : (string) $producto->fecha_alta) : null,
                 'fecha_modificacion' => $producto->fecha_modificacion ? ($producto->fecha_modificacion instanceof \Carbon\CarbonInterface ? $producto->fecha_modificacion->format('Y-m-d H:i:s') : (string) $producto->fecha_modificacion) : null,
@@ -327,12 +354,28 @@ class ProductoController extends Controller
             ], 404);
         }
 
+        if (!$request->filled('precio_unitario') && !$request->filled('precioMay')) {
+            $costoUpdate = $request->filled('costo') ? (float) $request->input('costo') : (float) $producto->costo;
+            $recargoUpdate = $request->filled('recargo') ? (float) $request->input('recargo') : ($producto->recargo !== null ? (float) $producto->recargo : null);
+            if ($costoUpdate > 0 && $recargoUpdate !== null) {
+                $request->merge([
+                    'precio_unitario' => round($costoUpdate * (1 + $recargoUpdate / 100), 2),
+                ]);
+            } else {
+                $request->merge([
+                    'precio_unitario' => (float) $producto->precio_unitario,
+                ]);
+            }
+        }
+
         $validator = Validator::make($request->all(), [
             'codigo' => "required|string|max:50|unique:PRODUCTO,codigo,{$id},id_producto",
             'nombre' => 'nullable|string|max:255',
             'descripcion' => 'required|string|max:255',
             'precio_unitario' => 'required|numeric|min:0',
             'precio_minorista' => 'nullable|numeric|min:0',
+            'costo' => 'nullable|numeric|min:0',
+            'recargo' => 'nullable|numeric|min:0',
             'id_categoria' => 'required|integer|exists:CATEGORIA,id_categoria',
             'id_marca' => 'required|integer|exists:MARCA,id_marca',
             'stock_minimo' => 'nullable|integer|min:0',
@@ -368,6 +411,21 @@ class ProductoController extends Controller
             $idUsuario = UsuarioActual::id($request);
             $nuevoPrecio = (float) ($request->input('precio_unitario') ?? $request->input('precioMay') ?? $producto->precio_unitario);
             $anteriorPrecio = (float) $producto->precio_unitario;
+
+            $costo = $request->has('costo')
+                ? ($request->filled('costo') ? (float) $request->input('costo') : null)
+                : ($producto->costo !== null ? (float) $producto->costo : null);
+
+            $recargo = $request->has('recargo')
+                ? ($request->filled('recargo') ? (float) $request->input('recargo') : null)
+                : ($producto->recargo !== null ? (float) $producto->recargo : null);
+
+            if ($request->has('recargo') && !$request->has('precio_unitario') && $costo !== null && $costo > 0 && $recargo !== null) {
+                $nuevoPrecio = round($costo * (1 + $recargo / 100), 2);
+            } elseif ($nuevoPrecio != $anteriorPrecio && $costo !== null && $costo > 0) {
+                $recargo = round((($nuevoPrecio - $costo) / $costo) * 100, 2);
+            }
+
             $descripcion = trim($request->input('descripcion'));
             $nombre = trim((string) $request->input('nombre')) !== ''
                 ? trim((string) $request->input('nombre'))
@@ -397,7 +455,7 @@ class ProductoController extends Controller
                 'imagen' => $nuevaImagen,
             ];
 
-            DB::transaction(function () use ($producto, $request, $now, $idUsuario, $nuevoPrecio, $anteriorPrecio, $descripcion, $nombre, $codigoLimpio, $nuevaImagen, $valoresAnteriores, $valoresNuevos) {
+            DB::transaction(function () use ($producto, $request, $now, $idUsuario, $nuevoPrecio, $anteriorPrecio, $costo, $recargo, $descripcion, $nombre, $codigoLimpio, $nuevaImagen, $valoresAnteriores, $valoresNuevos) {
                 // Si cambió el precio unitario, se registra en HISTORIAL_PRECIO (P04)
                 if (abs($nuevoPrecio - $anteriorPrecio) >= 0.001) {
                     $porcentaje = 0.0;
@@ -434,6 +492,13 @@ class ProductoController extends Controller
                 }
                 if ($request->has('unidades_por_bulto')) {
                     $datosUpdate['unidades_por_bulto'] = max(1, (int) $request->input('unidades_por_bulto', 1));
+                }
+
+                if ($request->has('costo')) {
+                    $datosUpdate['costo'] = $costo;
+                }
+                if ($request->has('recargo') || ($costo !== null && abs($nuevoPrecio - $anteriorPrecio) >= 0.001)) {
+                    $datosUpdate['recargo'] = $recargo;
                 }
 
                 // Actualizar producto
@@ -880,11 +945,17 @@ class ProductoController extends Controller
                                 'id_usuario' => $idUsuario,
                             ]);
 
-                        $producto->update([
+                        $updateData = [
                             'precio_unitario' => $nuevoPrecio,
                             'fecha_modificacion' => $now,
                             'id_usuario_modificacion' => $idUsuario,
-                        ]);
+                        ];
+
+                        if ($producto->costo !== null && (float) $producto->costo > 0) {
+                            $updateData['recargo'] = round((($nuevoPrecio - (float) $producto->costo) / (float) $producto->costo) * 100, 2);
+                        }
+
+                        $producto->update($updateData);
 
                         AuditoriaLogger::registrar(
                             'producto',

@@ -104,42 +104,53 @@ $$\text{Margen} = \frac{\text{Markup}}{1 + \text{Markup}}$$
 - **No exponer el costo en las APIs de integración**: `GET /api/productos` alimenta el **catálogo público de G1**. El costo y el margen son datos internos y sensibles de la distribuidora y solo deben verse en las pantallas internas de G3.
 - **No modificar código de otros grupos.**
 
-### Opción A — Mínima (alcance razonable para el cuatrimestre)
+### Opción A — Mínima (alcance razonable para el cuatrimestre) ✅ ELEGIDA
+
+> [!IMPORTANT]
+> Es la opción validada por el profesor, con un ajuste: **solo se agregan campos en `producto`** (no hay markup por defecto en `categoria`). Ver la sección 4.
 
 | Cambio | Detalle |
 | :--- | :--- |
-| Nuevas columnas en `producto` | `costo` (costo de reposición/último costo) y `markup` (% sobre costo, nullable) |
-| Markup por defecto en `categoria` | `markup_defecto`: si el producto no tiene markup propio, hereda el de su categoría |
-| Cálculo | `precio_unitario = redondeo(costo × (1 + markup))`, reutilizando las reglas de redondeo de P07 |
+| Nuevas columnas en `producto` | `costo` (costo de reposición) y `recargo` (markup, % sobre el costo) |
+| ~~Markup por defecto en `categoria`~~ | Descartado: el recargo se define en cada producto |
+| Cálculo | `precio_unitario = redondeo(costo × (1 + recargo))`, reutilizando las reglas de redondeo de P07 |
 | Actualización automática del costo | Cuando cambia el `precio_acordado` del **proveedor principal** (PV05/PV06) o se define otro principal, `costo` toma ese valor y se recalcula el precio de venta (registrándolo en `historial_precio` con `origen = 'costo'`) |
-| UI de Inventario | Mostrar costo, markup y **margen resultante**; alerta visual si el precio queda por debajo del costo |
+| UI de Inventario | Mostrar costo, recargo y **margen resultante**; alerta visual si el precio queda por debajo del costo |
 | Aumento masivo (P07) | Poder aplicarlo sobre el **costo** (ej. "el proveedor aumentó 12%") además de sobre el precio |
 
 Impacto en G4: **ninguno** (sigue leyendo `precio_unitario`, que ahora es coherente con el costo).
 
-### Opción B — Intermedia: listas de precios reales
+### Opción B — Intermedia: listas de precios reales ❌ DESCARTADA
+
+> La distribuidora diferencia mayorista y minorista **mediante descuentos**, no con precios distintos.
 
 Todo lo de A, más:
 - `precio_mayorista` y `precio_minorista` pasan a ser **valores realmente distintos** (ej. minorista = mayorista + X%).
 - G4 **ya lee `precioMay` / `precioMin`** en [HttpProductoApi.php](../app/Modules/Ventas/Integraciones/HttpProductoApi.php#L79-L91), así que se beneficiaría **sin tocar su código**.
 
-### Opción C — Completa (nivel ERP comercial)
+### Opción C — Completa (nivel ERP comercial) ❌ DESCARTADA
+
+> El profesor indicó **no crear una tabla de listas de precios**.
 
 - Tabla `lista_precio` y asignación de lista por cliente (requiere coordinar con **G1**, dueño de clientes).
 - Costo promedio ponderado al registrar recepciones.
 - Snapshot de `costo_unitario` en `detalle_venta` para reportes de rentabilidad (requiere coordinar con **G4**, dueño de ventas; nosotros solo podríamos ofrecer un endpoint de consulta de costo protegido).
 - Margen mínimo validado en promociones de G4.
 
-> [!IMPORTANT]
-> Las opciones A y B se resuelven **solo dentro de G3**. La opción C requiere acuerdos con G1 y G4, así que conviene plantearla como mejora futura en la defensa.
+> [!NOTE]
+> Las opciones B y C quedan documentadas solo como referencia de lo que hacen los ERP comerciales.
 
 ---
 
-## 4. Decisiones tomadas por el grupo
+## 4. Decisiones tomadas (grupo y profesor)
 
 | Tema | Decisión | Implicancia |
 | :--- | :--- | :--- |
-| Costo base | **Costo de reposición** | `costo = producto_proveedor.precio_acordado` del proveedor con `es_proveedor_principal = 1` (activo). El precio de venta se recalcula cuando cambia ese precio (PV05/PV06) o cuando se cambia el proveedor principal, sin esperar a una compra. |
+| Modelo de datos | **Sin tabla de listas de precios** (indicación del profesor) | Solo se agregan campos en `producto`: `costo` y `recargo`. |
+| Costo base | **Costo de reposición** | `costo = producto_proveedor.precio_acordado` del proveedor con `es_proveedor_principal = 1` (activo). Se sincroniza automáticamente cuando cambia ese precio (PV05/PV06) o cuando se cambia el proveedor principal, sin esperar a una compra. |
+| Recargo | **Markup (% sobre el costo), definido en cada producto** | `precio_unitario = redondeo(costo × (1 + recargo))`. La pantalla muestra además el margen resultante sobre la venta. |
+| Recálculo | **Automático** | Al cambiar el costo o el recargo, se recalcula `precio_unitario` y se registra en `historial_precio`. |
+| Mayorista / minorista | **Se diferencian mediante descuentos**, no con precios distintos | `precio_unitario` es el único precio de venta. `precioMay` / `precioMin` siguen devolviendo ese mismo valor. |
 | IVA | **Precios netos, sin IVA** | `precio_unitario`, `costo` y `precio_acordado` se guardan netos. El IVA lo agrega la facturación (G2). Hay que documentarlo en el [contrato de API](contrato-api-g3.md) y avisarles a G2 y G4. |
 
 > [!NOTE]
@@ -148,11 +159,32 @@ Todo lo de A, más:
 Casos borde a resolver:
 - **Producto sin proveedor principal o sin `precio_acordado`:** el precio queda como carga manual (comportamiento actual), con una alerta de "sin costo".
 - **Baja del proveedor principal (PV04):** hoy se desmarca como principal. El producto queda sin costo hasta que se defina otro principal.
+- **Productos existentes:** al agregar las columnas, `costo` se inicializa desde el proveedor principal (si existe) y `recargo` se calcula a partir del `precio_unitario` actual, para no cambiar ningún precio en la migración.
 
-## 5. Decisiones a validar con el profesor
+## 5. Estado de las preguntas
 
-1. ~~**¿Qué costo tomamos como base?**~~ Decidido: costo de reposición (ver sección 4).
-2. **¿Markup o margen?** Recomendación: el usuario configura **markup** y el sistema muestra **margen**.
-3. **¿Recálculo automático o precio sugerido con aprobación?** Recomendación: automático al recibir la compra, con registro en el historial de precios.
-4. **¿Diferenciamos mayorista y minorista (opción B)?** Es poco esfuerzo y G4 ya lo soporta.
-5. ~~**¿Los precios son netos o con IVA?**~~ Decidido: netos, sin IVA (ver sección 4).
+1. ~~**¿Qué costo tomamos como base?**~~ Costo de reposición.
+2. ~~**¿Markup o margen?**~~ Recargo (markup) por producto; se muestra el margen.
+3. ~~**¿Recálculo automático o precio sugerido con aprobación?**~~ Automático.
+4. ~~**¿Diferenciamos mayorista y minorista?**~~ No en el precio: se hace con descuentos.
+5. ~~**¿Los precios son netos o con IVA?**~~ Netos, sin IVA.
+6. ~~**¿Tabla de listas de precios?**~~ No, solo campos en `producto`.
+
+---
+
+## 6. Estado de la Implementación ✅ Completada
+
+- **Migraciones:**
+  - `2026_11_03_000001_add_costo_y_recargo_to_producto_table.php` (agrega `costo` y `recargo` con migración no destructiva de datos existentes).
+  - `2026_11_03_000002_widen_origen_in_historial_precio_table.php` (amplía `origen` a `VARCHAR(50)` para registrar trazabilidad de `costo_reposicion`).
+- **Modelo de Dominio:**
+  - `Producto.php`: casts, fillables, accessors (`costo`, `recargo`, `margen_ganancia`), relación `proveedorPrincipal()` y método de dominio `sincronizarCostoReposicion()`.
+- **Controladores Sincronizados:**
+  - `HistorialPrecioController.php`: sincroniza costo al cambiar `precio_acordado` del proveedor principal (PV06).
+  - `ProveedorController.php`: sincroniza costo al definir principal (PV05), asociar productos o dar de baja un proveedor principal (PV04).
+  - `ProductoController.php`: soporte de `costo` y `recargo` en `store` (P01), `update` (P04) y recálculo de recargo en `aumentoMasivo` (P07).
+- **Interfaz de Usuario:**
+  - `resources/views/inventario/index.blade.php`: tabla con detalle de costo, recargo y margen comercial real; alerta si se vende bajo costo; modal interactivo con recálculo dinámico en vivo.
+- **Suite de Pruebas Automatizadas:**
+  - `tests/Feature/ProductoCostoRecargoTest.php` (6 tests unitarios y de integración con 100% de éxito).
+  - Verificación de no-regresión en catálogo público de G1 y pruebas existentes.
