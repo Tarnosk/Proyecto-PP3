@@ -3,6 +3,7 @@
 namespace App\Modules\Caja\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Carbon;
 
 class Caja extends Model
 {
@@ -16,6 +17,9 @@ class Caja extends Model
 
     public const ROL_ADMIN = 'admin';
     public const ROL_REPARTIDOR = 'repartidor';
+
+    /** Horas antes del vencimiento desde las que se avisa que la caja está por vencer. */
+    public const HORAS_AVISO_VENCIMIENTO = 24;
 
     protected $fillable = [
         'id_usuario',
@@ -45,6 +49,12 @@ class Caja extends Model
         'fecha_hora_cierre' => 'datetime',
     ];
 
+    /**
+     * Campos derivados que viajan en la API y en las vistas (no se guardan).
+     * El estado guardado sigue siendo solo abierta/cerrada.
+     */
+    protected $appends = ['vencida', 'por_vencer', 'horas_restantes'];
+
     public function movimientos()
     {
         return $this->hasMany(CajaMovimiento::class, 'id_caja', 'id_caja');
@@ -58,6 +68,63 @@ class Caja extends Model
     public function perteneceA(int $idUsuario): bool
     {
         return (int) $this->id_usuario === $idUsuario;
+    }
+
+    /**
+     * Abierta y pasada su fecha de vencimiento. Aplica a repartidor (72 h)
+     * y a admin (7 días o fin de mes).
+     */
+    public function estaVencida(?Carbon $ahora = null): bool
+    {
+        $ahora ??= Carbon::now();
+
+        return $this->estaAbierta()
+            && $this->fecha_hora_vencimiento !== null
+            && $ahora->greaterThan($this->fecha_hora_vencimiento);
+    }
+
+    /**
+     * Abierta, todavía no vencida, y faltan 24 horas o menos para el
+     * vencimiento. Es el aviso previo; no cambia el estado de la caja.
+     */
+    public function estaPorVencer(?Carbon $ahora = null): bool
+    {
+        $ahora ??= Carbon::now();
+
+        return $this->estaAbierta()
+            && $this->fecha_hora_vencimiento !== null
+            && !$this->estaVencida($ahora)
+            && $this->fecha_hora_vencimiento->lte($ahora->copy()->addHours(self::HORAS_AVISO_VENCIMIENTO));
+    }
+
+    /**
+     * Horas que faltan para el vencimiento (1 decimal), o null si la caja no
+     * está abierta, no tiene vencimiento o ya venció.
+     */
+    public function horasRestantes(?Carbon $ahora = null): ?float
+    {
+        $ahora ??= Carbon::now();
+
+        if (!$this->estaAbierta() || $this->fecha_hora_vencimiento === null || $this->estaVencida($ahora)) {
+            return null;
+        }
+
+        return round($ahora->diffInMinutes($this->fecha_hora_vencimiento, false) / 60, 1);
+    }
+
+    public function getVencidaAttribute(): bool
+    {
+        return $this->estaVencida();
+    }
+
+    public function getPorVencerAttribute(): bool
+    {
+        return $this->estaPorVencer();
+    }
+
+    public function getHorasRestantesAttribute(): ?float
+    {
+        return $this->horasRestantes();
     }
 
     /**
