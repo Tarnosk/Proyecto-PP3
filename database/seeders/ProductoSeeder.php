@@ -388,6 +388,9 @@ class ProductoSeeder extends Seeder
             ],
         ];
 
+        $hasCostoCol = Schema::hasColumn('producto', 'costo');
+        $hasRecargoCol = Schema::hasColumn('producto', 'recargo');
+
         foreach ($productosData as $p) {
             $catNombre = $p['categoria'];
             $marcaNombre = $p['marca'];
@@ -397,6 +400,12 @@ class ProductoSeeder extends Seeder
             unset($p['categoria'], $p['marca'], $p['proveedor']);
             if (isset($p['ubicacion_id'])) {
                 unset($p['ubicacion_id']);
+            }
+            if (!$hasCostoCol) {
+                unset($p['costo']);
+            }
+            if (!$hasRecargoCol) {
+                unset($p['recargo']);
             }
 
             $p['id_categoria'] = $categoriasMap[$catNombre] ?? 1;
