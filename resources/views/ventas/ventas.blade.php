@@ -291,7 +291,7 @@
     /* ---------- Barra de acciones inferior ---------- */
     .acciones-finales {
         display: grid;
-        grid-template-columns: 1fr 1fr 1fr 1fr;
+        grid-template-columns: 1fr 1fr 1fr;
         gap: .75rem;
         margin-top: 1rem;
     }
@@ -813,17 +813,15 @@
 
     {{-- Acciones finales --}}
     <div class="acciones-finales">
-        <button type="button" class="clay-btn-primary" id="btnCobrar" disabled>
-            🧾 COBRAR
-        </button>
+
         <button type="button" class="clay-btn-secondary" id="btnLimpiar">
-            🗑 LIMPIAR
+            LIMPIAR
         </button>
         <button type="button" class="clay-btn-primary" id="btnDescuentos">
             % DESCUENTOS
         </button>
-        <button type="button" class="clay-btn-danger" id="btnCerrarCaja">
-            🔒 CERRAR CAJA
+        <button type="button" class="clay-btn-primary" id="btnCobrar" disabled>
+            VENTA LISTA
         </button>
     </div>
     {{-- Modal de descuentos --}}
@@ -871,7 +869,7 @@
     <div class="modal-overlay" id="modalCobro">
         <div class="modal-desc">
             <div class="modal-desc-header">
-                <span>Confirmar Cobro</span>
+                <span>Confirmar venta</span>
                 <button type="button" class="cerrar" id="cerrarModalCobro">✕</button>
             </div>
 
@@ -937,11 +935,21 @@
     let ventaEnCurso = false;
 
     const $ = (id) => document.getElementById(id);
+    const clienteGuardado = localStorage.getItem('pos_cliente');
+    if (clienteGuardado !== null) {
+        const existeCliente = CLIENTES.some(cliente => String(cliente.id) === clienteGuardado);
+        if (existeCliente) {
+            $('clienteVenta').value = clienteGuardado;
+        } else {
+            localStorage.removeItem('pos_cliente');
+        }
+    }
 
     function actualizarCliente() {
-        const cliente = CLIENTES.find(x => x.id === Number($('clienteVenta').value));
+        const cliente = CLIENTES.find(x => String(x.id) === $('clienteVenta').value);
         if (!cliente) return;
 
+        localStorage.setItem('pos_cliente', String(cliente.id));
         $('nombreClienteVenta').textContent = cliente.nombre;
         $('cuitClienteVenta').textContent = `CUIT: ${cliente.cuit} · ${cliente.condicion}`;
         $('domicilioClienteVenta').textContent = cliente.domicilio;

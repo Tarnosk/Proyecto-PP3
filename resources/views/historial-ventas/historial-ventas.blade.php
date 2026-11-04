@@ -57,6 +57,32 @@
     .hv-campo input:focus, .hv-campo select:focus {
         outline: 4px solid var(--primary); outline-offset: 2px; border-color: var(--primary);
     }
+    .hv-clientes-filtro { position: relative; }
+    .hv-clientes-seleccionados { display: flex; flex-wrap: wrap; gap: .35rem; }
+    .hv-cliente-chip {
+        display: inline-flex; align-items: center; gap: .4rem;
+        padding: .3rem .55rem; border-radius: 999px;
+        background: #EFF6FF; color: var(--primary); font-size: .8rem; font-weight: 600;
+    }
+    .hv-cliente-chip button {
+        padding: 0; border: 0; background: none; color: inherit;
+        font: inherit; cursor: pointer;
+    }
+    .hv-clientes-opciones {
+        position: absolute; z-index: 20; top: calc(100% + .35rem); left: 0; right: 0;
+        max-height: 220px; overflow-y: auto; padding: .3rem;
+        border: 1px solid var(--border); border-radius: 12px;
+        background: #fff; box-shadow: 0 8px 20px rgba(15, 23, 42, .14);
+    }
+    .hv-clientes-opciones[hidden] { display: none; }
+    .hv-clientes-opcion {
+        display: block; width: 100%; padding: .55rem .65rem;
+        border: 0; border-radius: 8px; background: #fff;
+        color: var(--text); font: inherit; text-align: left; cursor: pointer;
+    }
+    .hv-clientes-opcion:hover, .hv-clientes-opcion:focus {
+        outline: none; background: #EFF6FF; color: var(--primary);
+    }
 
     /* ---------- KPIs ---------- */
     .hv-resumen { display: grid; grid-template-columns: repeat(4, 1fr); gap: .75rem; }
@@ -321,25 +347,22 @@
             </div>
             <div class="hv-campo">
                 <label for="fCliente">👤 Cliente</label>
-                <select id="fCliente" name="cliente">
-                    <option value="">Todos</option>
-                    @foreach ($clientesFiltro as $c)
-                        <option value="{{ $c['id'] }}">
-                            {{ $c['nombre'] }}
-                        </option>
-                    @endforeach
-                </select>
+                <div class="hv-clientes-filtro" id="filtroClientes">
+                    <div class="hv-clientes-seleccionados" id="clientesSeleccionados" aria-live="polite"></div>
+                    <input type="search" id="fCliente" placeholder="Escribí para buscar clientes..." autocomplete="off"
+                        role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="opcionesClientes">
+                    <div class="hv-clientes-opciones" id="opcionesClientes" role="listbox" aria-label="Clientes disponibles" aria-multiselectable="true" hidden></div>
+                </div>
+                <script type="application/json" id="clientesSugeridos">@json($clientesFiltro, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT)</script>
             </div>
             <div class="hv-campo">
                 <label for="fProducto">📦 Producto</label>
-                <select id="fProducto" name="producto">
-                    <option value="">Todos</option>
-                @foreach ($productosFiltro as $p)
-                    <option value="{{ $p['id_producto'] }}">
-                        {{ $p['nombre'] }}
-                    </option>
-                @endforeach
-                </select>
+                <input type="search" id="fProducto" name="producto" list="productosSugeridos" placeholder="Escribí un producto..." autocomplete="off">
+                <datalist id="productosSugeridos">
+                    @foreach ($productosFiltro as $p)
+                        <option value="{{ $p['nombre'] }}" data-id="{{ $p['id_producto'] }}">
+                    @endforeach
+                </datalist>
             </div>
             <div class="hv-campo">
                 <label for="fLocalidad">📍 Localidad</label>

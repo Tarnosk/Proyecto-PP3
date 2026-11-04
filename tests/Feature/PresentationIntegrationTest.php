@@ -113,13 +113,17 @@ class PresentationIntegrationTest extends TestCase
         $this->sessionAs(UserRole::ADMINISTRATIVO);
         $this->view('ventas.ventas', ['clientes' => [], 'productos' => []])
             ->assertSee('Punto de Venta')->assertSee('btnConfirmarCobro')
-            ->assertSee('const URL_VENTAS', false)->assertSee('<style>', false);
+            ->assertSee('const URL_VENTAS', false)->assertSee('<style>', false)
+            ->assertSee('localStorage.getItem(\'pos_cliente\')', false)
+            ->assertSee('localStorage.setItem(\'pos_cliente\'', false);
         $this->view('saldos.saldo', ['clientes' => []])
             ->assertSee('Cuentas Corrientes')->assertSee('const URL_MOVIMIENTOS', false);
         $this->view('historial-ventas.historial-ventas', [
             'ventas' => collect(), 'clientesFiltro' => [], 'productosFiltro' => [],
             'kpis' => ['cantidad' => 0, 'total_vendido' => 0, 'descuentos' => 0, 'en_cc' => 0],
-        ])->assertSee('HISTORIAL DE VENTAS')->assertSee('async function llamarApi', false);
+        ])->assertSee('HISTORIAL DE VENTAS')->assertSee('async function llamarApi', false)
+            ->assertSee('id="opcionesClientes"', false)->assertSee('list="productosSugeridos"', false)
+            ->assertDontSee('<select id="fCliente"', false)->assertDontSee('<select id="fProducto"', false);
     }
 
     public function test_promotions_loads_the_recovered_script_without_a_vite_manifest(): void
