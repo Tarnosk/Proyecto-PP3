@@ -5494,6 +5494,11 @@
                                     {
                                         "key": "Accept",
                                         "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}",
+                                        "description": "Token que devuelve \"Login API (guarda token)\" en data.access_token"
                                     }
                                 ],
                                 "url": {
@@ -5514,18 +5519,43 @@
                                         }
                                     ]
                                 },
-                                "description": "**Acción:** `App\\Modules\\Ventas\\Controllers\\VentaApiController@destroy`\n\n**Acceso:** Sin autenticación declarada en la ruta.\n\n**Campos obligatorios:** `motivo`"
+                                "description": "**Acción:** `App\\Modules\\Ventas\\Controllers\\VentaApiController@destroy`\n\n**Acceso:** Protegida. Header `Authorization: Bearer {{token}}` (token de `00 Autenticación > Login API`). Sin token, o con uno falso o vencido, responde 401 `{\"message\":\"No autorizado.\"}`.\n\n**Campos obligatorios:** `motivo`",
+                                "auth": {
+                                    "type": "noauth"
+                                }
                             },
                             "response": []
                         },
                         {
                             "name": "GET /api/ventas",
+                            "event": [
+                                {
+                                    "listen": "test",
+                                    "script": {
+                                        "type": "text/javascript",
+                                        "exec": [
+                                            "pm.test(\"Con token válido responde 200 y la lista de ventas\", () => {",
+                                            "    pm.response.to.have.status(200);",
+                                            "    pm.expect(pm.response.json().data).to.be.an(\"array\");",
+                                            "});"
+                                        ]
+                                    }
+                                }
+                            ],
                             "request": {
+                                "auth": {
+                                    "type": "noauth"
+                                },
                                 "method": "GET",
                                 "header": [
                                     {
                                         "key": "Accept",
                                         "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}",
+                                        "description": "Token que devuelve \"Login API (guarda token)\" en data.access_token"
                                     }
                                 ],
                                 "url": {
@@ -5541,43 +5571,341 @@
                                         {
                                             "key": "estado",
                                             "value": "",
-                                            "disabled": true
+                                            "disabled": true,
+                                            "description": "pendiente, confirmada, preparada, entregada, facturada, pagada, cancelada"
                                         },
                                         {
                                             "key": "cliente_id",
                                             "value": "",
-                                            "disabled": true
+                                            "disabled": true,
+                                            "description": "id del cliente"
                                         },
                                         {
                                             "key": "desde",
                                             "value": "",
-                                            "disabled": true
+                                            "disabled": true,
+                                            "description": "AAAA-MM-DD"
                                         },
                                         {
                                             "key": "hasta",
                                             "value": "",
-                                            "disabled": true
+                                            "disabled": true,
+                                            "description": "AAAA-MM-DD"
                                         },
                                         {
                                             "key": "texto",
                                             "value": "",
-                                            "disabled": true
+                                            "disabled": true,
+                                            "description": "busca por número de factura u observaciones"
                                         },
                                         {
                                             "key": "por_pagina",
                                             "value": "",
-                                            "disabled": true
+                                            "disabled": true,
+                                            "description": "solo con page"
                                         },
                                         {
                                             "key": "page",
                                             "value": "",
-                                            "disabled": true
+                                            "disabled": true,
+                                            "description": "si se activa, pagina y agrega meta y links"
                                         }
                                     ]
                                 },
-                                "description": "**Acción:** `App\\Modules\\Ventas\\Controllers\\VentaApiController@index`\n\n**Acceso:** Sin autenticación declarada en la ruta."
+                                "description": "Lista de ventas. **Protegida: necesita el token del login.**\n\n**Cómo se usa**\n1. Ejecutar `00 Autenticación > Login API (guarda token)` con `usuario` y `password`.\n2. El login responde `data.access_token` y lo guarda solo en la variable `{{token}}`.\n3. Ejecutar este pedido: el header `Authorization: Bearer {{token}}` (pestaña Headers) manda ese token.\n\n**Respuestas**\n- **200**: token válido. Devuelve `data` con las ventas.\n- **401** `{\"message\":\"No autorizado.\"}`: sin token, token falso, vencido (120 min) o cerrado con logout.\n\nTambién responde 200 desde el navegador con la sesión web iniciada.\n\n**Filtros opcionales** (pestaña Params): `estado`, `cliente_id`, `desde`, `hasta`, `texto`. Sin `page` devuelve todas; con `page` pagina (`por_pagina`) y agrega `meta` y `links`.\n\n**Ojo:** hay una sola sesión por usuario. Loguearse por la API cierra la sesión del navegador de ese usuario.\n\n**Acción:** `App\\Modules\\Ventas\\Controllers\\VentaApiController@index`"
                             },
-                            "response": []
+                            "response": [
+                                {
+                                    "name": "200 - con token válido",
+                                    "originalRequest": {
+                                        "method": "GET",
+                                        "header": [
+                                            {
+                                                "key": "Accept",
+                                                "value": "application/json"
+                                            },
+                                            {
+                                                "key": "Authorization",
+                                                "value": "Bearer {{token}}"
+                                            }
+                                        ],
+                                        "url": {
+                                            "raw": "{{baseUrl}}/api/ventas",
+                                            "host": [
+                                                "{{baseUrl}}"
+                                            ],
+                                            "path": [
+                                                "api",
+                                                "ventas"
+                                            ],
+                                            "query": [
+                                                {
+                                                    "key": "estado",
+                                                    "value": "",
+                                                    "disabled": true,
+                                                    "description": "pendiente, confirmada, preparada, entregada, facturada, pagada, cancelada"
+                                                },
+                                                {
+                                                    "key": "cliente_id",
+                                                    "value": "",
+                                                    "disabled": true,
+                                                    "description": "id del cliente"
+                                                },
+                                                {
+                                                    "key": "desde",
+                                                    "value": "",
+                                                    "disabled": true,
+                                                    "description": "AAAA-MM-DD"
+                                                },
+                                                {
+                                                    "key": "hasta",
+                                                    "value": "",
+                                                    "disabled": true,
+                                                    "description": "AAAA-MM-DD"
+                                                },
+                                                {
+                                                    "key": "texto",
+                                                    "value": "",
+                                                    "disabled": true,
+                                                    "description": "busca por número de factura u observaciones"
+                                                },
+                                                {
+                                                    "key": "por_pagina",
+                                                    "value": "",
+                                                    "disabled": true,
+                                                    "description": "solo con page"
+                                                },
+                                                {
+                                                    "key": "page",
+                                                    "value": "",
+                                                    "disabled": true,
+                                                    "description": "si se activa, pagina y agrega meta y links"
+                                                }
+                                            ]
+                                        }
+                                    },
+                                    "status": "OK",
+                                    "code": 200,
+                                    "_postman_previewlanguage": "json",
+                                    "header": [
+                                        {
+                                            "key": "Content-Type",
+                                            "value": "application/json"
+                                        },
+                                        {
+                                            "key": "Cache-Control",
+                                            "value": "no-store, private"
+                                        }
+                                    ],
+                                    "body": "{\n    \"data\": [\n        {\n            \"id\": 9,\n            \"numero_comprobante\": \"POS-01M6CVND1BTZ2PG8P759V2JQKE\",\n            \"fecha\": \"2026-11-01\",\n            \"cliente\": {\n                \"id\": 3,\n                \"nombre\": \"Lucía Fernández\",\n                \"cuit\": \"30111222\"\n            },\n            \"usuario\": {\n                \"id\": 1,\n                \"nombre\": \"Usuario Administrativo\"\n            },\n            \"estado\": {\n                \"valor\": \"pendiente\",\n                \"etiqueta\": \"Pendiente\"\n            },\n            \"total\": 10450,\n            \"descuento_global\": 0,\n            \"observaciones\": \"Venta POS a cuenta corriente\",\n            \"cantidad_articulos\": 11,\n            \"detalles\": [\n                {\n                    \"id_producto\": 6,\n                    \"id_promocion\": null,\n                    \"promocion\": null,\n                    \"codigo\": \"P006\",\n                    \"producto\": \"Fideos 500g\",\n                    \"cantidad\": 11,\n                    \"precio_unitario\": 950,\n                    \"descuento\": 0,\n                    \"subtotal\": 10450\n                }\n            ],\n            \"acciones\": {\n                \"puede_modificar\": true,\n                \"puede_eliminar\": true,\n                \"puede_restaurar\": false\n            }\n        }\n    ]\n}"
+                                },
+                                {
+                                    "name": "401 - token inválido o vencido",
+                                    "originalRequest": {
+                                        "method": "GET",
+                                        "header": [
+                                            {
+                                                "key": "Accept",
+                                                "value": "application/json"
+                                            },
+                                            {
+                                                "key": "Authorization",
+                                                "value": "Bearer token-falso"
+                                            }
+                                        ],
+                                        "url": {
+                                            "raw": "{{baseUrl}}/api/ventas",
+                                            "host": [
+                                                "{{baseUrl}}"
+                                            ],
+                                            "path": [
+                                                "api",
+                                                "ventas"
+                                            ],
+                                            "query": [
+                                                {
+                                                    "key": "estado",
+                                                    "value": "",
+                                                    "disabled": true,
+                                                    "description": "pendiente, confirmada, preparada, entregada, facturada, pagada, cancelada"
+                                                },
+                                                {
+                                                    "key": "cliente_id",
+                                                    "value": "",
+                                                    "disabled": true,
+                                                    "description": "id del cliente"
+                                                },
+                                                {
+                                                    "key": "desde",
+                                                    "value": "",
+                                                    "disabled": true,
+                                                    "description": "AAAA-MM-DD"
+                                                },
+                                                {
+                                                    "key": "hasta",
+                                                    "value": "",
+                                                    "disabled": true,
+                                                    "description": "AAAA-MM-DD"
+                                                },
+                                                {
+                                                    "key": "texto",
+                                                    "value": "",
+                                                    "disabled": true,
+                                                    "description": "busca por número de factura u observaciones"
+                                                },
+                                                {
+                                                    "key": "por_pagina",
+                                                    "value": "",
+                                                    "disabled": true,
+                                                    "description": "solo con page"
+                                                },
+                                                {
+                                                    "key": "page",
+                                                    "value": "",
+                                                    "disabled": true,
+                                                    "description": "si se activa, pagina y agrega meta y links"
+                                                }
+                                            ]
+                                        }
+                                    },
+                                    "status": "Unauthorized",
+                                    "code": 401,
+                                    "_postman_previewlanguage": "json",
+                                    "header": [
+                                        {
+                                            "key": "Content-Type",
+                                            "value": "application/json"
+                                        },
+                                        {
+                                            "key": "Cache-Control",
+                                            "value": "no-store, private"
+                                        }
+                                    ],
+                                    "body": "{\n    \"message\": \"No autorizado.\"\n}"
+                                }
+                            ]
+                        },
+                        {
+                            "name": "GET /api/ventas (sin token → 401)",
+                            "event": [
+                                {
+                                    "listen": "test",
+                                    "script": {
+                                        "type": "text/javascript",
+                                        "exec": [
+                                            "pm.test(\"Sin token responde 401 No autorizado\", () => {",
+                                            "    pm.response.to.have.status(401);",
+                                            "    pm.expect(pm.response.json().message).to.eql(\"No autorizado.\");",
+                                            "});"
+                                        ]
+                                    }
+                                }
+                            ],
+                            "request": {
+                                "auth": {
+                                    "type": "noauth"
+                                },
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{baseUrl}}/api/ventas",
+                                    "host": [
+                                        "{{baseUrl}}"
+                                    ],
+                                    "path": [
+                                        "api",
+                                        "ventas"
+                                    ]
+                                },
+                                "description": "Mismo pedido que `GET /api/ventas` pero **sin** el header `Authorization`.\n\nMuestra que la API está protegida: responde **401** `{\"message\":\"No autorizado.\"}` y no devuelve ninguna venta."
+                            },
+                            "response": [
+                                {
+                                    "name": "401 - sin token",
+                                    "originalRequest": {
+                                        "method": "GET",
+                                        "header": [
+                                            {
+                                                "key": "Accept",
+                                                "value": "application/json"
+                                            }
+                                        ],
+                                        "url": {
+                                            "raw": "{{baseUrl}}/api/ventas",
+                                            "host": [
+                                                "{{baseUrl}}"
+                                            ],
+                                            "path": [
+                                                "api",
+                                                "ventas"
+                                            ],
+                                            "query": [
+                                                {
+                                                    "key": "estado",
+                                                    "value": "",
+                                                    "disabled": true,
+                                                    "description": "pendiente, confirmada, preparada, entregada, facturada, pagada, cancelada"
+                                                },
+                                                {
+                                                    "key": "cliente_id",
+                                                    "value": "",
+                                                    "disabled": true,
+                                                    "description": "id del cliente"
+                                                },
+                                                {
+                                                    "key": "desde",
+                                                    "value": "",
+                                                    "disabled": true,
+                                                    "description": "AAAA-MM-DD"
+                                                },
+                                                {
+                                                    "key": "hasta",
+                                                    "value": "",
+                                                    "disabled": true,
+                                                    "description": "AAAA-MM-DD"
+                                                },
+                                                {
+                                                    "key": "texto",
+                                                    "value": "",
+                                                    "disabled": true,
+                                                    "description": "busca por número de factura u observaciones"
+                                                },
+                                                {
+                                                    "key": "por_pagina",
+                                                    "value": "",
+                                                    "disabled": true,
+                                                    "description": "solo con page"
+                                                },
+                                                {
+                                                    "key": "page",
+                                                    "value": "",
+                                                    "disabled": true,
+                                                    "description": "si se activa, pagina y agrega meta y links"
+                                                }
+                                            ]
+                                        }
+                                    },
+                                    "status": "Unauthorized",
+                                    "code": 401,
+                                    "_postman_previewlanguage": "json",
+                                    "header": [
+                                        {
+                                            "key": "Content-Type",
+                                            "value": "application/json"
+                                        },
+                                        {
+                                            "key": "Cache-Control",
+                                            "value": "no-store, private"
+                                        }
+                                    ],
+                                    "body": "{\n    \"message\": \"No autorizado.\"\n}"
+                                }
+                            ]
                         },
                         {
                             "name": "GET /api/ventas/:id",
@@ -5587,6 +5915,11 @@
                                     {
                                         "key": "Accept",
                                         "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}",
+                                        "description": "Token que devuelve \"Login API (guarda token)\" en data.access_token"
                                     }
                                 ],
                                 "url": {
@@ -5607,7 +5940,10 @@
                                         }
                                     ]
                                 },
-                                "description": "**Acción:** `App\\Modules\\Ventas\\Controllers\\VentaApiController@show`\n\n**Acceso:** Sin autenticación declarada en la ruta."
+                                "description": "**Acción:** `App\\Modules\\Ventas\\Controllers\\VentaApiController@show`\n\n**Acceso:** Protegida. Header `Authorization: Bearer {{token}}` (token de `00 Autenticación > Login API`). Sin token, o con uno falso o vencido, responde 401 `{\"message\":\"No autorizado.\"}`.",
+                                "auth": {
+                                    "type": "noauth"
+                                }
                             },
                             "response": []
                         },
@@ -5619,6 +5955,11 @@
                                     {
                                         "key": "Accept",
                                         "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}",
+                                        "description": "Token que devuelve \"Login API (guarda token)\" en data.access_token"
                                     }
                                 ],
                                 "url": {
@@ -5670,7 +6011,10 @@
                                         }
                                     ]
                                 },
-                                "description": "**Acción:** `App\\Modules\\Ventas\\Controllers\\VentaApiController@porCliente`\n\n**Acceso:** Sin autenticación declarada en la ruta.\n\nVentas de un cliente, con `desde` y `hasta` opcionales (formato AAAA-MM-DD). Mismo formato que `GET /api/ventas`. Sin `page` devuelve todas las ventas que cumplen el filtro; con `page` pagina. 404 si el cliente no existe, 422 si las fechas son inválidas."
+                                "description": "**Acción:** `App\\Modules\\Ventas\\Controllers\\VentaApiController@porCliente`\n\n**Acceso:** Protegida. Header `Authorization: Bearer {{token}}` (token de `00 Autenticación > Login API`). Sin token, o con uno falso o vencido, responde 401 `{\"message\":\"No autorizado.\"}`.\n\nVentas de un cliente, con `desde` y `hasta` opcionales (formato AAAA-MM-DD). Mismo formato que `GET /api/ventas`. Sin `page` devuelve todas las ventas que cumplen el filtro; con `page` pagina. 404 si el cliente no existe, 422 si las fechas son inválidas.",
+                                "auth": {
+                                    "type": "noauth"
+                                }
                             },
                             "response": []
                         },
@@ -5682,6 +6026,11 @@
                                     {
                                         "key": "Accept",
                                         "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}",
+                                        "description": "Token que devuelve \"Login API (guarda token)\" en data.access_token"
                                     }
                                 ],
                                 "url": {
@@ -5707,7 +6056,10 @@
                                         }
                                     ]
                                 },
-                                "description": "**Acción:** `App\\Modules\\Ventas\\Controllers\\VentaApiController@localidades`\n\n**Acceso:** Sin autenticación declarada en la ruta.\n\nEstadísticas: resumen de ventas por localidad (cantidad de ventas, total vendido, ticket promedio, clientes con compras), de mayor a menor total. `desde` y `hasta` opcionales (AAAA-MM-DD). Las ventas anuladas no suman. 422 si las fechas son inválidas."
+                                "description": "**Acción:** `App\\Modules\\Ventas\\Controllers\\VentaApiController@localidades`\n\n**Acceso:** Protegida. Header `Authorization: Bearer {{token}}` (token de `00 Autenticación > Login API`). Sin token, o con uno falso o vencido, responde 401 `{\"message\":\"No autorizado.\"}`.\n\nEstadísticas: resumen de ventas por localidad (cantidad de ventas, total vendido, ticket promedio, clientes con compras), de mayor a menor total. `desde` y `hasta` opcionales (AAAA-MM-DD). Las ventas anuladas no suman. 422 si las fechas son inválidas.",
+                                "auth": {
+                                    "type": "noauth"
+                                }
                             },
                             "response": []
                         },
@@ -5719,6 +6071,11 @@
                                     {
                                         "key": "Accept",
                                         "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}",
+                                        "description": "Token que devuelve \"Login API (guarda token)\" en data.access_token"
                                     }
                                 ],
                                 "url": {
@@ -5752,7 +6109,10 @@
                                         }
                                     ]
                                 },
-                                "description": "**Acción:** `App\\Modules\\Ventas\\Controllers\\VentaApiController@localidad`\n\n**Acceso:** Sin autenticación declarada en la ruta.\n\nEstadísticas de una localidad: cantidad de ventas, total vendido, ticket promedio, ventas por estado, clientes y los 10 productos más vendidos. La localidad se busca por nombre porque Clientes no le asigna un id. `desde` y `hasta` opcionales. 404 si la localidad no tiene clientes, 422 si las fechas son inválidas."
+                                "description": "**Acción:** `App\\Modules\\Ventas\\Controllers\\VentaApiController@localidad`\n\n**Acceso:** Protegida. Header `Authorization: Bearer {{token}}` (token de `00 Autenticación > Login API`). Sin token, o con uno falso o vencido, responde 401 `{\"message\":\"No autorizado.\"}`.\n\nEstadísticas de una localidad: cantidad de ventas, total vendido, ticket promedio, ventas por estado, clientes y los 10 productos más vendidos. La localidad se busca por nombre porque Clientes no le asigna un id. `desde` y `hasta` opcionales. 404 si la localidad no tiene clientes, 422 si las fechas son inválidas.",
+                                "auth": {
+                                    "type": "noauth"
+                                }
                             },
                             "response": []
                         },
@@ -5764,6 +6124,11 @@
                                     {
                                         "key": "Accept",
                                         "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}",
+                                        "description": "Token que devuelve \"Login API (guarda token)\" en data.access_token"
                                     }
                                 ],
                                 "url": {
@@ -5777,7 +6142,10 @@
                                         "clientes"
                                     ]
                                 },
-                                "description": "**Acción:** `App\\Modules\\Ventas\\Controllers\\VentaApiController@clientes`\n\n**Acceso:** Sin autenticación declarada en la ruta."
+                                "description": "**Acción:** `App\\Modules\\Ventas\\Controllers\\VentaApiController@clientes`\n\n**Acceso:** Protegida. Header `Authorization: Bearer {{token}}` (token de `00 Autenticación > Login API`). Sin token, o con uno falso o vencido, responde 401 `{\"message\":\"No autorizado.\"}`.",
+                                "auth": {
+                                    "type": "noauth"
+                                }
                             },
                             "response": []
                         },
@@ -5789,6 +6157,11 @@
                                     {
                                         "key": "Accept",
                                         "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}",
+                                        "description": "Token que devuelve \"Login API (guarda token)\" en data.access_token"
                                     }
                                 ],
                                 "url": {
@@ -5802,7 +6175,10 @@
                                         "estados"
                                     ]
                                 },
-                                "description": "**Acción:** `App\\Modules\\Ventas\\Controllers\\VentaApiController@estados`\n\n**Acceso:** Sin autenticación declarada en la ruta."
+                                "description": "**Acción:** `App\\Modules\\Ventas\\Controllers\\VentaApiController@estados`\n\n**Acceso:** Protegida. Header `Authorization: Bearer {{token}}` (token de `00 Autenticación > Login API`). Sin token, o con uno falso o vencido, responde 401 `{\"message\":\"No autorizado.\"}`.",
+                                "auth": {
+                                    "type": "noauth"
+                                }
                             },
                             "response": []
                         },
@@ -5814,6 +6190,11 @@
                                     {
                                         "key": "Accept",
                                         "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}",
+                                        "description": "Token que devuelve \"Login API (guarda token)\" en data.access_token"
                                     }
                                 ],
                                 "url": {
@@ -5827,7 +6208,10 @@
                                         "productos"
                                     ]
                                 },
-                                "description": "**Acción:** `App\\Modules\\Ventas\\Controllers\\VentaApiController@productos`\n\n**Acceso:** Sin autenticación declarada en la ruta."
+                                "description": "**Acción:** `App\\Modules\\Ventas\\Controllers\\VentaApiController@productos`\n\n**Acceso:** Protegida. Header `Authorization: Bearer {{token}}` (token de `00 Autenticación > Login API`). Sin token, o con uno falso o vencido, responde 401 `{\"message\":\"No autorizado.\"}`.",
+                                "auth": {
+                                    "type": "noauth"
+                                }
                             },
                             "response": []
                         },
@@ -5839,6 +6223,11 @@
                                     {
                                         "key": "Accept",
                                         "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}",
+                                        "description": "Token que devuelve \"Login API (guarda token)\" en data.access_token"
                                     }
                                 ],
                                 "url": {
@@ -5852,7 +6241,10 @@
                                         "productos-simulados"
                                     ]
                                 },
-                                "description": "**Acción:** `App\\Modules\\Ventas\\Controllers\\VentaController@obtenerProductosSimulados`\n\n**Acceso:** Sin autenticación declarada en la ruta."
+                                "description": "**Acción:** `App\\Modules\\Ventas\\Controllers\\VentaController@obtenerProductosSimulados`\n\n**Acceso:** Protegida. Header `Authorization: Bearer {{token}}` (token de `00 Autenticación > Login API`). Sin token, o con uno falso o vencido, responde 401 `{\"message\":\"No autorizado.\"}`.",
+                                "auth": {
+                                    "type": "noauth"
+                                }
                             },
                             "response": []
                         },
@@ -5868,6 +6260,11 @@
                                     {
                                         "key": "Content-Type",
                                         "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}",
+                                        "description": "Token que devuelve \"Login API (guarda token)\" en data.access_token"
                                     }
                                 ],
                                 "url": {
@@ -5889,7 +6286,7 @@
                                         }
                                     ]
                                 },
-                                "description": "**Acción:** `App\\Modules\\Ventas\\Controllers\\VentaApiController@cambiarEstado`\n\n**Acceso:** Sin autenticación declarada en la ruta.\n\n**Campos obligatorios:** `estado`",
+                                "description": "**Acción:** `App\\Modules\\Ventas\\Controllers\\VentaApiController@cambiarEstado`\n\n**Acceso:** Protegida. Header `Authorization: Bearer {{token}}` (token de `00 Autenticación > Login API`). Sin token, o con uno falso o vencido, responde 401 `{\"message\":\"No autorizado.\"}`.\n\n**Campos obligatorios:** `estado`",
                                 "body": {
                                     "mode": "raw",
                                     "raw": "{\n    \"estado\": \"pendiente\",\n    \"motivo\": \"texto\"\n}",
@@ -5898,6 +6295,9 @@
                                             "language": "json"
                                         }
                                     }
+                                },
+                                "auth": {
+                                    "type": "noauth"
                                 }
                             },
                             "response": []
@@ -5914,6 +6314,11 @@
                                     {
                                         "key": "Content-Type",
                                         "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}",
+                                        "description": "Token que devuelve \"Login API (guarda token)\" en data.access_token"
                                     }
                                 ],
                                 "url": {
@@ -5926,7 +6331,7 @@
                                         "ventas"
                                     ]
                                 },
-                                "description": "**Acción:** `App\\Modules\\Ventas\\Controllers\\VentaController@store`\n\n**Acceso:** Sin autenticación declarada en la ruta.\n\n**Campos obligatorios:** `cliente_id`, `lista`, `items`, `items.*.id`, `items.*.cantidad`, `items.*.descuento`",
+                                "description": "**Acción:** `App\\Modules\\Ventas\\Controllers\\VentaController@store`\n\n**Acceso:** Protegida. Header `Authorization: Bearer {{token}}` (token de `00 Autenticación > Login API`). Sin token, o con uno falso o vencido, responde 401 `{\"message\":\"No autorizado.\"}`.\n\n**Campos obligatorios:** `cliente_id`, `lista`, `items`, `items.*.id`, `items.*.cantidad`, `items.*.descuento`",
                                 "body": {
                                     "mode": "raw",
                                     "raw": "{\n    \"cliente_id\": 1,\n    \"lista\": \"minorista\",\n    \"observaciones\": \"texto\",\n    \"items\": [\n        {\n            \"id\": 1,\n            \"cantidad\": 1,\n            \"descuento\": 100,\n            \"id_promocion\": 1\n        }\n    ],\n    \"descuento_global\": {\n        \"modo\": \"porcentaje\",\n        \"valor\": 100\n    }\n}",
@@ -5935,6 +6340,9 @@
                                             "language": "json"
                                         }
                                     }
+                                },
+                                "auth": {
+                                    "type": "noauth"
                                 }
                             },
                             "response": []
@@ -5951,6 +6359,11 @@
                                     {
                                         "key": "Content-Type",
                                         "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}",
+                                        "description": "Token que devuelve \"Login API (guarda token)\" en data.access_token"
                                     }
                                 ],
                                 "url": {
@@ -5972,7 +6385,7 @@
                                         }
                                     ]
                                 },
-                                "description": "**Acción:** `App\\Modules\\Ventas\\Controllers\\VentaApiController@restaurar`\n\n**Acceso:** Sin autenticación declarada en la ruta.",
+                                "description": "**Acción:** `App\\Modules\\Ventas\\Controllers\\VentaApiController@restaurar`\n\n**Acceso:** Protegida. Header `Authorization: Bearer {{token}}` (token de `00 Autenticación > Login API`). Sin token, o con uno falso o vencido, responde 401 `{\"message\":\"No autorizado.\"}`.",
                                 "body": {
                                     "mode": "raw",
                                     "raw": "{}",
@@ -5981,6 +6394,9 @@
                                             "language": "json"
                                         }
                                     }
+                                },
+                                "auth": {
+                                    "type": "noauth"
                                 }
                             },
                             "response": []
@@ -5997,6 +6413,11 @@
                                     {
                                         "key": "Content-Type",
                                         "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}",
+                                        "description": "Token que devuelve \"Login API (guarda token)\" en data.access_token"
                                     }
                                 ],
                                 "url": {
@@ -6017,7 +6438,7 @@
                                         }
                                     ]
                                 },
-                                "description": "**Acción:** `App\\Modules\\Ventas\\Controllers\\VentaApiController@update`\n\n**Acceso:** Sin autenticación declarada en la ruta.\n\n**Campos obligatorios:** `lista`, `items`, `items.*.id`, `items.*.cantidad`, `items.*.descuento`",
+                                "description": "**Acción:** `App\\Modules\\Ventas\\Controllers\\VentaApiController@update`\n\n**Acceso:** Protegida. Header `Authorization: Bearer {{token}}` (token de `00 Autenticación > Login API`). Sin token, o con uno falso o vencido, responde 401 `{\"message\":\"No autorizado.\"}`.\n\n**Campos obligatorios:** `lista`, `items`, `items.*.id`, `items.*.cantidad`, `items.*.descuento`",
                                 "body": {
                                     "mode": "raw",
                                     "raw": "{\n    \"lista\": \"minorista\",\n    \"observaciones\": \"texto\",\n    \"items\": [\n        {\n            \"id\": 1,\n            \"cantidad\": 1,\n            \"descuento\": 100,\n            \"id_promocion\": 1\n        }\n    ],\n    \"descuento_global\": {\n        \"modo\": \"porcentaje\",\n        \"valor\": 100\n    }\n}",
@@ -6026,6 +6447,9 @@
                                             "language": "json"
                                         }
                                     }
+                                },
+                                "auth": {
+                                    "type": "noauth"
                                 }
                             },
                             "response": []

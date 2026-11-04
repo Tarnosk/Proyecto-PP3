@@ -538,10 +538,12 @@
     // ---------- BOTONES DE PRUEBA: modificar / eliminar / restaurar / cambiar estado ----------
     // Llaman a la API de app/Modules/Ventas/Controllers/VentaApiController.php (ver docs/VENTAS-BACKEND.md).
     // Muestran la respuesta del back en un alert y recargan la página.
+    // Los cambios mandan X-CSRF-TOKEN: la API de Ventas lo exige cuando se usa la sesión web.
+    const CSRF = document.querySelector('meta[name="csrf-token"]').content;
     async function llamarApi(metodo, url, body) {
         const respuesta = await fetch(url, {
             method: metodo,
-            headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+            headers: { 'Accept': 'application/json', 'Content-Type': 'application/json', 'X-CSRF-TOKEN': CSRF },
             body: body ? JSON.stringify(body) : undefined,
         });
         const json = await respuesta.json().catch(() => ({}));
@@ -720,7 +722,7 @@
 
                 const r = await fetch(`/api/ventas/${id}`, {
                     method: 'PUT',
-                    headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+                    headers: { 'Accept': 'application/json', 'Content-Type': 'application/json', 'X-CSRF-TOKEN': CSRF },
                     body: JSON.stringify(cuerpo),
                 });
                 const json = await r.json().catch(() => ({}));
