@@ -22,8 +22,9 @@ Route::prefix('catalogo')->name('catalogo.')->withoutMiddleware([
     Route::get('/{producto}', [CatalogoController::class, 'show'])->where('producto', '[1-9][0-9]{0,9}')->name('show');
 });
 
-Route::get('/', fn () => view('hub'))->name('hub');
-Route::get('/hub', fn () => view('hub'))->name('hub.direct');
+Route::get('/', fn () => auth()->check()
+    ? redirect()->route('dashboard')
+    : redirect()->route('login'));
 
 Route::middleware('guest')->group(function (): void {
     Route::get('/login', [AuthenticatedSessionController::class, 'create'])->name('login');

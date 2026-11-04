@@ -45,7 +45,6 @@ Route::middleware(['auth', 'session.current', G2Access::class.':admin,contador,a
 // GET /api/cobranzas-erp
 // GET /api/cobranzas-erp/{id}
 Route::middleware(['web'])->group(function () {
-    Route::get('/conciliacion/split', fn() => view('conciliacion.split-screen'))->name('conciliacion.split');
     Route::get('/api/movimientos-bancarios', [MovimientoBancarioController::class, 'index']);
     Route::get('/api/movimientos-bancarios/{id}', [MovimientoBancarioController::class, 'show'])->whereNumber('id');
     Route::post('/api/extractos/importar', [MovimientoBancarioController::class, 'importar']);
