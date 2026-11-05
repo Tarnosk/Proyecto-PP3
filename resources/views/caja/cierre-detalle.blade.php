@@ -17,6 +17,10 @@
 
     <a href="{{ route('caja.cierres.index') }}" class="clay-btn-secondary link-volver">← Volver al historial</a>
 
+    @if (!empty($puedeExportarPdf))
+        <a href="{{ route('caja.cierres.pdf.detalle', $cierre['id_caja']) }}" class="clay-btn-secondary">Exportar PDF</a>
+    @endif
+
     @if (session('mensaje'))
         <div class="alerta">{{ session('mensaje') }}</div>
     @endif

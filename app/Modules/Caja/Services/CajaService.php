@@ -48,6 +48,10 @@ class CajaService
             return ['error' => true, 'mensaje' => 'El monto inicial no puede ser negativo.'];
         }
 
+        if ($montoInicial > Caja::MONTO_MAXIMO) {
+            return ['error' => true, 'mensaje' => Caja::MENSAJE_MONTO_MAXIMO];
+        }
+
         $caja = $this->repositorio->crear([
             'id_usuario' => $idUsuarioSesion,
             'fecha' => $ahora->toDateString(),
@@ -144,6 +148,10 @@ class CajaService
             return ['error' => true, 'mensaje' => 'La caja ya está cerrada.'];
         }
 
+        if ($montoFinal > Caja::MONTO_MAXIMO) {
+            return ['error' => true, 'mensaje' => Caja::MENSAJE_MONTO_MAXIMO];
+        }
+
         $saldoEsperado = round((float) $caja->monto_inicial + $this->repositorio->calcularSaldoMovimientos($idCaja), 2);
         $diferencia = round($montoFinal - $saldoEsperado, 2);
 
@@ -238,6 +246,10 @@ class CajaService
             return ['error' => true, 'mensaje' => 'Esta caja no está pendiente de conteo.'];
         }
 
+        if ($montoFinal > Caja::MONTO_MAXIMO) {
+            return ['error' => true, 'mensaje' => Caja::MENSAJE_MONTO_MAXIMO];
+        }
+
         $caja->monto_final = $montoFinal;
         $caja->diferencia = round($montoFinal - (float) $caja->monto_esperado, 2);
         $caja->id_usuario_cierre = $idUsuarioSesion;
@@ -308,6 +320,10 @@ class CajaService
 
         if ($monto <= 0) {
             return ['error' => true, 'mensaje' => 'El monto debe ser mayor a cero.'];
+        }
+
+        if ($monto > Caja::MONTO_MAXIMO) {
+            return ['error' => true, 'mensaje' => Caja::MENSAJE_MONTO_MAXIMO];
         }
 
         if (!in_array($medioPago, CajaMovimiento::MEDIOS_VALIDOS, true)) {
@@ -405,6 +421,10 @@ class CajaService
             return ['error' => true, 'mensaje' => 'El monto debe ser mayor a cero.'];
         }
 
+        if ($monto > Caja::MONTO_MAXIMO) {
+            return ['error' => true, 'mensaje' => Caja::MENSAJE_MONTO_MAXIMO];
+        }
+
         if (!in_array($medioPago, CajaMovimiento::MEDIOS_VALIDOS, true)) {
             return ['error' => true, 'mensaje' => 'Medio de pago no válido.'];
         }
@@ -443,6 +463,10 @@ class CajaService
 
         if ($monto <= 0) {
             return ['error' => true, 'mensaje' => 'El monto debe ser mayor a cero.'];
+        }
+
+        if ($monto > Caja::MONTO_MAXIMO) {
+            return ['error' => true, 'mensaje' => Caja::MENSAJE_MONTO_MAXIMO];
         }
 
         if ($movimiento->id_caja !== null) {

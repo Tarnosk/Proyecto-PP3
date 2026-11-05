@@ -17,6 +17,20 @@ class Caja extends Model
 
     public const ROL_ADMIN = 'admin';
     public const ROL_REPARTIDOR = 'repartidor';
+    public const ROL_CONTADOR = 'contador';
+
+    /**
+     * Tope de negocio para cualquier monto cargado. Las columnas de la base son
+     * decimal(12,2) (hasta 9.999.999.999,99): el tope evita errores de tipeo y
+     * que MySQL devuelva un error 500 por "out of range".
+     */
+    public const MONTO_MAXIMO = 99999999.99;
+    public const MENSAJE_MONTO_MAXIMO = 'El monto no puede superar $99.999.999,99.';
+    public const MENSAJES_MONTO = [
+        'monto_inicial.max' => self::MENSAJE_MONTO_MAXIMO,
+        'monto_final.max' => self::MENSAJE_MONTO_MAXIMO,
+        'monto.max' => self::MENSAJE_MONTO_MAXIMO,
+    ];
 
     /** Horas antes del vencimiento desde las que se avisa que la caja está por vencer. */
     public const HORAS_AVISO_VENCIMIENTO = 24;
@@ -139,10 +153,27 @@ class Caja extends Model
     }
 
     /**
-     * Solo admin y repartidor manejan caja. El vendedor no.
+     * Solo admin y repartidor manejan caja (abren, cierran, cargan movimientos).
+     * El contador es solo lectura y el vendedor no existe en caja.
      */
     public static function rolManejaCaja(string $rol): bool
     {
         return in_array($rol, [self::ROL_ADMIN, self::ROL_REPARTIDOR], true);
+    }
+
+    /**
+     * Roles que ven los cierres de todos los usuarios. El repartidor solo ve los suyos.
+     */
+    public static function rolVeTodasLasCajas(string $rol): bool
+    {
+        return in_array($rol, [self::ROL_ADMIN, self::ROL_CONTADOR], true);
+    }
+
+    /**
+     * Roles que exportan cierres a PDF (documento de solo lectura).
+     */
+    public static function rolExportaPdf(string $rol): bool
+    {
+        return self::rolVeTodasLasCajas($rol);
     }
 }
