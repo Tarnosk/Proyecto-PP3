@@ -2,6 +2,7 @@
 @section('title', 'Entregas y Despacho')
 @push('styles')
 <link rel="stylesheet" href="{{ asset('css/g2.css') }}">
+<link rel="stylesheet" href="{{ asset('css/pigue-claymorphism.css') }}">
 @endpush
 @section('content')
 <div class="g2-page" data-g2-role="{{ \App\Modules\Shared\Auth\G2Identity::role() }}">
@@ -22,7 +23,11 @@
             </div>
             <div class="page-header-actions" style="display: flex; gap: 0.5rem; align-items: center;">
                 <button class="clay-btn clay-btn-secondary" onclick="consultarVentasGrupo4()" id="btnVentasG4" title="Consultar pedidos confirmados en la API de Ventas (Grupo 4)">
-                    <span aria-hidden="true">🛒</span>
+                    <svg class="icon-svg" viewBox="0 0 24 24" aria-hidden="true">
+                        <circle cx="9" cy="21" r="1"/>
+                        <circle cx="20" cy="21" r="1"/>
+                        <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
+                    </svg>
                     <span>API Ventas (G4)</span>
                 </button>
                 <button class="clay-btn clay-btn-secondary btn-spin" onclick="cargarPedidosPendientes()" title="Actualizar datos" aria-label="Actualizar lista de pedidos">
@@ -38,7 +43,14 @@
         <section class="clay-card" aria-labelledby="seccion-pedidos-title">
             <div class="clay-card-header">
                 <h3 class="clay-card-title" id="seccion-pedidos-title">
-                    <span class="card-icon" aria-hidden="true">📋</span>
+                    <span class="card-icon" aria-hidden="true">
+                        <svg class="icon-svg" viewBox="0 0 24 24" aria-hidden="true" style="stroke: #1D4ED8;">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                            <polyline points="14 2 14 8 20 8"/>
+                            <line x1="16" y1="13" x2="8" y2="13"/>
+                            <line x1="16" y1="17" x2="8" y2="17"/>
+                        </svg>
+                    </span>
                     1. Pedidos Confirmados — Pendientes de Despacho
                 </h3>
                 <div class="filter-group">
@@ -75,7 +87,13 @@
                         <tr>
                             <td colspan="8">
                                 <div class="table-empty">
-                                    <span class="table-empty-icon">📦</span>
+                                    <span class="table-empty-icon">
+                                        <svg class="icon-svg icon-svg-lg" viewBox="0 0 24 24" aria-hidden="true" style="stroke: var(--text-muted); width: 28px; height: 28px;">
+                                            <polyline points="21 8 21 21 3 21 3 8"/>
+                                            <rect x="1" y="3" width="22" height="5"/>
+                                            <line x1="10" y1="12" x2="14" y2="12"/>
+                                        </svg>
+                                    </span>
                                     Cargando pedidos confirmados…
                                 </div>
                             </td>
@@ -107,7 +125,13 @@
         <!-- SECCIÓN 2: ARMAR ENTREGA -->
         <section class="clay-card" aria-labelledby="seccion-armar-title">
             <h3 class="clay-card-title" id="seccion-armar-title" style="margin-bottom: 1.25rem;">
-                <span class="card-icon" aria-hidden="true">🗺️</span>
+                <span class="card-icon" aria-hidden="true">
+                    <svg class="icon-svg" viewBox="0 0 24 24" aria-hidden="true" style="stroke: #1D4ED8;">
+                        <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/>
+                        <line x1="8" y1="2" x2="8" y2="18"/>
+                        <line x1="16" y1="6" x2="16" y2="22"/>
+                    </svg>
+                </span>
                 2. Armar Entrega y Emitir Remitos de Transporte
             </h3>
 
@@ -148,7 +172,14 @@
         <!-- SECCIÓN 3: HISTORIAL DE VIAJES -->
         <section class="clay-card" aria-labelledby="seccion-viajes-title">
             <h3 class="clay-card-title" id="seccion-viajes-title" style="margin-bottom: 1.25rem;">
-                <span class="card-icon" aria-hidden="true">🚛</span>
+                <span class="card-icon" aria-hidden="true">
+                    <svg class="icon-svg" viewBox="0 0 24 24" aria-hidden="true" style="stroke: #1D4ED8;">
+                        <rect x="1" y="3" width="15" height="13"/>
+                        <polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/>
+                        <circle cx="5.5" cy="18.5" r="2.5"/>
+                        <circle cx="18.5" cy="18.5" r="2.5"/>
+                    </svg>
+                </span>
                 3. Viajes de Reparto Creados — Historial
             </h3>
             <div class="table-responsive" role="region" aria-label="Historial de viajes" tabindex="0">
@@ -168,7 +199,14 @@
                         <tr>
                             <td colspan="7">
                                 <div class="table-empty">
-                                    <span class="table-empty-icon">🚛</span>
+                                    <span class="table-empty-icon">
+                                        <svg class="icon-svg icon-svg-lg" viewBox="0 0 24 24" aria-hidden="true" style="stroke: var(--text-muted); width: 28px; height: 28px;">
+                                            <rect x="1" y="3" width="15" height="13"/>
+                                            <polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/>
+                                            <circle cx="5.5" cy="18.5" r="2.5"/>
+                                            <circle cx="18.5" cy="18.5" r="2.5"/>
+                                        </svg>
+                                    </span>
                                     Cargando viajes de reparto…
                                 </div>
                             </td>
@@ -185,7 +223,6 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h3 class="modal-title" id="modalArticulosTitulo">
-                    <span aria-hidden="true">📦</span>
                     Detalle del Pedido
                 </h3>
                 <button class="modal-close" onclick="cerrarModalArticulos()" aria-label="Cerrar modal">✕</button>
@@ -224,7 +261,6 @@
         <div class="modal-content" style="max-width: 780px;">
             <div class="modal-header no-print">
                 <h3 class="modal-title" id="modalRemitoTitulo">
-                    <span aria-hidden="true">🖨️</span>
                     Comprobante de Remito
                 </h3>
                 <div style="display: flex; gap: 0.65rem;">
@@ -298,7 +334,6 @@
         <div class="modal-content" style="max-width: 960px;">
             <div class="modal-header">
                 <h3 class="modal-title" id="modalHojaRutaTitulo">
-                    <span aria-hidden="true">🗺️</span>
                     Hoja de Ruta de Reparto — Control de Entregas
                 </h3>
                 <button class="modal-close" onclick="cerrarModalHojaRuta()" aria-label="Cerrar modal">✕</button>
@@ -320,7 +355,7 @@
             </div>
 
             <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 0.85rem;">
-                ℹ️ Como repartidor, confirme cada pedido entregado al finalizar la descarga en el cliente para notificar a la distribuidora en tiempo real.
+                Como repartidor, confirme cada pedido entregado al finalizar la descarga en el cliente para notificar a la distribuidora en tiempo real.
             </p>
 
             <div class="table-responsive">
@@ -346,7 +381,7 @@
 
             <div class="modal-footer" style="margin-top: 1.25rem; display: flex; justify-content: space-between; align-items: center;">
                 <span style="font-size: 0.85rem; color: var(--success); font-weight: 600;">
-                    ✅ Los pedidos entregados se precargan automáticamente en Rendiciones para la administración.
+                    Los pedidos entregados se precargan automáticamente en Rendiciones para la administración.
                 </span>
                 <button class="clay-btn clay-btn-primary" onclick="cerrarModalHojaRuta()">Cerrar</button>
             </div>

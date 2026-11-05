@@ -23,8 +23,8 @@ body.erp-shell.erp-sidebar-collapsed { padding-left: 0; }
     padding: 10px 20px;
     box-sizing: border-box;
     background: #fff;
-    border-bottom: 1px solid #dfd0b8;
-    font-family: Arial, Helvetica, sans-serif;
+    border-bottom: 1px solid #cbd5e1;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
 }
 .erp-sidebar-collapsed .erp-toolbar { left: 0; }
 .erp-toolbar-controls { display: flex; flex: none; gap: 10px; }
@@ -37,9 +37,9 @@ body.erp-shell.erp-sidebar-collapsed { padding-left: 0; }
     height: 44px;
     min-height: 44px;
     padding: 10px;
-    border: 1px solid #dfd0b8;
+    border: 1px solid #cbd5e1;
     border-radius: 8px;
-    background: #fffaf0;
+    background: #f8fafc;
     color: #075bd8;
     cursor: pointer;
     text-decoration: none;

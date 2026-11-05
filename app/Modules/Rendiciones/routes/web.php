@@ -12,6 +12,7 @@ Route::middleware(['auth', 'session.current', G2Access::class.':admin,repartidor
         Route::get('/', [RendicionController::class, 'index']);
         Route::get('/historial', [RendicionController::class, 'index']);
         Route::get('/preparar/{idEntrega}', [RendicionController::class, 'preparar'])->whereNumber('idEntrega')->middleware(G2OwnsRecord::class.':preparar');
+        Route::get('/buscar-clientes', [RendicionController::class, 'buscarClientes']);
         Route::get('/{id}', [RendicionController::class, 'show'])->whereNumber('id')->middleware(G2OwnsRecord::class.':rendicion');
         Route::post('/', [RendicionController::class, 'store']);
         Route::post('/cobros', [RendicionController::class, 'agregarCobroDirecto'])->middleware(G2OwnsRecord::class.':rendicion');

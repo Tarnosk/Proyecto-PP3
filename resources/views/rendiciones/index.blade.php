@@ -2,6 +2,7 @@
 @section('title', 'Rendiciones y Cobros')
 @push('styles')
 <link rel="stylesheet" href="{{ asset('css/g2.css') }}">
+<link rel="stylesheet" href="{{ asset('css/pigue-claymorphism.css') }}">
 @endpush
 @section('content')
 <div class="g2-page" data-g2-role="{{ \App\Modules\Shared\Auth\G2Identity::role() }}">
@@ -28,7 +29,12 @@
                     <span>Actualizar</span>
                 </button>
                 <button class="clay-btn clay-btn-secondary" onclick="abrirModalDevolucion()">
-                    📦 Devolución
+                    <svg class="icon-svg" viewBox="0 0 24 24" aria-hidden="true">
+                        <polyline points="21 8 21 21 3 21 3 8"/>
+                        <rect x="1" y="3" width="22" height="5"/>
+                        <line x1="10" y1="12" x2="14" y2="12"/>
+                    </svg>
+                    <span>Devolución</span>
                 </button>
                 <button class="clay-btn clay-btn-primary" onclick="abrirModalNuevaRendicion()" id="btnNuevaRendicion">
                     <svg class="icon-svg icon-svg-lg" viewBox="0 0 24 24" aria-hidden="true">
@@ -43,28 +49,52 @@
         <!-- KPI SUMMARY -->
         <div class="kpi-grid" role="region" aria-label="Indicadores clave">
             <div class="kpi-card">
-                <div class="kpi-icon" style="background: linear-gradient(135deg, #DBEAFE, #BFDBFE);">📋</div>
+                <div class="kpi-icon" style="background: linear-gradient(135deg, #DBEAFE, #BFDBFE);">
+                    <svg class="icon-svg icon-svg-lg" viewBox="0 0 24 24" aria-hidden="true" style="stroke: #1D4ED8;">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                        <polyline points="14 2 14 8 20 8"/>
+                        <line x1="16" y1="13" x2="8" y2="13"/>
+                        <line x1="16" y1="17" x2="8" y2="17"/>
+                        <polyline points="10 9 9 9 8 9"/>
+                    </svg>
+                </div>
                 <div class="kpi-body">
                     <div class="kpi-label">Rendiciones Hoy</div>
                     <div class="kpi-value" id="kpiTotalRendiciones">—</div>
                 </div>
             </div>
             <div class="kpi-card">
-                <div class="kpi-icon" style="background: linear-gradient(135deg, #FEF3C7, #FDE68A);">⏳</div>
+                <div class="kpi-icon" style="background: linear-gradient(135deg, #FEF3C7, #FDE68A);">
+                    <svg class="icon-svg icon-svg-lg" viewBox="0 0 24 24" aria-hidden="true" style="stroke: #B45309;">
+                        <circle cx="12" cy="12" r="10"/>
+                        <polyline points="12 6 12 12 16 14"/>
+                    </svg>
+                </div>
                 <div class="kpi-body">
                     <div class="kpi-label">Pendientes Revisión</div>
                     <div class="kpi-value" id="kpiPendientes" style="color: var(--warning);">—</div>
                 </div>
             </div>
             <div class="kpi-card">
-                <div class="kpi-icon" style="background: linear-gradient(135deg, #D1FAE5, #6EE7B7);">✅</div>
+                <div class="kpi-icon" style="background: linear-gradient(135deg, #D1FAE5, #6EE7B7);">
+                    <svg class="icon-svg icon-svg-lg" viewBox="0 0 24 24" aria-hidden="true" style="stroke: #047857;">
+                        <line x1="12" y1="1" x2="12" y2="23"/>
+                        <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+                    </svg>
+                </div>
                 <div class="kpi-body">
                     <div class="kpi-label">Cobros Liquidados</div>
                     <div class="kpi-value" id="kpiTotalDinero" style="color: var(--success);">—</div>
                 </div>
             </div>
             <div class="kpi-card">
-                <div class="kpi-icon" style="background: linear-gradient(135deg, #FEE2E2, #FCA5A5);">❌</div>
+                <div class="kpi-icon" style="background: linear-gradient(135deg, #FEE2E2, #FCA5A5);">
+                    <svg class="icon-svg icon-svg-lg" viewBox="0 0 24 24" aria-hidden="true" style="stroke: #B91C1C;">
+                        <circle cx="12" cy="12" r="10"/>
+                        <line x1="15" y1="9" x2="9" y2="15"/>
+                        <line x1="9" y1="9" x2="15" y2="15"/>
+                    </svg>
+                </div>
                 <div class="kpi-body">
                     <div class="kpi-label">Rechazadas</div>
                     <div class="kpi-value" id="kpiRechazadas" style="color: var(--danger);">—</div>
@@ -75,7 +105,13 @@
         <!-- TABLA & FILTROS -->
         <section class="clay-card" aria-labelledby="seccion-rendiciones-title">
             <h3 class="clay-card-title" id="seccion-rendiciones-title" style="margin-bottom: 1.25rem;">
-                <span class="card-icon" aria-hidden="true">📊</span>
+                <span class="card-icon" aria-hidden="true">
+                    <svg class="icon-svg" viewBox="0 0 24 24" aria-hidden="true" style="stroke: #1D4ED8;">
+                        <line x1="18" y1="20" x2="18" y2="10"/>
+                        <line x1="12" y1="20" x2="12" y2="4"/>
+                        <line x1="6" y1="20" x2="6" y2="14"/>
+                    </svg>
+                </span>
                 Listado de Rendiciones
             </h3>
 
@@ -152,7 +188,12 @@
                         <tr>
                             <td colspan="8">
                                 <div class="table-empty">
-                                    <span class="table-empty-icon">📋</span>
+                                    <span class="table-empty-icon">
+                                        <svg class="icon-svg icon-svg-lg" viewBox="0 0 24 24" aria-hidden="true" style="stroke: var(--text-muted); width: 28px; height: 28px;">
+                                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                            <polyline points="14 2 14 8 20 8"/>
+                                        </svg>
+                                    </span>
                                     Cargando rendiciones…
                                 </div>
                             </td>
@@ -169,7 +210,6 @@
         <div class="modal-content" style="max-width: 620px;">
             <div class="modal-header">
                 <h3 class="modal-title" id="modalNuevaTitle">
-                    <span aria-hidden="true">➕</span>
                     Cargar Rendición de Reparto
                 </h3>
                 <button class="modal-close" onclick="cerrarModalNuevaRendicion()" aria-label="Cerrar modal">✕</button>
@@ -179,7 +219,7 @@
                 <div class="form-grid form-grid-2" style="margin-bottom: 1.1rem;">
                     <div class="form-group">
                         <label for="formEntregaSelect" class="form-label">
-                            🚚 Seleccionar Entrega / Viaje
+                            Seleccionar Entrega / Viaje
                         </label>
                         <select id="formEntregaSelect" class="clay-select" onchange="alCambiarEntregaSelect(this.value)">
                             <option value="">Cargando entregas…</option>
@@ -201,7 +241,6 @@
                 <!-- CONTENEDOR DE COBROS DINÁMICOS POR ENTREGA -->
                 <div id="seccionCobrosDinamicos" class="form-section" style="display: none; margin-bottom: 1.1rem;">
                     <p class="form-section-title">
-                        <span aria-hidden="true">📦</span>
                         Pedidos Entregados en este Viaje
                     </p>
                     <div class="table-responsive">
@@ -225,20 +264,21 @@
                 <!-- CONTENEDOR MANUAL (SI NO SE SELECCIONA ENTREGA) -->
                 <div id="seccionCobroManual" class="form-section">
                     <p class="form-section-title">
-                        <span aria-hidden="true">💰</span>
                         Cobro Rendido (Manual)
                     </p>
                     <div class="form-grid form-grid-2" style="margin-bottom: 0.875rem;">
-                        <div class="form-group">
-                            <label for="formCliente" class="form-label">Cliente / Factura</label>
-                            <select id="formCliente" class="clay-select"><option value="">Elegí una entrega para cargar sus clientes y facturas</option></select>
+                        <div class="form-group" style="position: relative;">
+                            <label for="formClienteInput" class="form-label">Buscar Cliente</label>
+                            <input type="text" id="formClienteInput" class="clay-input" list="listaClientesSugeridos" placeholder="Escribí para buscar…" autocomplete="off" oninput="alEscribirCliente(this.value)">
+                            <datalist id="listaClientesSugeridos"></datalist>
+                            <input type="hidden" id="formClienteId" value="">
                         </div>
                         <div class="form-group">
                             <label for="formMedioPago" class="form-label">Medio de Pago</label>
                             <select id="formMedioPago" class="clay-select">
-                                <option value="efectivo">💵 Efectivo (Impacta en Caja)</option>
-                                <option value="transferencia">🏦 Transferencia (Conciliación Bancaria)</option>
-                                <option value="cheque">📄 Cheque Diferido / Al Día</option>
+                                <option value="efectivo">Efectivo (Impacta en Caja)</option>
+                                <option value="transferencia">Transferencia (Conciliación Bancaria)</option>
+                                <option value="cheque">Cheque Diferido / Al Día</option>
                             </select>
                         </div>
                     </div>
@@ -278,7 +318,6 @@
         <div class="modal-content" style="max-width: 680px;">
             <div class="modal-header">
                 <h3 class="modal-title" id="modalDetalleTitle">
-                    <span aria-hidden="true">🔍</span>
                     Detalle Rendición <span id="detIdRendicion">#--</span>
                 </h3>
                 <button class="modal-close" onclick="cerrarModalDetalle()" aria-label="Cerrar modal">✕</button>
@@ -331,7 +370,6 @@
             <!-- ACCIÓN ADMINISTRATIVA -->
             <div id="boxAccionAdmin" class="admin-action-box">
                 <p class="admin-action-title">
-                    <span aria-hidden="true">⚡</span>
                     Acción Administrativa — Validación de Rendición
                 </p>
                 <div class="form-group" style="margin-bottom: 0.875rem;">
@@ -372,7 +410,6 @@
         <div class="modal-content" style="max-width: 520px;">
             <div class="modal-header">
                 <h3 class="modal-title" id="modalDevolucionTitle">
-                    <span aria-hidden="true">📦</span>
                     Registrar Devolución de Pedido
                 </h3>
                 <button class="modal-close" onclick="cerrarModalDevolucion()" aria-label="Cerrar modal">✕</button>

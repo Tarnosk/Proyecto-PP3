@@ -1,7 +1,7 @@
 :root {
-    --bg: #f4ecdc;
-    --surface: #fffaf0;
-    --surface-muted: #efe5d2;
+    --bg: #EBF4FC;
+    --surface: #ffffff;
+    --surface-muted: #f1f5f9;
     --text: #111827;
     --muted: #5e6673;
     --primary: #075bd8;
@@ -10,7 +10,7 @@
     --nav: #073f9d;
     --nav-strong: #052f78;
     --accent: #09866f;
-    --border: #dfd0b8;
+    --border: #cbd5e1;
     --danger-bg: #fff1f0;
     --danger: #b42318;
     --success-bg: #ecfdf3;
@@ -504,7 +504,7 @@ p {
     border: 1px solid var(--border);
     border-radius: 8px;
     padding: 10px;
-    background: #f7f0e2;
+    background: #f8fafc;
 }
 
 .tariff-box span {
@@ -640,7 +640,7 @@ textarea:focus {
 }
 
 .button-secondary {
-    background: #f7f0e2;
+    background: #f8fafc;
     color: var(--text);
     border-color: var(--border);
 }
