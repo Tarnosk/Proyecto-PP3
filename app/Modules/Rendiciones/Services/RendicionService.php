@@ -2,9 +2,11 @@
 
 namespace App\Modules\Rendiciones\Services;
 
+use App\Modules\Entregas\Integraciones\VentasApiClient;
 use App\Modules\Rendiciones\Models\Rendicion;
 use App\Modules\Rendiciones\Repositories\RendicionRepository;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use InvalidArgumentException;
 
 /**
@@ -19,8 +21,13 @@ use InvalidArgumentException;
  */
 class RendicionService
 {
-    public function __construct(private RendicionRepository $repository)
-    {
+    private VentasApiClient $ventasClient;
+
+    public function __construct(
+        private RendicionRepository $repository,
+        ?VentasApiClient $ventasClient = null
+    ) {
+        $this->ventasClient = $ventasClient ?? new VentasApiClient();
     }
 
     // -------------------------------------------------------------------------
@@ -333,6 +340,15 @@ class RendicionService
                     } elseif ($medioPagoLower === 'cheque') {
                         \Illuminate\Support\Facades\Log::info("Cheque por \${$cobroItem->monto} registrado en Cartera (Rendición #{$rendicion->id_rendicion}).");
                     }
+
+                    // Notificación tolerante a la API de Ventas (G4) sobre la imputación del cobro
+                    if (!empty($cobroItem->id_factura)) {
+                        try {
+                            $this->ventasClient->actualizarEstadoVenta((int) $cobroItem->id_factura, 'pagada');
+                        } catch (\Throwable $e) {
+                            Log::warning("G2 - No se pudo actualizar estado en G4 para venta/factura #{$cobroItem->id_factura}: " . $e->getMessage());
+                        }
+                    }
                 }
             }
 
@@ -398,10 +414,9 @@ class RendicionService
 
         $cobrosSugeridos = [];
         $totalRendidoSugerido = 0.0;
-        $ventasClient = new \App\Modules\Entregas\Integraciones\VentasApiClient();
 
         foreach ($pedidosRaw as $p) {
-            $venta = $ventasClient->obtenerVentaPorId((int)$p->id_venta);
+            $venta = $this->ventasClient->obtenerVentaPorId((int)$p->id_venta);
             $monto = (float)($venta['total'] ?? $venta['monto_total'] ?? 0.0);
             $idCliente = (int)($venta['id_cliente'] ?? 1);
             $clienteNombre = $venta['cliente_nombre'] ?? $venta['cliente']['nombre'] ?? "Cliente Pedido #{$p->id_venta}";
