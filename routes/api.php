@@ -7,11 +7,15 @@ use App\Modules\Login\Controllers\Api\V1\AuthController;
 use App\Modules\Login\Controllers\Api\V1\UserController;
 use App\Modules\Login\Middleware\AuthenticateApiReadRequest;
 use App\Modules\Reclamos\Controllers\Api\V1\ClaimController;
+use App\Modules\Rendiciones\Controllers\Api\V1\CobroApiController;
+use App\Modules\Rendiciones\Controllers\Api\V1\RendicionApiController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function (): void {
     Route::get('/catalogo', [CatalogoApiController::class, 'index'])->middleware('throttle:60,1');
     Route::get('/catalogo/{producto}', [CatalogoApiController::class, 'show'])->where('producto', '[1-9][0-9]{0,9}')->middleware('throttle:60,1');
+    Route::get('/rendiciones', [RendicionApiController::class, 'index'])->middleware('throttle:60,1');
+    Route::get('/cobros', [CobroApiController::class, 'index'])->middleware('throttle:60,1');
     Route::post('/auth/login', [AuthController::class, 'login'])
         ->middleware('throttle:5,1');
 
