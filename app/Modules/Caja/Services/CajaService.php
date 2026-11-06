@@ -5,6 +5,7 @@ namespace App\Modules\Caja\Services;
 use App\Modules\Caja\Models\Caja;
 use App\Modules\Caja\Models\CajaMovimiento;
 use App\Modules\Caja\Repositories\CajaRepository;
+use App\Support\AuditoriaLogger;
 use Illuminate\Support\Carbon;
 
 class CajaService
@@ -64,6 +65,8 @@ class CajaService
             'fecha_hora_vencimiento' => $this->calcularVencimiento($rol, $ahora),
             'observaciones' => $observaciones,
         ]);
+
+        $this->auditar('CAJA', (int) $caja->id_caja, 'INSERT', null, $this->datosCaja($caja), $idUsuarioSesion);
 
         return $caja->toArray();
     }
@@ -158,6 +161,8 @@ class CajaService
         $saldoEsperado = round((float) $caja->monto_inicial + $this->repositorio->calcularSaldoMovimientos($idCaja), 2);
         $diferencia = round($montoFinal - $saldoEsperado, 2);
 
+        $antes = $this->datosCaja($caja);
+
         $caja->monto_final = $montoFinal;
         $caja->monto_esperado = $saldoEsperado;
         $caja->diferencia = $diferencia;
@@ -169,7 +174,10 @@ class CajaService
             $caja->observaciones = $observaciones;
         }
 
-        return $this->repositorio->guardar($caja)->toArray();
+        $guardada = $this->repositorio->guardar($caja);
+        $this->auditar('CAJA', (int) $caja->id_caja, 'UPDATE', $antes, $this->datosCaja($caja), $idUsuarioSesion);
+
+        return $guardada->toArray();
     }
 
     /**
@@ -206,6 +214,8 @@ class CajaService
                 continue;
             }
 
+            $antes = $this->datosCaja($caja);
+
             $caja->monto_esperado = round(
                 (float) $caja->monto_inicial + $this->repositorio->calcularSaldoMovimientos((int) $caja->id_caja),
                 2
@@ -216,6 +226,9 @@ class CajaService
             $caja->id_usuario_cierre = null;
 
             $this->repositorio->guardar($caja);
+
+            // Lo hace el sistema, no una persona: usuario 0 => se guarda null ("Sistema").
+            $this->auditar('CAJA', (int) $caja->id_caja, 'UPDATE', $antes, $this->datosCaja($caja), 0);
             $cerradas++;
         }
 
@@ -253,6 +266,8 @@ class CajaService
             return ['error' => true, 'mensaje' => Caja::MENSAJE_MONTO_MAXIMO];
         }
 
+        $antes = $this->datosCaja($caja);
+
         $caja->monto_final = $montoFinal;
         $caja->diferencia = round($montoFinal - (float) $caja->monto_esperado, 2);
         $caja->id_usuario_cierre = $idUsuarioSesion;
@@ -261,7 +276,10 @@ class CajaService
             $caja->observaciones = $observaciones;
         }
 
-        return $this->repositorio->guardar($caja)->toArray();
+        $guardada = $this->repositorio->guardar($caja);
+        $this->auditar('CAJA', (int) $caja->id_caja, 'UPDATE', $antes, $this->datosCaja($caja), $idUsuarioSesion);
+
+        return $guardada->toArray();
     }
 
     /**
@@ -427,6 +445,15 @@ class CajaService
             'monto' => round($monto, 2),
         ]);
 
+        $this->auditar(
+            'CAJA_MOVIMIENTO',
+            (int) $movimiento->id_movimiento_caja,
+            'INSERT',
+            null,
+            $this->datosMovimiento($movimiento),
+            $idUsuarioSesion
+        );
+
         return $movimiento->toArray();
     }
 
@@ -514,7 +541,7 @@ class CajaService
 
         $ahora = Carbon::now();
 
-        return $this->repositorio->crearMovimiento([
+        $movimiento = $this->repositorio->crearMovimiento([
             'id_caja' => $caja->id_caja,
             'id_cobro' => $idCobro,
             'id_usuario' => $idUsuarioSesion,
@@ -524,7 +551,18 @@ class CajaService
             'medio_pago' => $medioPago,
             'concepto' => $concepto,
             'monto' => round($monto, 2),
-        ])->toArray();
+        ]);
+
+        $this->auditar(
+            'CAJA_MOVIMIENTO',
+            (int) $movimiento->id_movimiento_caja,
+            'INSERT',
+            null,
+            $this->datosMovimiento($movimiento),
+            $idUsuarioSesion
+        );
+
+        return $movimiento->toArray();
     }
 
     public function obtenerMovimiento(int $idMovimiento): ?array
@@ -560,12 +598,80 @@ class CajaService
             }
         }
 
+        $antes = $this->datosMovimiento($movimiento);
+
         $movimiento->monto_anterior = $movimiento->monto;
         $movimiento->concepto = $concepto;
         $movimiento->monto = round($monto, 2);
         $movimiento->id_usuario_modificacion = $idUsuarioSesion;
         $movimiento->fecha_hora_modificacion = Carbon::now();
 
-        return $this->repositorio->guardarMovimiento($movimiento)->toArray();
+        $guardado = $this->repositorio->guardarMovimiento($movimiento);
+        $this->auditar(
+            'CAJA_MOVIMIENTO',
+            (int) $movimiento->id_movimiento_caja,
+            'UPDATE',
+            $antes,
+            $this->datosMovimiento($movimiento),
+            $idUsuarioSesion
+        );
+
+        return $guardado->toArray();
+    }
+
+    // --- Auditoría (log_auditoria, compartida con el resto de los módulos) ------
+
+    /**
+     * Registra el evento en log_auditoria. La auditoría nunca debe impedir una
+     * operación de caja: si falla, se ignora (AuditoriaLogger además deja un warning en el log).
+     * $idUsuario = 0 para eventos del sistema (se guarda null y se muestra como "Sistema").
+     */
+    private function auditar(
+        string $tabla,
+        int $idRegistro,
+        string $accion,
+        ?array $anteriores,
+        ?array $nuevos,
+        int $idUsuario
+    ): void {
+        try {
+            AuditoriaLogger::registrar($tabla, $idRegistro, $accion, $anteriores, $nuevos, $idUsuario);
+        } catch (\Throwable $e) {
+            // Intencional: no romper la caja por un problema de auditoría.
+        }
+    }
+
+    private function aFloat(mixed $valor): ?float
+    {
+        return $valor === null ? null : (float) $valor;
+    }
+
+    /** Valores de una caja que se guardan en la auditoría. */
+    private function datosCaja(Caja $caja): array
+    {
+        return [
+            'id_usuario' => (int) $caja->id_usuario,
+            'estado' => $caja->estado,
+            'monto_inicial' => $this->aFloat($caja->monto_inicial),
+            'monto_final' => $this->aFloat($caja->monto_final),
+            'monto_esperado' => $this->aFloat($caja->monto_esperado),
+            'diferencia' => $this->aFloat($caja->diferencia),
+            'cierre_automatico' => (bool) $caja->cierre_automatico,
+            'id_usuario_cierre' => $caja->id_usuario_cierre !== null ? (int) $caja->id_usuario_cierre : null,
+            'fecha_hora_vencimiento' => $caja->fecha_hora_vencimiento?->toDateTimeString(),
+        ];
+    }
+
+    /** Valores de un movimiento que se guardan en la auditoría. */
+    private function datosMovimiento(CajaMovimiento $movimiento): array
+    {
+        return [
+            'id_caja' => $movimiento->id_caja !== null ? (int) $movimiento->id_caja : null,
+            'id_cobro' => $movimiento->id_cobro !== null ? (int) $movimiento->id_cobro : null,
+            'tipo' => $movimiento->tipo,
+            'medio_pago' => $movimiento->medio_pago,
+            'concepto' => $movimiento->concepto,
+            'monto' => $this->aFloat($movimiento->monto),
+        ];
     }
 }
