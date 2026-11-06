@@ -192,6 +192,19 @@ class CajaRepository
     }
 
     /**
+     * Movimientos cargados en una fecha, de todas las cajas (caja diaria
+     * para Reportes). Se agrupa por la fecha del movimiento, no por la de
+     * apertura de la caja, porque una caja de admin puede durar varios días.
+     */
+    public function listarMovimientosDeFecha(string $fecha): Collection
+    {
+        return CajaMovimiento::whereDate('fecha', $fecha)
+            ->orderBy('fecha_hora_carga')
+            ->orderBy('id_movimiento_caja')
+            ->get();
+    }
+
+    /**
      * Subtotales con signo de los movimientos de la caja: efectivo por un
      * lado y valores (cheques, transferencias, otros) por el otro.
      */

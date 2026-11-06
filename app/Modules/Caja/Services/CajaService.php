@@ -316,6 +316,56 @@ class CajaService
     }
 
     /**
+     * Caja diaria para Reportes (G1): movimientos cargados en la fecha, de
+     * todas las cajas, con ingresos, egresos y saldo del día.
+     * saldo_final = ingresos - egresos (no suma el monto inicial de ninguna caja).
+     * Cobro e ingreso manual son ingresos; el resto (incluida la reversión) son egresos.
+     */
+    public function obtenerCajaDiaria(string $fecha): array
+    {
+        $ingresos = 0.0;
+        $egresos = 0.0;
+        $detalle = [];
+
+        foreach ($this->repositorio->listarMovimientosDeFecha($fecha) as $movimiento) {
+            $monto = (float) $movimiento->monto;
+            $esIngreso = $movimiento->esIngreso();
+
+            if ($esIngreso) {
+                $ingresos += $monto;
+            } else {
+                $egresos += $monto;
+            }
+
+            $detalle[] = [
+                'id_movimiento_caja' => (int) $movimiento->id_movimiento_caja,
+                'id_caja' => $movimiento->id_caja !== null ? (int) $movimiento->id_caja : null,
+                'id_cobro' => $movimiento->id_cobro !== null ? (int) $movimiento->id_cobro : null,
+                'fecha' => $movimiento->fecha?->toDateString(),
+                'fecha_hora_carga' => $movimiento->fecha_hora_carga?->toIso8601String(),
+                'tipo' => $movimiento->tipo,
+                'sentido' => $esIngreso ? 'ingreso' : 'egreso',
+                'medio_pago' => $movimiento->medio_pago ?? CajaMovimiento::MEDIO_EFECTIVO,
+                'concepto' => $movimiento->concepto,
+                'monto' => round($monto, 2),
+                'id_usuario' => (int) $movimiento->id_usuario,
+            ];
+        }
+
+        $ingresos = round($ingresos, 2);
+        $egresos = round($egresos, 2);
+
+        return [
+            'fecha' => $fecha,
+            'ingresos' => $ingresos,
+            'egresos' => $egresos,
+            'saldo_final' => round($ingresos - $egresos, 2),
+            'cantidad_movimientos' => count($detalle),
+            'movimientos' => $detalle,
+        ];
+    }
+
+    /**
      * Los movimientos con la caja vencida NO se bloquean (el repartidor
      * puede estar en ruta). $idCobro es opcional: lo usa Cobros para
      * dejar vinculado el movimiento con el cobro que lo generó.

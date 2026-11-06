@@ -390,4 +390,78 @@ class CajaEndpointsTest extends TestCase
             $this->idsDe($this->getJson('/g2/api/caja/cierres?id_usuario=' . self::OTRO_REPARTIDOR)->assertOk())
         );
     }
+
+    // --- API v1 para Reportes (G1): caja diaria -----------------------------
+
+    private function conTokenDeServicio(): static
+    {
+        config(['services.internal_api.token' => 'token-de-prueba-g1']);
+
+        return $this->withToken('token-de-prueba-g1');
+    }
+
+    private function cargarMovimientosDelDia(): void
+    {
+        $base = ['id_caja' => 1, 'id_usuario' => self::REPARTIDOR, 'medio_pago' => 'efectivo'];
+
+        // Mismo día que el cobro de 500 que ya carga setUp(): egreso 120 + reversión 50.
+        DB::table('CAJA_MOVIMIENTO')->insert($base + [
+            'id_movimiento_caja' => 2, 'fecha' => '2026-11-03', 'fecha_hora_carga' => '2026-11-03 11:00:00',
+            'monto' => 120, 'tipo' => 'egreso', 'concepto' => 'Combustible',
+        ]);
+        DB::table('CAJA_MOVIMIENTO')->insert($base + [
+            'id_movimiento_caja' => 3, 'fecha' => '2026-11-03', 'fecha_hora_carga' => '2026-11-03 12:00:00',
+            'monto' => 50, 'tipo' => 'reversion', 'concepto' => 'Anulación de cobro',
+        ]);
+        // Otro día: no debe aparecer.
+        DB::table('CAJA_MOVIMIENTO')->insert($base + [
+            'id_movimiento_caja' => 4, 'fecha' => '2026-11-04', 'fecha_hora_carga' => '2026-11-04 10:00:00',
+            'monto' => 999, 'tipo' => 'cobro', 'concepto' => 'Cobro de otro día',
+        ]);
+    }
+
+    public function test_api_v1_caja_diaria_devuelve_ingresos_egresos_saldo_y_movimientos(): void
+    {
+        $this->cargarMovimientosDelDia();
+
+        $respuesta = $this->conTokenDeServicio()->getJson('/api/v1/caja/2026-11-03')->assertOk();
+        $json = $respuesta->json();
+
+        $this->assertSame('2026-11-03', $json['fecha']);
+        $this->assertEquals(500, $json['ingresos']);
+        $this->assertEquals(170, $json['egresos']);       // 120 egreso + 50 reversión
+        $this->assertEquals(330, $json['saldo_final']);   // 500 - 170
+        $this->assertSame(3, $json['cantidad_movimientos']);
+
+        $sentidos = [];
+        foreach ($json['movimientos'] as $movimiento) {
+            $sentidos[(int) $movimiento['id_movimiento_caja']] = $movimiento['sentido'];
+        }
+        ksort($sentidos);
+
+        // El movimiento 4 es de otro día y queda afuera.
+        $this->assertSame([1 => 'ingreso', 2 => 'egreso', 3 => 'egreso'], $sentidos);
+    }
+
+    public function test_api_v1_caja_diaria_de_un_dia_sin_movimientos_devuelve_ceros(): void
+    {
+        $json = $this->conTokenDeServicio()->getJson('/api/v1/caja/2026-12-31')->assertOk()->json();
+
+        $this->assertEquals(0, $json['ingresos']);
+        $this->assertEquals(0, $json['egresos']);
+        $this->assertEquals(0, $json['saldo_final']);
+        $this->assertSame([], $json['movimientos']);
+    }
+
+    public function test_api_v1_caja_diaria_rechaza_una_fecha_imposible(): void
+    {
+        $this->conTokenDeServicio()->getJson('/api/v1/caja/2026-13-45')
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['fecha']);
+    }
+
+    public function test_api_v1_caja_diaria_sin_credenciales_devuelve_401(): void
+    {
+        $this->getJson('/api/v1/caja/2026-11-03')->assertUnauthorized();
+    }
 }
