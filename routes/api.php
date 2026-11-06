@@ -1,5 +1,6 @@
 <?php
 
+use App\Modules\Caja\Controllers\Api\V1\CajaDiariaController;
 use App\Modules\Catalogo\Controllers\CatalogoApiController;
 use App\Modules\Clientes\Controllers\Api\V1\ClientController;
 use App\Modules\Clientes\Controllers\Api\V1\ZoneController;
@@ -28,6 +29,10 @@ Route::prefix('v1')->group(function (): void {
         Route::get('/reclamos', [ClaimController::class, 'index'])->middleware('api.audience:administrativo,repartidor');
         Route::get('/reclamos/{reclamo}', [ClaimController::class, 'show'])->whereNumber('reclamo')->middleware('api.audience:administrativo,repartidor');
         Route::get('/usuarios/{user}', UserController::class)->whereNumber('user')->middleware('api.audience:administrativo');
+        // Caja diaria para Reportes (G1). Token de servicio, administrativo o contador.
+        Route::get('/caja/{fecha}', CajaDiariaController::class)
+            ->where('fecha', '[0-9]{4}-[0-9]{2}-[0-9]{2}')
+            ->middleware('api.audience:administrativo,contador');
     });
 
     Route::middleware(['api.access', 'throttle:60,1'])->group(function (): void {

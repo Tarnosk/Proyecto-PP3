@@ -5,14 +5,14 @@ namespace App\Modules\Caja\Controllers;
 use App\Modules\Caja\Models\Caja;
 use App\Modules\Caja\Models\CajaMovimiento;
 use App\Modules\Caja\Services\CajaService;
-use App\Modules\Shared\Http\Controllers\Controller;
-use Illuminate\Http\Request;
 use App\Modules\Shared\Auth\G2Identity;
+use App\Modules\Shared\Http\Controllers\Controller;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 
 class CajaWebController extends Controller
 {
-
-
     public function __construct(private CajaService $service)
     {
     }
@@ -71,9 +71,9 @@ class CajaWebController extends Controller
     public function abrir(Request $request)
     {
         $datos = $request->validate([
-            'monto_inicial' => ['required', 'numeric', 'min:0'],
+            'monto_inicial' => ['required', 'numeric', 'min:0', 'max:' . Caja::MONTO_MAXIMO],
             'observaciones' => ['nullable', 'string', 'max:500'],
-        ]);
+        ], Caja::MENSAJES_MONTO);
 
         $resultado = $this->service->abrirCaja(
             G2Identity::id(),
@@ -100,9 +100,9 @@ class CajaWebController extends Controller
         $datos = $request->validate([
             'tipo' => ['required', 'string'],
             'concepto' => ['required', 'string', 'max:200'],
-            'monto' => ['required', 'numeric', 'min:0.01'],
+            'monto' => ['required', 'numeric', 'min:0.01', 'max:' . Caja::MONTO_MAXIMO],
             'medio_pago' => ['nullable', 'string', 'in:' . implode(',', CajaMovimiento::MEDIOS_VALIDOS)],
-        ]);
+        ], Caja::MENSAJES_MONTO);
 
         $resultado = $this->service->registrarMovimiento(
             $id,
@@ -142,9 +142,9 @@ class CajaWebController extends Controller
     public function cerrar(Request $request, int $id)
     {
         $datos = $request->validate([
-            'monto_final' => ['required', 'numeric', 'min:0'],
+            'monto_final' => ['required', 'numeric', 'min:0', 'max:' . Caja::MONTO_MAXIMO],
             'observaciones' => ['nullable', 'string', 'max:500'],
-        ]);
+        ], Caja::MENSAJES_MONTO);
 
         $resultado = $this->service->cerrarCaja(
             $id,
@@ -173,9 +173,9 @@ class CajaWebController extends Controller
     public function completarConteo(Request $request, int $id)
     {
         $datos = $request->validate([
-            'monto_final' => ['required', 'numeric', 'min:0'],
+            'monto_final' => ['required', 'numeric', 'min:0', 'max:' . Caja::MONTO_MAXIMO],
             'observaciones' => ['nullable', 'string', 'max:500'],
-        ]);
+        ], Caja::MENSAJES_MONTO);
 
         $resultado = $this->service->completarConteoCierreAutomatico(
             $id,
@@ -198,22 +198,45 @@ class CajaWebController extends Controller
             ->with('mensaje', 'Conteo cargado correctamente.');
     }
 
+    // ---------------------------------------------------------------------
+    // Historial de cierres (lectura). Admin y contador ven los de todos;
+    // el repartidor solo los suyos.
+    // ---------------------------------------------------------------------
+
+    private function veTodasLasCajas(): bool
+    {
+        return Caja::rolVeTodasLasCajas(G2Identity::role());
+    }
+
+    /** Filtros del historial: [idUsuario, desde, hasta]. */
+    private function filtrosDeCierres(Request $request): array
+    {
+        $idUsuario = $this->veTodasLasCajas() ? $request->query('id_usuario') : G2Identity::id();
+
+        return [
+            $idUsuario !== null && $idUsuario !== '' ? (int) $idUsuario : null,
+            $request->query('desde') ?: null,
+            $request->query('hasta') ?: null,
+        ];
+    }
+
+    /** Un repartidor solo puede ver su propio cierre; admin y contador, todos. */
+    private function assertPuedeVerCierre(array $cierre): void
+    {
+        if (!$this->veTodasLasCajas()) {
+            G2Identity::assertOwner($cierre, 'id_usuario');
+        }
+    }
+
     public function cierresIndex(Request $request)
     {
-        $idUsuario = G2Identity::role() === Caja::ROL_ADMIN ? $request->query('id_usuario') : G2Identity::id();
-        $desde = $request->query('desde');
-        $hasta = $request->query('hasta');
-
-        $cierres = $this->service->obtenerHistorialCierres(
-            $idUsuario !== null ? (int) $idUsuario : null,
-            $desde ?: null,
-            $hasta ?: null
-        );
+        [$idUsuario, $desde, $hasta] = $this->filtrosDeCierres($request);
 
         return view('caja.cierres', [
-            'cierres' => $cierres,
+            'cierres' => $this->service->obtenerHistorialCierres($idUsuario, $desde, $hasta),
             'desde' => $desde,
             'hasta' => $hasta,
+            'puedeExportarPdf' => Caja::rolExportaPdf(G2Identity::role()),
         ]);
     }
 
@@ -225,12 +248,55 @@ class CajaWebController extends Controller
             abort(404, 'Cierre no encontrado');
         }
 
-        G2Identity::assertOwner($cierre, 'id_usuario');
+        $this->assertPuedeVerCierre($cierre);
 
         return view('caja.cierre-detalle', [
             'cierre' => $cierre,
-            // Solo el admin carga el conteo de una caja cerrada sola.
+            // Solo el admin carga el conteo de una caja cerrada sola. El contador no.
             'puedeCargarConteo' => G2Identity::role() === Caja::ROL_ADMIN,
+            'puedeExportarPdf' => Caja::rolExportaPdf(G2Identity::role()),
         ]);
+    }
+
+    // ---------------------------------------------------------------------
+    // Exportación a PDF (admin y contador). Documento de solo lectura.
+    // ---------------------------------------------------------------------
+
+    /** PDF del historial de cierres con los mismos filtros que se ven en pantalla. */
+    public function cierresPdf(Request $request)
+    {
+        [$idUsuario, $desde, $hasta] = $this->filtrosDeCierres($request);
+
+        $cierres = $this->service->obtenerHistorialCierres($idUsuario, $desde, $hasta);
+
+        return Pdf::loadView('caja.pdf-cierres', [
+            'cierres' => $cierres,
+            'desde' => $desde,
+            'hasta' => $hasta,
+            'generadoEn' => Carbon::now(),
+            'generadoPor' => G2Identity::id(),
+        ])
+            ->setPaper('a4', 'landscape')
+            ->download('cierres-de-caja-' . Carbon::now()->format('Ymd-His') . '.pdf');
+    }
+
+    /** PDF de un cierre puntual, con subtotales y movimientos. */
+    public function cierrePdf(int $id)
+    {
+        $cierre = $this->service->obtenerDetalleCierre($id);
+
+        if ($cierre === null) {
+            abort(404, 'Cierre no encontrado');
+        }
+
+        $this->assertPuedeVerCierre($cierre);
+
+        return Pdf::loadView('caja.pdf-cierre', [
+            'cierre' => $cierre,
+            'generadoEn' => Carbon::now(),
+            'generadoPor' => G2Identity::id(),
+        ])
+            ->setPaper('a4')
+            ->download('cierre-de-caja-' . $id . '.pdf');
     }
 }

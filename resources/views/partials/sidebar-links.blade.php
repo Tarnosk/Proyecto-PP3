@@ -19,6 +19,8 @@
         ['entregas.index', 'Entregas y Despacho', $operational],
         ['rendiciones.index', 'Rendiciones y Cobros', $operational],
         ['caja.dia', 'Caja y Tesorería', $operational],
+        // El contador no opera la caja: solo ve el historial de cierres y exporta PDF.
+        ['caja.cierres.index', 'Cierres de caja', ['contador']],
         ['conciliacion.index', 'Conciliación Bancaria', $accounting],
         ['reports.index', 'Reportes y Finanzas', $accounting],
         ['users.index', 'Lista de Usuarios', ['administrativo']],
@@ -36,6 +38,7 @@
         'promociones.index' => ['promociones.*'],
         'saldo' => ['saldo', 'saldo.*'],
         'caja.dia' => ['caja.*'],
+        'caja.cierres.index' => ['caja.*'],
         'conciliacion.index' => ['conciliacion.*'],
         'entregas.index' => ['entregas.*'],
         'rendiciones.index' => ['rendiciones.*'],

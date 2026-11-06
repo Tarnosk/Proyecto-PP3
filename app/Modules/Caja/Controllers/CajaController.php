@@ -45,9 +45,9 @@ class CajaController extends Controller
         }
 
         $datos = $request->validate([
-            'monto_inicial' => ['required', 'numeric', 'min:0'],
+            'monto_inicial' => ['required', 'numeric', 'min:0', 'max:' . Caja::MONTO_MAXIMO],
             'observaciones' => ['nullable', 'string', 'max:500'],
-        ]);
+        ], Caja::MENSAJES_MONTO);
 
         $resultado = $this->service->abrirCaja(
             $idUsuario,
@@ -117,9 +117,9 @@ class CajaController extends Controller
     public function cerrar(Request $request, int $id)
     {
         $datos = $request->validate([
-            'monto_final' => ['required', 'numeric', 'min:0'],
+            'monto_final' => ['required', 'numeric', 'min:0', 'max:' . Caja::MONTO_MAXIMO],
             'observaciones' => ['nullable', 'string', 'max:500'],
-        ]);
+        ], Caja::MENSAJES_MONTO);
 
         [$idUsuarioSesion, $rol] = $this->resolverUsuarioYRol($request);
 
@@ -149,9 +149,9 @@ class CajaController extends Controller
     public function completarConteo(Request $request, int $id)
     {
         $datos = $request->validate([
-            'monto_final' => ['required', 'numeric', 'min:0'],
+            'monto_final' => ['required', 'numeric', 'min:0', 'max:' . Caja::MONTO_MAXIMO],
             'observaciones' => ['nullable', 'string', 'max:500'],
-        ]);
+        ], Caja::MENSAJES_MONTO);
 
         [$idUsuarioSesion, $rol] = $this->resolverUsuarioYRol($request);
 
@@ -176,31 +176,39 @@ class CajaController extends Controller
 
     /**
      * GET /caja/cierres?id_usuario=&desde=YYYY-MM-DD&hasta=YYYY-MM-DD
-     * Quien no es admin solo ve sus propios cierres.
+     *     &tipo_cierre=manual|automatico&pendiente_conteo=1|0
+     * Admin y contador ven los cierres de todos; el resto solo los suyos.
      */
     public function historialCierres(Request $request)
     {
         $datos = $request->validate([
             'id_usuario' => ['nullable', 'integer'],
             'desde' => ['nullable', 'date_format:Y-m-d'],
-            'hasta' => ['nullable', 'date_format:Y-m-d'],
+            'hasta' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:desde'],
+            'tipo_cierre' => ['nullable', Rule::in([
+                CajaService::TIPO_CIERRE_MANUAL,
+                CajaService::TIPO_CIERRE_AUTOMATICO,
+            ])],
+            'pendiente_conteo' => ['nullable', 'boolean'],
         ]);
 
         [$idUsuarioSesion, $rol] = $this->resolverUsuarioYRol($request);
 
-        $idUsuario = ($rol === Caja::ROL_ADMIN)
+        $idUsuario = Caja::rolVeTodasLasCajas($rol)
             ? ($datos['id_usuario'] ?? null)
             : $idUsuarioSesion;
 
         return Response::json($this->service->obtenerHistorialCierres(
             $idUsuario !== null ? (int) $idUsuario : null,
             $datos['desde'] ?? null,
-            $datos['hasta'] ?? null
+            $datos['hasta'] ?? null,
+            $datos['tipo_cierre'] ?? null,
+            isset($datos['pendiente_conteo']) ? (bool) $datos['pendiente_conteo'] : null
         ));
     }
 
     /**
-     * GET /caja/cierres/{id} — admin o dueño de la caja
+     * GET /caja/cierres/{id} — admin, contador o dueño de la caja
      */
     public function detalleCierre(Request $request, int $id)
     {
@@ -209,7 +217,7 @@ class CajaController extends Controller
 
         // 404 también cuando no es suyo, para no revelar que el id existe
         if ($cierre === null
-            || ($rol !== Caja::ROL_ADMIN && (int) $cierre['id_usuario'] !== $idUsuarioSesion)) {
+            || (!Caja::rolVeTodasLasCajas($rol) && (int) $cierre['id_usuario'] !== $idUsuarioSesion)) {
             return Response::error('No existe un cierre con ese id.', 404);
         }
 
@@ -225,9 +233,9 @@ class CajaController extends Controller
             'id_caja' => ['required', 'integer'],
             'tipo' => ['required', Rule::in(CajaMovimiento::TIPOS_VALIDOS)],
             'concepto' => ['required', 'string', 'max:200'],
-            'monto' => ['required', 'numeric', 'min:0.01'],
+            'monto' => ['required', 'numeric', 'min:0.01', 'max:' . Caja::MONTO_MAXIMO],
             'medio_pago' => ['nullable', Rule::in(CajaMovimiento::MEDIOS_VALIDOS)],
-        ]);
+        ], Caja::MENSAJES_MONTO);
 
         [$idUsuarioSesion, $rol] = $this->resolverUsuarioYRol($request);
 
@@ -283,8 +291,8 @@ class CajaController extends Controller
 
         $datos = $request->validate([
             'concepto' => ['required', 'string', 'max:200'],
-            'monto' => ['required', 'numeric', 'min:0.01'],
-        ]);
+            'monto' => ['required', 'numeric', 'min:0.01', 'max:' . Caja::MONTO_MAXIMO],
+        ], Caja::MENSAJES_MONTO);
 
         $resultado = $this->service->modificarMovimiento(
             $id,

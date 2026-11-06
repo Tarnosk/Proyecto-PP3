@@ -5,10 +5,14 @@ namespace App\Modules\Caja\Services;
 use App\Modules\Caja\Models\Caja;
 use App\Modules\Caja\Models\CajaMovimiento;
 use App\Modules\Caja\Repositories\CajaRepository;
+use App\Support\AuditoriaLogger;
 use Illuminate\Support\Carbon;
 
 class CajaService
 {
+    public const TIPO_CIERRE_MANUAL = 'manual';
+    public const TIPO_CIERRE_AUTOMATICO = 'automatico';
+
     public function __construct(private CajaRepository $repositorio)
     {
     }
@@ -48,6 +52,10 @@ class CajaService
             return ['error' => true, 'mensaje' => 'El monto inicial no puede ser negativo.'];
         }
 
+        if ($montoInicial > Caja::MONTO_MAXIMO) {
+            return ['error' => true, 'mensaje' => Caja::MENSAJE_MONTO_MAXIMO];
+        }
+
         $caja = $this->repositorio->crear([
             'id_usuario' => $idUsuarioSesion,
             'fecha' => $ahora->toDateString(),
@@ -57,6 +65,8 @@ class CajaService
             'fecha_hora_vencimiento' => $this->calcularVencimiento($rol, $ahora),
             'observaciones' => $observaciones,
         ]);
+
+        $this->auditar('CAJA', (int) $caja->id_caja, 'INSERT', null, $this->datosCaja($caja), $idUsuarioSesion);
 
         return $caja->toArray();
     }
@@ -144,8 +154,14 @@ class CajaService
             return ['error' => true, 'mensaje' => 'La caja ya está cerrada.'];
         }
 
+        if ($montoFinal > Caja::MONTO_MAXIMO) {
+            return ['error' => true, 'mensaje' => Caja::MENSAJE_MONTO_MAXIMO];
+        }
+
         $saldoEsperado = round((float) $caja->monto_inicial + $this->repositorio->calcularSaldoMovimientos($idCaja), 2);
         $diferencia = round($montoFinal - $saldoEsperado, 2);
+
+        $antes = $this->datosCaja($caja);
 
         $caja->monto_final = $montoFinal;
         $caja->monto_esperado = $saldoEsperado;
@@ -158,7 +174,10 @@ class CajaService
             $caja->observaciones = $observaciones;
         }
 
-        return $this->repositorio->guardar($caja)->toArray();
+        $guardada = $this->repositorio->guardar($caja);
+        $this->auditar('CAJA', (int) $caja->id_caja, 'UPDATE', $antes, $this->datosCaja($caja), $idUsuarioSesion);
+
+        return $guardada->toArray();
     }
 
     /**
@@ -195,6 +214,8 @@ class CajaService
                 continue;
             }
 
+            $antes = $this->datosCaja($caja);
+
             $caja->monto_esperado = round(
                 (float) $caja->monto_inicial + $this->repositorio->calcularSaldoMovimientos((int) $caja->id_caja),
                 2
@@ -205,6 +226,9 @@ class CajaService
             $caja->id_usuario_cierre = null;
 
             $this->repositorio->guardar($caja);
+
+            // Lo hace el sistema, no una persona: usuario 0 => se guarda null ("Sistema").
+            $this->auditar('CAJA', (int) $caja->id_caja, 'UPDATE', $antes, $this->datosCaja($caja), 0);
             $cerradas++;
         }
 
@@ -238,6 +262,12 @@ class CajaService
             return ['error' => true, 'mensaje' => 'Esta caja no está pendiente de conteo.'];
         }
 
+        if ($montoFinal > Caja::MONTO_MAXIMO) {
+            return ['error' => true, 'mensaje' => Caja::MENSAJE_MONTO_MAXIMO];
+        }
+
+        $antes = $this->datosCaja($caja);
+
         $caja->monto_final = $montoFinal;
         $caja->diferencia = round($montoFinal - (float) $caja->monto_esperado, 2);
         $caja->id_usuario_cierre = $idUsuarioSesion;
@@ -246,12 +276,33 @@ class CajaService
             $caja->observaciones = $observaciones;
         }
 
-        return $this->repositorio->guardar($caja)->toArray();
+        $guardada = $this->repositorio->guardar($caja);
+        $this->auditar('CAJA', (int) $caja->id_caja, 'UPDATE', $antes, $this->datosCaja($caja), $idUsuarioSesion);
+
+        return $guardada->toArray();
     }
 
-    public function obtenerHistorialCierres(?int $idUsuario = null, ?string $desde = null, ?string $hasta = null): array
-    {
-        return $this->repositorio->listarCierres($idUsuario, $desde, $hasta)->toArray();
+    /**
+     * Historial de cierres con filtros opcionales. Cada fila incluye
+     * 'tipo_cierre' (manual | automatico).
+     * $pendienteConteo: true = cierres automáticos sin monto final;
+     * false = cierres que ya tienen monto final.
+     */
+    public function obtenerHistorialCierres(
+        ?int $idUsuario = null,
+        ?string $desde = null,
+        ?string $hasta = null,
+        ?string $tipoCierre = null,
+        ?bool $pendienteConteo = null
+    ): array {
+        $cierreAutomatico = $tipoCierre === null
+            ? null
+            : $tipoCierre === self::TIPO_CIERRE_AUTOMATICO;
+
+        return $this->repositorio
+            ->listarCierres($idUsuario, $desde, $hasta, $cierreAutomatico, $pendienteConteo)
+            ->map(fn (Caja $caja) => $this->conTipoCierre($caja->toArray()))
+            ->all();
     }
 
     public function obtenerDetalleCierre(int $idCaja): ?array
@@ -262,12 +313,74 @@ class CajaService
             return null;
         }
 
+        $cierre = $this->conTipoCierre($cierre);
+
         // Subtotales de movimientos: efectivo por un lado, valores por el otro.
         $subtotales = $this->repositorio->calcularSubtotalesPorMedio($idCaja);
         $cierre['subtotal_efectivo'] = $subtotales['efectivo'];
         $cierre['subtotal_valores'] = $subtotales['valores'];
 
         return $cierre;
+    }
+
+    /** Agrega 'tipo_cierre' (manual | automatico) a partir de cierre_automatico. */
+    private function conTipoCierre(array $cierre): array
+    {
+        $cierre['tipo_cierre'] = !empty($cierre['cierre_automatico'])
+            ? self::TIPO_CIERRE_AUTOMATICO
+            : self::TIPO_CIERRE_MANUAL;
+
+        return $cierre;
+    }
+
+    /**
+     * Caja diaria para Reportes (G1): movimientos cargados en la fecha, de
+     * todas las cajas, con ingresos, egresos y saldo del día.
+     * saldo_final = ingresos - egresos (no suma el monto inicial de ninguna caja).
+     * Cobro e ingreso manual son ingresos; el resto (incluida la reversión) son egresos.
+     */
+    public function obtenerCajaDiaria(string $fecha): array
+    {
+        $ingresos = 0.0;
+        $egresos = 0.0;
+        $detalle = [];
+
+        foreach ($this->repositorio->listarMovimientosDeFecha($fecha) as $movimiento) {
+            $monto = (float) $movimiento->monto;
+            $esIngreso = $movimiento->esIngreso();
+
+            if ($esIngreso) {
+                $ingresos += $monto;
+            } else {
+                $egresos += $monto;
+            }
+
+            $detalle[] = [
+                'id_movimiento_caja' => (int) $movimiento->id_movimiento_caja,
+                'id_caja' => $movimiento->id_caja !== null ? (int) $movimiento->id_caja : null,
+                'id_cobro' => $movimiento->id_cobro !== null ? (int) $movimiento->id_cobro : null,
+                'fecha' => $movimiento->fecha?->toDateString(),
+                'fecha_hora_carga' => $movimiento->fecha_hora_carga?->toIso8601String(),
+                'tipo' => $movimiento->tipo,
+                'sentido' => $esIngreso ? 'ingreso' : 'egreso',
+                'medio_pago' => $movimiento->medio_pago ?? CajaMovimiento::MEDIO_EFECTIVO,
+                'concepto' => $movimiento->concepto,
+                'monto' => round($monto, 2),
+                'id_usuario' => (int) $movimiento->id_usuario,
+            ];
+        }
+
+        $ingresos = round($ingresos, 2);
+        $egresos = round($egresos, 2);
+
+        return [
+            'fecha' => $fecha,
+            'ingresos' => $ingresos,
+            'egresos' => $egresos,
+            'saldo_final' => round($ingresos - $egresos, 2),
+            'cantidad_movimientos' => count($detalle),
+            'movimientos' => $detalle,
+        ];
     }
 
     /**
@@ -310,6 +423,10 @@ class CajaService
             return ['error' => true, 'mensaje' => 'El monto debe ser mayor a cero.'];
         }
 
+        if ($monto > Caja::MONTO_MAXIMO) {
+            return ['error' => true, 'mensaje' => Caja::MENSAJE_MONTO_MAXIMO];
+        }
+
         if (!in_array($medioPago, CajaMovimiento::MEDIOS_VALIDOS, true)) {
             return ['error' => true, 'mensaje' => 'Medio de pago no válido.'];
         }
@@ -327,6 +444,15 @@ class CajaService
             'concepto' => $concepto,
             'monto' => round($monto, 2),
         ]);
+
+        $this->auditar(
+            'CAJA_MOVIMIENTO',
+            (int) $movimiento->id_movimiento_caja,
+            'INSERT',
+            null,
+            $this->datosMovimiento($movimiento),
+            $idUsuarioSesion
+        );
 
         return $movimiento->toArray();
     }
@@ -405,13 +531,17 @@ class CajaService
             return ['error' => true, 'mensaje' => 'El monto debe ser mayor a cero.'];
         }
 
+        if ($monto > Caja::MONTO_MAXIMO) {
+            return ['error' => true, 'mensaje' => Caja::MENSAJE_MONTO_MAXIMO];
+        }
+
         if (!in_array($medioPago, CajaMovimiento::MEDIOS_VALIDOS, true)) {
             return ['error' => true, 'mensaje' => 'Medio de pago no válido.'];
         }
 
         $ahora = Carbon::now();
 
-        return $this->repositorio->crearMovimiento([
+        $movimiento = $this->repositorio->crearMovimiento([
             'id_caja' => $caja->id_caja,
             'id_cobro' => $idCobro,
             'id_usuario' => $idUsuarioSesion,
@@ -421,7 +551,18 @@ class CajaService
             'medio_pago' => $medioPago,
             'concepto' => $concepto,
             'monto' => round($monto, 2),
-        ])->toArray();
+        ]);
+
+        $this->auditar(
+            'CAJA_MOVIMIENTO',
+            (int) $movimiento->id_movimiento_caja,
+            'INSERT',
+            null,
+            $this->datosMovimiento($movimiento),
+            $idUsuarioSesion
+        );
+
+        return $movimiento->toArray();
     }
 
     public function obtenerMovimiento(int $idMovimiento): ?array
@@ -445,6 +586,10 @@ class CajaService
             return ['error' => true, 'mensaje' => 'El monto debe ser mayor a cero.'];
         }
 
+        if ($monto > Caja::MONTO_MAXIMO) {
+            return ['error' => true, 'mensaje' => Caja::MENSAJE_MONTO_MAXIMO];
+        }
+
         if ($movimiento->id_caja !== null) {
             $caja = $this->repositorio->buscarPorId((int) $movimiento->id_caja);
 
@@ -453,12 +598,80 @@ class CajaService
             }
         }
 
+        $antes = $this->datosMovimiento($movimiento);
+
         $movimiento->monto_anterior = $movimiento->monto;
         $movimiento->concepto = $concepto;
         $movimiento->monto = round($monto, 2);
         $movimiento->id_usuario_modificacion = $idUsuarioSesion;
         $movimiento->fecha_hora_modificacion = Carbon::now();
 
-        return $this->repositorio->guardarMovimiento($movimiento)->toArray();
+        $guardado = $this->repositorio->guardarMovimiento($movimiento);
+        $this->auditar(
+            'CAJA_MOVIMIENTO',
+            (int) $movimiento->id_movimiento_caja,
+            'UPDATE',
+            $antes,
+            $this->datosMovimiento($movimiento),
+            $idUsuarioSesion
+        );
+
+        return $guardado->toArray();
+    }
+
+    // --- Auditoría (log_auditoria, compartida con el resto de los módulos) ------
+
+    /**
+     * Registra el evento en log_auditoria. La auditoría nunca debe impedir una
+     * operación de caja: si falla, se ignora (AuditoriaLogger además deja un warning en el log).
+     * $idUsuario = 0 para eventos del sistema (se guarda null y se muestra como "Sistema").
+     */
+    private function auditar(
+        string $tabla,
+        int $idRegistro,
+        string $accion,
+        ?array $anteriores,
+        ?array $nuevos,
+        int $idUsuario
+    ): void {
+        try {
+            AuditoriaLogger::registrar($tabla, $idRegistro, $accion, $anteriores, $nuevos, $idUsuario);
+        } catch (\Throwable $e) {
+            // Intencional: no romper la caja por un problema de auditoría.
+        }
+    }
+
+    private function aFloat(mixed $valor): ?float
+    {
+        return $valor === null ? null : (float) $valor;
+    }
+
+    /** Valores de una caja que se guardan en la auditoría. */
+    private function datosCaja(Caja $caja): array
+    {
+        return [
+            'id_usuario' => (int) $caja->id_usuario,
+            'estado' => $caja->estado,
+            'monto_inicial' => $this->aFloat($caja->monto_inicial),
+            'monto_final' => $this->aFloat($caja->monto_final),
+            'monto_esperado' => $this->aFloat($caja->monto_esperado),
+            'diferencia' => $this->aFloat($caja->diferencia),
+            'cierre_automatico' => (bool) $caja->cierre_automatico,
+            'id_usuario_cierre' => $caja->id_usuario_cierre !== null ? (int) $caja->id_usuario_cierre : null,
+            'fecha_hora_vencimiento' => $caja->fecha_hora_vencimiento?->toDateTimeString(),
+        ];
+    }
+
+    /** Valores de un movimiento que se guardan en la auditoría. */
+    private function datosMovimiento(CajaMovimiento $movimiento): array
+    {
+        return [
+            'id_caja' => $movimiento->id_caja !== null ? (int) $movimiento->id_caja : null,
+            'id_cobro' => $movimiento->id_cobro !== null ? (int) $movimiento->id_cobro : null,
+            'tipo' => $movimiento->tipo,
+            'medio_pago' => $movimiento->medio_pago,
+            'concepto' => $movimiento->concepto,
+            'monto' => $this->aFloat($movimiento->monto),
+        ];
     }
 }
