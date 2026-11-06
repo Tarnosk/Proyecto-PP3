@@ -176,6 +176,7 @@ class CajaController extends Controller
 
     /**
      * GET /caja/cierres?id_usuario=&desde=YYYY-MM-DD&hasta=YYYY-MM-DD
+     *     &tipo_cierre=manual|automatico&pendiente_conteo=1|0
      * Admin y contador ven los cierres de todos; el resto solo los suyos.
      */
     public function historialCierres(Request $request)
@@ -183,7 +184,12 @@ class CajaController extends Controller
         $datos = $request->validate([
             'id_usuario' => ['nullable', 'integer'],
             'desde' => ['nullable', 'date_format:Y-m-d'],
-            'hasta' => ['nullable', 'date_format:Y-m-d'],
+            'hasta' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:desde'],
+            'tipo_cierre' => ['nullable', Rule::in([
+                CajaService::TIPO_CIERRE_MANUAL,
+                CajaService::TIPO_CIERRE_AUTOMATICO,
+            ])],
+            'pendiente_conteo' => ['nullable', 'boolean'],
         ]);
 
         [$idUsuarioSesion, $rol] = $this->resolverUsuarioYRol($request);
@@ -195,7 +201,9 @@ class CajaController extends Controller
         return Response::json($this->service->obtenerHistorialCierres(
             $idUsuario !== null ? (int) $idUsuario : null,
             $datos['desde'] ?? null,
-            $datos['hasta'] ?? null
+            $datos['hasta'] ?? null,
+            $datos['tipo_cierre'] ?? null,
+            isset($datos['pendiente_conteo']) ? (bool) $datos['pendiente_conteo'] : null
         ));
     }
 

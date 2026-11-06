@@ -303,4 +303,91 @@ class CajaEndpointsTest extends TestCase
         $this->assertSame('abierta', DB::table('CAJA')->where('id_caja', 4)->value('estado'));
         $this->assertStringContainsString('99.999.999,99', Caja::MENSAJE_MONTO_MAXIMO);
     }
+
+    // --- Historial: filtros y tipo de cierre --------------------------------
+
+    public function test_historial_filtra_por_tipo_de_cierre(): void
+    {
+        $this->sessionAs(UserRole::CONTADOR, self::CONTADOR);
+
+        $automaticos = $this->getJson('/g2/api/caja/cierres?tipo_cierre=automatico')->assertOk();
+        $manuales = $this->getJson('/g2/api/caja/cierres?tipo_cierre=manual')->assertOk();
+
+        $this->assertSame([3], $this->idsDe($automaticos));
+        $this->assertSame([1, 2], $this->idsDe($manuales));
+    }
+
+    public function test_historial_filtra_los_cierres_pendientes_de_conteo(): void
+    {
+        $this->sessionAs(UserRole::ADMINISTRATIVO, self::ADMIN);
+
+        $pendientes = $this->getJson('/g2/api/caja/cierres?pendiente_conteo=1')->assertOk();
+        $contados = $this->getJson('/g2/api/caja/cierres?pendiente_conteo=0')->assertOk();
+
+        $this->assertSame([3], $this->idsDe($pendientes));
+        $this->assertSame([1, 2], $this->idsDe($contados));
+    }
+
+    public function test_cada_cierre_del_historial_informa_su_tipo(): void
+    {
+        $this->sessionAs(UserRole::CONTADOR, self::CONTADOR);
+
+        $filas = $this->lista($this->getJson('/g2/api/caja/cierres')->assertOk());
+
+        $tipos = [];
+        foreach ($filas as $fila) {
+            $tipos[(int) $fila['id_caja']] = $fila['tipo_cierre'];
+        }
+        ksort($tipos);
+
+        $this->assertSame([1 => 'manual', 2 => 'manual', 3 => 'automatico'], $tipos);
+    }
+
+    public function test_el_detalle_del_cierre_informa_su_tipo(): void
+    {
+        $this->sessionAs(UserRole::CONTADOR, self::CONTADOR);
+
+        $this->getJson('/g2/api/caja/cierres/3')->assertOk()->assertJsonFragment(['tipo_cierre' => 'automatico']);
+        $this->getJson('/g2/api/caja/cierres/1')->assertOk()->assertJsonFragment(['tipo_cierre' => 'manual']);
+    }
+
+    public function test_historial_filtra_por_rango_de_fechas(): void
+    {
+        $this->sessionAs(UserRole::CONTADOR, self::CONTADOR);
+
+        // Todos los cierres de prueba son del 2026-11-03.
+        $this->assertSame([], $this->idsDe($this->getJson('/g2/api/caja/cierres?desde=2026-11-04')->assertOk()));
+        $this->assertSame([], $this->idsDe($this->getJson('/g2/api/caja/cierres?hasta=2026-11-02')->assertOk()));
+        $this->assertSame(
+            [1, 2, 3],
+            $this->idsDe($this->getJson('/g2/api/caja/cierres?desde=2026-11-03&hasta=2026-11-03')->assertOk())
+        );
+    }
+
+    public function test_historial_rechaza_filtros_invalidos(): void
+    {
+        $this->sessionAs(UserRole::CONTADOR, self::CONTADOR);
+
+        $this->getJson('/g2/api/caja/cierres?tipo_cierre=otro')
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['tipo_cierre']);
+
+        $this->getJson('/g2/api/caja/cierres?desde=2026-11-05&hasta=2026-11-01')
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['hasta']);
+    }
+
+    public function test_repartidor_filtra_solo_dentro_de_sus_propios_cierres(): void
+    {
+        $this->sessionAs(UserRole::REPARTIDOR, self::REPARTIDOR);
+
+        $this->assertSame([1], $this->idsDe($this->getJson('/g2/api/caja/cierres?tipo_cierre=manual')->assertOk()));
+        $this->assertSame([3], $this->idsDe($this->getJson('/g2/api/caja/cierres?tipo_cierre=automatico')->assertOk()));
+
+        // Pedir los cierres de otro usuario no lo deja ver los de ese usuario.
+        $this->assertSame(
+            [1, 3],
+            $this->idsDe($this->getJson('/g2/api/caja/cierres?id_usuario=' . self::OTRO_REPARTIDOR)->assertOk())
+        );
+    }
 }

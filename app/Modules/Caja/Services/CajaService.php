@@ -9,6 +9,9 @@ use Illuminate\Support\Carbon;
 
 class CajaService
 {
+    public const TIPO_CIERRE_MANUAL = 'manual';
+    public const TIPO_CIERRE_AUTOMATICO = 'automatico';
+
     public function __construct(private CajaRepository $repositorio)
     {
     }
@@ -261,9 +264,27 @@ class CajaService
         return $this->repositorio->guardar($caja)->toArray();
     }
 
-    public function obtenerHistorialCierres(?int $idUsuario = null, ?string $desde = null, ?string $hasta = null): array
-    {
-        return $this->repositorio->listarCierres($idUsuario, $desde, $hasta)->toArray();
+    /**
+     * Historial de cierres con filtros opcionales. Cada fila incluye
+     * 'tipo_cierre' (manual | automatico).
+     * $pendienteConteo: true = cierres automáticos sin monto final;
+     * false = cierres que ya tienen monto final.
+     */
+    public function obtenerHistorialCierres(
+        ?int $idUsuario = null,
+        ?string $desde = null,
+        ?string $hasta = null,
+        ?string $tipoCierre = null,
+        ?bool $pendienteConteo = null
+    ): array {
+        $cierreAutomatico = $tipoCierre === null
+            ? null
+            : $tipoCierre === self::TIPO_CIERRE_AUTOMATICO;
+
+        return $this->repositorio
+            ->listarCierres($idUsuario, $desde, $hasta, $cierreAutomatico, $pendienteConteo)
+            ->map(fn (Caja $caja) => $this->conTipoCierre($caja->toArray()))
+            ->all();
     }
 
     public function obtenerDetalleCierre(int $idCaja): ?array
@@ -274,10 +295,22 @@ class CajaService
             return null;
         }
 
+        $cierre = $this->conTipoCierre($cierre);
+
         // Subtotales de movimientos: efectivo por un lado, valores por el otro.
         $subtotales = $this->repositorio->calcularSubtotalesPorMedio($idCaja);
         $cierre['subtotal_efectivo'] = $subtotales['efectivo'];
         $cierre['subtotal_valores'] = $subtotales['valores'];
+
+        return $cierre;
+    }
+
+    /** Agrega 'tipo_cierre' (manual | automatico) a partir de cierre_automatico. */
+    private function conTipoCierre(array $cierre): array
+    {
+        $cierre['tipo_cierre'] = !empty($cierre['cierre_automatico'])
+            ? self::TIPO_CIERRE_AUTOMATICO
+            : self::TIPO_CIERRE_MANUAL;
 
         return $cierre;
     }
