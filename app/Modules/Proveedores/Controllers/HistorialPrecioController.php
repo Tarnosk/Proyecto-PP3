@@ -247,6 +247,11 @@ class HistorialPrecioController extends Controller
                 $observaciones
             );
 
+            if ($relacion->es_proveedor_principal) {
+                $prod = Producto::find($idProducto);
+                $prod?->sincronizarCostoReposicion($idUsuario);
+            }
+
             return [
                 'relacion' => $relacion,
                 'snapshot' => $snapshot,

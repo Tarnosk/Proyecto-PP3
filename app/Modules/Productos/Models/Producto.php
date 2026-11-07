@@ -64,6 +64,9 @@ class Producto extends Model
         'precio_minorista',
         'precioMay',
         'precioMin',
+        'costo',
+        'recargo',
+        'margen_ganancia',
         'unidad_medida',
         'equivalencia_unidad',
         'id_unidad_activa',
@@ -78,6 +81,8 @@ class Producto extends Model
         'precio_unitario',
         'precioMay',
         'precioMin',
+        'costo',
+        'recargo',
         'imagen',
         'stock',
         'stock_minimo',
@@ -96,6 +101,8 @@ class Producto extends Model
     protected $casts = [
         'id_producto' => 'integer',
         'precio_unitario' => 'decimal:2',
+        'costo' => 'decimal:2',
+        'recargo' => 'decimal:2',
         'stock' => 'integer',
         'stock_minimo' => 'integer',
         'unidades_por_bulto' => 'integer',
@@ -143,7 +150,7 @@ class Producto extends Model
                 $claveNormalizada = 'precio_unitario';
             }
 
-            if (!in_array($claveNormalizada, $columnas, true) && !in_array($claveNormalizada, ['precio_unitario', 'precioMay', 'precioMin', 'stock_disponible', 'stock_actual'], true)) {
+            if (!in_array($claveNormalizada, $columnas, true) && !in_array($claveNormalizada, ['precio_unitario', 'precioMay', 'precioMin', 'stock_disponible', 'stock_actual', 'costo', 'recargo'], true)) {
                 continue;
             }
 
@@ -244,6 +251,98 @@ class Producto extends Model
     public function getPrecioMinAttribute(): float
     {
         return (float) ($this->attributes['precio_unitario'] ?? $this->attributes['precioMin'] ?? 0.0);
+    }
+
+    public function getCostoAttribute(): ?float
+    {
+        return isset($this->attributes['costo']) && $this->attributes['costo'] !== null
+            ? (float) $this->attributes['costo']
+            : null;
+    }
+
+    public function getRecargoAttribute(): ?float
+    {
+        return isset($this->attributes['recargo']) && $this->attributes['recargo'] !== null
+            ? (float) $this->attributes['recargo']
+            : null;
+    }
+
+    /**
+     * Margen comercial real sobre la venta: (Precio - Costo) / Precio
+     */
+    public function getMargenGananciaAttribute(): ?float
+    {
+        $costo = $this->costo;
+        $precio = (float) $this->precio_unitario;
+
+        if ($costo === null || $precio <= 0) {
+            return null;
+        }
+
+        return round((($precio - $costo) / $precio) * 100, 2);
+    }
+
+    /**
+     * Retorna la asociación activa con el proveedor principal, si existe.
+     */
+    public function proveedorPrincipal(): ?ProductoProveedor
+    {
+        return $this->proveedores()
+            ->where('es_proveedor_principal', true)
+            ->where('activo', true)
+            ->whereHas('proveedor', function (Builder $query) {
+                $query->where('estado', 'activo');
+            })
+            ->first();
+    }
+
+    /**
+     * Sincroniza el costo de reposición desde el proveedor principal activo.
+     * Si el producto cuenta con recargo, recalcula automáticamente precio_unitario
+     * y genera el registro correspondiente en el historial de precios.
+     */
+    public function sincronizarCostoReposicion(?int $idUsuario = null): bool
+    {
+        $principal = $this->proveedorPrincipal();
+
+        if ($principal && $principal->precio_acordado !== null && (float) $principal->precio_acordado > 0) {
+            $nuevoCosto = (float) $principal->precio_acordado;
+            $this->costo = $nuevoCosto;
+
+            if ($this->recargo !== null) {
+                $precioCalculado = round($nuevoCosto * (1 + ((float) $this->recargo / 100.0)), 2);
+                $precioActual = (float) $this->precio_unitario;
+
+                if (abs($precioCalculado - $precioActual) >= 0.01) {
+                    HistorialPrecio::create([
+                        'id_producto' => $this->id_producto,
+                        'tipo_precio' => 'general',
+                        'precio' => $precioCalculado,
+                        'porcentaje_aumento' => $precioActual > 0 ? round((($precioCalculado - $precioActual) / $precioActual) * 100, 2) : 0,
+                        'regla_redondeo' => 'sin_redondeo',
+                        'origen' => 'costo_reposicion',
+                        'fecha_cambio' => now()->toDateTimeString(),
+                        'id_usuario' => $idUsuario ?? 1,
+                    ]);
+
+                    $this->precio_unitario = $precioCalculado;
+                    $this->fecha_modificacion = now()->toDateTimeString();
+                    $this->id_usuario_modificacion = $idUsuario;
+                }
+            }
+
+            $this->save();
+            return true;
+        }
+
+        // Si no tiene proveedor principal activo pero tenía costo cargado, limpiamos costo
+        if ($this->costo !== null) {
+            $this->costo = null;
+            $this->save();
+            return true;
+        }
+
+        return false;
     }
 
     public function historialPrecios(): HasMany

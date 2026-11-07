@@ -30,12 +30,18 @@ class ProductoController extends Controller
         $codigo = $request->filled('codigo') ? trim((string) $request->input('codigo')) : null;
         $categoriaId = $request->filled('categoria_id') ? (int) $request->input('categoria_id') : null;
         $marcaId = $request->filled('marca_id') ? (int) $request->input('marca_id') : null;
+        $esVistaInternaG3 = $request->boolean('interno');
         $estado = $request->input('estado');
         if ($estado === 'todos' || empty($estado)) {
             $estado = null;
         }
 
-        $query = Producto::with(['categoria', 'marca', 'usuarioCarga', 'usuarioModificacion', 'ubicaciones', 'unidades'])
+        $relaciones = ['categoria', 'marca', 'unidades'];
+        if ($esVistaInternaG3) {
+            $relaciones = array_merge($relaciones, ['usuarioCarga', 'usuarioModificacion', 'ubicaciones']);
+        }
+
+        $query = Producto::with($relaciones)
             ->search($search)
             ->filterCategoria($categoriaId)
             ->filterMarca($marcaId)
@@ -48,46 +54,7 @@ class ProductoController extends Controller
         $productos = $query
             ->orderBy('id_producto', 'desc')
             ->get()
-            ->map(function (Producto $p) {
-                return [
-                    'id' => $p->id_producto,
-                    'id_producto' => $p->id_producto,
-                    'codigo' => $p->codigo,
-                    'descripcion' => $p->descripcion,
-                    'nombre' => $p->nombre,
-                    'imagen' => $p->imagen,
-                    'imagen_url' => $p->imagen_url,
-                    'precio_unitario' => (float) $p->precio_unitario,
-                    'precio_mayorista' => (float) $p->precio_mayorista,
-                    'precio_minorista' => (float) $p->precio_minorista,
-                    'precioMay' => (float) $p->precio_mayorista,
-                    'precioMin' => (float) $p->precio_minorista,
-                    'estado' => $p->estado,
-                    'fecha_alta' => $p->fecha_alta ? ($p->fecha_alta instanceof \Carbon\CarbonInterface ? $p->fecha_alta->format('Y-m-d H:i:s') : (string) $p->fecha_alta) : null,
-                    'fecha_modificacion' => $p->fecha_modificacion ? ($p->fecha_modificacion instanceof \Carbon\CarbonInterface ? $p->fecha_modificacion->format('Y-m-d H:i:s') : (string) $p->fecha_modificacion) : null,
-                    'fecha_desactivacion' => $p->fecha_desactivacion ? ($p->fecha_desactivacion instanceof \Carbon\CarbonInterface ? $p->fecha_desactivacion->format('Y-m-d H:i:s') : (string) $p->fecha_desactivacion) : null,
-                    'id_usuario_carga' => $p->id_usuario_carga,
-                    'usuario_carga_nombre' => $p->usuarioCarga ? $p->usuarioCarga->nombre : ($p->id_usuario_carga ? "Usuario #{$p->id_usuario_carga}" : null),
-                    'id_usuario_modificacion' => $p->id_usuario_modificacion,
-                    'usuario_modificacion_nombre' => $p->usuarioModificacion ? $p->usuarioModificacion->nombre : ($p->id_usuario_modificacion ? "Usuario #{$p->id_usuario_modificacion}" : null),
-                    'id_categoria' => $p->id_categoria,
-                    'categoria_nombre' => $p->categoria ? $p->categoria->nombre : null,
-                    'id_marca' => $p->id_marca,
-                    'marca_nombre' => $p->marca ? $p->marca->nombre : null,
-                    'id_ubicacion' => $p->ubicaciones->first()?->id_ubicacion,
-                    'ubicacion_nombre' => $p->ubicaciones->first()?->descripcion ?? 'Sin asignar',
-                    'stock' => (int) ($p->stock ?? $p->stock_disponible ?? 0),
-                    'stock_disponible' => (int) ($p->stock_disponible ?? $p->stock ?? 0),
-                    'stock_minimo' => (int) ($p->stock_minimo ?? 0),
-                    'estado_alerta' => $p->estado_alerta,
-                    'unidad_medida' => $p->unidad_medida,
-                    'equivalencia_unidad' => $p->equivalencia_unidad,
-                    'id_unidad_activa' => $p->id_unidad_activa,
-                    'formato_bulto' => $p->formato_bulto,
-                    'unidades_por_bulto' => (int) ($p->unidades_por_bulto ?? 1),
-                    'presentacion_texto' => $p->presentacion_texto,
-                ];
-            });
+            ->map(fn (Producto $p) => $this->formatearProducto($p, $esVistaInternaG3));
 
         return response()->json([
             'status' => 'success',
@@ -96,16 +63,86 @@ class ProductoController extends Controller
     }
 
     /**
+     * Construye el payload de un producto:
+     * - Por defecto (hacia G1, G2 y G4): expone únicamente el contrato comercial
+     *   sin filtrar costos de reposición, recargos, márgenes ni auditoría interna.
+     * - Con ?interno=1 (pantallas propias de G3): agrega los campos operativos internos.
+     */
+    private function formatearProducto(Producto $p, bool $incluirInternos = false, bool $incluirHistorial = false): array
+    {
+        $datos = [
+            'id' => $p->id_producto,
+            'id_producto' => $p->id_producto,
+            'codigo' => $p->codigo,
+            'descripcion' => $p->descripcion,
+            'nombre' => $p->nombre,
+            'imagen' => $p->imagen,
+            'imagen_url' => $p->imagen_url,
+            'precio_unitario' => (float) $p->precio_unitario,
+            'precio_mayorista' => (float) $p->precio_mayorista,
+            'precio_minorista' => (float) $p->precio_minorista,
+            'precioMay' => (float) $p->precio_mayorista,
+            'precioMin' => (float) $p->precio_minorista,
+            'estado' => $p->estado,
+            'id_categoria' => $p->id_categoria,
+            'categoria_nombre' => $p->categoria ? $p->categoria->nombre : null,
+            'id_marca' => $p->id_marca,
+            'marca_nombre' => $p->marca ? $p->marca->nombre : null,
+            'stock' => (int) ($p->stock ?? $p->stock_disponible ?? 0),
+            'stock_disponible' => (int) ($p->stock_disponible ?? $p->stock ?? 0),
+            'stock_minimo' => (int) ($p->stock_minimo ?? 0),
+            'estado_alerta' => $p->estado_alerta,
+            'unidad_medida' => $p->unidad_medida,
+            'equivalencia_unidad' => $p->equivalencia_unidad,
+            'formato_bulto' => $p->formato_bulto,
+            'unidades_por_bulto' => (int) ($p->unidades_por_bulto ?? 1),
+            'presentacion_texto' => $p->presentacion_texto,
+        ];
+
+        if ($incluirInternos) {
+            $datos['costo'] = $p->costo !== null ? (float) $p->costo : null;
+            $datos['recargo'] = $p->recargo !== null ? (float) $p->recargo : null;
+            $datos['margen_ganancia'] = $p->margen_ganancia !== null ? (float) $p->margen_ganancia : null;
+            $datos['fecha_alta'] = $p->fecha_alta ? ($p->fecha_alta instanceof \Carbon\CarbonInterface ? $p->fecha_alta->format('Y-m-d H:i:s') : (string) $p->fecha_alta) : null;
+            $datos['fecha_modificacion'] = $p->fecha_modificacion ? ($p->fecha_modificacion instanceof \Carbon\CarbonInterface ? $p->fecha_modificacion->format('Y-m-d H:i:s') : (string) $p->fecha_modificacion) : null;
+            $datos['fecha_desactivacion'] = $p->fecha_desactivacion ? ($p->fecha_desactivacion instanceof \Carbon\CarbonInterface ? $p->fecha_desactivacion->format('Y-m-d H:i:s') : (string) $p->fecha_desactivacion) : null;
+            $datos['id_usuario_carga'] = $p->id_usuario_carga;
+            $datos['usuario_carga_nombre'] = $p->usuarioCarga ? $p->usuarioCarga->nombre : ($p->id_usuario_carga ? "Usuario #{$p->id_usuario_carga}" : null);
+            $datos['id_usuario_modificacion'] = $p->id_usuario_modificacion;
+            $datos['usuario_modificacion_nombre'] = $p->usuarioModificacion ? $p->usuarioModificacion->nombre : ($p->id_usuario_modificacion ? "Usuario #{$p->id_usuario_modificacion}" : null);
+            $datos['id_ubicacion'] = $p->ubicaciones->first()?->id_ubicacion;
+            $datos['ubicacion_nombre'] = $p->ubicaciones->first()?->descripcion ?? 'Sin asignar';
+            $datos['id_unidad_activa'] = $p->id_unidad_activa;
+
+            if ($incluirHistorial) {
+                $datos['historial_precios'] = $p->historialPrecios;
+            }
+        }
+
+        return $datos;
+    }
+
+    /**
      * Registrar nuevo producto (P01)
      */
     public function store(Request $request): JsonResponse
     {
+        if ($request->filled('costo') && $request->filled('recargo') && !$request->filled('precio_unitario')) {
+            $costoCalc = (float) $request->input('costo');
+            $recargoCalc = (float) $request->input('recargo');
+            $request->merge([
+                'precio_unitario' => round($costoCalc * (1 + $recargoCalc / 100), 2),
+            ]);
+        }
+
         $validator = Validator::make($request->all(), [
             'codigo' => 'required|string|max:50|unique:PRODUCTO,codigo',
             'nombre' => 'nullable|string|max:255',
             'descripcion' => 'required|string|max:255',
             'precio_unitario' => 'required|numeric|min:0',
             'precio_minorista' => 'nullable|numeric|min:0',
+            'costo' => 'nullable|numeric|min:0',
+            'recargo' => 'nullable|numeric|min:0',
             'id_categoria' => 'required|integer|exists:CATEGORIA,id_categoria',
             'id_marca' => 'required|integer|exists:MARCA,id_marca',
             'stock_disponible' => 'nullable|integer|min:0',
@@ -145,6 +182,15 @@ class ProductoController extends Controller
             $unidadesPorBulto = max(1, (int) $request->input('unidades_por_bulto', 1));
             $idUsuario = UsuarioActual::id($request);
             $precioUnitario = (float) ($request->input('precio_unitario') ?? $request->input('precioMay') ?? 0.0);
+            $costo = $request->filled('costo') ? (float) $request->input('costo') : null;
+            $recargo = $request->filled('recargo') ? (float) $request->input('recargo') : null;
+
+            if ($costo !== null && $costo > 0 && $recargo !== null && !$request->filled('precio_unitario')) {
+                $precioUnitario = round($costo * (1 + $recargo / 100), 2);
+            } elseif ($precioUnitario > 0 && $costo !== null && $costo > 0 && $recargo === null) {
+                $recargo = round((($precioUnitario - $costo) / $costo) * 100, 2);
+            }
+
             $descripcion = trim($request->input('descripcion'));
             $nombre = trim((string) $request->input('nombre')) !== ''
                 ? trim((string) $request->input('nombre'))
@@ -152,13 +198,15 @@ class ProductoController extends Controller
             $codigoLimpio = trim((string) $request->input('codigo'));
             $imagenRuta = $this->resolverImagen($request, $codigoLimpio, null);
 
-            $producto = DB::transaction(function () use ($request, $now, $stockInicial, $stockMinimo, $formatoBulto, $unidadesPorBulto, $idUsuario, $precioUnitario, $descripcion, $nombre, $codigoLimpio, $imagenRuta) {
+            $producto = DB::transaction(function () use ($request, $now, $stockInicial, $stockMinimo, $formatoBulto, $unidadesPorBulto, $idUsuario, $precioUnitario, $costo, $recargo, $descripcion, $nombre, $codigoLimpio, $imagenRuta) {
                 // 1. Crear Producto (P01). El stock queda embebido en PRODUCTO (OB3).
                 $prod = Producto::create([
                     'codigo' => $codigoLimpio,
                     'nombre' => $nombre,
                     'descripcion' => $descripcion,
                     'precio_unitario' => $precioUnitario,
+                    'costo' => $costo,
+                    'recargo' => $recargo,
                     'imagen' => $imagenRuta,
                     'stock' => $stockInicial,
                     'stock_minimo' => $stockMinimo,
@@ -241,9 +289,15 @@ class ProductoController extends Controller
     /**
      * Obtener detalle de un producto por ID
      */
-    public function show(int $id): JsonResponse
+    public function show(Request $request, int $id): JsonResponse
     {
-        $producto = Producto::with(['categoria', 'marca', 'usuarioCarga', 'usuarioModificacion', 'historialPrecios.usuario', 'ubicaciones', 'unidades'])->find($id);
+        $esVistaInternaG3 = $request->boolean('interno');
+        $relaciones = ['categoria', 'marca', 'unidades'];
+        if ($esVistaInternaG3) {
+            $relaciones = array_merge($relaciones, ['usuarioCarga', 'usuarioModificacion', 'historialPrecios.usuario', 'ubicaciones']);
+        }
+
+        $producto = Producto::with($relaciones)->find($id);
 
         if (!$producto) {
             return response()->json([
@@ -254,52 +308,14 @@ class ProductoController extends Controller
 
         return response()->json([
             'status' => 'success',
-            'data' => [
-                'id' => $producto->id_producto,
-                'id_producto' => $producto->id_producto,
-                'codigo' => $producto->codigo,
-                'descripcion' => $producto->descripcion,
-                'nombre' => $producto->nombre,
-                'imagen' => $producto->imagen,
-                'imagen_url' => $producto->imagen_url,
-                'precio_unitario' => (float) $producto->precio_unitario,
-                'precio_mayorista' => (float) $producto->precio_mayorista,
-                'precio_minorista' => (float) $producto->precio_minorista,
-                'precioMay' => (float) $producto->precio_mayorista,
-                'precioMin' => (float) $producto->precio_minorista,
-                'estado' => $producto->estado,
-                'fecha_alta' => $producto->fecha_alta ? ($producto->fecha_alta instanceof \Carbon\CarbonInterface ? $producto->fecha_alta->format('Y-m-d H:i:s') : (string) $producto->fecha_alta) : null,
-                'fecha_modificacion' => $producto->fecha_modificacion ? ($producto->fecha_modificacion instanceof \Carbon\CarbonInterface ? $producto->fecha_modificacion->format('Y-m-d H:i:s') : (string) $producto->fecha_modificacion) : null,
-                'fecha_desactivacion' => $producto->fecha_desactivacion ? ($producto->fecha_desactivacion instanceof \Carbon\CarbonInterface ? $producto->fecha_desactivacion->format('Y-m-d H:i:s') : (string) $producto->fecha_desactivacion) : null,
-                'id_usuario_carga' => $producto->id_usuario_carga,
-                'usuario_carga_nombre' => $producto->usuarioCarga ? $producto->usuarioCarga->nombre : ($producto->id_usuario_carga ? "Usuario #{$producto->id_usuario_carga}" : null),
-                'id_usuario_modificacion' => $producto->id_usuario_modificacion,
-                'usuario_modificacion_nombre' => $producto->usuarioModificacion ? $producto->usuarioModificacion->nombre : ($producto->id_usuario_modificacion ? "Usuario #{$producto->id_usuario_modificacion}" : null),
-                'id_categoria' => $producto->id_categoria,
-                'categoria_nombre' => $producto->categoria ? $producto->categoria->nombre : null,
-                'id_marca' => $producto->id_marca,
-                'marca_nombre' => $producto->marca ? $producto->marca->nombre : null,
-                'id_ubicacion' => $producto->ubicaciones->first()?->id_ubicacion,
-                'ubicacion_nombre' => $producto->ubicaciones->first()?->descripcion ?? 'Sin asignar',
-                'stock' => (int) ($producto->stock ?? $producto->stock_disponible ?? 0),
-                'stock_disponible' => (int) ($producto->stock_disponible ?? $producto->stock ?? 0),
-                'stock_minimo' => (int) ($producto->stock_minimo ?? 0),
-                'estado_alerta' => $producto->estado_alerta,
-                'unidad_medida' => $producto->unidad_medida,
-                'equivalencia_unidad' => $producto->equivalencia_unidad,
-                'id_unidad_activa' => $producto->id_unidad_activa,
-                'formato_bulto' => $producto->formato_bulto,
-                'unidades_por_bulto' => (int) ($producto->unidades_por_bulto ?? 1),
-                'presentacion_texto' => $producto->presentacion_texto,
-                'historial_precios' => $producto->historialPrecios,
-            ],
+            'data' => $this->formatearProducto($producto, $esVistaInternaG3, true),
         ]);
     }
 
     /**
      * Obtener detalle de un producto por su código comercial único
      */
-    public function showByCodigo(string $codigo): JsonResponse
+    public function showByCodigo(Request $request, string $codigo): JsonResponse
     {
         $producto = Producto::where('codigo', trim($codigo))->first();
 
@@ -310,7 +326,7 @@ class ProductoController extends Controller
             ], 404);
         }
 
-        return $this->show((int) $producto->id_producto);
+        return $this->show($request, (int) $producto->id_producto);
     }
 
     /**
@@ -327,12 +343,28 @@ class ProductoController extends Controller
             ], 404);
         }
 
+        if (!$request->filled('precio_unitario') && !$request->filled('precioMay')) {
+            $costoUpdate = $request->filled('costo') ? (float) $request->input('costo') : (float) $producto->costo;
+            $recargoUpdate = $request->filled('recargo') ? (float) $request->input('recargo') : ($producto->recargo !== null ? (float) $producto->recargo : null);
+            if ($costoUpdate > 0 && $recargoUpdate !== null) {
+                $request->merge([
+                    'precio_unitario' => round($costoUpdate * (1 + $recargoUpdate / 100), 2),
+                ]);
+            } else {
+                $request->merge([
+                    'precio_unitario' => (float) $producto->precio_unitario,
+                ]);
+            }
+        }
+
         $validator = Validator::make($request->all(), [
             'codigo' => "required|string|max:50|unique:PRODUCTO,codigo,{$id},id_producto",
             'nombre' => 'nullable|string|max:255',
             'descripcion' => 'required|string|max:255',
             'precio_unitario' => 'required|numeric|min:0',
             'precio_minorista' => 'nullable|numeric|min:0',
+            'costo' => 'nullable|numeric|min:0',
+            'recargo' => 'nullable|numeric|min:0',
             'id_categoria' => 'required|integer|exists:CATEGORIA,id_categoria',
             'id_marca' => 'required|integer|exists:MARCA,id_marca',
             'stock_minimo' => 'nullable|integer|min:0',
@@ -368,6 +400,21 @@ class ProductoController extends Controller
             $idUsuario = UsuarioActual::id($request);
             $nuevoPrecio = (float) ($request->input('precio_unitario') ?? $request->input('precioMay') ?? $producto->precio_unitario);
             $anteriorPrecio = (float) $producto->precio_unitario;
+
+            $costo = $request->has('costo')
+                ? ($request->filled('costo') ? (float) $request->input('costo') : null)
+                : ($producto->costo !== null ? (float) $producto->costo : null);
+
+            $recargo = $request->has('recargo')
+                ? ($request->filled('recargo') ? (float) $request->input('recargo') : null)
+                : ($producto->recargo !== null ? (float) $producto->recargo : null);
+
+            if ($request->has('recargo') && !$request->has('precio_unitario') && $costo !== null && $costo > 0 && $recargo !== null) {
+                $nuevoPrecio = round($costo * (1 + $recargo / 100), 2);
+            } elseif ($nuevoPrecio != $anteriorPrecio && $costo !== null && $costo > 0) {
+                $recargo = round((($nuevoPrecio - $costo) / $costo) * 100, 2);
+            }
+
             $descripcion = trim($request->input('descripcion'));
             $nombre = trim((string) $request->input('nombre')) !== ''
                 ? trim((string) $request->input('nombre'))
@@ -397,7 +444,7 @@ class ProductoController extends Controller
                 'imagen' => $nuevaImagen,
             ];
 
-            DB::transaction(function () use ($producto, $request, $now, $idUsuario, $nuevoPrecio, $anteriorPrecio, $descripcion, $nombre, $codigoLimpio, $nuevaImagen, $valoresAnteriores, $valoresNuevos) {
+            DB::transaction(function () use ($producto, $request, $now, $idUsuario, $nuevoPrecio, $anteriorPrecio, $costo, $recargo, $descripcion, $nombre, $codigoLimpio, $nuevaImagen, $valoresAnteriores, $valoresNuevos) {
                 // Si cambió el precio unitario, se registra en HISTORIAL_PRECIO (P04)
                 if (abs($nuevoPrecio - $anteriorPrecio) >= 0.001) {
                     $porcentaje = 0.0;
@@ -434,6 +481,13 @@ class ProductoController extends Controller
                 }
                 if ($request->has('unidades_por_bulto')) {
                     $datosUpdate['unidades_por_bulto'] = max(1, (int) $request->input('unidades_por_bulto', 1));
+                }
+
+                if ($request->has('costo')) {
+                    $datosUpdate['costo'] = $costo;
+                }
+                if ($request->has('recargo') || ($costo !== null && abs($nuevoPrecio - $anteriorPrecio) >= 0.001)) {
+                    $datosUpdate['recargo'] = $recargo;
                 }
 
                 // Actualizar producto
@@ -880,11 +934,17 @@ class ProductoController extends Controller
                                 'id_usuario' => $idUsuario,
                             ]);
 
-                        $producto->update([
+                        $updateData = [
                             'precio_unitario' => $nuevoPrecio,
                             'fecha_modificacion' => $now,
                             'id_usuario_modificacion' => $idUsuario,
-                        ]);
+                        ];
+
+                        if ($producto->costo !== null && (float) $producto->costo > 0) {
+                            $updateData['recargo'] = round((($nuevoPrecio - (float) $producto->costo) / (float) $producto->costo) * 100, 2);
+                        }
+
+                        $producto->update($updateData);
 
                         AuditoriaLogger::registrar(
                             'producto',

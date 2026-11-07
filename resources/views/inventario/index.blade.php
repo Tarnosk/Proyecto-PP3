@@ -618,15 +618,41 @@
                 </div>
             </div>
 
-            <div class="grid grid-cols-2 gap-3">
-                <div>
-                    <label class="block text-[11px] font-extrabold text-slate-600 uppercase mb-1">Precio Unitario ($)</label>
-                    <input type="number" step="0.01" min="0" id="prodPrecioUnitario" required class="clay-input w-full font-black text-sm" placeholder="0.00">
+            <div class="p-3 bg-slate-50/90 rounded-xl border border-slate-200/80 space-y-2.5">
+                <div class="flex items-center justify-between">
+                    <span class="text-[11px] font-black text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                        <i data-lucide="tag" class="w-3.5 h-3.5 text-indigo-500"></i> Formación del Precio (Neto sin IVA)
+                    </span>
+                    <span id="prodMargenBadge" class="text-[11px] font-bold text-slate-500">Margen: —</span>
                 </div>
-                <div>
-                    <label class="block text-[11px] font-extrabold text-slate-600 uppercase mb-1">Imagen (Ruta o URL)</label>
-                    <input type="text" id="prodImagen" oninput="actualizarPreviewImagenProducto()" class="clay-input w-full text-xs font-bold" placeholder="/assets/catalogo/producto.webp">
+                <div class="grid grid-cols-3 gap-2.5">
+                    <div>
+                        <label class="block text-[10px] font-extrabold text-slate-600 uppercase mb-1" title="Costo de reposición del proveedor principal">
+                            Costo Base ($)
+                        </label>
+                        <input type="number" step="0.01" min="0" id="prodCosto" oninput="calcularPrecioDesdeCostoYRecargo()" class="clay-input w-full font-bold text-xs" placeholder="0.00">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-extrabold text-slate-600 uppercase mb-1" title="Markup porcentual sobre el costo">
+                            Recargo (%)
+                        </label>
+                        <input type="number" step="0.01" min="0" id="prodRecargo" oninput="calcularPrecioDesdeCostoYRecargo()" class="clay-input w-full font-bold text-xs" placeholder="0.00">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-extrabold text-slate-600 uppercase mb-1">
+                            Precio Venta ($) *
+                        </label>
+                        <input type="number" step="0.01" min="0" id="prodPrecioUnitario" oninput="calcularRecargoDesdePrecio()" required class="clay-input w-full font-black text-xs text-indigo-950" placeholder="0.00">
+                    </div>
                 </div>
+                <div id="prodAlertaBajoCosto" class="hidden text-[10px] font-extrabold text-rose-600 bg-rose-50 px-2 py-1 rounded-lg border border-rose-200">
+                    ⚠️ Atención: El precio de venta está por debajo del costo de reposición.
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-[11px] font-extrabold text-slate-600 uppercase mb-1">Imagen (Ruta o URL)</label>
+                <input type="text" id="prodImagen" oninput="actualizarPreviewImagenProducto()" class="clay-input w-full text-xs font-bold" placeholder="/assets/catalogo/producto.webp">
             </div>
 
             <div class="flex items-center justify-between gap-3 p-2.5 bg-slate-50/80 rounded-xl border border-slate-200/70">
@@ -1435,7 +1461,7 @@
 
     async function cargarProductos() {
         try {
-            const res = await fetch(`${API_BASE}/productos`);
+            const res = await fetch(`${API_BASE}/productos?interno=1`);
             const json = await res.json();
             if (json.status === 'success') {
                 productosCache = json.data;
@@ -1549,6 +1575,31 @@
             const cantStock = Number(p.stock ?? p.stock_disponible ?? 0);
             const stockMin = Number(p.stock_minimo || 5);
 
+            let precioDetalleHtml = '';
+            const numCosto = (p.costo !== null && p.costo !== undefined && p.costo !== '') ? Number(p.costo) : null;
+            const numRecargo = (p.recargo !== null && p.recargo !== undefined && p.recargo !== '') ? Number(p.recargo) : null;
+            const numMargen = (p.margen_ganancia !== null && p.margen_ganancia !== undefined && p.margen_ganancia !== '') ? Number(p.margen_ganancia) : null;
+            const numPrecio = Number(p.precio_unitario ?? 0);
+
+            if (numCosto !== null && numCosto > 0) {
+                const costoFmt = numCosto.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' });
+                if (numCosto > numPrecio) {
+                    precioDetalleHtml = `
+                        <div class="text-[10px] text-rose-600 font-extrabold mt-0.5">Costo: ${costoFmt}</div>
+                        <span class="inline-block mt-0.5 px-1.5 py-0.5 bg-rose-100 text-rose-700 text-[9px] font-black rounded">¡Bajo costo!</span>
+                    `;
+                } else {
+                    const recTxt = numRecargo !== null ? `+${numRecargo}%` : '';
+                    const mrgTxt = numMargen !== null ? `Margen: ${numMargen}%` : '';
+                    precioDetalleHtml = `
+                        <div class="text-[10px] text-slate-400 font-semibold mt-0.5" title="Costo de reposición del proveedor principal">Costo: ${costoFmt} ${recTxt ? `(${recTxt})` : ''}</div>
+                        ${mrgTxt ? `<div class="text-[10px] text-emerald-600 font-bold">${mrgTxt}</div>` : ''}
+                    `;
+                }
+            } else {
+                precioDetalleHtml = `<div class="text-[10px] text-amber-500 font-medium mt-0.5" title="Sin costo de reposición asignado">Sin costo</div>`;
+            }
+
             // Semáforo visual
             let semaforoBadge = '';
             if (cantStock === 0) {
@@ -1586,7 +1637,10 @@
                     </td>
                     <td><span class="text-xs font-bold text-slate-600">${p.categoria?.nombre || p.categoria_nombre || '-'}</span></td>
                     <td><span class="text-xs font-bold text-slate-600">${p.marca?.nombre || p.marca_nombre || '-'}</span></td>
-                    <td class="text-center font-black text-slate-800">${precioUnitario}</td>
+                    <td class="text-center">
+                        <div class="font-black text-slate-800">${precioUnitario}</div>
+                        ${precioDetalleHtml}
+                    </td>
                     <td class="text-center">
                         <div class="font-black text-slate-800 text-xs">${cantStock} u.</div>
                         <div class="mt-0.5">${semaforoBadge}</div>
@@ -2043,7 +2097,10 @@
         document.getElementById('prodDescripcion').value = '';
         document.getElementById('prodCategoria').value = '';
         document.getElementById('prodMarca').value = '';
+        document.getElementById('prodCosto').value = '';
+        document.getElementById('prodRecargo').value = '';
         document.getElementById('prodPrecioUnitario').value = '';
+        actualizarMargenUI();
         document.getElementById('prodImagen').value = '';
         const fileInput = document.getElementById('prodImagenArchivo');
         if (fileInput) fileInput.value = '';
@@ -2069,7 +2126,10 @@
         document.getElementById('prodDescripcion').value = prod.descripcion || '';
         document.getElementById('prodCategoria').value = prod.id_categoria || '';
         document.getElementById('prodMarca').value = prod.id_marca || '';
+        document.getElementById('prodCosto').value = (prod.costo !== null && prod.costo !== undefined) ? prod.costo : '';
+        document.getElementById('prodRecargo').value = (prod.recargo !== null && prod.recargo !== undefined) ? prod.recargo : '';
         document.getElementById('prodPrecioUnitario').value = prod.precio_unitario ?? prod.precio_minorista ?? '';
+        actualizarMargenUI();
         document.getElementById('prodImagen').value = prod.imagen_url || prod.imagen || '';
         const fileInput = document.getElementById('prodImagenArchivo');
         if (fileInput) fileInput.value = '';
@@ -2083,6 +2143,60 @@
         if (btnHist) btnHist.classList.remove('hidden');
         document.getElementById('modalProducto').classList.remove('hidden');
         if (window.lucide) window.lucide.createIcons();
+    }
+
+    function calcularPrecioDesdeCostoYRecargo() {
+        const costo = parseFloat(document.getElementById('prodCosto')?.value);
+        const recargo = parseFloat(document.getElementById('prodRecargo')?.value);
+
+        if (!isNaN(costo) && costo >= 0 && !isNaN(recargo) && recargo >= 0) {
+            const precio = Math.round((costo * (1 + recargo / 100)) * 100) / 100;
+            document.getElementById('prodPrecioUnitario').value = precio.toFixed(2);
+        }
+        actualizarMargenUI();
+    }
+
+    function calcularRecargoDesdePrecio() {
+        const costo = parseFloat(document.getElementById('prodCosto')?.value);
+        const precio = parseFloat(document.getElementById('prodPrecioUnitario')?.value);
+
+        if (!isNaN(costo) && costo > 0 && !isNaN(precio) && precio >= 0) {
+            const recargo = Math.round((((precio - costo) / costo) * 100) * 100) / 100;
+            document.getElementById('prodRecargo').value = recargo.toFixed(2);
+        }
+        actualizarMargenUI();
+    }
+
+    function actualizarMargenUI() {
+        const costo = parseFloat(document.getElementById('prodCosto')?.value);
+        const precio = parseFloat(document.getElementById('prodPrecioUnitario')?.value);
+        const badge = document.getElementById('prodMargenBadge');
+        const alerta = document.getElementById('prodAlertaBajoCosto');
+
+        if (isNaN(costo) || costo <= 0 || isNaN(precio) || precio <= 0) {
+            if (badge) {
+                badge.textContent = 'Margen: —';
+                badge.className = 'text-[11px] font-bold text-slate-400';
+            }
+            if (alerta) alerta.classList.add('hidden');
+            return;
+        }
+
+        const margen = Math.round((((precio - costo) / precio) * 100) * 100) / 100;
+        if (badge) {
+            badge.textContent = `Margen real: ${margen.toFixed(1)}%`;
+            badge.className = margen >= 0
+                ? 'text-[11px] font-black text-emerald-600'
+                : 'text-[11px] font-black text-rose-600';
+        }
+
+        if (alerta) {
+            if (precio < costo) {
+                alerta.classList.remove('hidden');
+            } else {
+                alerta.classList.add('hidden');
+            }
+        }
     }
 
     function abrirHistorialDesdeProducto() {
@@ -2099,6 +2213,8 @@
         e.preventDefault();
         const id = document.getElementById('prodId').value;
         const precioUnitario = Number(document.getElementById('prodPrecioUnitario').value);
+        const costoVal = document.getElementById('prodCosto')?.value;
+        const recargoVal = document.getElementById('prodRecargo')?.value;
         const formatoBulto = document.getElementById('prodFormatoBulto')?.value || 'Unidad';
         const unidadesPorBulto = Math.max(1, parseInt(document.getElementById('prodUnidadesPorBulto')?.value || '1', 10));
         const imagenTexto = document.getElementById('prodImagen')?.value.trim() || '';
@@ -2111,6 +2227,8 @@
             descripcion: document.getElementById('prodDescripcion').value.trim(),
             id_categoria: document.getElementById('prodCategoria').value || null,
             id_marca: document.getElementById('prodMarca').value || null,
+            costo: (costoVal !== '' && costoVal !== null && !isNaN(costoVal)) ? Number(costoVal) : null,
+            recargo: (recargoVal !== '' && recargoVal !== null && !isNaN(recargoVal)) ? Number(recargoVal) : null,
             precio_unitario: precioUnitario,
             precio_minorista: precioUnitario,
             precio_mayorista: precioUnitario,

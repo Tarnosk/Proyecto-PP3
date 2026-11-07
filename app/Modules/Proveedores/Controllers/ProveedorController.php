@@ -411,9 +411,19 @@ class ProveedorController extends Controller
             ]);
 
             // PV04: Desmarcar como proveedor principal de cualquier producto para que no quede como principal tras darse de baja
+            $productosAfectados = ProductoProveedor::where('id_proveedor', $proveedor->id_proveedor)
+                ->where('es_proveedor_principal', true)
+                ->pluck('id_producto')
+                ->toArray();
+
             ProductoProveedor::where('id_proveedor', $proveedor->id_proveedor)
                 ->where('es_proveedor_principal', true)
                 ->update(['es_proveedor_principal' => false]);
+
+            foreach ($productosAfectados as $idProdAfectado) {
+                $p = Producto::find($idProdAfectado);
+                $p?->sincronizarCostoReposicion($idUsuario);
+            }
         });
 
         AuditoriaLogger::registrar(
@@ -805,6 +815,13 @@ class ProveedorController extends Controller
                     }
                     $asociados[] = $nuevo;
                 }
+
+                if ($esPrincipal) {
+                    foreach ($idsProductos as $idProducto) {
+                        $p = Producto::find($idProducto);
+                        $p?->sincronizarCostoReposicion($idUsuario);
+                    }
+                }
             });
 
             return response()->json([
@@ -859,6 +876,9 @@ class ProveedorController extends Controller
                 'fecha_asociacion' => $now,
                 'id_usuario' => $idUsuario,
             ]);
+
+            $prod = Producto::find($relacion->id_producto);
+            $prod?->sincronizarCostoReposicion($idUsuario);
         });
 
         return response()->json([
