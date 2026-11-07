@@ -8,21 +8,7 @@ use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Facades\Http;
 use Throwable;
 
-/**
- * STOCK DESDE LA API REAL (APAGADA HOY - lista para integrar)
- *
- * Testeada en tests/Unit/Integraciones/HttpStockApiTest.php.
- *
- * Para activarla, en el .env:
- *   VENTAS_INTEGRACION=http
- *   VENTAS_STOCK_URL=http://url-del-modulo-stock
- *
- * ⚠ CONTRATO SUPUESTO (ajustar cuando el grupo de Stock lo confirme):
- *   POST {url}/api/stock/movimientos
- *        { "origen": "ventas", "venta_id": 5, "motivo": "anulacion",
- *          "items": [ { "id_producto": 1, "cantidad": 2 } ] }      ← cantidad con signo
- *   GET  {url}/api/stock/{id_producto}  → { "disponible": 48 }
- */
+/** Stock desde la API real de Productos/Stock. */
 class HttpStockApi implements StockGateway
 {
     public function ajustar(array $cambios, int $ventaId, string $motivo): void
@@ -40,7 +26,7 @@ class HttpStockApi implements StockGateway
         }
 
         try {
-            $this->cliente()->post('/api/stock/movimientos', [
+            $this->cliente()->post('/api/v1/stock/movimientos', [
                 'origen' => 'ventas',
                 'venta_id' => $ventaId,
                 'motivo' => $motivo,
@@ -54,7 +40,7 @@ class HttpStockApi implements StockGateway
     public function disponible(int $idProducto): ?int
     {
         try {
-            $respuesta = $this->cliente()->get("/api/stock/{$idProducto}");
+            $respuesta = $this->cliente()->get("/api/v1/stock/{$idProducto}");
         } catch (Throwable $e) {
             throw new IntegracionNoDisponibleException('stock', $e);
         }
@@ -67,13 +53,28 @@ class HttpStockApi implements StockGateway
             throw new IntegracionNoDisponibleException('stock', $respuesta->toException());
         }
 
-        return (int) $respuesta->json('disponible');
+        $disponible = $respuesta->json('disponible');
+        if ($disponible === null) {
+            $disponible = $respuesta->json('cantidad_disponible');
+        }
+        if ($disponible === null) {
+            $disponible = $respuesta->json('stock_disponible');
+        }
+        if ($disponible === null) {
+            $disponible = $respuesta->json('stock');
+        }
+
+        return $disponible === null ? null : (int) $disponible;
     }
 
     private function cliente(): PendingRequest
     {
-        return Http::baseUrl((string) config('ventas.servicios.stock.url'))
+        $cliente = Http::baseUrl(rtrim((string) config('ventas.servicios.stock.url'), '/'))
             ->timeout((int) config('ventas.timeout'))
             ->acceptJson();
+
+        $token = config('services.internal_api.token');
+
+        return is_string($token) && $token !== '' ? $cliente->withToken($token) : $cliente;
     }
 }

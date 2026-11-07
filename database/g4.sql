@@ -10,11 +10,24 @@ numFactura varchar(50) NOT NULL,
 estado enum ('pendiente','confirmada','pagada','facturada', 'cancelada') NOT NULL,
 observaciones varchar(150) NOT NULL,
 id_usuario int NOT NULL);
+CREATE TABLE venta_historial (
+  id bigint(20) UNSIGNED NOT NULL,
+  id_venta int(10) UNSIGNED NOT NULL,
+  accion varchar(20) NOT NULL,
+  estado_anterior varchar(20) DEFAULT NULL,
+  estado_nuevo varchar(20) NOT NULL,
+  motivo varchar(150) DEFAULT NULL,
+  datos longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(datos)),
+  id_usuario int(10) UNSIGNED DEFAULT NULL,
+  created_at timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE PROMOCION (
 id_promocion int primary key auto_increment,
 nombre varchar(50) NOT NULL,
 total decimal NOT NULL,
+tipo_descuento varchar(20) NOT NULL DEFAULT 'monto_fijo',
+valor_descuento decimal(12,2) NOT NULL DEFAULT 0,
 vigencia_desde date NOT NULL,
 vigencia_hasta date NOT NULL,
 descripcion varchar(150),

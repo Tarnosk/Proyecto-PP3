@@ -4,43 +4,32 @@ namespace App\Modules\ConciliacionBancaria\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class MovimientoBancario extends Model
 {
     protected $table = 'MOVIMIENTO_BANCARIO';
     protected $primaryKey = 'id_movimiento_bancario';
-    public $timestamps = false;
 
     protected $fillable = [
-        'id_periodo',
-        'fecha_movimiento',
-        'descripcion',
+        'id_archivo_importado_log',
+        'fecha_operacion',
         'monto',
-        'tipo',
-        'estado',
-        'fecha_importacion',
-        'id_usuario',
+        'signo_monto',
+        'descripcion_original',
+        'descripcion_normalizada',
+        'nro_comprobante_extraido',
+        'cuit_extraido',
+        'tipo_movimiento',
+        'estado_conciliacion',
     ];
 
     protected $casts = [
-        'fecha_movimiento' => 'date',
-        'fecha_importacion' => 'datetime',
+        'fecha_operacion' => 'date',
         'monto' => 'decimal:2',
     ];
 
-    public function periodo(): BelongsTo
+    public function archivoImportado(): BelongsTo
     {
-        return $this->belongsTo(PeriodoConciliacion::class, 'id_periodo', 'id_periodo');
-    }
-
-    public function ajustes(): HasMany
-    {
-        return $this->hasMany(AjusteBancario::class, 'id_movimiento_bancario', 'id_movimiento_bancario');
-    }
-
-    public function conciliacionDetalle(): HasMany
-    {
-        return $this->hasMany(ConciliacionDetalle::class, 'id_movimiento_bancario', 'id_movimiento_bancario');
+        return $this->belongsTo(ArchivoImportadoLog::class, 'id_archivo_importado_log', 'id_archivo_importado_log');
     }
 }

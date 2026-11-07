@@ -1,5 +1,5 @@
-/* Componentes de origin/develop-g2, aislados del menú global. */
-.g2-page 500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+/* Componentes de G2, aislados del menú global (claymorfismo spec 04-prototipo-frontend.md). */
 
 
 :root {
@@ -7,10 +7,10 @@
     --bg-surface:     #F4F8FD;
     --sidebar-grad:   linear-gradient(160deg, #1E3A8A 0%, #1E40AF 55%, #2563EB 100%);
     --sidebar-width:  272px;
-    --primary:        #1D4ED8;
+    --primary:        #0D6EFD;
     --primary-light:  #3B82F6;
-    --primary-hover:  #1E40AF;
-    --primary-glow:   rgba(29, 78, 216, 0.3);
+    --primary-hover:  #0b5ed7;
+    --primary-glow:   rgba(13, 110, 253, 0.3);
     --success:        #059669;
     --success-light:  #D1FAE5;
     --success-hover:  #047857;
@@ -30,11 +30,11 @@
     --radius-xs:  8px;
     --radius-sm:  12px;
     --radius-md:  16px;
-    --radius-lg:  24px;
+    --radius-lg:  28px;
     --radius-xl:  32px;
     --shadow-clay:     8px 8px 20px rgba(148, 163, 184, 0.35), -4px -4px 12px rgba(255, 255, 255, 0.85);
     --shadow-clay-sm:  4px 4px 10px rgba(148, 163, 184, 0.25), -2px -2px 6px rgba(255, 255, 255, 0.8);
-    --shadow-clay-btn: 4px 4px 12px rgba(29, 78, 216, 0.35), -2px -2px 6px rgba(255, 255, 255, 0.6);
+    --shadow-clay-btn: 4px 4px 12px rgba(13, 110, 253, 0.35), -2px -2px 6px rgba(255, 255, 255, 0.6);
     --shadow-modal:    0 24px 60px rgba(15, 23, 42, 0.3);
     --shadow-card-hover: 12px 12px 28px rgba(148, 163, 184, 0.45), -6px -6px 16px rgba(255, 255, 255, 0.95);
     --transition-fast:   150ms cubic-bezier(0.4, 0, 0.2, 1);
@@ -47,7 +47,7 @@
 .g2-page { scroll-behavior: smooth; }
 .g2-page {
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
-    font-size: 1.05rem;
+    font-size: 1.125rem;
     line-height: 1.6;
     color: var(--text-body);
     background-color: var(--bg-main);
@@ -56,8 +56,8 @@
     -webkit-font-smoothing: antialiased;
 }
 .g2-page *:focus-visible {
-    outline: 3px solid var(--primary-light) !important;
-    outline-offset: 3px !important;
+    outline: 4px solid #0D6EFD !important;
+    outline-offset: 2px !important;
     border-radius: 4px;
 }
 .g2-page .page-header {
@@ -261,7 +261,7 @@
 }
 .g2-page .clay-input,
 .g2-page .clay-select {
-    min-height: 44px;
+    min-height: 48px;
     padding: 0.5rem 0.95rem;
     font-size: 0.95rem;
     font-family: inherit;
@@ -284,7 +284,7 @@
 .g2-page .clay-input::placeholder { color: var(--text-light); }
 .g2-page textarea.clay-input { resize: vertical; min-height: 80px; }
 .g2-page .clay-btn {
-    min-height: 44px;
+    min-height: 48px;
     padding: 0.55rem 1.2rem;
     font-size: 0.95rem;
     font-weight: 600;
@@ -303,14 +303,14 @@
 }
 .g2-page .clay-btn:disabled { opacity: 0.5; pointer-events: none; }
 .g2-page .clay-btn-primary {
-    background: linear-gradient(135deg, var(--primary) 0%, #2563EB 100%);
+    background: linear-gradient(135deg, #0D6EFD 0%, #0b5ed7 100%);
     color: #FFFFFF;
     box-shadow: var(--shadow-clay-btn);
 }
 .g2-page .clay-btn-primary:hover {
-    background: linear-gradient(135deg, var(--primary-hover) 0%, var(--primary) 100%);
+    background: linear-gradient(135deg, #0b5ed7 0%, #0D6EFD 100%);
     transform: translateY(-1px);
-    box-shadow: 4px 6px 16px rgba(29, 78, 216, 0.4);
+    box-shadow: 4px 6px 16px rgba(13, 110, 253, 0.4);
 }
 .g2-page .clay-btn-primary:active { transform: translateY(0); }
 .g2-page .clay-btn-success {
@@ -692,7 +692,28 @@
 .g2-page .page-header { flex-direction: column; }
 }
 
-.g2-page { display:block; min-height:0; padding:1rem; border-radius:1rem; }
+.g2-page { display:block; min-height:0; padding:1.5rem; border-radius:1.5rem; }
 .g2-page [hidden] { display:none !important; }
 .g2-page .g2-content { margin:0; padding:0; min-width:0; }
+
+/* Integración y unificación visual con el layout de la app (idéntico a G3 - Stock e Inventario) */
+body.erp-shell {
+    background-color: #EBF4FC !important;
+}
+.erp-workspace, .erp-shell > .app-workspace {
+    background-color: #EBF4FC !important;
+}
+.erp-toolbar {
+    background: rgba(255, 255, 255, 0.85) !important;
+    backdrop-filter: blur(12px) !important;
+    border-bottom: 1px solid rgba(226, 232, 240, 0.8) !important;
+}
+.erp-toolbar .erp-icon-button {
+    background: #ffffff !important;
+    border: 1px solid #cbd5e1 !important;
+}
+#g1-rendiciones-status,
+#g1-rendiciones-retry {
+    display: none !important;
+}
 

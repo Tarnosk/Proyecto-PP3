@@ -123,11 +123,17 @@ class CajaRepository
     }
 
     /**
-     * Historial de cierres (CAJ-04). Filtros opcionales: usuario y rango de
-     * fechas (desde/hasta, sobre el campo 'fecha' de la caja).
+     * Historial de cierres (CAJ-04). Filtros opcionales: usuario, rango de
+     * fechas (desde/hasta, sobre el campo 'fecha' de la caja), tipo de cierre
+     * (automático o manual) y si el conteo está pendiente.
      */
-    public function listarCierres(?int $idUsuario = null, ?string $desde = null, ?string $hasta = null): Collection
-    {
+    public function listarCierres(
+        ?int $idUsuario = null,
+        ?string $desde = null,
+        ?string $hasta = null,
+        ?bool $cierreAutomatico = null,
+        ?bool $pendienteConteo = null
+    ): Collection {
         $query = Caja::where('estado', Caja::ESTADO_CERRADA);
 
         if ($idUsuario !== null) {
@@ -140,6 +146,17 @@ class CajaRepository
 
         if ($hasta !== null) {
             $query->where('fecha', '<=', $hasta);
+        }
+
+        if ($cierreAutomatico !== null) {
+            $query->where('cierre_automatico', $cierreAutomatico);
+        }
+
+        // Pendiente de conteo = cierre automático todavía sin monto final.
+        if ($pendienteConteo === true) {
+            $query->where('cierre_automatico', true)->whereNull('monto_final');
+        } elseif ($pendienteConteo === false) {
+            $query->whereNotNull('monto_final');
         }
 
         return $query->orderByDesc('fecha_hora_cierre')->get();
@@ -172,6 +189,19 @@ class CajaRepository
     public function listarMovimientosDeCaja(int $idCaja): Collection
     {
         return CajaMovimiento::where('id_caja', $idCaja)->get();
+    }
+
+    /**
+     * Movimientos cargados en una fecha, de todas las cajas (caja diaria
+     * para Reportes). Se agrupa por la fecha del movimiento, no por la de
+     * apertura de la caja, porque una caja de admin puede durar varios días.
+     */
+    public function listarMovimientosDeFecha(string $fecha): Collection
+    {
+        return CajaMovimiento::whereDate('fecha', $fecha)
+            ->orderBy('fecha_hora_carga')
+            ->orderBy('id_movimiento_caja')
+            ->get();
     }
 
     /**

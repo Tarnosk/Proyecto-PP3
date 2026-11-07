@@ -13,5 +13,6 @@ use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth', 'session.current', 'role:administrativo,contador'])->group(function (): void {
     Route::get('/saldo', [CuentaCorrienteController::class, 'index'])->name('saldo');
+    Route::post('/saldo/cobros', [CuentaCorrienteController::class, 'registrarCobro'])->name('saldo.cobros');
     Route::post('/saldo/{cliente}/movimientos', [CuentaCorrienteController::class, 'registrarMovimiento'])->name('saldo.movimientos');
 });

@@ -29,6 +29,12 @@
                     <a href="{{ route('caja.cierres.index') }}" class="clay-btn-secondary">Limpiar filtro</a>
                 </div>
             @endif
+            @if (!empty($puedeExportarPdf))
+                <div>
+                    {{-- Exporta con los mismos filtros que se están viendo --}}
+                    <a href="{{ route('caja.cierres.pdf', array_filter(['desde' => $desde, 'hasta' => $hasta])) }}" class="clay-btn-secondary">Exportar PDF</a>
+                </div>
+            @endif
         </form>
 
         @if (count($cierres) === 0)
@@ -43,19 +49,36 @@
                         <th>Monto inicial</th>
                         <th>Monto final</th>
                         <th>Diferencia</th>
-                        <th>Usuario que cerró</th>
+                        <th>Cierre</th>
                         <th></th>
                     </tr>
                 </thead>
                 <tbody>
                     @foreach ($cierres as $cierre)
+                        @php
+                            // Cierre automático (72 h) sin el conteo cargado todavía.
+                            $pendiente = !empty($cierre['cierre_automatico']) && $cierre['monto_final'] === null;
+                        @endphp
                         <tr>
                             <td>{{ \Illuminate\Support\Carbon::parse($cierre['fecha'])->format('d/m/Y') }}</td>
                             <td>${{ number_format($cierre['monto_inicial'], 2, ',', '.') }}</td>
-                            <td>${{ number_format($cierre['monto_final'], 2, ',', '.') }}</td>
-                            <td>${{ number_format($cierre['diferencia'], 2, ',', '.') }}</td>
+                            @if ($pendiente)
+                                <td colspan="2"><span class="badge badge-cerrado">Pendiente de conteo</span></td>
+                            @else
+                                <td>${{ number_format($cierre['monto_final'], 2, ',', '.') }}</td>
+                                <td>${{ number_format($cierre['diferencia'], 2, ',', '.') }}</td>
+                            @endif
                             {{-- TODO: mostrar nombre real cuando Login (G1) este integrado --}}
-                            <td>Usuario #{{ $cierre['id_usuario_cierre'] }}</td>
+                            <td>
+                                @if (!empty($cierre['cierre_automatico']))
+                                    Automático
+                                    @if (!$pendiente && !empty($cierre['id_usuario_cierre']))
+                                        (conteo: usuario #{{ $cierre['id_usuario_cierre'] }})
+                                    @endif
+                                @else
+                                    Usuario #{{ $cierre['id_usuario_cierre'] }}
+                                @endif
+                            </td>
                             <td>
                                 <a href="{{ route('caja.cierres.show', $cierre['id_caja']) }}" class="clay-btn-secondary">Ver detalle</a>
                             </td>

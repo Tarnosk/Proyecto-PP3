@@ -11,7 +11,9 @@ use App\Modules\Ventas\Exceptions\VentaNoEncontradaException;
 use App\Modules\Ventas\Logging\VentaLogger;
 use App\Modules\Ventas\Models\Venta;
 use App\Modules\Ventas\Models\VentaHistorial;
+use App\Support\UsuarioActual;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 use Throwable;
 
@@ -50,15 +52,16 @@ class VentaService
     // =====================================================================
 
     /**
-     * Lista de ventas con filtros y paginada. La más nueva primero.
+     * Lista de ventas con filtros. La más nueva primero.
      *
-     * @param  array  $filtros  estado, cliente_id, desde, hasta, texto, por_pagina (todos opcionales)
+     * Con "page" pagina (Reportes y Entregas recorren las páginas).
+     * Sin "page" devuelve TODAS las ventas que cumplen el filtro.
+     *
+     * @param  array  $filtros  estado, cliente_id, desde, hasta, texto, por_pagina, page (todos opcionales)
      */
-    public function listar(array $filtros): LengthAwarePaginator
+    public function listar(array $filtros): LengthAwarePaginator|Collection
     {
-        $porPagina = min((int) ($filtros['por_pagina'] ?? config('ventas.por_pagina')), (int) config('ventas.por_pagina_max'));
-
-        return Venta::query()
+        $consulta = Venta::query()
             ->with('detalles')
             // when(condición, ...) solo agrega el filtro si la condición es verdadera.
             ->when($filtros['estado'] ?? null, fn ($q, $estado) => $q->where('estado', $estado))
@@ -69,8 +72,15 @@ class VentaService
                 $q->where('numFactura', 'like', "%{$texto}%")->orWhere('observaciones', 'like', "%{$texto}%");
             }))
             ->orderByDesc('fecha')
-            ->orderByDesc('id_venta')
-            ->paginate($porPagina);
+            ->orderByDesc('id_venta');
+
+        if (! isset($filtros['page'])) {
+            return $consulta->get();
+        }
+
+        $porPagina = min((int) ($filtros['por_pagina'] ?? config('ventas.por_pagina')), (int) config('ventas.por_pagina_max'));
+
+        return $consulta->paginate($porPagina);
     }
 
     /**
@@ -388,8 +398,7 @@ class VentaService
             'estado_nuevo' => $estadoNuevo,
             'motivo' => $motivo,
             'datos' => $datos,
-            // Usuario de prueba hasta que exista el login (mismo que usa VentaController@store).
-            'id_usuario' => config('cuenta_corriente.id_usuario_prueba'),
+            'id_usuario' => UsuarioActual::id(),
         ]);
     }
 

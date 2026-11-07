@@ -2,9 +2,11 @@
 
 namespace App\Modules\Rendiciones\Repositories;
 
+use App\Modules\Entregas\Integraciones\VentasApiClient;
 use App\Modules\Rendiciones\Models\Rendicion;
 use App\Modules\Rendiciones\Models\RendicionCobro;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 
 /**
@@ -16,6 +18,12 @@ use Illuminate\Support\Facades\Schema;
  */
 class RendicionRepository
 {
+    private VentasApiClient $ventasClient;
+
+    public function __construct(?VentasApiClient $ventasClient = null)
+    {
+        $this->ventasClient = $ventasClient ?? new VentasApiClient();
+    }
     /**
      * Crea una nueva rendición en estado 'pendiente'.
      */
@@ -150,17 +158,29 @@ class RendicionRepository
 
     /**
      * Verifica si una factura/venta tiene saldo pendiente de pago.
+     * Si la API de G4 no responde o falla, actúa con tolerancia registrando advertencia.
      */
     public function facturaEstaPendiente(int $idFactura): bool
     {
-        $venta = (new \App\Modules\Entregas\Integraciones\VentasApiClient())->obtenerVentaPorId($idFactura);
+        $venta = $this->ventasClient->obtenerVentaPorId($idFactura);
         if ($venta === null) {
-            return false;
-        }
-        if (!array_key_exists('pagado', $venta) || !is_bool($venta['pagado'])) {
-            throw new \UnexpectedValueException('G4 debe informar el indicador booleano pagado para validar el cobro.');
+            // Si el servicio no está disponible o no existe la venta, asumimos pendiente con advertencia en log
+            Log::warning("G2 - facturaEstaPendiente: No se pudo verificar venta #{$idFactura} en G4. Se asume pendiente para no bloquear el flujo.");
+            return true;
         }
 
-        return !$venta['pagado'];
+        // Si viene un indicador booleano explícito
+        if (isset($venta['pagado']) && is_bool($venta['pagado'])) {
+            return !$venta['pagado'];
+        }
+
+        // Si no viene booleano explícito, inferir a partir del estado de la venta
+        $estado = is_array($venta['estado'] ?? null)
+            ? ($venta['estado']['valor'] ?? null)
+            : ($venta['estado'] ?? null);
+
+        $estadoStr = is_string($estado) ? strtolower(trim($estado)) : '';
+
+        return $estadoStr !== 'pagada';
     }
 }

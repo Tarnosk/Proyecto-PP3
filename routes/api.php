@@ -1,5 +1,6 @@
 <?php
 
+use App\Modules\Caja\Controllers\Api\V1\CajaDiariaController;
 use App\Modules\Catalogo\Controllers\CatalogoApiController;
 use App\Modules\Clientes\Controllers\Api\V1\ClientController;
 use App\Modules\Clientes\Controllers\Api\V1\ZoneController;
@@ -7,11 +8,15 @@ use App\Modules\Login\Controllers\Api\V1\AuthController;
 use App\Modules\Login\Controllers\Api\V1\UserController;
 use App\Modules\Login\Middleware\AuthenticateApiReadRequest;
 use App\Modules\Reclamos\Controllers\Api\V1\ClaimController;
+use App\Modules\Rendiciones\Controllers\Api\V1\CobroApiController;
+use App\Modules\Rendiciones\Controllers\Api\V1\RendicionApiController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function (): void {
     Route::get('/catalogo', [CatalogoApiController::class, 'index'])->middleware('throttle:60,1');
     Route::get('/catalogo/{producto}', [CatalogoApiController::class, 'show'])->where('producto', '[1-9][0-9]{0,9}')->middleware('throttle:60,1');
+    Route::get('/rendiciones', [RendicionApiController::class, 'index'])->middleware('throttle:60,1');
+    Route::get('/cobros', [CobroApiController::class, 'index'])->middleware('throttle:60,1');
     Route::post('/auth/login', [AuthController::class, 'login'])
         ->middleware('throttle:5,1');
 
@@ -24,6 +29,10 @@ Route::prefix('v1')->group(function (): void {
         Route::get('/reclamos', [ClaimController::class, 'index'])->middleware('api.audience:administrativo,repartidor');
         Route::get('/reclamos/{reclamo}', [ClaimController::class, 'show'])->whereNumber('reclamo')->middleware('api.audience:administrativo,repartidor');
         Route::get('/usuarios/{user}', UserController::class)->whereNumber('user')->middleware('api.audience:administrativo');
+        // Caja diaria para Reportes (G1). Token de servicio, administrativo o contador.
+        Route::get('/caja/{fecha}', CajaDiariaController::class)
+            ->where('fecha', '[0-9]{4}-[0-9]{2}-[0-9]{2}')
+            ->middleware('api.audience:administrativo,contador');
     });
 
     Route::middleware(['api.access', 'throttle:60,1'])->group(function (): void {

@@ -17,11 +17,12 @@ class Promocion extends Model
     protected $fillable = [
         'nombre',
         'descripcion', // En tu BD se llama 'descripcion', no 'condiciones'
-        'total',       // En tu BD se llama 'total', no 'valor'
+        'total',
+        'tipo_descuento',
+        'valor_descuento',
         'vigencia_desde',
         'vigencia_hasta',
         'estado'
-        // 'tipo_descuento' se quitó porque no existe esa columna en tu tabla
     ];
 
     // 2. Relación con Producto

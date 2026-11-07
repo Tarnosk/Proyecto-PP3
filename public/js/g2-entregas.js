@@ -339,7 +339,7 @@ async function cargarEntregas() {
                     <td>
                         <div style="display: flex; gap: 0.4rem; justify-content: center; flex-wrap: wrap;">
                             <button class="clay-btn clay-btn-primary" style="min-height: 36px; padding: 0.35rem 0.85rem; font-size: 0.92rem;" onclick="abrirModalHojaRuta(${e.id_entrega})" title="Ver hoja de ruta y confirmar entregas">
-                                📋 Hoja de Ruta
+                                Hoja de Ruta
                             </button>
                             <button class="clay-btn clay-btn-secondary" style="min-height: 36px; padding: 0.35rem 0.85rem; font-size: 0.92rem;" onclick="verDetalleEntrega(${e.id_entrega})" title="Ver comprobante de remito">
                                 Ver Remito
@@ -394,18 +394,18 @@ async function abrirModalHojaRuta(idEntrega) {
                 const tr = document.createElement('tr');
                 const esEntregado = (p.estado_pedido_entrega === 'entregado');
                 const badgeEstado = esEntregado
-                    ? `<span class="badge badge-entregada">✅ Entregado</span>`
-                    : `<span class="badge badge-en_camino">🚚 En Reparto</span>`;
+                    ? `<span class="badge badge-entregada">Entregado</span>`
+                    : `<span class="badge badge-en_camino">En Reparto</span>`;
 
                 const btnConfirmar = esEntregado
                     ? `<span style="color: var(--success); font-weight: 700; font-size: 0.88rem;">Completado</span>`
                     : `<button class="clay-btn clay-btn-success" style="min-height: 32px; padding: 0.3rem 0.75rem; font-size: 0.88rem;" onclick="confirmarEntregaPedido(${e.id_entrega}, ${p.id_venta})" title="Confirmar entrega física realizada">
-                        ✅ Confirmar Entrega
+                        Confirmar Entrega
                        </button>`;
 
                 const btnRemito = p.id_remito
                     ? `<button class="clay-btn clay-btn-secondary" style="min-height: 32px; padding: 0.3rem 0.75rem; font-size: 0.88rem;" onclick="verRemito(${p.id_remito})" title="Ver remito oficial">
-                        📄 Remito
+                        Remito
                        </button>`
                     : '';
 
@@ -573,11 +573,11 @@ async function verRemito(idRemito) {
         const contAccion = document.getElementById('remitoAccionEntrega');
         if (contAccion) {
             if (r.estado === 'entregado') {
-                contAccion.innerHTML = `<span class="badge badge-entregada" style="padding: 0.5rem 1rem; font-size: 0.95rem;">✅ Mercadería Entregada Conforme</span>`;
+                contAccion.innerHTML = `<span class="badge badge-entregada" style="padding: 0.5rem 1rem; font-size: 0.95rem;">Mercadería Entregada Conforme</span>`;
             } else {
                 contAccion.innerHTML = `
                     <button class="clay-btn clay-btn-success" onclick="confirmarEntregaPedido(${r.id_entrega}, ${r.id_venta}); cerrarModalRemito();">
-                        ✅ Confirmar Pedido como Entregado
+                        Confirmar Pedido como Entregado
                     </button>
                 `;
             }
@@ -604,10 +604,15 @@ function cerrarModalRemito() {
 function showToast(mensaje, tipo = 'info') {
     const container = document.getElementById('toastContainer');
     if (!container) return;
-    const icons = { success: '✅', error: '❌', info: 'ℹ️', warning: '⚠️' };
+    const icons = { 
+        success: '<svg class="icon-svg" viewBox="0 0 24 24" style="stroke:#059669"><path d="M5 12l5 5L20 7"/></svg>', 
+        error: '<svg class="icon-svg" viewBox="0 0 24 24" style="stroke:#DC2626"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>', 
+        info: '<svg class="icon-svg" viewBox="0 0 24 24" style="stroke:#0D6EFD"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>', 
+        warning: '<svg class="icon-svg" viewBox="0 0 24 24" style="stroke:#D97706"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>' 
+    };
     const toast = document.createElement('div');
     toast.className = `toast toast-${tipo}`;
-    toast.innerHTML = `<span>${icons[tipo] || 'ℹ️'}</span><span>${mensaje}</span>`;
+    toast.innerHTML = `<span style="display:inline-flex;align-items:center;">${icons[tipo] || ''}</span><span>${mensaje}</span>`;
     container.appendChild(toast);
     setTimeout(() => {
         toast.classList.add('hiding');

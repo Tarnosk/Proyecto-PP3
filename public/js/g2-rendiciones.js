@@ -59,10 +59,15 @@ function showToast(mensaje, tipo = 'info') {
     const container = document.getElementById('toastContainer');
     if (!container) return;
 
-    const icons = { success: '✅', error: '❌', info: 'ℹ️', warning: '⚠️' };
+    const icons = { 
+        success: '<svg class="icon-svg" viewBox="0 0 24 24" style="stroke:#059669"><path d="M5 12l5 5L20 7"/></svg>', 
+        error: '<svg class="icon-svg" viewBox="0 0 24 24" style="stroke:#DC2626"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>', 
+        info: '<svg class="icon-svg" viewBox="0 0 24 24" style="stroke:#0D6EFD"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>', 
+        warning: '<svg class="icon-svg" viewBox="0 0 24 24" style="stroke:#D97706"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>' 
+    };
     const toast = document.createElement('div');
     toast.className = `toast toast-${tipo}`;
-    toast.innerHTML = `<span>${icons[tipo] || 'ℹ️'}</span><span>${mensaje}</span>`;
+    toast.innerHTML = `<span style="display:inline-flex;align-items:center;">${icons[tipo] || ''}</span><span>${mensaje}</span>`;
     container.appendChild(toast);
 
     setTimeout(() => {
@@ -77,7 +82,7 @@ function showToast(mensaje, tipo = 'info') {
 async function cargarListadoRendiciones() {
     const repartidorId = document.getElementById('filtroRepartidor')?.value || '';
     const tbody = document.getElementById('tablaRendicionesBody');
-    tbody.innerHTML = `<tr><td colspan="8"><div class="table-empty"><span class="table-empty-icon">⏳</span>Cargando rendiciones…</div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="8"><div class="table-empty">Cargando rendiciones…</div></td></tr>`;
 
     let url = `${API_BASE}/rendiciones?1=1`;
     if (estadoFiltroActual) url += `&estado=${estadoFiltroActual}`;
@@ -88,7 +93,7 @@ async function cargarListadoRendiciones() {
         const json = await res.json();
 
         if (json.error) {
-            tbody.innerHTML = `<tr><td colspan="8"><div class="table-empty"><span class="table-empty-icon">❌</span>${json.mensaje}</div></td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="8"><div class="table-empty" style="color:var(--danger);">${json.mensaje}</div></td></tr>`;
             return;
         }
 
@@ -100,7 +105,7 @@ async function cargarListadoRendiciones() {
 
     } catch (err) {
         console.error('Error al cargar rendiciones:', err);
-        tbody.innerHTML = `<tr><td colspan="8"><div class="table-empty"><span class="table-empty-icon">⚠️</span>Error de conexión con el servidor.</div></td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="8"><div class="table-empty" style="color:var(--danger);">Error de conexión con el servidor.</div></td></tr>`;
     }
 }
 
@@ -108,7 +113,7 @@ function renderizarTabla(rendiciones) {
     const tbody = document.getElementById('tablaRendicionesBody');
 
     if (rendiciones.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="8"><div class="table-empty"><span class="table-empty-icon">📋</span>No se encontraron rendiciones para los filtros seleccionados.</div></td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="8"><div class="table-empty">No se encontraron rendiciones para los filtros seleccionados.</div></td></tr>`;
         return;
     }
 
@@ -118,15 +123,12 @@ function renderizarTabla(rendiciones) {
 
         let badgeClass = 'badge-pendiente';
         let estadoTexto = 'Pendiente';
-        let estadoEmoji = '⏳';
         if (r.estado === 'aprobada') {
             badgeClass = 'badge-aprobada';
             estadoTexto = 'Aprobada';
-            estadoEmoji = '✅';
         } else if (r.estado === 'rechazada') {
             badgeClass = 'badge-rechazada';
             estadoTexto = 'Rechazada';
-            estadoEmoji = '❌';
         }
 
         const fechaFormat = new Date(r.fecha).toLocaleDateString('es-AR', {
@@ -152,20 +154,20 @@ function renderizarTabla(rendiciones) {
                 $${totalFormateado}
             </td>
             <td style="text-align: center;">
-                <span class="badge ${badgeClass}">${estadoEmoji} ${estadoTexto}</span>
+                <span class="badge ${badgeClass}">${estadoTexto}</span>
             </td>
             <td style="font-size: 0.875rem;">${obs}</td>
             <td style="text-align: center;">
                 <div style="display: flex; gap: 0.4rem; justify-content: center; flex-wrap: wrap;">
                     <button class="clay-btn clay-btn-secondary clay-btn-xs" onclick="verDetalleRendicion(${r.id_rendicion})" title="Ver detalle y validar">
-                        🔍 Ver
+                        Ver
                     </button>
                     ${g2Admin && r.estado === 'pendiente' ? `
                     <button class="clay-btn clay-btn-xs" style="background: var(--success); color: white;" onclick="aprobarRapido(${r.id_rendicion})" title="Aprobar directamente">
-                        ✅
+                        Aprobar
                     </button>
                     <button class="clay-btn clay-btn-xs" style="background: var(--danger); color: white;" onclick="rechazarRapido(${r.id_rendicion})" title="Rechazar">
-                        ❌
+                        Rechazar
                     </button>` : ''}
                 </div>
             </td>
@@ -223,6 +225,49 @@ function setText(id, val) {
     if (el) el.textContent = val;
 }
 
+let _clientesCache = [];
+let _debounceBusquedaCliente = null;
+
+async function buscarClientesApi(termino = '') {
+    try {
+        const res = await g2Fetch(`${API_BASE}/rendiciones/buscar-clientes?q=${encodeURIComponent(termino)}`);
+        const json = await res.json();
+        if (!json.error && Array.isArray(json.data)) {
+            _clientesCache = json.data;
+            const datalist = document.getElementById('listaClientesSugeridos');
+            if (datalist) {
+                datalist.innerHTML = '';
+                json.data.forEach(c => {
+                    const opt = document.createElement('option');
+                    opt.value = c.etiqueta;
+                    opt.dataset.id = c.id;
+                    datalist.appendChild(opt);
+                });
+            }
+        }
+    } catch (err) {
+        console.error('Error al buscar clientes:', err);
+    }
+}
+
+function alEscribirCliente(valor) {
+    const valTrim = valor.trim();
+    const clienteMatch = _clientesCache.find(c => c.etiqueta === valTrim);
+    const hiddenId = document.getElementById('formClienteId');
+    if (clienteMatch) {
+        hiddenId.value = clienteMatch.id;
+    } else {
+        // Intentar buscar id si empieza por #
+        const matchNum = valTrim.match(/^#?(\d+)/);
+        hiddenId.value = matchNum ? matchNum[1] : '';
+    }
+
+    clearTimeout(_debounceBusquedaCliente);
+    _debounceBusquedaCliente = setTimeout(() => {
+        buscarClientesApi(valTrim);
+    }, 250);
+}
+
 /* ==========================================================
    MODAL: NUEVA RENDICIÓN DINÁMICA (POR ENTREGA / COBRO)
    ========================================================== */
@@ -231,9 +276,14 @@ async function abrirModalNuevaRendicion(idEntregaPrevia = null) {
     document.getElementById('seccionCobrosDinamicos').style.display = 'none';
     document.getElementById('seccionCobroManual').style.display = 'block';
     document.getElementById('tablaCobrosDinamicosBody').innerHTML = '';
+    const hiddenId = document.getElementById('formClienteId');
+    if (hiddenId) hiddenId.value = '';
     document.getElementById('modalNuevaRendicion').classList.add('active');
 
-    await cargarSelectEntregas(idEntregaPrevia);
+    await Promise.all([
+        cargarSelectEntregas(idEntregaPrevia),
+        buscarClientesApi('')
+    ]);
 }
 
 function cerrarModalNuevaRendicion() {
@@ -321,9 +371,9 @@ async function alCambiarEntregaSelect(idEntrega) {
                     </td>
                     <td>
                         <select class="clay-select select-medio-pago-dinamico" style="font-size:0.85rem; padding:0.35rem 0.5rem; width:100%;">
-                            <option value="efectivo">💵 Efectivo (Caja)</option>
-                            <option value="transferencia">🏦 Transferencia (Banco)</option>
-                            <option value="cheque">📄 Cheque Diferido</option>
+                            <option value="efectivo">Efectivo (Caja)</option>
+                            <option value="transferencia">Transferencia (Banco)</option>
+                            <option value="cheque">Cheque Diferido</option>
                         </select>
                     </td>
                 `;
@@ -374,10 +424,29 @@ async function guardarNuevaRendicion(e) {
             return;
         }
     } else {
-        const selectCliente = document.getElementById('formCliente');
-        const optionSel     = selectCliente.options[selectCliente.selectedIndex];
-        const idFactura     = optionSel.getAttribute('data-factura');
-        const montoVal      = parseFloat(document.getElementById('formMonto').value) || 0;
+        const inputCliente = document.getElementById('formClienteInput');
+        const hiddenId     = document.getElementById('formClienteId');
+        let idCliente      = parseInt(hiddenId ? hiddenId.value : 0);
+
+        if (!idCliente && inputCliente) {
+            const val = inputCliente.value.trim();
+            const clienteMatch = _clientesCache.find(c => c.etiqueta === val);
+            if (clienteMatch) {
+                idCliente = clienteMatch.id;
+            } else {
+                const matchNum = val.match(/^#?(\d+)/);
+                if (matchNum) idCliente = parseInt(matchNum[1]);
+            }
+        }
+
+        if (!idCliente) {
+            showToast('Por favor seleccioná o escribí un cliente válido para el cobro manual.', 'warning');
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = `<svg class="icon-svg" viewBox="0 0 24 24"><path d="M5 12l5 5L20 7"/></svg> Registrar Rendición`;
+            return;
+        }
+
+        const montoVal = parseFloat(document.getElementById('formMonto').value) || 0;
 
         if (montoVal <= 0) {
             showToast('El monto debe ser mayor a $0.', 'warning');
@@ -387,8 +456,8 @@ async function guardarNuevaRendicion(e) {
         }
 
         cobros.push({
-            id_cliente: parseInt(selectCliente.value),
-            id_factura: parseInt(idFactura),
+            id_cliente: idCliente,
+            id_factura: 1, // Factura manual o general asociada
             monto:      montoVal,
             medio_pago: document.getElementById('formMedioPago').value
         });
@@ -459,13 +528,13 @@ async function verDetalleRendicion(idRendicion) {
         const motivoInput = document.getElementById('motivoRechazoAdmin');
 
         if (r.estado === 'aprobada') {
-            estadoBadge.innerHTML = `<span class="badge badge-aprobada">✅ Aprobada</span>`;
+            estadoBadge.innerHTML = `<span class="badge badge-aprobada">Aprobada</span>`;
             adminBox.style.display = 'none';
         } else if (r.estado === 'rechazada') {
-            estadoBadge.innerHTML = `<span class="badge badge-rechazada">❌ Rechazada${r.motivo_rechazo ? ' — ' + r.motivo_rechazo : ''}</span>`;
+            estadoBadge.innerHTML = `<span class="badge badge-rechazada">Rechazada${r.motivo_rechazo ? ' — ' + r.motivo_rechazo : ''}</span>`;
             adminBox.style.display = 'none';
         } else {
-            estadoBadge.innerHTML = `<span class="badge badge-pendiente">⏳ Pendiente</span>`;
+            estadoBadge.innerHTML = `<span class="badge badge-pendiente">Pendiente</span>`;
             adminBox.style.display = g2Admin ? 'block' : 'none';
             if (motivoInput) motivoInput.value = '';
         }
@@ -479,9 +548,9 @@ async function verDetalleRendicion(idRendicion) {
             cobrosBody.innerHTML = `<tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:1rem;">Sin cobros detallados.</td></tr>`;
         } else {
             const medioPagoMeta = {
-                efectivo:      { label: '💵 Efectivo', badge: 'badge-aprobada', destino: '🏠 Caja Arqueo' },
-                transferencia: { label: '🏦 Transferencia', badge: 'badge-zona', destino: '🏦 Conciliación Bancaria' },
-                cheque:        { label: '📄 Cheque', badge: 'badge-pendiente', destino: '💼 Cartera de Cheques' }
+                efectivo:      { label: 'Efectivo', badge: 'badge-aprobada', destino: 'Caja Arqueo' },
+                transferencia: { label: 'Transferencia', badge: 'badge-zona', destino: 'Conciliación Bancaria' },
+                cheque:        { label: 'Cheque', badge: 'badge-pendiente', destino: 'Cartera de Cheques' }
             };
 
             cobros.forEach(c => {

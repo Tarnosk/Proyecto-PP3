@@ -8,24 +8,7 @@ use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Facades\Http;
 use Throwable;
 
-/**
- * PRODUCTOS DESDE LA API REAL (APAGADA HOY - lista para integrar)
- *
- * "Código real" para cuando el módulo de Productos publique su API.
- * Está escrito y testeado (tests/Unit/Integraciones/HttpProductoApiTest.php)
- * pero NO se usa mientras VENTAS_INTEGRACION=mock.
- *
- * Para activarla, en el .env:
- *   VENTAS_INTEGRACION=http
- *   VENTAS_PRODUCTOS_URL=http://url-del-modulo-productos
- *
- * ⚠ CONTRATO SUPUESTO: todavía no sabemos los nombres exactos de las rutas
- * ni de los campos que va a usar el otro grupo. Se asumió:
- *   GET {url}/api/productos       → lista de productos
- *   GET {url}/api/productos/{id}  → un producto (404 si no existe)
- * y normalizar() acepta varios nombres posibles de campos. Cuando el otro
- * grupo confirme su formato, se ajusta SOLO este archivo.
- */
+/** Productos desde la API real de Productos/Stock. */
 class HttpProductoApi implements ProductoGateway
 {
     /**
@@ -34,6 +17,9 @@ class HttpProductoApi implements ProductoGateway
      */
     private ?array $cache = null;
 
+    /** Productos ya buscados en este pedido (null = no existe): se pide cada id una sola vez. */
+    private array $buscados = [];
+
     public function todos(): array
     {
         if ($this->cache !== null) {
@@ -41,7 +27,7 @@ class HttpProductoApi implements ProductoGateway
         }
 
         try {
-            $respuesta = $this->cliente()->get('/api/productos')->throw()->json();
+            $respuesta = $this->cliente()->get('/api/v1/productos')->throw()->json();
         } catch (Throwable $e) {
             // Timeout, servidor caído, error 500... → 503 para nuestro front.
             throw new IntegracionNoDisponibleException('productos', $e);
@@ -55,8 +41,17 @@ class HttpProductoApi implements ProductoGateway
 
     public function buscar(int $id): ?array
     {
+        if (array_key_exists($id, $this->buscados)) {
+            return $this->buscados[$id];
+        }
+
+        return $this->buscados[$id] = $this->pedir($id);
+    }
+
+    private function pedir(int $id): ?array
+    {
         try {
-            $respuesta = $this->cliente()->get("/api/productos/{$id}");
+            $respuesta = $this->cliente()->get("/api/v1/productos/{$id}");
         } catch (Throwable $e) {
             throw new IntegracionNoDisponibleException('productos', $e);
         }
@@ -86,7 +81,10 @@ class HttpProductoApi implements ProductoGateway
             'nombre' => (string) ($p['nombre'] ?? $p['descripcion'] ?? ''),
             'precioMin' => (float) ($p['precioMin'] ?? $p['precio_minorista'] ?? $precioBase),
             'precioMay' => (float) ($p['precioMay'] ?? $p['precio_mayorista'] ?? $precioBase),
-            'stock' => isset($p['stock']) ? (int) $p['stock'] : null,
+            'stock' => isset($p['stock_disponible'])
+                ? (int) $p['stock_disponible']
+                : (isset($p['stock']) ? (int) $p['stock'] : null),
+            'estado' => (string) ($p['estado'] ?? 'activo'),
         ];
     }
 
@@ -95,8 +93,12 @@ class HttpProductoApi implements ProductoGateway
      */
     private function cliente(): PendingRequest
     {
-        return Http::baseUrl((string) config('ventas.servicios.productos.url'))
+        $cliente = Http::baseUrl(rtrim((string) config('ventas.servicios.productos.url'), '/'))
             ->timeout((int) config('ventas.timeout'))
             ->acceptJson();
+
+        $token = config('services.internal_api.token');
+
+        return is_string($token) && $token !== '' ? $cliente->withToken($token) : $cliente;
     }
 }

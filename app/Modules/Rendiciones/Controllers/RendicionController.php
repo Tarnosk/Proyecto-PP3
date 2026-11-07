@@ -355,4 +355,47 @@ class RendicionController extends Controller
             return Response::error("Error al preparar rendición: " . $e->getMessage(), 500);
         }
     }
+
+    /**
+     * GET /g2/api/rendiciones/buscar-clientes
+     * Búsqueda en tiempo real de clientes para carga manual de rendiciones
+     */
+    public function buscarClientes(Request $request)
+    {
+        try {
+            $q = trim((string) $request->input('q', ''));
+            $query = DB::table('clientes')
+                ->select(['id', 'nombre', 'apellido_razon_social', 'dni_cuit']);
+
+            if ($q !== '') {
+                $query->where(function ($sub) use ($q) {
+                    $pattern = '%' . $q . '%';
+                    $sub->where('nombre', 'like', $pattern)
+                        ->orWhere('apellido_razon_social', 'like', $pattern)
+                        ->orWhere('dni_cuit', 'like', $pattern);
+                });
+            }
+
+            $clientes = $query->orderBy('apellido_razon_social')
+                ->orderBy('nombre')
+                ->limit(20)
+                ->get()
+                ->map(function ($c) {
+                    $nombreCompleto = trim("{$c->apellido_razon_social} {$c->nombre}");
+                    if (empty($nombreCompleto)) {
+                        $nombreCompleto = $c->nombre ?: $c->apellido_razon_social;
+                    }
+                    return [
+                        'id' => (int) $c->id,
+                        'nombre' => $nombreCompleto,
+                        'cuit' => $c->dni_cuit,
+                        'etiqueta' => "#{$c->id} - {$nombreCompleto}" . ($c->dni_cuit ? " ({$c->dni_cuit})" : '')
+                    ];
+                });
+
+            return Response::json($clientes, 200, "Clientes obtenidos.");
+        } catch (Throwable $e) {
+            return Response::error("Error al buscar clientes: " . $e->getMessage(), 500);
+        }
+    }
 }
