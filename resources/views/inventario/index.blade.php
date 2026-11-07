@@ -1461,7 +1461,7 @@
 
     async function cargarProductos() {
         try {
-            const res = await fetch(`${API_BASE}/productos`);
+            const res = await fetch(`${API_BASE}/productos?interno=1`);
             const json = await res.json();
             if (json.status === 'success') {
                 productosCache = json.data;

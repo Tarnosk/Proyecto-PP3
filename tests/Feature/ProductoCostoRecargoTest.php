@@ -271,7 +271,9 @@ class ProductoCostoRecargoTest extends TestCase
     }
 
     /**
-     * El contrato con G1 y G4 se preserva: GET /api/productos entrega precio_unitario neto.
+     * El contrato con G1 y G4 se preserva: GET /api/productos entrega precio_unitario neto
+     * sin exponer costo, recargo ni margen_ganancia hacia otros módulos, mientras que
+     * con ?interno=1 los expone para la interfaz interna de G3.
      */
     public function test_contrato_api_productos_mantiene_precio_unitario_para_g1_y_g4(): void
     {
@@ -281,6 +283,7 @@ class ProductoCostoRecargoTest extends TestCase
             'recargo' => 38.89,
         ]);
 
+        // 1. Llamada externa (G1 / G2 / G4): no expone costo, recargo ni margen_ganancia
         $res = $this->getJson("/api/productos?codigo={$prod->codigo}");
         $res->assertOk();
 
@@ -290,5 +293,17 @@ class ProductoCostoRecargoTest extends TestCase
         $this->assertSame(2500.0, (float) $item['precio_unitario']);
         $this->assertSame(2500.0, (float) $item['precioMay']);
         $this->assertSame(2500.0, (float) $item['precioMin']);
+        $this->assertArrayNotHasKey('costo', $item);
+        $this->assertArrayNotHasKey('recargo', $item);
+        $this->assertArrayNotHasKey('margen_ganancia', $item);
+
+        // 2. Llamada interna G3 (?interno=1): incluye costo, recargo y margen_ganancia
+        $resInterna = $this->getJson("/api/productos?codigo={$prod->codigo}&interno=1");
+        $resInterna->assertOk();
+
+        $itemInterno = $resInterna->json('data.0');
+        $this->assertSame(1800.0, (float) $itemInterno['costo']);
+        $this->assertSame(38.89, (float) $itemInterno['recargo']);
+        $this->assertArrayHasKey('margen_ganancia', $itemInterno);
     }
 }

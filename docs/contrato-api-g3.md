@@ -135,19 +135,11 @@ En el modelo de dominio de G3 existen dos identificadores para un producto:
 | `marca_nombre` | `string\|null` | Nombre de la marca (ej. `"Coca-Cola"`). |
 | `unidad_medida` | `string` | Nombre de la presentación/unidad activa (ej. `"Pack x 6"` o `"u."`). |
 | `equivalencia_unidad` | `float` | Factor de conversión de la unidad activa a unidades individuales. |
-| `id_unidad_activa` | `int\|null` | ID de la unidad de medida activa en `unidad_medida` (si tiene). |
 | `formato_bulto` | `string` | Tipo de empaque comercial (ej. `"Pack"`, `"Caja"`, `"Fardo"`, `"Unidad"`). |
 | `unidades_por_bulto` | `int` | Cantidad de unidades individuales que trae cada bulto (mínimo `1`). |
 | `presentacion_texto` | `string` | Texto legible de presentación (ej. `"Pack x 6 u."` o `"Unidad individual (u.)"`). |
-| `id_ubicacion` | `int\|null` | ID de la ubicación física asignada en depósito. |
-| `ubicacion_nombre` | `string` | Código/descripción de la ubicación física o `"Sin asignar"`. |
-| `fecha_alta` | `string\|null` | Fecha y hora de creación (`YYYY-MM-DD HH:mm:ss`). |
-| `fecha_modificacion` | `string\|null` | Fecha y hora de última modificación. |
-| `fecha_desactivacion` | `string\|null` | Fecha y hora de baja lógica (`null` si está activo). |
-| `id_usuario_carga` | `int\|null` | ID del usuario que dio de alta el producto. |
-| `usuario_carga_nombre` | `string\|null` | Nombre del usuario que dio de alta el producto. |
-| `id_usuario_modificacion` | `int\|null` | ID del último usuario que modificó el producto. |
-| `usuario_modificacion_nombre` | `string\|null` | Nombre del último usuario que modificó el producto. |
+
+> **Nota para pantallas internas de G3 (`?interno=1`):** Los datos confidenciales de formación de precio (`costo`, `recargo`, `margen_ganancia`, `historial_precios`), ubicación física en estantería (`id_ubicacion`, `ubicacion_nombre`) y auditoría interna (`id_usuario_carga`, `usuario_carga_nombre`, `fecha_alta`, etc.) **no se envían en las respuestas hacia otros módulos**, incluyéndose únicamente cuando las vistas propias de G3 consultan con `?interno=1`.
 
 #### Ejemplo de Respuesta (`200 OK`)
 ```json
@@ -168,26 +160,16 @@ En el modelo de dominio de G3 existen dos identificadores para un producto:
       "precioMay": 2500,
       "precioMin": 2500,
       "estado": "activo",
-      "fecha_alta": "2026-09-01 10:00:00",
-      "fecha_modificacion": "2026-10-24 12:00:00",
-      "fecha_desactivacion": null,
-      "id_usuario_carga": 1,
-      "usuario_carga_nombre": "Administrador",
-      "id_usuario_modificacion": 1,
-      "usuario_modificacion_nombre": "Administrador",
       "id_categoria": 1,
       "categoria_nombre": "Bebidas",
       "id_marca": 1,
       "marca_nombre": "Coca-Cola",
-      "id_ubicacion": 1,
-      "ubicacion_nombre": "PASILLO-A1",
       "stock": 48,
       "stock_disponible": 48,
       "stock_minimo": 10,
       "estado_alerta": "normal",
       "unidad_medida": "Pack x 6",
       "equivalencia_unidad": 6,
-      "id_unidad_activa": null,
       "formato_bulto": "Pack",
       "unidades_por_bulto": 6,
       "presentacion_texto": "Pack x 6 u."
