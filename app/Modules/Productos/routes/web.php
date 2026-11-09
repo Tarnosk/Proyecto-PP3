@@ -145,6 +145,7 @@ $registrarRutasInternasG3 = function (): void {
 
     // Módulo Compras, Recepciones y Pagos a Proveedores (C01 a C09)
     Route::patch('compras/{compra}/cancelar', [CompraController::class, 'cancelar'])->whereNumber('compra');
+    Route::patch('compras/{compra}/cerrar-parcial', [CompraController::class, 'cerrarParcial'])->whereNumber('compra');
     Route::post('compras/{compra}/recepciones', [RecepcionController::class, 'store'])->whereNumber('compra');
     Route::get('compras/{compra}/estado', [CompraController::class, 'estado'])->whereNumber('compra');
     Route::post('compras/{compra}/pagos', [PagoCompraController::class, 'store'])->whereNumber('compra');

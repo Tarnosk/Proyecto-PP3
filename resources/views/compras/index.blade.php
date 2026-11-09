@@ -897,6 +897,10 @@
                 <span>Imprimir Ficha</span>
             </button>
             <div class="flex items-center gap-2">
+                <button type="button" id="btnDetalleAccionCerrarParcial" onclick="cerrarCompraParcialDesdeDetalle()" class="clay-btn-secondary px-3 py-2 text-xs font-bold text-teal-700 hover:bg-teal-50 flex items-center gap-1.5 hidden" title="Cerrar la compra con la mercadería recibida y recalcular la deuda">
+                    <i data-lucide="check-check" class="w-4 h-4"></i>
+                    <span>Dar por completada con lo recibido</span>
+                </button>
                 <button type="button" id="btnDetalleAccionRecepcionar" onclick="irDesdeDetalleARecepcion()" class="clay-btn-secondary px-3 py-2 text-xs font-bold text-emerald-700 flex items-center gap-1.5 hidden">
                     <i data-lucide="package-check" class="w-4 h-4"></i>
                     <span>Recepcionar</span>
@@ -1054,7 +1058,13 @@
             <div id="detalleOrdenComprasLista" class="space-y-1 text-xs"></div>
         </div>
 
-        <div class="flex justify-end pt-3 border-t border-slate-100">
+        <div class="flex justify-between items-center pt-3 border-t border-slate-100 flex-wrap gap-2">
+            <div id="detalleOrdenAccionesBox" class="flex items-center gap-2">
+                <button type="button" id="btnDetalleOrdenCerrarParcial" onclick="cerrarOrdenParcialDesdeDetalle()" class="clay-btn-secondary px-3 py-2 text-xs font-bold text-teal-700 hover:bg-teal-50 flex items-center gap-1.5 hidden" title="Cerrar y dar por completada con lo recibido">
+                    <i data-lucide="check-circle-2" class="w-4 h-4"></i>
+                    <span>Dar por completada con lo recibido</span>
+                </button>
+            </div>
             <button type="button" onclick="cerrarModalDetalleOrden()" class="clay-btn-secondary px-4 py-2 text-xs font-bold">Cerrar</button>
         </div>
     </div>
@@ -1221,6 +1231,11 @@
                             ${admiteRecepcion ? `
                             <button onclick="abrirModalRecepcionCompra(${c.id_compra})" class="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all" title="Registrar Recepción de Mercadería">
                                 <i data-lucide="package-check" class="w-4 h-4"></i>
+                            </button>
+                            ` : ''}
+                            ${esParcial ? `
+                            <button onclick="cerrarCompraParcial(${c.id_compra})" class="p-1.5 text-teal-600 hover:bg-teal-50 rounded-lg transition-all" title="Dar por completada con lo recibido (Recalcular deuda y cerrar compra)">
+                                <i data-lucide="check-check" class="w-4 h-4"></i>
                             </button>
                             ` : ''}
                             ${admitePago ? `
@@ -1754,6 +1769,32 @@
         }
     }
 
+    async function cerrarCompraParcial(id) {
+        if (!confirm('¿Desea cerrar y dar por completada esta compra con la mercadería ya recibida? Se ajustarán las cantidades facturadas al stock efectivamente ingresado y se recalculará la deuda y saldo pendiente.')) return;
+        const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
+        try {
+            const res = await fetch(`${API_BASE}/compras/${id}/cerrar-parcial`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': csrf }
+            });
+            const data = await res.json();
+            if (data.status === 'success') {
+                mostrarNotificacion(data.message || 'Compra completada con lo recibido. Deuda recalculada.', 'success');
+                cerrarModalDetalleCompra();
+                await Promise.all([cargarCompras(), cargarOrdenes(), cargarDeudas()]);
+            } else {
+                mostrarNotificacion(data.message || 'Error al cerrar la compra.', 'error');
+            }
+        } catch (e) {
+            mostrarNotificacion('Error de conexión al cerrar la compra.', 'error');
+        }
+    }
+
+    function cerrarCompraParcialDesdeDetalle() {
+        if (!idCompraDetalleActual) return;
+        cerrarCompraParcial(idCompraDetalleActual);
+    }
+
     // =========================================================
     // DETALLE DE COMPRA (C03 & C07)
     // =========================================================
@@ -1829,11 +1870,19 @@
                 // Acciones directas desde el detalle
                 const btnRecep = document.getElementById('btnDetalleAccionRecepcionar');
                 const btnPago = document.getElementById('btnDetalleAccionPagar');
+                const btnCerrarParcial = document.getElementById('btnDetalleAccionCerrarParcial');
                 if (btnRecep) {
                     if (c.estado === 'pendiente' || c.estado === 'parcialmente_recibida') {
                         btnRecep.classList.remove('hidden');
                     } else {
                         btnRecep.classList.add('hidden');
+                    }
+                }
+                if (btnCerrarParcial) {
+                    if (c.estado === 'parcialmente_recibida') {
+                        btnCerrarParcial.classList.remove('hidden');
+                    } else {
+                        btnCerrarParcial.classList.add('hidden');
                     }
                 }
                 if (btnPago) {
@@ -3036,7 +3085,7 @@
     }
 
     async function cerrarOrdenParcial(id) {
-        if (!confirm('¿Desea cerrar y dar por completada esta orden con la mercadería ya recibida? El saldo pendiente dejará de figurar como faltante.')) return;
+        if (!confirm('¿Desea cerrar y dar por completada esta orden con la mercadería ya recibida? El saldo pendiente de la orden se anulará y cualquier compra parcial asociada recalculará su deuda a lo efectivamente ingresado.')) return;
         const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
         try {
             const res = await fetch(`${API_BASE}/ordenes-compra/${id}/cambiar-estado`, {
@@ -3046,14 +3095,21 @@
             });
             const data = await res.json();
             if (data.status === 'success') {
-                mostrarNotificacion('Orden de compra cerrada como completada.', 'success');
-                await cargarOrdenes();
+                mostrarNotificacion('Orden de compra cerrada como completada y deuda recalculada.', 'success');
+                cerrarModalDetalleOrden();
+                await Promise.all([cargarCompras(), cargarOrdenes(), cargarDeudas()]);
             } else {
                 mostrarNotificacion(data.message || 'Error al cerrar la orden.', 'error');
             }
         } catch (e) {
             mostrarNotificacion('Error de conexión al cerrar la orden.', 'error');
         }
+    }
+
+    let idOrdenDetalleActual = null;
+    function cerrarOrdenParcialDesdeDetalle() {
+        if (!idOrdenDetalleActual) return;
+        cerrarOrdenParcial(idOrdenDetalleActual);
     }
 
     // Convertir una orden emitida en una Compra (flujo integral de abastecimiento)
@@ -3104,11 +3160,14 @@
     }
 
     async function abrirModalDetalleOrden(id) {
+        idOrdenDetalleActual = id;
         document.getElementById('detalleOrdenSubtitulo').textContent = `Orden #${id}`;
         document.getElementById('modalDetalleOrden').classList.remove('hidden');
         const tbody = document.getElementById('detalleOrdenTablaBody');
         const boxCompras = document.getElementById('detalleOrdenComprasBox');
         const listaCompras = document.getElementById('detalleOrdenComprasLista');
+        const btnCerrarParcial = document.getElementById('btnDetalleOrdenCerrarParcial');
+        if (btnCerrarParcial) btnCerrarParcial.classList.add('hidden');
         if (boxCompras) boxCompras.classList.add('hidden');
         tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-slate-400">Cargando ítems...</td></tr>';
         try {
@@ -3116,6 +3175,9 @@
             const json = await res.json();
             if (json.status === 'success' && json.data) {
                 const ord = json.data.orden || {};
+                if (btnCerrarParcial && ord.estado === 'recibida_parcialmente') {
+                    btnCerrarParcial.classList.remove('hidden');
+                }
                 document.getElementById('detalleOrdenSubtitulo').textContent =
                     `Orden ${ord.numero_orden || '#' + id} • Estado: ${(ord.estado || '').replace('_', ' ').toUpperCase()}`;
                 tbody.innerHTML = (json.data.detalles || []).map(d => {
