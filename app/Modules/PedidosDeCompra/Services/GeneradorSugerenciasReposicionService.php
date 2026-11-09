@@ -214,7 +214,7 @@ class GeneradorSugerenciasReposicionService
      * Todo en una transacción: si falla el marcado de la sugerencia no debe quedar
      * una orden huérfana.
      */
-    public function generarOrdenDesdeSugerencia(int $id, int $idUsuario): array
+    public function generarOrdenDesdeSugerencia(int $id, int $idUsuario, bool $agruparProveedor = false): array
     {
         $sugerencia = $this->sugerencias->obtenerPorId($id);
         if (!$sugerencia) {
@@ -256,20 +256,14 @@ class GeneradorSugerenciasReposicionService
         $precio = (float) $sugerencia->precio_unitario;
         $subtotal = round($cantidad * $precio, 2);
 
-        // La línea nasce en la unidad base del producto, igual que PC01 cuando el
-        // cliente no elige unidad: la sugerencia no transporta id_unidad.
         $idUnidad = (int) (UnidadMedida::where('id_producto', $producto->id_producto)
             ->where('es_base', 1)
             ->value('id_unidad')
             ?? UnidadMedida::where('es_base', 1)->orderBy('id_unidad')->value('id_unidad'));
 
-        $orden = DB::transaction(function () use ($id, $sugerencia, $proveedor, $producto, $cantidad, $precio, $subtotal, $idUnidad, $idUsuario) {
-            // Segunda validación, ahora bajo bloqueo de fila (SELECT ... FOR UPDATE).
-            //
-            // La de afuera es solo para fallar rápido y dar un mensaje claro; sin
-            // esta, dos peticiones simultáneas podrían validar 'pendiente' a la vez
-            // y generar dos órdenes. Con el lock, la segunda espera a que la
-            // primera confirme, relee el estado ya actualizado y aborta.
+        $sugerenciasProcesadas = 0;
+
+        $orden = DB::transaction(function () use ($id, $sugerencia, $proveedor, $producto, $cantidad, $precio, $subtotal, $idUnidad, $idUsuario, $agruparProveedor, &$sugerenciasProcesadas) {
             $bloqueada = $this->sugerencias->obtenerPorIdBloqueado($id);
             if (!$bloqueada) {
                 throw new RuntimeException('Sugerencia no encontrada');
@@ -281,46 +275,105 @@ class GeneradorSugerenciasReposicionService
                 throw new RuntimeException('La sugerencia ya generó una orden de compra.');
             }
 
-            $orden = OrdenCompra::create([
-                'numero_orden' => $this->generarNumero(),
-                'id_proveedor' => $proveedor->id_proveedor,
-                'total_estimado' => $subtotal,
-                'estado' => 'pendiente',
-                'fecha_creacion' => Carbon::now()->toDateString(),
-                'fecha_entrega_estimada' => $bloqueada->plazo_entrega_dias
-                    ? Carbon::now()->addDays((int) $bloqueada->plazo_entrega_dias)->toDateString()
-                    : null,
-                'id_usuario' => $idUsuario,
-            ]);
+            $hoy = Carbon::now()->toDateString();
 
-            DetalleOrden::create([
-                'id_orden' => $orden->id_orden,
-                'id_producto' => $producto->id_producto,
-                'id_unidad' => $idUnidad,
-                'cantidad_solicitada' => $cantidad,
-                'cantidad_sugerida' => $cantidad,
-                'origen' => 'sugerencia',
-                'precio_estimado' => $precio,
-                'subtotal' => $subtotal,
-            ]);
+            // Si ya existe una Orden de Compra en estado 'pendiente' del mismo proveedor (sin compras asociadas)
+            // emitida hoy, consolidamos los renglones en esa única Orden de Compra por proveedor.
+            $orden = OrdenCompra::where('id_proveedor', $proveedor->id_proveedor)
+                ->where('estado', 'pendiente')
+                ->whereDate('fecha_creacion', $hoy)
+                ->doesntHave('compras')
+                ->orderByDesc('id_orden')
+                ->first();
 
-            // La sugerencia queda 'procesada' y apuntando a la orden: así no se
-            // puede volver a generar y se puede navegar de la sugerencia a la orden.
-            // Con la fila bloqueada, el compare-and-set de resolver() no puede fallar;
-            // si fallara, se aborta la transacción en vez de dejar una orden huérfana.
-            if (!$this->sugerencias->resolver($id, 'procesada', $idUsuario)) {
-                throw new RuntimeException('No se pudo vincular la sugerencia con la orden generada.');
+            if (!$orden) {
+                $orden = OrdenCompra::create([
+                    'numero_orden' => $this->generarNumero(),
+                    'id_proveedor' => $proveedor->id_proveedor,
+                    'total_estimado' => 0,
+                    'estado' => 'pendiente',
+                    'fecha_creacion' => $hoy,
+                    'fecha_entrega_estimada' => $bloqueada->plazo_entrega_dias
+                        ? Carbon::now()->addDays((int) $bloqueada->plazo_entrega_dias)->toDateString()
+                        : null,
+                    'id_usuario' => $idUsuario,
+                ]);
             }
-            SugerenciaCompra::where('id_sugerencia', $id)
-                ->update(['id_orden_compra' => $orden->id_orden]);
+
+            // Lista de sugerencias a incluir en esta orden (la seleccionada + opcionalmente todas las pendientes del mismo proveedor)
+            $loteSugerencias = collect([$bloqueada]);
+            if ($agruparProveedor) {
+                $otrasDelProveedor = SugerenciaCompra::with('producto')
+                    ->where('id_proveedor', $proveedor->id_proveedor)
+                    ->where('estado', 'pendiente')
+                    ->whereNull('id_orden_compra')
+                    ->where('id_sugerencia', '!=', $id)
+                    ->lockForUpdate()
+                    ->get();
+                $loteSugerencias = $loteSugerencias->concat($otrasDelProveedor);
+            }
+
+            foreach ($loteSugerencias as $sugItem) {
+                $prodItem = $sugItem->id_sugerencia === $id ? $producto : $sugItem->producto;
+                if (!$prodItem || $prodItem->estado !== 'activo') {
+                    continue;
+                }
+                $cantItem = (int) $sugItem->cantidad_sugerida;
+                if ($cantItem <= 0) {
+                    continue;
+                }
+                $precioItem = (float) $sugItem->precio_unitario;
+                $subItem = round($cantItem * $precioItem, 2);
+                $unidadItem = (int) (UnidadMedida::where('id_producto', $prodItem->id_producto)
+                    ->where('es_base', 1)
+                    ->value('id_unidad')
+                    ?? $idUnidad);
+
+                $detalleExistente = DetalleOrden::where('id_orden', $orden->id_orden)
+                    ->where('id_producto', $prodItem->id_producto)
+                    ->first();
+
+                if ($detalleExistente) {
+                    $nuevaCant = (int) $detalleExistente->cantidad_solicitada + $cantItem;
+                    $detalleExistente->cantidad_solicitada = $nuevaCant;
+                    $detalleExistente->cantidad_sugerida = (int) $detalleExistente->cantidad_sugerida + $cantItem;
+                    $detalleExistente->precio_estimado = $precioItem;
+                    $detalleExistente->subtotal = round($nuevaCant * $precioItem, 2);
+                    $detalleExistente->save();
+                } else {
+                    DetalleOrden::create([
+                        'id_orden' => $orden->id_orden,
+                        'id_producto' => $prodItem->id_producto,
+                        'id_unidad' => $unidadItem,
+                        'cantidad_solicitada' => $cantItem,
+                        'cantidad_sugerida' => $cantItem,
+                        'origen' => 'sugerencia',
+                        'precio_estimado' => $precioItem,
+                        'subtotal' => $subItem,
+                    ]);
+                }
+
+                if (!$this->sugerencias->resolver((int) $sugItem->id_sugerencia, 'procesada', $idUsuario)) {
+                    throw new RuntimeException('No se pudo vincular la sugerencia con la orden generada.');
+                }
+                SugerenciaCompra::where('id_sugerencia', $sugItem->id_sugerencia)
+                    ->update(['id_orden_compra' => $orden->id_orden]);
+                $sugerenciasProcesadas++;
+            }
+
+            $orden->total_estimado = round((float) DetalleOrden::where('id_orden', $orden->id_orden)->sum('subtotal'), 2);
+            $orden->save();
 
             return $orden;
         });
 
         return [
             'exito' => true,
-            'mensaje' => 'Orden de compra generada desde la sugerencia.',
+            'mensaje' => $sugerenciasProcesadas > 1
+                ? "Orden de compra {$orden->numero_orden} generada agrupando {$sugerenciasProcesadas} productos de {$proveedor->razon_social}."
+                : 'Orden de compra generada desde la sugerencia.',
             'sugerencia_id' => $sugerencia->id_sugerencia,
+            'sugerencias_agrupadas' => $sugerenciasProcesadas,
             'orden' => [
                 'id' => $orden->id_orden,
                 'numero_orden' => $orden->numero_orden,

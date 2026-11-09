@@ -56,4 +56,66 @@ class OrdenCompra extends Model
     {
         return $this->hasMany(\App\Modules\Compras\Models\Compra::class, 'id_orden', 'id_orden');
     }
+
+    /**
+     * Recalcula y sincroniza el estado logístico de la Orden de Compra según
+     * las cantidades efectivamente recibidas en todas sus compras activas (no canceladas).
+     */
+    public function sincronizarEstadoRecepcion(): void
+    {
+        if ($this->estado === 'cancelada') {
+            return;
+        }
+
+        $this->load(['detalles', 'compras.detalles']);
+
+        $comprasActivas = $this->compras->filter(fn ($c) => $c->estado !== 'cancelada');
+
+        if ($comprasActivas->isEmpty()) {
+            if (in_array($this->estado, ['recibida_parcialmente', 'completada'], true)) {
+                $this->estado = $this->fecha_envio ? 'enviada' : 'pendiente';
+                $this->fecha_modificacion = \Carbon\Carbon::now()->toDateString();
+                $this->save();
+            }
+            return;
+        }
+
+        $recibidoPorProducto = [];
+        $totalRecibidoGeneral = 0;
+
+        foreach ($comprasActivas as $compra) {
+            foreach ($compra->detalles as $detCompra) {
+                $idProd = (int) $detCompra->id_producto;
+                $rec = (int) $detCompra->cantidad_recibida;
+                $recibidoPorProducto[$idProd] = ($recibidoPorProducto[$idProd] ?? 0) + $rec;
+                $totalRecibidoGeneral += $rec;
+            }
+        }
+
+        $todosCumplidos = $this->detalles->isNotEmpty();
+        foreach ($this->detalles as $detOrden) {
+            $idProd = (int) $detOrden->id_producto;
+            $solicitado = (int) $detOrden->cantidad_solicitada;
+            $recibido = $recibidoPorProducto[$idProd] ?? 0;
+            if ($recibido < $solicitado) {
+                $todosCumplidos = false;
+                break;
+            }
+        }
+
+        if ($todosCumplidos && $totalRecibidoGeneral > 0) {
+            $nuevoEstado = 'completada';
+        } elseif ($totalRecibidoGeneral > 0) {
+            $nuevoEstado = 'recibida_parcialmente';
+        } else {
+            $nuevoEstado = 'enviada';
+        }
+
+        $this->estado = $nuevoEstado;
+        if (!$this->fecha_envio) {
+            $this->fecha_envio = \Carbon\Carbon::now()->toDateString();
+        }
+        $this->fecha_modificacion = \Carbon\Carbon::now()->toDateString();
+        $this->save();
+    }
 }
