@@ -284,16 +284,37 @@ class Producto extends Model
 
     /**
      * Retorna la asociación activa con el proveedor principal, si existe.
+     * Si ningún proveedor fue marcado explícitamente como principal pero el producto
+     * tiene un único proveedor activo con precio acordado > 0, se toma como referencia.
      */
     public function proveedorPrincipal(): ?ProductoProveedor
     {
-        return $this->proveedores()
+        $principal = $this->proveedores()
             ->where('es_proveedor_principal', true)
             ->where('activo', true)
             ->whereHas('proveedor', function (Builder $query) {
                 $query->where('estado', 'activo');
             })
             ->first();
+
+        if ($principal) {
+            return $principal;
+        }
+
+        $activosConPrecio = $this->proveedores()
+            ->where('activo', true)
+            ->whereNotNull('precio_acordado')
+            ->where('precio_acordado', '>', 0)
+            ->whereHas('proveedor', function (Builder $query) {
+                $query->where('estado', 'activo');
+            })
+            ->get();
+
+        if ($activosConPrecio->count() === 1) {
+            return $activosConPrecio->first();
+        }
+
+        return null;
     }
 
     /**

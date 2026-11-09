@@ -49,6 +49,11 @@ class Compra extends Model
         return $this->belongsTo(Proveedor::class, 'id_proveedor', 'id_proveedor');
     }
 
+    public function orden(): BelongsTo
+    {
+        return $this->belongsTo(\App\Modules\PedidosDeCompra\Models\OrdenCompra::class, 'id_orden', 'id_orden');
+    }
+
     public function detalles(): HasMany
     {
         return $this->hasMany(DetalleCompra::class, 'id_compra', 'id_compra');

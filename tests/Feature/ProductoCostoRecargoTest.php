@@ -449,4 +449,123 @@ class ProductoCostoRecargoTest extends TestCase
         $this->assertSame('costo_reposicion', $ultimoHistorial->origen);
         $this->assertSame(1750.0, (float) $ultimoHistorial->precio);
     }
+
+    /**
+     * Editar el precio acordado de la asociación en Proveedores (PUT /api/proveedores/productos/{id})
+     * sincroniza automáticamente el costo del producto y recalcula su precio de venta.
+     */
+    public function test_editar_asociacion_proveedor_actualiza_costo_y_recalcula_precio_venta(): void
+    {
+        $prov = $this->crearProveedor();
+        $prod = $this->crearProducto([
+            'costo' => 1000.00,
+            'recargo' => 50.00,
+            'precio_unitario' => 1500.00,
+        ]);
+
+        // 1. Asociar desde POST /api/proveedores/{id}/productos (primer proveedor -> queda como principal)
+        $resAsoc = $this->postJson("/api/proveedores/{$prov->id_proveedor}/productos", [
+            'id_productos' => [$prod->id_producto],
+            'precio_acordado' => 1100.00,
+        ]);
+        $resAsoc->assertStatus(201);
+
+        $prod->refresh();
+        $this->assertSame(1100.0, (float) $prod->costo);
+        // 1100 * 1.50 = 1650.00
+        $this->assertSame(1650.0, (float) $prod->precio_unitario);
+
+        $asoc = ProductoProveedor::where('id_producto', $prod->id_producto)
+            ->where('id_proveedor', $prov->id_proveedor)
+            ->firstOrFail();
+
+        // 2. Actualizar precio acordado desde el modal de edición (PUT /api/proveedores/productos/{id})
+        $resEdit = $this->putJson("/api/proveedores/productos/{$asoc->id_producto_proveedor}", [
+            'precio_acordado' => 1400.00,
+            'es_proveedor_principal' => true,
+        ]);
+        $resEdit->assertOk();
+
+        $prod->refresh();
+        $this->assertSame(1400.0, (float) $prod->costo);
+        // 1400 * 1.50 = 2100.00
+        $this->assertSame(2100.0, (float) $prod->precio_unitario);
+    }
+
+    /**
+     * Verificar enlace bidireccional entre Orden de Compra y Compra, y que al registrar un pago
+     * en la compra se actualicen total_pagado y saldo_a_pagar en el listado general de Compras.
+     */
+    public function test_enlace_orden_compra_y_actualizacion_saldo_a_pagar_en_listado_compras(): void
+    {
+        $prov = $this->crearProveedor();
+        $prod = $this->crearProducto([
+            'costo' => 1000.00,
+            'recargo' => 30.00,
+            'precio_unitario' => 1300.00,
+        ]);
+
+        // 1. Crear Orden de Compra en estado pendiente
+        $resOrden = $this->postJson('/api/ordenes-compra', [
+            'id_proveedor' => $prov->id_proveedor,
+            'fecha_creacion' => Carbon::now()->toDateString(),
+            'items' => [
+                [
+                    'id_producto' => $prod->id_producto,
+                    'cantidad_solicitada' => 10,
+                    'precio_estimado' => 1000.00,
+                ],
+            ],
+        ]);
+        $resOrden->assertCreated();
+        $idOrden = (int) $resOrden->json('data.id_orden');
+        $numeroOrden = $resOrden->json('data.numero_orden');
+
+        // 2. Registrar Compra vinculada a la Orden de Compra
+        $resCompra = $this->postJson('/api/compras', [
+            'id_proveedor' => $prov->id_proveedor,
+            'id_orden' => $idOrden,
+            'fecha_compra' => Carbon::now()->toDateString(),
+            'items' => [
+                [
+                    'id_producto' => $prod->id_producto,
+                    'cantidad' => 10,
+                    'precio_unitario' => 1000.00,
+                ],
+            ],
+        ]);
+        $resCompra->assertCreated();
+        $idCompra = (int) $resCompra->json('data.id_compra');
+        $numeroCompra = $resCompra->json('data.numero_compra');
+
+        // La compra devuelve el enlace a la orden y su saldo_a_pagar inicial ($10.000)
+        $this->assertSame($idOrden, (int) $resCompra->json('data.id_orden'));
+        $this->assertSame($numeroOrden, $resCompra->json('data.numero_orden'));
+        $this->assertSame(10000.0, (float) $resCompra->json('data.saldo_a_pagar'));
+        $this->assertSame(0.0, (float) $resCompra->json('data.total_pagado'));
+
+        // La orden pasó automáticamente de 'pendiente' a 'enviada' y expone la compra vinculada
+        $resShowOrden = $this->getJson("/api/ordenes-compra/{$idOrden}");
+        $resShowOrden->assertOk();
+        $this->assertSame('enviada', $resShowOrden->json('data.orden.estado'));
+        $this->assertSame($idCompra, (int) $resShowOrden->json('data.orden.id_compra'));
+        $this->assertSame($numeroCompra, $resShowOrden->json('data.orden.numero_compra'));
+
+        // 3. Registrar un pago parcial de $4.000 sobre la compra
+        $resPago = $this->postJson("/api/compras/{$idCompra}/pagos", [
+            'metodo_pago' => 'transferencia',
+            'importe' => 4000.00,
+            'fecha_pago' => Carbon::now()->toDateString(),
+        ]);
+        $resPago->assertCreated();
+
+        // 4. Consultar el listado general de compras (GET /api/compras) y verificar que saldo_a_pagar bajó a $6.000
+        $resListado = $this->getJson("/api/compras?id_proveedor={$prov->id_proveedor}");
+        $resListado->assertOk();
+        $compraEnTabla = collect($resListado->json('data'))->firstWhere('id_compra', $idCompra);
+
+        $this->assertNotNull($compraEnTabla);
+        $this->assertSame(4000.0, (float) $compraEnTabla['total_pagado']);
+        $this->assertSame(6000.0, (float) $compraEnTabla['saldo_a_pagar']);
+    }
 }

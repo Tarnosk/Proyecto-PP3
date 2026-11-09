@@ -796,10 +796,20 @@ class ProveedorController extends Controller
                         continue;
                     }
 
+                    $tieneOtroPrincipal = ProductoProveedor::where('id_producto', $idProducto)
+                        ->where('activo', true)
+                        ->where('id_proveedor', '!=', $id)
+                        ->where('es_proveedor_principal', true)
+                        ->exists();
+
+                    $nuevoPrincipal = $request->has('es_proveedor_principal')
+                        ? $esPrincipal
+                        : !$tieneOtroPrincipal;
+
                     $nuevo = ProductoProveedor::create([
                         'id_producto' => $idProducto,
                         'id_proveedor' => $id,
-                        'es_proveedor_principal' => $esPrincipal,
+                        'es_proveedor_principal' => $nuevoPrincipal,
                         'precio_acordado' => $precioAcordado,
                         'activo' => true,
                         'fecha_asociacion' => $now,
@@ -816,11 +826,9 @@ class ProveedorController extends Controller
                     $asociados[] = $nuevo;
                 }
 
-                if ($esPrincipal) {
-                    foreach ($idsProductos as $idProducto) {
-                        $p = Producto::find($idProducto);
-                        $p?->sincronizarCostoReposicion($idUsuario);
-                    }
+                foreach ($idsProductos as $idProducto) {
+                    $p = Producto::find($idProducto);
+                    $p?->sincronizarCostoReposicion($idUsuario);
                 }
             });
 
@@ -911,6 +919,9 @@ class ProveedorController extends Controller
             'fecha_desasociacion' => $now,
             'id_usuario' => $idUsuario,
         ]);
+
+        $prod = Producto::find($relacion->id_producto);
+        $prod?->sincronizarCostoReposicion($idUsuario);
 
         return response()->json([
             'status' => 'success',
@@ -1020,7 +1031,7 @@ class ProveedorController extends Controller
             ? ($request->input('precio_acordado') !== null && $request->input('precio_acordado') !== '' ? (float) $request->input('precio_acordado') : null)
             : ($relacion->precio_acordado !== null ? (float) $relacion->precio_acordado : null);
 
-        DB::transaction(function () use ($relacion, $nuevoProductoId, $esPrincipal, $precioAcordado, $idUsuario, $precioAnterior) {
+        DB::transaction(function () use ($relacion, $nuevoProductoId, $productoAnterior, $esPrincipal, $precioAcordado, $idUsuario, $precioAnterior) {
             if ($esPrincipal) {
                 ProductoProveedor::where('id_producto', $nuevoProductoId)
                     ->where('activo', true)
@@ -1043,6 +1054,14 @@ class ProveedorController extends Controller
                     (float) $precioAcordado,
                     $idUsuario
                 );
+            }
+
+            $prodNuevo = Producto::find($nuevoProductoId);
+            $prodNuevo?->sincronizarCostoReposicion($idUsuario);
+
+            if ($productoAnterior !== $nuevoProductoId) {
+                $prodAnterior = Producto::find($productoAnterior);
+                $prodAnterior?->sincronizarCostoReposicion($idUsuario);
             }
         });
 
