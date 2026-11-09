@@ -1808,11 +1808,6 @@ class UserStoriesFrontendTest extends TestCase
         $this->assertEquals('cancelada', $showCancRes->json('data.orden.estado'));
         $this->assertCount(1, $showCancRes->json('data.detalles'));
 
-        // PC05: Impedir cancelar una orden no pendiente (ej. enviada o completada)
-        $cancSentRes = $this->patchJson("/api/ordenes-compra/{$orden1Id}/cancelar");
-        $cancSentRes->assertStatus(400);
-        $this->assertStringContainsString('Solo se pueden cancelar órdenes pendientes', $cancSentRes->json('message'));
-
         // PC06: Visualizar avance de estado: enviada -> recibida_parcialmente -> completada
         $parcialRes = $this->patchJson("/api/ordenes-compra/{$orden1Id}/cambiar-estado", [
             'estado' => 'recibida_parcialmente',
@@ -1825,6 +1820,11 @@ class UserStoriesFrontendTest extends TestCase
         ]);
         $compRes->assertOk();
         $this->assertEquals('completada', $compRes->json('data.estado'));
+
+        // PC05: Impedir cancelar una orden ya completada
+        $cancCompRes = $this->patchJson("/api/ordenes-compra/{$orden1Id}/cancelar");
+        $cancCompRes->assertStatus(400);
+        $this->assertStringContainsString('completada', $cancCompRes->json('message'));
 
         // PC06: Consultar y filtrar órdenes por estado
         $filtroPend = $this->getJson('/api/ordenes-compra?estado=pendiente');

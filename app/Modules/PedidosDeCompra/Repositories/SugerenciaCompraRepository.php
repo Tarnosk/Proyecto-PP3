@@ -22,6 +22,14 @@ class SugerenciaCompraRepository
             ->exists();
     }
 
+    public function obtenerPendiente(int $idProducto, string $motivo): ?SugerenciaCompra
+    {
+        return SugerenciaCompra::pendientes()
+            ->where('id_producto', $idProducto)
+            ->where('motivo_generacion', $motivo)
+            ->first();
+    }
+
     public function obtenerPorId(int $id): ?SugerenciaCompra
     {
         return SugerenciaCompra::with(['producto', 'proveedor'])->find($id);
@@ -82,12 +90,16 @@ class SugerenciaCompraRepository
         return ['procesadas' => $procesadas, 'fallidas' => $fallidas];
     }
 
-    public function obtenerConFiltros(array $filtros = [], int $pagina = 1, int $porPagina = 15): array
+    public function obtenerConFiltros(array $filtros = [], int $pagina = 1, int $porPagina = 100): array
     {
         $query = SugerenciaCompra::with(['producto', 'proveedor']);
 
         if (!empty($filtros['motivo'])) {
             $query->where('motivo_generacion', $filtros['motivo']);
+        }
+
+        if (!empty($filtros['id_proveedor'])) {
+            $query->where('id_proveedor', (int) $filtros['id_proveedor']);
         }
 
         $query->where('estado', $filtros['estado'] ?? 'pendiente');
