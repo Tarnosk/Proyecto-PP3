@@ -760,6 +760,15 @@
                 </table>
             </div>
 
+            <!-- OPCIÓN: RECEPCIÓN INMEDIATA DE STOCK AL REGISTRAR FACTURA -->
+            <div id="bloqueCompraRecibirAhora" class="p-3 bg-emerald-50/70 rounded-xl border border-emerald-200/80 flex items-start gap-2.5">
+                <input type="checkbox" id="compraRecibirAhora" checked class="mt-0.5 w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer">
+                <label for="compraRecibirAhora" class="text-xs font-bold text-slate-700 cursor-pointer select-none">
+                    <span class="font-black text-emerald-800 block">La mercadería ingresó junto con el comprobante (Impactar Stock ahora)</span>
+                    <span class="text-[11px] text-slate-500">Registra la recepción automáticamente en un solo paso. Destildalo solo si estás cargando una factura anticipada cuya mercadería todavía no llegó al depósito.</span>
+                </label>
+            </div>
+
             <div class="flex items-center justify-between pt-2">
                 <div class="text-xs font-bold text-slate-500">
                     Importe Total Calculado: <span id="compraTotalDisplay" class="text-base font-black text-blue-600">$0.00</span>
@@ -1013,15 +1022,22 @@
                 <thead>
                     <tr>
                         <th>Producto</th>
-                        <th class="text-center">Cant. Solicitada</th>
-                        <th class="text-right">Precio Estimado</th>
+                        <th class="text-center">Solicitado</th>
+                        <th class="text-center">Recibido / Fact.</th>
+                        <th class="text-center">Pendiente</th>
+                        <th class="text-right">Precio Est.</th>
                         <th class="text-right">Subtotal</th>
                     </tr>
                 </thead>
                 <tbody id="detalleOrdenTablaBody">
-                    <tr><td colspan="4" class="text-center py-4 text-slate-400">Cargando ítems...</td></tr>
+                    <tr><td colspan="6" class="text-center py-4 text-slate-400">Cargando ítems...</td></tr>
                 </tbody>
             </table>
+        </div>
+
+        <div id="detalleOrdenComprasBox" class="hidden p-3 bg-slate-50 rounded-xl border border-slate-200/80 space-y-1.5">
+            <span class="text-[10px] font-black uppercase text-slate-500 block">Comprobantes de Compra registrados sobre esta Orden</span>
+            <div id="detalleOrdenComprasLista" class="space-y-1 text-xs"></div>
         </div>
 
         <div class="flex justify-end pt-3 border-t border-slate-100">
@@ -1128,8 +1144,33 @@
             
             const esPendiente = c.estado === 'pendiente';
             const esParcial = c.estado === 'parcialmente_recibida';
+            const esCancelada = c.estado === 'cancelada';
             const admiteRecepcion = esPendiente || esParcial;
-            const admitePago = c.estado !== 'cancelada' && saldoVal > 0;
+            const admitePago = !esCancelada && saldoVal > 0;
+
+            let pagoBadgeClass = 'clay-badge-warning';
+            let pagoLabel = 'IMPAGA';
+            if (esCancelada) {
+                pagoBadgeClass = 'clay-badge-danger';
+                pagoLabel = 'ANULADA';
+            } else if (saldoVal <= 0) {
+                pagoBadgeClass = 'clay-badge-success';
+                pagoLabel = 'PAGADA';
+            } else if (pagadoVal > 0) {
+                pagoBadgeClass = 'clay-badge-info';
+                pagoLabel = 'PAGO PARCIAL';
+            }
+
+            let stockInfoHtml = '';
+            if (!esCancelada) {
+                if (c.estado === 'completada') {
+                    stockInfoHtml = '<div class="text-[10px] font-bold text-emerald-600 mt-0.5">✓ Stock ingresado</div>';
+                } else if (c.estado === 'parcialmente_recibida') {
+                    stockInfoHtml = '<div class="text-[10px] font-bold text-amber-600 mt-0.5">⏳ Recepción parcial</div>';
+                } else {
+                    stockInfoHtml = '<div class="text-[10px] font-bold text-slate-400 mt-0.5">⏳ Falta recepcionar</div>';
+                }
+            }
 
             return `
                 <tr>
@@ -1151,7 +1192,10 @@
                         <div class="font-black ${saldoVal > 0 ? 'text-amber-600' : 'text-emerald-600'}">${saldo}</div>
                         ${pagadoVal > 0 ? `<div class="text-[10px] font-bold ${saldoVal <= 0 ? 'text-emerald-600' : 'text-slate-400'}">${saldoVal <= 0 ? '✓ Saldada' : `Pagado: $${pagadoVal.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}</div>` : ''}
                     </td>
-                    <td class="text-center"><span class="clay-badge ${badgeClass} uppercase">${c.estado.replace('_', ' ')}</span></td>
+                    <td class="text-center">
+                        <span class="clay-badge ${pagoBadgeClass} uppercase">${pagoLabel}</span>
+                        ${stockInfoHtml}
+                    </td>
                     <td class="text-center">
                         <div class="flex items-center justify-center gap-1.5">
                             <button onclick="abrirModalDetalleCompra(${c.id_compra})" class="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-all" title="Ver Detalle">
@@ -1161,7 +1205,7 @@
                                 <i data-lucide="printer" class="w-4 h-4"></i>
                             </button>
                             ${admiteRecepcion ? `
-                            <button onclick="abrirModalRecepcionCompra(${c.id_compra})" class="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all" title="Registrar Recepción">
+                            <button onclick="abrirModalRecepcionCompra(${c.id_compra})" class="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all" title="Registrar Recepción de Mercadería">
                                 <i data-lucide="package-check" class="w-4 h-4"></i>
                             </button>
                             ` : ''}
@@ -1174,7 +1218,9 @@
                             <button onclick="abrirModalEditarCompra(${c.id_compra})" class="p-1.5 text-amber-600 hover:bg-amber-50 rounded-lg transition-all" title="Modificar Compra">
                                 <i data-lucide="edit-3" class="w-4 h-4"></i>
                             </button>
-                            <button onclick="cancelarCompra(${c.id_compra})" class="p-1.5 text-rose-600 hover:bg-rose-50 rounded-lg transition-all" title="Cancelar Compra">
+                            ` : ''}
+                            ${!esCancelada ? `
+                            <button onclick="cancelarCompra(${c.id_compra})" class="p-1.5 text-rose-600 hover:bg-rose-50 rounded-lg transition-all" title="Anular / Cancelar Compra">
                                 <i data-lucide="x-circle" class="w-4 h-4"></i>
                             </button>
                             ` : ''}
@@ -1256,19 +1302,22 @@
             return;
         }
 
-        // Poblar órdenes de compra del proveedor seleccionado (pendientes, enviadas o la ya vinculada)
+        // Poblar órdenes de compra del proveedor seleccionado (con saldo pendiente o la ya vinculada)
         if (selOrden) {
             const ordenPrevia = selOrden.value;
             const ordenesProv = (ordenesCache || []).filter(o =>
                 String(o.id_proveedor) === String(idProv) &&
-                (o.estado === 'pendiente' || o.estado === 'enviada' || String(o.id_orden) === String(ordenPrevia))
+                (
+                    ((o.estado === 'pendiente' || o.estado === 'enviada' || o.estado === 'recibida_parcialmente') && (o.total_pendiente === undefined || o.total_pendiente > 0)) ||
+                    String(o.id_orden) === String(ordenPrevia)
+                )
             );
             let optsOrden = '<option value="">Compra directa (Sin Orden de Compra previa)</option>';
             ordenesProv.forEach(o => {
                 const nro = o.numero_orden || `#ORD-${o.id_orden}`;
                 const est = Number(o.total_estimado || 0).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                const yaVinc = o.id_compra ? ` [Vinculada a ${o.numero_compra || '#' + o.id_compra}]` : '';
-                optsOrden += `<option value="${o.id_orden}">${nro} — Est: $${est} (${(o.estado || '').toUpperCase()})${yaVinc}</option>`;
+                const pendInfo = o.total_pendiente !== undefined && o.total_productos ? ` • Pend: ${o.total_pendiente}/${o.total_productos} u.` : '';
+                optsOrden += `<option value="${o.id_orden}">${nro} — Est: $${est} (${(o.estado || '').replace('_', ' ').toUpperCase()}${pendInfo})</option>`;
             });
             selOrden.innerHTML = optsOrden;
             if (ordenPrevia && ordenesProv.some(o => String(o.id_orden) === String(ordenPrevia))) {
@@ -1338,15 +1387,26 @@
             const json = await res.json();
             if (json.status === 'success' && json.data) {
                 const o = json.data.orden || {};
-                itemsNuevaCompra = (json.data.detalles || []).map(d => ({
-                    id_producto: d.id_producto,
-                    nombre: d.nombre || d.descripcion || d.codigo || `Prod #${d.id_producto}`,
-                    cantidad: d.cantidad_solicitada,
-                    precio_unitario: d.precio_estimado,
-                    subtotal: d.subtotal
-                }));
+                const detallesPendientes = (json.data.detalles || []).filter(d => {
+                    const pend = d.cantidad_pendiente !== undefined ? Number(d.cantidad_pendiente) : Number(d.cantidad_solicitada);
+                    return pend > 0;
+                });
+                const listaUsar = detallesPendientes.length > 0 ? detallesPendientes : (json.data.detalles || []);
+                itemsNuevaCompra = listaUsar.map(d => {
+                    const cant = d.cantidad_pendiente !== undefined && Number(d.cantidad_pendiente) > 0
+                        ? Number(d.cantidad_pendiente)
+                        : Number(d.cantidad_solicitada);
+                    const precio = Number(d.precio_estimado || 0);
+                    return {
+                        id_producto: d.id_producto,
+                        nombre: d.nombre || d.descripcion || d.codigo || `Prod #${d.id_producto}`,
+                        cantidad: cant,
+                        precio_unitario: precio,
+                        subtotal: Math.round(cant * precio * 100) / 100
+                    };
+                });
                 renderItemsNuevaCompra();
-                mostrarNotificacion(`Productos cargados desde la Orden ${o.numero_orden || '#' + idOrden}.`, 'info');
+                mostrarNotificacion(`Productos pendientes cargados desde la Orden ${o.numero_orden || '#' + idOrden}.`, 'info');
             }
         } catch (e) {
             console.error('Error al cargar ítems de la orden seleccionada:', e);
@@ -1474,6 +1534,10 @@
         actualizarInputsDesdeComprobante('');
         document.getElementById('compraFecha').value = new Date().toISOString().split('T')[0];
         document.getElementById('compraVencimiento').value = new Date(Date.now() + 30*24*60*60*1000).toISOString().split('T')[0];
+        const chkRecibir = document.getElementById('compraRecibirAhora');
+        const blkRecibir = document.getElementById('bloqueCompraRecibirAhora');
+        if (chkRecibir) chkRecibir.checked = true;
+        if (blkRecibir) blkRecibir.classList.remove('hidden');
 
         itemsNuevaCompra = [];
         renderItemsNuevaCompra();
@@ -1500,6 +1564,8 @@
             document.getElementById('compraModoEdicion').value = 'true';
             document.getElementById('compraIdEditar').value = idCompra;
             document.getElementById('compraIdOrden').value = c.id_orden || '';
+            const blkRecibir = document.getElementById('bloqueCompraRecibirAhora');
+            if (blkRecibir) blkRecibir.classList.add('hidden');
             document.getElementById('modalCompraTitulo').textContent = `Modificar Compra Pendiente #${c.numero_compra || idCompra}`;
             document.getElementById('modalCompraSubtitulo').textContent = 'Edición de cantidades, precios y productos antes de la recepción';
             document.getElementById('btnGuardarCompraSubmit').textContent = 'Guardar Cambios';
@@ -1609,11 +1675,13 @@
         const esEdicion = document.getElementById('compraModoEdicion').value === 'true';
         const idEditar = document.getElementById('compraIdEditar').value;
         const idOrden = document.getElementById('compraIdOrden').value;
+        const recibirAhora = !esEdicion && Boolean(document.getElementById('compraRecibirAhora')?.checked);
         sincronizarComprobante();
         const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
         const payload = {
             id_proveedor: Number(idProv),
             id_orden: idOrden ? Number(idOrden) : null,
+            recibir_ahora: recibirAhora,
             numero_comprobante: document.getElementById('compraComprobante').value.trim() || null,
             fecha_compra: document.getElementById('compraFecha').value,
             fecha_vencimiento: document.getElementById('compraVencimiento').value || null,
@@ -1647,7 +1715,12 @@
     }
 
     async function cancelarCompra(id) {
-        if (!confirm('¿Confirma la cancelación de esta compra pendiente? Esta acción conservará el historial.')) return;
+        const compraObj = (comprasCache || []).find(c => Number(c.id_compra) === Number(id));
+        const yaRecibio = compraObj && (compraObj.estado === 'completada' || compraObj.estado === 'parcialmente_recibida');
+        const msgConfirm = yaRecibio
+            ? '¿Confirma la anulación de esta compra? Se revertirá automáticamente el ingreso de mercadería en Stock y se conservará el historial.'
+            : '¿Confirma la cancelación de esta compra pendiente? Esta acción conservará el historial.';
+        if (!confirm(msgConfirm)) return;
         const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
         try {
             const res = await fetch(`${API_BASE}/compras/${id}/cancelar`, {
@@ -2595,24 +2668,38 @@
 
             const total = Number(o.total_estimado || 0).toLocaleString('es-AR', { style: 'currency', currency: 'ARS' });
             const esPendiente = o.estado === 'pendiente';
-            const admiteFacturar = (esPendiente || o.estado === 'enviada') && !o.id_compra;
+            const tienePendienteFacturar = o.total_pendiente === undefined ? !o.id_compra : Number(o.total_pendiente) > 0;
+            const admiteFacturar = (esPendiente || o.estado === 'enviada' || o.estado === 'recibida_parcialmente') && tienePendienteFacturar;
+            const comprasVinc = Array.isArray(o.compras_vinculadas) && o.compras_vinculadas.length > 0
+                ? o.compras_vinculadas
+                : (o.id_compra ? [{ id_compra: o.id_compra, numero_compra: o.numero_compra }] : []);
+            const avanceUnidades = (o.total_productos > 0 && (o.total_recibido > 0 || o.total_comprado > 0))
+                ? `<div class="text-[10px] font-bold text-slate-500 mt-0.5">Recibido: ${o.total_recibido || 0}/${o.total_productos} u.</div>`
+                : '';
 
             return `
                 <tr>
                     <td>
                         <div class="font-black text-slate-800">${o.numero_orden || `#ORD-${o.id_orden}`}</div>
-                        ${o.id_compra ? `
-                        <button type="button" onclick="abrirModalDetalleCompra(${o.id_compra})" class="mt-0.5 inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 hover:bg-emerald-100 text-[10px] font-black border border-emerald-200 transition-all" title="Ver Compra registrada desde esta orden">
-                            <i data-lucide="shopping-bag" class="w-3 h-3"></i>
-                            <span>${o.numero_compra || `#CMP-${o.id_compra}`}</span>
-                        </button>
+                        ${comprasVinc.length > 0 ? `
+                        <div class="flex flex-wrap gap-1 mt-0.5">
+                            ${comprasVinc.map(cv => `
+                                <button type="button" onclick="abrirModalDetalleCompra(${cv.id_compra})" class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 hover:bg-emerald-100 text-[10px] font-black border border-emerald-200 transition-all" title="Ver Compra registrada desde esta orden">
+                                    <i data-lucide="shopping-bag" class="w-3 h-3"></i>
+                                    <span>${cv.numero_compra || `#CMP-${cv.id_compra}`}</span>
+                                </button>
+                            `).join('')}
+                        </div>
                         ` : ''}
                     </td>
                     <td class="font-bold text-slate-800">${o.proveedor || `Proveedor #${o.id_proveedor}`}</td>
                     <td class="text-xs text-slate-500 font-bold">${o.fecha_creacion ? o.fecha_creacion.substring(0, 10) : '-'}</td>
                     <td class="text-xs text-slate-600 font-bold">${o.fecha_entrega_estimada ? o.fecha_entrega_estimada.substring(0, 10) : '<span class="text-slate-400 italic">No fijada</span>'}</td>
                     <td class="text-right font-black text-slate-800">${total}</td>
-                    <td class="text-center"><span class="clay-badge ${badgeClass} uppercase">${o.estado.replace('_', ' ')}</span></td>
+                    <td class="text-center">
+                        <span class="clay-badge ${badgeClass} uppercase">${o.estado.replace('_', ' ')}</span>
+                        ${avanceUnidades}
+                    </td>
                     <td class="text-center">
                         <div class="flex items-center justify-center gap-1.5">
                             <button onclick="abrirModalDetalleOrden(${o.id_orden})" class="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-all" title="Ver Detalle">
@@ -2938,23 +3025,35 @@
             const o = json.data.orden;
             abrirModalNuevaCompra();
             document.getElementById('modalCompraTitulo').textContent = `Registrar Compra desde Orden #${o.numero_orden || idOrden}`;
-            actualizarInputsDesdeComprobante(`TI-0001-${String(o.numero_orden || idOrden).padStart(8, '0')}`);
+            actualizarInputsDesdeComprobante('');
             document.getElementById('compraProveedor').value = o.id_proveedor;
             document.getElementById('compraIdOrden').value = String(idOrden);
             await alCambiarProveedorCompra();
             document.getElementById('compraIdOrden').value = String(idOrden);
 
-            itemsNuevaCompra = (json.data.detalles || []).map(d => ({
-                id_producto: d.id_producto,
-                nombre: d.nombre || d.descripcion || d.codigo || `Prod #${d.id_producto}`,
-                cantidad: d.cantidad_solicitada,
-                precio_unitario: d.precio_estimado,
-                subtotal: d.subtotal
-            }));
+            const detallesPendientes = (json.data.detalles || []).filter(d => {
+                const pend = d.cantidad_pendiente !== undefined ? Number(d.cantidad_pendiente) : Number(d.cantidad_solicitada);
+                return pend > 0;
+            });
+            const listaUsar = detallesPendientes.length > 0 ? detallesPendientes : (json.data.detalles || []);
+
+            itemsNuevaCompra = listaUsar.map(d => {
+                const cant = d.cantidad_pendiente !== undefined && Number(d.cantidad_pendiente) > 0
+                    ? Number(d.cantidad_pendiente)
+                    : Number(d.cantidad_solicitada);
+                const precio = Number(d.precio_estimado || 0);
+                return {
+                    id_producto: d.id_producto,
+                    nombre: d.nombre || d.descripcion || d.codigo || `Prod #${d.id_producto}`,
+                    cantidad: cant,
+                    precio_unitario: precio,
+                    subtotal: Math.round(cant * precio * 100) / 100
+                };
+            });
 
             renderItemsNuevaCompra();
             cambiarPestanaCompras('compras');
-            mostrarNotificacion('Datos de la orden cargados en la nueva compra.', 'info');
+            mostrarNotificacion('Saldo pendiente de la orden cargado en la nueva compra.', 'info');
         } catch (e) {
             mostrarNotificacion('Error al vincular orden a compra.', 'error');
         }
@@ -2964,26 +3063,46 @@
         document.getElementById('detalleOrdenSubtitulo').textContent = `Orden #${id}`;
         document.getElementById('modalDetalleOrden').classList.remove('hidden');
         const tbody = document.getElementById('detalleOrdenTablaBody');
-        tbody.innerHTML = '<tr><td colspan="4" class="text-center py-4 text-slate-400">Cargando ítems...</td></tr>';
+        const boxCompras = document.getElementById('detalleOrdenComprasBox');
+        const listaCompras = document.getElementById('detalleOrdenComprasLista');
+        if (boxCompras) boxCompras.classList.add('hidden');
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-slate-400">Cargando ítems...</td></tr>';
         try {
             const res = await fetch(`${API_BASE}/ordenes-compra/${id}`);
             const json = await res.json();
             if (json.status === 'success' && json.data) {
                 const ord = json.data.orden || {};
                 document.getElementById('detalleOrdenSubtitulo').textContent =
-                    `Orden ${ord.numero_orden || '#' + id}` +
-                    (ord.id_compra ? ` • Vinculada a Compra ${ord.numero_compra || ('#CMP-' + ord.id_compra)}` : '');
-                tbody.innerHTML = (json.data.detalles || []).map(d => `
-                    <tr>
-                        <td>
-                            <div class="font-bold text-slate-800">${d.nombre || d.descripcion || `Prod #${d.id_producto}`}</div>
-                            ${d.codigo ? `<div class="text-[11px] text-slate-400 font-bold">${d.codigo}${d.descripcion && d.descripcion !== d.nombre ? ` • ${d.descripcion}` : ''}</div>` : ''}
-                        </td>
-                        <td class="text-center font-black">${d.cantidad_solicitada}</td>
-                        <td class="text-right font-black">$${Number(d.precio_estimado).toFixed(2)}</td>
-                        <td class="text-right font-black text-indigo-600">$${Number(d.subtotal).toFixed(2)}</td>
-                    </tr>
-                `).join('');
+                    `Orden ${ord.numero_orden || '#' + id} • Estado: ${(ord.estado || '').replace('_', ' ').toUpperCase()}`;
+                tbody.innerHTML = (json.data.detalles || []).map(d => {
+                    const sol = Number(d.cantidad_solicitada || 0);
+                    const rec = Number(d.cantidad_recibida ?? d.cantidad_comprada ?? 0);
+                    const pend = d.falta_recibir !== undefined ? Number(d.falta_recibir) : Math.max(0, sol - rec);
+                    return `
+                        <tr>
+                            <td>
+                                <div class="font-bold text-slate-800">${d.nombre || d.descripcion || `Prod #${d.id_producto}`}</div>
+                                ${d.codigo ? `<div class="text-[11px] text-slate-400 font-bold">${d.codigo}${d.descripcion && d.descripcion !== d.nombre ? ` • ${d.descripcion}` : ''}</div>` : ''}
+                            </td>
+                            <td class="text-center font-black">${sol}</td>
+                            <td class="text-center font-bold ${rec >= sol ? 'text-emerald-600' : (rec > 0 ? 'text-amber-600' : 'text-slate-400')}">${rec}</td>
+                            <td class="text-center font-bold ${pend > 0 ? 'text-rose-600' : 'text-emerald-600'}">${pend > 0 ? pend : '✓ 0'}</td>
+                            <td class="text-right font-black">$${Number(d.precio_estimado).toFixed(2)}</td>
+                            <td class="text-right font-black text-indigo-600">$${Number(d.subtotal).toFixed(2)}</td>
+                        </tr>
+                    `;
+                }).join('');
+
+                const comprasVinc = json.data.compras || ord.compras_vinculadas || [];
+                if (boxCompras && listaCompras && comprasVinc.length > 0) {
+                    boxCompras.classList.remove('hidden');
+                    listaCompras.innerHTML = comprasVinc.map(cv => `
+                        <div class="flex items-center justify-between p-1.5 bg-white rounded-lg border border-slate-200/80">
+                            <span class="font-black text-slate-700">${cv.numero_compra || ('#CMP-' + cv.id_compra)} ${cv.numero_comprobante ? `(${cv.numero_comprobante})` : ''}</span>
+                            <span class="font-bold text-emerald-700">$${Number(cv.importe_total || 0).toFixed(2)} • ${(cv.estado || '').replace('_', ' ').toUpperCase()}</span>
+                        </div>
+                    `).join('');
+                }
             }
         } catch (e) {}
     }
@@ -3100,11 +3219,12 @@
         try {
             const res = await fetch(`${API_BASE}/sugerencias-reposicion/${idSugerencia}/generar-orden`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': csrf }
+                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': csrf },
+                body: JSON.stringify({ agrupar_proveedor: true })
             });
             const data = await res.json();
             if (data.exito) {
-                mostrarNotificacion('Orden de compra generada exitosamente desde la sugerencia.', 'success');
+                mostrarNotificacion(data.mensaje || 'Orden de compra generada exitosamente desde la sugerencia.', 'success');
                 await Promise.all([cargarSugerencias(), cargarOrdenes()]);
                 cambiarPestanaCompras('ordenes');
             } else {

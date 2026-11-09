@@ -216,13 +216,12 @@ class RecepcionController extends Controller
 
                 $compra->save();
 
-                // Propagar avance de estado a la ORDEN_COMPRA asociada si existe (PC06)
+                // Propagar avance de estado a la ORDEN_COMPRA asociada si existe (PC06),
+                // evaluando el total recibido acumulado de todas las compras frente al solicitado en la orden.
                 if ($compra->id_orden) {
                     $orden = OrdenCompra::find($compra->id_orden);
-                    if ($orden && $orden->estado !== 'cancelada') {
-                        $orden->estado = $todasCompletas ? 'completada' : 'recibida_parcialmente';
-                        $orden->fecha_modificacion = Carbon::now()->toDateString();
-                        $orden->save();
+                    if ($orden) {
+                        $orden->sincronizarEstadoRecepcion();
                     }
                 }
 

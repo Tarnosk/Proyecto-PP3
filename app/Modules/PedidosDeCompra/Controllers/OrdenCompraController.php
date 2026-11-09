@@ -33,9 +33,42 @@ class OrdenCompraController extends Controller
      */
     private function formato(OrdenCompra $o): array
     {
-        $compraActiva = $o->relationLoaded('compras')
-            ? ($o->compras->first(fn ($c) => $c->estado !== 'cancelada') ?? $o->compras->first())
-            : $o->compras()->where('estado', '!=', 'cancelada')->orderByDesc('id_compra')->first();
+        $comprasRel = $o->relationLoaded('compras')
+            ? $o->compras
+            : $o->compras()->with('detalles')->orderByDesc('id_compra')->get();
+
+        $comprasActivas = $comprasRel->filter(fn ($c) => $c->estado !== 'cancelada')->values();
+        $compraActiva = $comprasActivas->first() ?? $comprasRel->first();
+
+        $detallesOrden = $o->relationLoaded('detalles') ? $o->detalles : $o->detalles()->get();
+        $totalSolicitado = (int) $detallesOrden->sum('cantidad_solicitada');
+
+        $compradoPorProd = [];
+        $recibidoPorProd = [];
+        $totalComprado = 0;
+        $totalRecibido = 0;
+
+        foreach ($comprasActivas as $c) {
+            $dets = $c->relationLoaded('detalles') ? $c->detalles : $c->detalles()->get();
+            foreach ($dets as $dc) {
+                $idP = (int) $dc->id_producto;
+                $cant = (int) $dc->cantidad;
+                $rec = (int) $dc->cantidad_recibida;
+                $compradoPorProd[$idP] = ($compradoPorProd[$idP] ?? 0) + $cant;
+                $recibidoPorProd[$idP] = ($recibidoPorProd[$idP] ?? 0) + $rec;
+                $totalComprado += $cant;
+                $totalRecibido += $rec;
+            }
+        }
+
+        $totalPendienteFacturar = 0;
+        $totalPendienteRecibir = 0;
+        foreach ($detallesOrden as $do) {
+            $idP = (int) $do->id_producto;
+            $sol = (int) $do->cantidad_solicitada;
+            $totalPendienteFacturar += max(0, $sol - ($compradoPorProd[$idP] ?? 0));
+            $totalPendienteRecibir += max(0, $sol - ($recibidoPorProd[$idP] ?? 0));
+        }
 
         return [
             'id_orden' => $o->id_orden,
@@ -49,10 +82,22 @@ class OrdenCompraController extends Controller
             'fecha_modificacion' => $o->fecha_modificacion ? $o->fecha_modificacion->format('Y-m-d') : null,
             'fecha_envio' => $o->fecha_envio ? $o->fecha_envio->format('Y-m-d') : null,
             'fecha_cancelacion' => $o->fecha_cancelacion ? $o->fecha_cancelacion->format('Y-m-d') : null,
-            'total_productos' => (int) $o->detalles()->sum('cantidad_solicitada'),
+            'total_productos' => $totalSolicitado,
+            'total_comprado' => $totalComprado,
+            'total_recibido' => $totalRecibido,
+            'total_pendiente' => $totalPendienteFacturar,
+            'total_falta_recibir' => $totalPendienteRecibir,
             'id_compra' => $compraActiva ? (int) $compraActiva->id_compra : null,
             'numero_compra' => $compraActiva?->numero_compra,
             'estado_compra' => $compraActiva?->estado,
+            'compras_vinculadas' => $comprasActivas->map(fn ($c) => [
+                'id_compra' => (int) $c->id_compra,
+                'numero_compra' => $c->numero_compra,
+                'numero_comprobante' => $c->numero_comprobante,
+                'importe_total' => (float) $c->importe_total,
+                'estado' => $c->estado,
+                'fecha_compra' => $c->fecha_compra ? $c->fecha_compra->format('Y-m-d') : null,
+            ])->all(),
         ];
     }
 
@@ -237,7 +282,7 @@ class OrdenCompraController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $query = OrdenCompra::with(['proveedor', 'compras']);
+        $query = OrdenCompra::with(['proveedor', 'detalles', 'compras.detalles']);
 
         if ($request->filled('id_proveedor')) {
             $query->where('id_proveedor', (int) $request->input('id_proveedor'));
@@ -267,33 +312,62 @@ class OrdenCompraController extends Controller
      */
     public function show(int $id): JsonResponse
     {
-        $orden = OrdenCompra::with(['proveedor', 'compras', 'detalles.producto'])->find($id);
+        $orden = OrdenCompra::with(['proveedor', 'compras.detalles', 'detalles.producto'])->find($id);
         if (!$orden) {
             return response()->json(['status' => 'error', 'message' => 'La orden de compra no existe.'], 404);
         }
 
-        $detalles = $orden->detalles->map(function (DetalleOrden $d) {
+        $comprasActivas = $orden->compras->filter(fn ($c) => $c->estado !== 'cancelada');
+        $compradoPorProd = [];
+        $recibidoPorProd = [];
+        $ultimoPrecioFacturado = [];
+
+        foreach ($comprasActivas as $c) {
+            foreach ($c->detalles as $dc) {
+                $idP = (int) $dc->id_producto;
+                $compradoPorProd[$idP] = ($compradoPorProd[$idP] ?? 0) + (int) $dc->cantidad;
+                $recibidoPorProd[$idP] = ($recibidoPorProd[$idP] ?? 0) + (int) $dc->cantidad_recibida;
+                $ultimoPrecioFacturado[$idP] = (float) $dc->precio_unitario;
+            }
+        }
+
+        $detalles = $orden->detalles->map(function (DetalleOrden $d) use ($compradoPorProd, $recibidoPorProd, $ultimoPrecioFacturado) {
+            $idP = (int) $d->id_producto;
+            $solicitada = (int) $d->cantidad_solicitada;
+            $comprada = $compradoPorProd[$idP] ?? 0;
+            $recibida = $recibidoPorProd[$idP] ?? 0;
+
             return [
                 'id_detalle_orden' => $d->id_detalle_orden,
-                'id_producto' => $d->id_producto,
+                'id_producto' => $idP,
                 'codigo' => $d->producto?->codigo,
                 'nombre' => $d->producto?->nombre,
                 'descripcion' => $d->producto?->descripcion,
-                'cantidad_solicitada' => (int) $d->cantidad_solicitada,
+                'cantidad_solicitada' => $solicitada,
+                'cantidad_comprada' => $comprada,
+                'cantidad_recibida' => $recibida,
+                'cantidad_pendiente' => max(0, $solicitada - $comprada),
+                'falta_recibir' => max(0, $solicitada - $recibida),
                 'precio_estimado' => (float) $d->precio_estimado,
+                'precio_facturado' => $ultimoPrecioFacturado[$idP] ?? null,
                 'subtotal' => (float) $d->subtotal,
                 'origen' => $d->origen,
             ];
         });
 
+        $formatoOrden = $this->formato($orden);
         $totalSolicitado = (int) $orden->detalles->sum('cantidad_solicitada');
 
         return response()->json([
             'status' => 'success',
             'data' => [
-                'orden' => $this->formato($orden),
+                'orden' => $formatoOrden,
                 'total_solicitado' => $totalSolicitado,
+                'total_comprado' => $formatoOrden['total_comprado'],
+                'total_recibido' => $formatoOrden['total_recibido'],
+                'total_pendiente' => $formatoOrden['total_pendiente'],
                 'detalles' => $detalles,
+                'compras' => $formatoOrden['compras_vinculadas'],
             ],
         ], 200);
     }

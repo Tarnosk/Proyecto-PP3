@@ -567,5 +567,112 @@ class ProductoCostoRecargoTest extends TestCase
         $this->assertNotNull($compraEnTabla);
         $this->assertSame(4000.0, (float) $compraEnTabla['total_pagado']);
         $this->assertSame(6000.0, (float) $compraEnTabla['saldo_a_pagar']);
+        $this->assertSame('pago_parcial', $compraEnTabla['estado_pago']);
+    }
+
+    /**
+     * Flujo real de distribuidora:
+     * 1) Compra con recibir_ahora=true ingresa stock en un solo paso.
+     * 2) Entregas parciales (1 Orden de 100 u. -> Compra #1 por 60 u. deja Orden en recibida_parcialmente con 40 u. pendientes -> Compra #2 por 40 u. pasa Orden a completada).
+     * 3) Anular Compra #2 revierte automáticamente las 40 u. de stock y devuelve la Orden a recibida_parcialmente.
+     */
+    public function test_flujo_distribuidora_recepcion_inmediata_entregas_parciales_y_anulacion_con_reversion_stock(): void
+    {
+        $prov = $this->crearProveedor();
+        $prod = $this->crearProducto([
+            'stock' => 20,
+            'costo' => 1000.00,
+            'recargo' => 40.00,
+            'precio_unitario' => 1400.00,
+        ]);
+
+        // 1. Emitir Orden de Compra por 100 unidades
+        $resOrden = $this->postJson('/api/ordenes-compra', [
+            'id_proveedor' => $prov->id_proveedor,
+            'fecha_creacion' => Carbon::now()->toDateString(),
+            'items' => [
+                [
+                    'id_producto' => $prod->id_producto,
+                    'cantidad_solicitada' => 100,
+                    'precio_estimado' => 1000.00,
+                ],
+            ],
+        ]);
+        $resOrden->assertCreated();
+        $idOrden = (int) $resOrden->json('data.id_orden');
+
+        // 2. Llega el primer camión con Factura #1 por 60 unidades (recibir_ahora = true)
+        $resCompra1 = $this->postJson('/api/compras', [
+            'id_proveedor' => $prov->id_proveedor,
+            'id_orden' => $idOrden,
+            'recibir_ahora' => true,
+            'numero_comprobante' => 'A-0001-00000101',
+            'fecha_compra' => Carbon::now()->toDateString(),
+            'items' => [
+                [
+                    'id_producto' => $prod->id_producto,
+                    'cantidad' => 60,
+                    'precio_unitario' => 1100.00,
+                ],
+            ],
+        ]);
+        $resCompra1->assertCreated();
+        $idCompra1 = (int) $resCompra1->json('data.id_compra');
+
+        // Stock subió en el acto de 20 a 80 sin paso extra de recepción
+        $prod->refresh();
+        $this->assertSame(80, (int) $prod->stock);
+        $this->assertSame('completada', $resCompra1->json('data.estado'));
+        $this->assertSame('pendiente_pago', $resCompra1->json('data.estado_pago'));
+
+        // La Orden de Compra (100 u.) quedó en 'recibida_parcialmente' con 60 recibidas y 40 pendientes
+        $resShowOrden1 = $this->getJson("/api/ordenes-compra/{$idOrden}");
+        $resShowOrden1->assertOk();
+        $this->assertSame('recibida_parcialmente', $resShowOrden1->json('data.orden.estado'));
+        $this->assertSame(60, (int) $resShowOrden1->json('data.total_recibido'));
+        $this->assertSame(40, (int) $resShowOrden1->json('data.total_pendiente'));
+
+        // 3. Llega el segundo camión con Factura #2 por las 40 unidades restantes (recibir_ahora = true)
+        $resCompra2 = $this->postJson('/api/compras', [
+            'id_proveedor' => $prov->id_proveedor,
+            'id_orden' => $idOrden,
+            'recibir_ahora' => true,
+            'numero_comprobante' => 'A-0001-00000102',
+            'fecha_compra' => Carbon::now()->toDateString(),
+            'items' => [
+                [
+                    'id_producto' => $prod->id_producto,
+                    'cantidad' => 40,
+                    'precio_unitario' => 1100.00,
+                ],
+            ],
+        ]);
+        $resCompra2->assertCreated();
+        $idCompra2 = (int) $resCompra2->json('data.id_compra');
+
+        // Stock subió de 80 a 120 y la Orden de Compra pasó a 'completada' (0 pendientes)
+        $prod->refresh();
+        $this->assertSame(120, (int) $prod->stock);
+
+        $resShowOrden2 = $this->getJson("/api/ordenes-compra/{$idOrden}");
+        $resShowOrden2->assertOk();
+        $this->assertSame('completada', $resShowOrden2->json('data.orden.estado'));
+        $this->assertSame(100, (int) $resShowOrden2->json('data.total_recibido'));
+        $this->assertSame(0, (int) $resShowOrden2->json('data.total_pendiente'));
+        $this->assertCount(2, $resShowOrden2->json('data.compras'));
+
+        // 4. Si se anula la Compra #2, se revierten las 40 u. de stock (vuelve a 80) y la Orden vuelve a 'recibida_parcialmente'
+        $resCancel2 = $this->patchJson("/api/compras/{$idCompra2}/cancelar");
+        $resCancel2->assertOk();
+        $this->assertSame('cancelada', $resCancel2->json('data.estado'));
+
+        $prod->refresh();
+        $this->assertSame(80, (int) $prod->stock);
+
+        $resShowOrden3 = $this->getJson("/api/ordenes-compra/{$idOrden}");
+        $resShowOrden3->assertOk();
+        $this->assertSame('recibida_parcialmente', $resShowOrden3->json('data.orden.estado'));
+        $this->assertSame(60, (int) $resShowOrden3->json('data.total_recibido'));
+        $this->assertSame(40, (int) $resShowOrden3->json('data.total_pendiente'));
     }
 }

@@ -80,8 +80,10 @@ class SugerenciasReposicionController extends Controller
      */
     public function generarOrden(Request $request, int $id): JsonResponse
     {
+        $agruparProveedor = $request->boolean('agrupar_proveedor', false);
+
         return $this->responder(
-            fn () => $this->service->generarOrdenDesdeSugerencia($id, UsuarioActual::id($request)),
+            fn () => $this->service->generarOrdenDesdeSugerencia($id, UsuarioActual::id($request), $agruparProveedor),
             201,
             400
         );
