@@ -33,6 +33,10 @@ class OrdenCompraController extends Controller
      */
     private function formato(OrdenCompra $o): array
     {
+        $compraActiva = $o->relationLoaded('compras')
+            ? ($o->compras->first(fn ($c) => $c->estado !== 'cancelada') ?? $o->compras->first())
+            : $o->compras()->where('estado', '!=', 'cancelada')->orderByDesc('id_compra')->first();
+
         return [
             'id_orden' => $o->id_orden,
             'numero_orden' => $o->numero_orden,
@@ -46,6 +50,9 @@ class OrdenCompraController extends Controller
             'fecha_envio' => $o->fecha_envio ? $o->fecha_envio->format('Y-m-d') : null,
             'fecha_cancelacion' => $o->fecha_cancelacion ? $o->fecha_cancelacion->format('Y-m-d') : null,
             'total_productos' => (int) $o->detalles()->sum('cantidad_solicitada'),
+            'id_compra' => $compraActiva ? (int) $compraActiva->id_compra : null,
+            'numero_compra' => $compraActiva?->numero_compra,
+            'estado_compra' => $compraActiva?->estado,
         ];
     }
 
@@ -230,7 +237,7 @@ class OrdenCompraController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $query = OrdenCompra::with('proveedor');
+        $query = OrdenCompra::with(['proveedor', 'compras']);
 
         if ($request->filled('id_proveedor')) {
             $query->where('id_proveedor', (int) $request->input('id_proveedor'));
@@ -260,7 +267,7 @@ class OrdenCompraController extends Controller
      */
     public function show(int $id): JsonResponse
     {
-        $orden = OrdenCompra::with(['proveedor', 'detalles.producto'])->find($id);
+        $orden = OrdenCompra::with(['proveedor', 'compras', 'detalles.producto'])->find($id);
         if (!$orden) {
             return response()->json(['status' => 'error', 'message' => 'La orden de compra no existe.'], 404);
         }

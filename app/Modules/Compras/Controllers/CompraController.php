@@ -34,18 +34,30 @@ class CompraController extends Controller
      */
     private function formato(Compra $c): array
     {
+        $importeTotal = round((float) $c->importe_total, 2);
+        $totalPagado = $c->relationLoaded('pagos')
+            ? round((float) $c->pagos->sum('importe'), 2)
+            : $c->totalPagado();
+        $saldoAPagar = $c->estado === 'cancelada'
+            ? 0.0
+            : max(0.0, round($importeTotal - $totalPagado, 2));
+
         return [
             'id_compra' => $c->id_compra,
             'numero_compra' => $c->numero_compra,
             'numero_comprobante' => $c->numero_comprobante,
+            'id_orden' => $c->id_orden ? (int) $c->id_orden : null,
+            'numero_orden' => $c->orden?->numero_orden,
             'id_proveedor' => $c->id_proveedor,
             'proveedor' => $c->proveedor?->razon_social,
             'proveedor_cuit' => $c->proveedor?->cuit,
             'proveedor_direccion' => $c->proveedor?->direccion,
             'proveedor_telefono' => $c->proveedor?->telefono,
             'proveedor_email' => $c->proveedor?->email,
-            'importe_total' => (float) $c->importe_total,
+            'importe_total' => $importeTotal,
             'saldo_pendiente' => (float) $c->saldo_pendiente,
+            'total_pagado' => $totalPagado,
+            'saldo_a_pagar' => $saldoAPagar,
             'estado' => $c->estado,
             'fecha_compra' => $c->fecha_compra ? $c->fecha_compra->format('Y-m-d') : null,
             'fecha_vencimiento' => $c->fecha_vencimiento ? $c->fecha_vencimiento->format('Y-m-d') : null,
@@ -237,7 +249,17 @@ class CompraController extends Controller
                     }
                 }
 
-                return $compra;
+                if ($idOrden) {
+                    $ordenVinculada = \App\Modules\PedidosDeCompra\Models\OrdenCompra::find($idOrden);
+                    if ($ordenVinculada && $ordenVinculada->estado === 'pendiente') {
+                        $ordenVinculada->estado = 'enviada';
+                        $ordenVinculada->fecha_envio = $ordenVinculada->fecha_envio ?: $fecha;
+                        $ordenVinculada->fecha_modificacion = Carbon::now()->toDateString();
+                        $ordenVinculada->save();
+                    }
+                }
+
+                return $compra->load(['proveedor', 'orden', 'pagos']);
             });
 
             return response()->json([
@@ -316,7 +338,7 @@ class CompraController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $query = Compra::with('proveedor');
+        $query = Compra::with(['proveedor', 'orden', 'pagos']);
 
         if ($request->filled('id_proveedor')) {
             $query->where('id_proveedor', (int) $request->input('id_proveedor'));
@@ -463,7 +485,7 @@ class CompraController extends Controller
      */
     public function show(int $id): JsonResponse
     {
-        $compra = Compra::with(['proveedor', 'detalles.producto', 'recepciones.detalles.producto'])->find($id);
+        $compra = Compra::with(['proveedor', 'orden', 'pagos', 'detalles.producto', 'recepciones.detalles.producto'])->find($id);
         if (!$compra) {
             return response()->json(['status' => 'error', 'message' => 'La compra no existe.'], 404);
         }
@@ -636,11 +658,13 @@ class CompraController extends Controller
         }
 
         $validator = Validator::make($request->all(), [
+            'id_orden' => 'nullable|integer|exists:ORDEN_COMPRA,id_orden',
             'fecha_compra' => 'nullable|date|before_or_equal:today',
             'fecha_vencimiento' => 'nullable|date',
             'numero_comprobante' => 'nullable|string|max:50',
             'items' => 'required|array|min:1',
         ], [
+            'id_orden.exists' => 'La orden de compra vinculada no existe.',
             'fecha_compra.before_or_equal' => 'La fecha de la compra no puede ser posterior a la fecha actual.',
             'numero_comprobante.max' => 'El número de comprobante no puede superar los 50 caracteres.',
             'items.required' => 'Debe agregar al menos un producto a la compra.',
@@ -694,6 +718,9 @@ class CompraController extends Controller
                     ]);
                 }
 
+                if ($request->has('id_orden')) {
+                    $compra->id_orden = $request->filled('id_orden') ? (int) $request->input('id_orden') : null;
+                }
                 if ($request->filled('fecha_compra')) {
                     $compra->fecha_compra = $request->input('fecha_compra');
                 }
@@ -710,7 +737,17 @@ class CompraController extends Controller
 
                 $compra->save();
 
-                return $compra;
+                if ($compra->id_orden) {
+                    $ordenVinculada = \App\Modules\PedidosDeCompra\Models\OrdenCompra::find($compra->id_orden);
+                    if ($ordenVinculada && $ordenVinculada->estado === 'pendiente') {
+                        $ordenVinculada->estado = 'enviada';
+                        $ordenVinculada->fecha_envio = $ordenVinculada->fecha_envio ?: Carbon::now()->toDateString();
+                        $ordenVinculada->fecha_modificacion = Carbon::now()->toDateString();
+                        $ordenVinculada->save();
+                    }
+                }
+
+                return $compra->load(['proveedor', 'orden', 'pagos']);
             });
 
             return response()->json([

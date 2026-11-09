@@ -624,7 +624,6 @@
         <form onsubmit="guardarNuevaCompra(event)" class="space-y-4">
             <input type="hidden" id="compraModoEdicion" value="false">
             <input type="hidden" id="compraIdEditar" value="">
-            <input type="hidden" id="compraIdOrden" value="">
 
             <div class="grid grid-cols-1 sm:grid-cols-12 gap-3">
                 <!-- PROVEEDOR -->
@@ -645,6 +644,16 @@
                 <div class="sm:col-span-3">
                     <label class="block text-[11px] font-extrabold text-slate-600 uppercase mb-1">Fecha de Vencimiento</label>
                     <input type="date" id="compraVencimiento" class="clay-input w-full text-xs font-bold">
+                </div>
+
+                <!-- ORDEN DE COMPRA VINCULADA (OPCIONAL) -->
+                <div class="sm:col-span-12">
+                    <label class="block text-[11px] font-extrabold text-slate-600 uppercase mb-1">
+                        Vincular a Orden de Compra Emitida <span class="text-slate-400 font-normal">(Opcional — autocompleta productos solicitados)</span>
+                    </label>
+                    <select id="compraIdOrden" onchange="alSeleccionarOrdenEnCompra()" class="clay-input w-full text-xs font-bold text-slate-700">
+                        <option value="">Compra directa (Sin Orden de Compra previa)</option>
+                    </select>
                 </div>
 
                 <!-- COMPROBANTE / FACTURA -->
@@ -1113,24 +1122,35 @@
             if (c.estado === 'pendiente' || c.estado === 'parcialmente_recibida') badgeClass = 'clay-badge-warning';
 
             const total = Number(c.importe_total || 0).toLocaleString('es-AR', { style: 'currency', currency: 'ARS' });
-            const saldo = Number(c.saldo_pendiente ?? c.importe_total ?? 0).toLocaleString('es-AR', { style: 'currency', currency: 'ARS' });
+            const saldoVal = Number(c.saldo_a_pagar ?? c.saldo_pendiente ?? c.importe_total ?? 0);
+            const pagadoVal = Number(c.total_pagado || 0);
+            const saldo = saldoVal.toLocaleString('es-AR', { style: 'currency', currency: 'ARS' });
             
             const esPendiente = c.estado === 'pendiente';
             const esParcial = c.estado === 'parcialmente_recibida';
             const admiteRecepcion = esPendiente || esParcial;
-            const admitePago = c.estado !== 'cancelada';
+            const admitePago = c.estado !== 'cancelada' && saldoVal > 0;
 
             return `
                 <tr>
                     <td>
                         <div class="font-black text-slate-800">${c.numero_compra || `#CMP-${c.id_compra}`}</div>
                         <div class="text-[11px] text-slate-400 font-bold">${c.fecha_compra ? c.fecha_compra.substring(0, 10) : '-'}</div>
+                        ${c.id_orden ? `
+                        <button type="button" onclick="abrirModalDetalleOrden(${c.id_orden})" class="mt-0.5 inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-700 hover:bg-indigo-100 text-[10px] font-black border border-indigo-200 transition-all" title="Ver Orden de Compra vinculada">
+                            <i data-lucide="clipboard-list" class="w-3 h-3"></i>
+                            <span>${c.numero_orden || `#ORD-${c.id_orden}`}</span>
+                        </button>
+                        ` : ''}
                     </td>
                     <td class="font-bold text-slate-800">${c.proveedor || `Proveedor #${c.id_proveedor}`}</td>
                     <td class="text-xs text-slate-600 font-bold">${c.numero_comprobante || '<span class="text-slate-400 italic">Sin comprobante</span>'}</td>
                     <td class="text-xs font-bold text-slate-600">${c.fecha_vencimiento ? c.fecha_vencimiento.substring(0, 10) : '<span class="text-slate-400">-</span>'}</td>
                     <td class="text-right font-black text-slate-800">${total}</td>
-                    <td class="text-right font-black ${Number(c.saldo_pendiente) > 0 ? 'text-amber-600' : 'text-slate-400'}">${saldo}</td>
+                    <td class="text-right">
+                        <div class="font-black ${saldoVal > 0 ? 'text-amber-600' : 'text-emerald-600'}">${saldo}</div>
+                        ${pagadoVal > 0 ? `<div class="text-[10px] font-bold ${saldoVal <= 0 ? 'text-emerald-600' : 'text-slate-400'}">${saldoVal <= 0 ? '✓ Saldada' : `Pagado: $${pagadoVal.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}</div>` : ''}
+                    </td>
                     <td class="text-center"><span class="clay-badge ${badgeClass} uppercase">${c.estado.replace('_', ' ')}</span></td>
                     <td class="text-center">
                         <div class="flex items-center justify-center gap-1.5">
@@ -1218,17 +1238,42 @@
         }
     }
 
-    // Al seleccionar proveedor en Nueva Compra, cargamos sus productos asociados
+    // Al seleccionar proveedor en Nueva Compra, cargamos sus productos asociados y órdenes disponibles
     async function alCambiarProveedorCompra() {
         const idProv = document.getElementById('compraProveedor').value;
         const selProd = document.getElementById('compraItemProducto');
+        const selOrden = document.getElementById('compraIdOrden');
         const lblInfo = document.getElementById('labelProductosProveedorInfo');
         if (!selProd) return;
 
         if (!idProv) {
             selProd.innerHTML = '<option value="">Seleccione primero un proveedor...</option>';
+            if (selOrden) {
+                selOrden.innerHTML = '<option value="">Compra directa (Sin Orden de Compra previa)</option>';
+                selOrden.value = '';
+            }
             if (lblInfo) lblInfo.textContent = '';
             return;
+        }
+
+        // Poblar órdenes de compra del proveedor seleccionado (pendientes, enviadas o la ya vinculada)
+        if (selOrden) {
+            const ordenPrevia = selOrden.value;
+            const ordenesProv = (ordenesCache || []).filter(o =>
+                String(o.id_proveedor) === String(idProv) &&
+                (o.estado === 'pendiente' || o.estado === 'enviada' || String(o.id_orden) === String(ordenPrevia))
+            );
+            let optsOrden = '<option value="">Compra directa (Sin Orden de Compra previa)</option>';
+            ordenesProv.forEach(o => {
+                const nro = o.numero_orden || `#ORD-${o.id_orden}`;
+                const est = Number(o.total_estimado || 0).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                const yaVinc = o.id_compra ? ` [Vinculada a ${o.numero_compra || '#' + o.id_compra}]` : '';
+                optsOrden += `<option value="${o.id_orden}">${nro} — Est: $${est} (${(o.estado || '').toUpperCase()})${yaVinc}</option>`;
+            });
+            selOrden.innerHTML = optsOrden;
+            if (ordenPrevia && ordenesProv.some(o => String(o.id_orden) === String(ordenPrevia))) {
+                selOrden.value = String(ordenPrevia);
+            }
         }
 
         try {
@@ -1280,6 +1325,31 @@
             }
         } catch (e) {
             console.error('Error productos proveedor:', e);
+        }
+    }
+
+    async function alSeleccionarOrdenEnCompra() {
+        const idOrden = document.getElementById('compraIdOrden')?.value;
+        if (!idOrden) {
+            return;
+        }
+        try {
+            const res = await fetch(`${API_BASE}/ordenes-compra/${idOrden}`);
+            const json = await res.json();
+            if (json.status === 'success' && json.data) {
+                const o = json.data.orden || {};
+                itemsNuevaCompra = (json.data.detalles || []).map(d => ({
+                    id_producto: d.id_producto,
+                    nombre: d.nombre || d.descripcion || d.codigo || `Prod #${d.id_producto}`,
+                    cantidad: d.cantidad_solicitada,
+                    precio_unitario: d.precio_estimado,
+                    subtotal: d.subtotal
+                }));
+                renderItemsNuevaCompra();
+                mostrarNotificacion(`Productos cargados desde la Orden ${o.numero_orden || '#' + idOrden}.`, 'info');
+            }
+        } catch (e) {
+            console.error('Error al cargar ítems de la orden seleccionada:', e);
         }
     }
 
@@ -1437,6 +1507,7 @@
             document.getElementById('compraProveedor').value = c.id_proveedor;
             document.getElementById('compraProveedor').disabled = true; // El proveedor de la compra no cambia
             await alCambiarProveedorCompra();
+            document.getElementById('compraIdOrden').value = c.id_orden || '';
 
             actualizarInputsDesdeComprobante(c.numero_comprobante || '');
             document.getElementById('compraFecha').value = c.fecha_compra ? c.fecha_compra.substring(0, 10) : new Date().toISOString().split('T')[0];
@@ -1618,6 +1689,9 @@
                 const c = json.data.compra;
                 compraDetalleActualObjeto = c;
                 compraDetalleDataCompleta = json.data;
+                document.getElementById('detalleCompraSubtitulo').textContent =
+                    `Compra ${c.numero_compra || '#' + id}` +
+                    (c.id_orden ? ` • Vinculada a Orden ${c.numero_orden || ('#ORD-' + c.id_orden)}` : '');
                 const totComp = json.data.total_comprado || 1;
                 const totRec = json.data.total_recibido || 0;
                 const pctRec = Math.min(100, Math.round((totRec / totComp) * 100));
@@ -1676,7 +1750,7 @@
                     }
                 }
                 if (btnPago) {
-                    const saldo = Number(c.saldo_pendiente ?? c.importe_total ?? 0);
+                    const saldo = Number(pagos.saldo_a_pagar ?? c.saldo_a_pagar ?? c.saldo_pendiente ?? c.importe_total ?? 0);
                     if (c.estado !== 'cancelada' && saldo > 0) {
                         btnPago.classList.remove('hidden');
                     } else {
@@ -2521,11 +2595,19 @@
 
             const total = Number(o.total_estimado || 0).toLocaleString('es-AR', { style: 'currency', currency: 'ARS' });
             const esPendiente = o.estado === 'pendiente';
-            const admiteFacturar = esPendiente || o.estado === 'enviada';
+            const admiteFacturar = (esPendiente || o.estado === 'enviada') && !o.id_compra;
 
             return `
                 <tr>
-                    <td class="font-black text-slate-800">${o.numero_orden || `#ORD-${o.id_orden}`}</td>
+                    <td>
+                        <div class="font-black text-slate-800">${o.numero_orden || `#ORD-${o.id_orden}`}</div>
+                        ${o.id_compra ? `
+                        <button type="button" onclick="abrirModalDetalleCompra(${o.id_compra})" class="mt-0.5 inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 hover:bg-emerald-100 text-[10px] font-black border border-emerald-200 transition-all" title="Ver Compra registrada desde esta orden">
+                            <i data-lucide="shopping-bag" class="w-3 h-3"></i>
+                            <span>${o.numero_compra || `#CMP-${o.id_compra}`}</span>
+                        </button>
+                        ` : ''}
+                    </td>
                     <td class="font-bold text-slate-800">${o.proveedor || `Proveedor #${o.id_proveedor}`}</td>
                     <td class="text-xs text-slate-500 font-bold">${o.fecha_creacion ? o.fecha_creacion.substring(0, 10) : '-'}</td>
                     <td class="text-xs text-slate-600 font-bold">${o.fecha_entrega_estimada ? o.fecha_entrega_estimada.substring(0, 10) : '<span class="text-slate-400 italic">No fijada</span>'}</td>
@@ -2855,11 +2937,12 @@
 
             const o = json.data.orden;
             abrirModalNuevaCompra();
-            document.getElementById('compraIdOrden').value = idOrden;
             document.getElementById('modalCompraTitulo').textContent = `Registrar Compra desde Orden #${o.numero_orden || idOrden}`;
             actualizarInputsDesdeComprobante(`TI-0001-${String(o.numero_orden || idOrden).padStart(8, '0')}`);
             document.getElementById('compraProveedor').value = o.id_proveedor;
+            document.getElementById('compraIdOrden').value = String(idOrden);
             await alCambiarProveedorCompra();
+            document.getElementById('compraIdOrden').value = String(idOrden);
 
             itemsNuevaCompra = (json.data.detalles || []).map(d => ({
                 id_producto: d.id_producto,
@@ -2886,6 +2969,10 @@
             const res = await fetch(`${API_BASE}/ordenes-compra/${id}`);
             const json = await res.json();
             if (json.status === 'success' && json.data) {
+                const ord = json.data.orden || {};
+                document.getElementById('detalleOrdenSubtitulo').textContent =
+                    `Orden ${ord.numero_orden || '#' + id}` +
+                    (ord.id_compra ? ` • Vinculada a Compra ${ord.numero_compra || ('#CMP-' + ord.id_compra)}` : '');
                 tbody.innerHTML = (json.data.detalles || []).map(d => `
                     <tr>
                         <td>

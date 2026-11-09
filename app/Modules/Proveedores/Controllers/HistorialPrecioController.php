@@ -226,10 +226,15 @@ class HistorialPrecioController extends Controller
                     'id_usuario' => $idUsuario,
                 ]);
             } else {
+                $tieneOtroPrincipal = ProductoProveedor::where('id_producto', $idProducto)
+                    ->where('activo', true)
+                    ->where('es_proveedor_principal', true)
+                    ->exists();
+
                 $relacion = ProductoProveedor::create([
                     'id_proveedor' => $id,
                     'id_producto' => $idProducto,
-                    'es_proveedor_principal' => false,
+                    'es_proveedor_principal' => !$tieneOtroPrincipal,
                     'precio_acordado' => $nuevoPrecio,
                     'activo' => true,
                     'fecha_asociacion' => date('Y-m-d'),
@@ -247,10 +252,8 @@ class HistorialPrecioController extends Controller
                 $observaciones
             );
 
-            if ($relacion->es_proveedor_principal) {
-                $prod = Producto::find($idProducto);
-                $prod?->sincronizarCostoReposicion($idUsuario);
-            }
+            $prod = Producto::find($idProducto);
+            $prod?->sincronizarCostoReposicion($idUsuario);
 
             return [
                 'relacion' => $relacion,
