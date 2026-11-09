@@ -60,7 +60,7 @@ class VentasApiClient
 
         try {
             do {
-                $response = $this->http()->get('ventas', array_filter(['estado' => 'confirmada', 'id_zona' => $idZona, 'page' => $page]));
+                $response = $this->http()->get('ventas', array_filter(['estado' => 'pendiente', 'id_zona' => $idZona, 'page' => $page]));
 
                 if ($response->failed()) {
                     Log::warning("G2 - VentasApiClient: Error al consultar ventas pendientes (HTTP {$response->status()}).", [
@@ -96,7 +96,7 @@ class VentasApiClient
         }
 
         return array_values(array_filter($sales,
-            fn ($sale) => ($sale['estado'] ?? null) === 'confirmada'
+            fn ($sale) => ($sale['estado'] ?? null) === 'pendiente'
                 && ($idZona === null || (int) ($sale['id_zona'] ?? 0) === $idZona)));
     }
 
