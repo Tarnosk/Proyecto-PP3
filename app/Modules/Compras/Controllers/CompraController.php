@@ -878,4 +878,66 @@ class CompraController extends Controller
             'data' => $this->formato($compra),
         ], 200);
     }
+
+    /**
+     * Cierra y da por completada una compra parcialmente recibida ajustando
+     * las cantidades e importe total facturado a lo efectivamente ingresado a stock,
+     * recalculando la deuda y el saldo pendiente.
+     */
+    public function cerrarParcial(int $id): JsonResponse
+    {
+        $compra = Compra::with(['detalles', 'pagos', 'orden'])->find($id);
+        if (!$compra) {
+            return response()->json(['status' => 'error', 'message' => 'La compra no existe.'], 404);
+        }
+
+        if ($compra->estado === 'cancelada') {
+            return response()->json(['status' => 'error', 'message' => 'La compra ya se encuentra cancelada.'], 400);
+        }
+
+        if ($compra->estado === 'completada') {
+            return response()->json(['status' => 'error', 'message' => 'La compra ya se encuentra completada.'], 400);
+        }
+
+        $totalRecibido = (int) $compra->detalles->sum('cantidad_recibida');
+        if ($totalRecibido <= 0) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'No se puede dar por completada una compra sin mercadería recibida. Si no va a ingresar stock, cancele la compra.',
+            ], 400);
+        }
+
+        DB::transaction(function () use ($compra) {
+            foreach ($compra->detalles as $d) {
+                $rec = (int) $d->cantidad_recibida;
+                $d->cantidad = $rec;
+                $d->subtotal = round($rec * (float) $d->precio_unitario, 2);
+                $d->save();
+            }
+
+            $nuevoTotal = round((float) $compra->detalles()->sum('subtotal'), 2);
+            $compra->importe_total = $nuevoTotal;
+            $compra->saldo_pendiente = max(0.0, round($nuevoTotal - $compra->totalPagado(), 2));
+            $compra->estado = 'completada';
+            $compra->fecha_modificacion = Carbon::now()->toDateString();
+            $compra->save();
+
+            if ($compra->id_orden) {
+                $orden = \App\Modules\PedidosDeCompra\Models\OrdenCompra::find($compra->id_orden);
+                if ($orden) {
+                    $orden->estado = 'completada';
+                    $orden->fecha_modificacion = Carbon::now()->toDateString();
+                    $orden->save();
+                }
+            }
+        });
+
+        $compra->refresh()->load(['proveedor', 'orden', 'pagos']);
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Compra cerrada y dada por completada con lo efectivamente recibido. La deuda y el saldo fueron recalculados.',
+            'data' => $this->formato($compra),
+        ], 200);
+    }
 }

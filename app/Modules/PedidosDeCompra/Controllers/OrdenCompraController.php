@@ -63,11 +63,13 @@ class OrdenCompraController extends Controller
 
         $totalPendienteFacturar = 0;
         $totalPendienteRecibir = 0;
-        foreach ($detallesOrden as $do) {
-            $idP = (int) $do->id_producto;
-            $sol = (int) $do->cantidad_solicitada;
-            $totalPendienteFacturar += max(0, $sol - ($compradoPorProd[$idP] ?? 0));
-            $totalPendienteRecibir += max(0, $sol - ($recibidoPorProd[$idP] ?? 0));
+        if ($o->estado !== 'completada') {
+            foreach ($detallesOrden as $do) {
+                $idP = (int) $do->id_producto;
+                $sol = (int) $do->cantidad_solicitada;
+                $totalPendienteFacturar += max(0, $sol - ($compradoPorProd[$idP] ?? 0));
+                $totalPendienteRecibir += max(0, $sol - ($recibidoPorProd[$idP] ?? 0));
+            }
         }
 
         return [
@@ -331,7 +333,8 @@ class OrdenCompraController extends Controller
             }
         }
 
-        $detalles = $orden->detalles->map(function (DetalleOrden $d) use ($compradoPorProd, $recibidoPorProd, $ultimoPrecioFacturado) {
+        $esCompletada = $orden->estado === 'completada';
+        $detalles = $orden->detalles->map(function (DetalleOrden $d) use ($compradoPorProd, $recibidoPorProd, $ultimoPrecioFacturado, $esCompletada) {
             $idP = (int) $d->id_producto;
             $solicitada = (int) $d->cantidad_solicitada;
             $comprada = $compradoPorProd[$idP] ?? 0;
@@ -346,8 +349,8 @@ class OrdenCompraController extends Controller
                 'cantidad_solicitada' => $solicitada,
                 'cantidad_comprada' => $comprada,
                 'cantidad_recibida' => $recibida,
-                'cantidad_pendiente' => max(0, $solicitada - $comprada),
-                'falta_recibir' => max(0, $solicitada - $recibida),
+                'cantidad_pendiente' => $esCompletada ? 0 : max(0, $solicitada - $comprada),
+                'falta_recibir' => $esCompletada ? 0 : max(0, $solicitada - $recibida),
                 'precio_estimado' => (float) $d->precio_estimado,
                 'precio_facturado' => $ultimoPrecioFacturado[$idP] ?? null,
                 'subtotal' => (float) $d->subtotal,
@@ -583,9 +586,32 @@ class OrdenCompraController extends Controller
         }
 
         $nuevoEstado = $request->input('estado');
-        $orden->estado = $nuevoEstado;
-        $orden->fecha_modificacion = Carbon::now()->toDateString();
-        $orden->save();
+
+        DB::transaction(function () use ($orden, $nuevoEstado) {
+            $orden->estado = $nuevoEstado;
+            $orden->fecha_modificacion = Carbon::now()->toDateString();
+            $orden->save();
+
+            if ($nuevoEstado === 'completada') {
+                $orden->load('compras.detalles');
+                foreach ($orden->compras->where('estado', 'parcialmente_recibida') as $compraParcial) {
+                    foreach ($compraParcial->detalles as $det) {
+                        $rec = (int) $det->cantidad_recibida;
+                        $det->cantidad = $rec;
+                        $det->subtotal = round($rec * (float) $det->precio_unitario, 2);
+                        $det->save();
+                    }
+                    $nuevoTotal = round((float) $compraParcial->detalles()->sum('subtotal'), 2);
+                    $compraParcial->importe_total = $nuevoTotal;
+                    $compraParcial->saldo_pendiente = max(0.0, round($nuevoTotal - $compraParcial->totalPagado(), 2));
+                    $compraParcial->estado = 'completada';
+                    $compraParcial->fecha_modificacion = Carbon::now()->toDateString();
+                    $compraParcial->save();
+                }
+            }
+        });
+
+        $orden->refresh()->load(['proveedor', 'detalles', 'compras.detalles']);
 
         return response()->json([
             'status' => 'success',
