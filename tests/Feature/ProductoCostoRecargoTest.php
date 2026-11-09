@@ -581,6 +581,7 @@ class ProductoCostoRecargoTest extends TestCase
         $prov = $this->crearProveedor();
         $prod = $this->crearProducto([
             'stock' => 20,
+            'stock_minimo' => 50,
             'costo' => 1000.00,
             'recargo' => 40.00,
             'precio_unitario' => 1400.00,
@@ -674,5 +675,35 @@ class ProductoCostoRecargoTest extends TestCase
         $this->assertSame('recibida_parcialmente', $resShowOrden3->json('data.orden.estado'));
         $this->assertSame(60, (int) $resShowOrden3->json('data.total_recibido'));
         $this->assertSame(40, (int) $resShowOrden3->json('data.total_pendiente'));
+
+        // 5. Mientras tiene una compra activa (#1), no se puede cancelar la orden, pero sí se puede dar por completada
+        $resCancelConCompras = $this->patchJson("/api/ordenes-compra/{$idOrden}/cancelar");
+        $resCancelConCompras->assertStatus(400);
+
+        // Si en cambio anulamos también la Compra #1, el stock vuelve a 20 y la orden vuelve a 'enviada' sin compras activas
+        $resCancel1 = $this->patchJson("/api/compras/{$idCompra1}/cancelar");
+        $resCancel1->assertOk();
+        $prod->refresh();
+        $this->assertSame(20, (int) $prod->stock);
+
+        $resShowOrden4 = $this->getJson("/api/ordenes-compra/{$idOrden}");
+        $resShowOrden4->assertOk();
+        $this->assertSame('enviada', $resShowOrden4->json('data.orden.estado'));
+        $this->assertCount(0, $resShowOrden4->json('data.compras'));
+
+        // Ahora sí podemos cancelar la Orden de Compra aunque haya estado enviada
+        $resCancelOrden = $this->patchJson("/api/ordenes-compra/{$idOrden}/cancelar");
+        $resCancelOrden->assertOk();
+        $this->assertSame('cancelada', $resCancelOrden->json('data.estado'));
+
+        // 6. Sugerencias de reposición: prod tiene stock = 20 y stock_minimo = 50 -> debe sugerir exactamente 30 u. (50 - 20)
+        $resGenSug = $this->postJson('/api/sugerencias-reposicion/generar');
+        $resGenSug->assertStatus(201);
+
+        $resListSug = $this->getJson("/api/sugerencias-reposicion?id_proveedor={$prov->id_proveedor}");
+        $resListSug->assertOk();
+        $sugProd = collect($resListSug->json('datos'))->firstWhere('id_producto', $prod->id_producto);
+        $this->assertNotNull($sugProd);
+        $this->assertSame(30, (int) $sugProd['cantidad_sugerida']);
     }
 }

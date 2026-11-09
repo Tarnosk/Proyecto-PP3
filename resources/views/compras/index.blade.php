@@ -309,9 +309,23 @@
 
         <!-- TABLA DE SUGERENCIAS -->
         <div class="clay-card overflow-hidden">
-            <div class="p-4 border-b border-slate-100 flex items-center justify-between">
-                <span class="text-xs font-black uppercase text-slate-600 tracking-wider">Productos que requieren reposición inmediata</span>
-                <span id="badgeSugerenciasCount" class="clay-badge clay-badge-info">0 sugerencias</span>
+            <div class="p-4 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-3">
+                <div class="flex items-center gap-2 flex-wrap">
+                    <span class="text-xs font-black uppercase text-slate-600 tracking-wider">Productos que requieren reposición inmediata</span>
+                    <span id="badgeSugerenciasCount" class="clay-badge clay-badge-info">0 sugerencias</span>
+                </div>
+                <div class="flex items-center gap-3 flex-wrap">
+                    <div class="flex items-center gap-1.5">
+                        <label for="filtroProveedorSugerencias" class="text-[11px] font-extrabold text-slate-500 uppercase">Proveedor:</label>
+                        <select id="filtroProveedorSugerencias" onchange="renderSugerencias()" class="clay-input py-1.5 px-2.5 text-xs font-bold text-slate-700 min-w-[190px]">
+                            <option value="">Todos los Proveedores</option>
+                        </select>
+                    </div>
+                    <label class="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-violet-50/80 border border-violet-200 cursor-pointer select-none" title="Si se activa, al emitir una orden se juntarán todos los productos pendientes del mismo proveedor en una única Orden de Compra">
+                        <input type="checkbox" id="chkAgruparSugerenciasProveedor" class="w-3.5 h-3.5 rounded text-violet-600 focus:ring-violet-500">
+                        <span class="text-[11px] font-extrabold text-violet-900">Agrupar por proveedor al emitir</span>
+                    </label>
+                </div>
             </div>
             <div class="overflow-x-auto">
                 <table class="clay-table">
@@ -1731,7 +1745,7 @@
             const data = await res.json();
             if (data.status === 'success') {
                 mostrarNotificacion('Compra cancelada exitosamente.', 'success');
-                await Promise.all([cargarCompras(), cargarDeudas()]);
+                await Promise.all([cargarCompras(), cargarOrdenes(), cargarDeudas()]);
             } else {
                 mostrarNotificacion(data.message || 'Error al cancelar la compra.', 'error');
             }
@@ -2673,6 +2687,8 @@
             const comprasVinc = Array.isArray(o.compras_vinculadas) && o.compras_vinculadas.length > 0
                 ? o.compras_vinculadas
                 : (o.id_compra ? [{ id_compra: o.id_compra, numero_compra: o.numero_compra }] : []);
+            const admiteCancelar = (esPendiente || o.estado === 'enviada') && comprasVinc.length === 0;
+            const admiteCerrarParcial = o.estado === 'recibida_parcialmente';
             const avanceUnidades = (o.total_productos > 0 && (o.total_recibido > 0 || o.total_comprado > 0))
                 ? `<div class="text-[10px] font-bold text-slate-500 mt-0.5">Recibido: ${o.total_recibido || 0}/${o.total_productos} u.</div>`
                 : '';
@@ -2712,13 +2728,20 @@
                             <button onclick="abrirModalEditarOrden(${o.id_orden})" class="p-1.5 text-amber-600 hover:bg-amber-50 rounded-lg transition-all" title="Editar Orden">
                                 <i data-lucide="edit-3" class="w-4 h-4"></i>
                             </button>
-                            <button onclick="cancelarOrden(${o.id_orden})" class="p-1.5 text-rose-600 hover:bg-rose-50 rounded-lg transition-all" title="Cancelar Orden">
-                                <i data-lucide="x-circle" class="w-4 h-4"></i>
-                            </button>
                             ` : ''}
                             ${admiteFacturar ? `
                             <button onclick="convertirOrdenACompra(${o.id_orden})" class="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all" title="Registrar Compra desde Orden">
                                 <i data-lucide="file-check" class="w-4 h-4"></i>
+                            </button>
+                            ` : ''}
+                            ${admiteCerrarParcial ? `
+                            <button onclick="cerrarOrdenParcial(${o.id_orden})" class="p-1.5 text-teal-600 hover:bg-teal-50 rounded-lg transition-all" title="Cerrar / Dar por Completada con lo recibido">
+                                <i data-lucide="check-circle-2" class="w-4 h-4"></i>
+                            </button>
+                            ` : ''}
+                            ${admiteCancelar ? `
+                            <button onclick="cancelarOrden(${o.id_orden})" class="p-1.5 text-rose-600 hover:bg-rose-50 rounded-lg transition-all" title="Cancelar Orden">
+                                <i data-lucide="x-circle" class="w-4 h-4"></i>
                             </button>
                             ` : ''}
                         </div>
@@ -3012,6 +3035,27 @@
         }
     }
 
+    async function cerrarOrdenParcial(id) {
+        if (!confirm('¿Desea cerrar y dar por completada esta orden con la mercadería ya recibida? El saldo pendiente dejará de figurar como faltante.')) return;
+        const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
+        try {
+            const res = await fetch(`${API_BASE}/ordenes-compra/${id}/cambiar-estado`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': csrf },
+                body: JSON.stringify({ estado: 'completada' })
+            });
+            const data = await res.json();
+            if (data.status === 'success') {
+                mostrarNotificacion('Orden de compra cerrada como completada.', 'success');
+                await cargarOrdenes();
+            } else {
+                mostrarNotificacion(data.message || 'Error al cerrar la orden.', 'error');
+            }
+        } catch (e) {
+            mostrarNotificacion('Error de conexión al cerrar la orden.', 'error');
+        }
+    }
+
     // Convertir una orden emitida en una Compra (flujo integral de abastecimiento)
     async function convertirOrdenACompra(idOrden) {
         try {
@@ -3131,9 +3175,36 @@
     function renderSugerencias() {
         const tbody = document.getElementById('tablaSugerenciasBody');
         const badgeCount = document.getElementById('badgeSugerenciasCount');
+        const selProv = document.getElementById('filtroProveedorSugerencias');
         if (!tbody) return;
 
-        const pendientes = sugerenciasCache.filter(s => s.estado === 'pendiente');
+        // Actualizar opciones del filtro por proveedor conservando la selección actual
+        if (selProv) {
+            const provActual = selProv.value;
+            const mapaProvs = new Map();
+            sugerenciasCache.forEach(s => {
+                const idP = s.id_proveedor ?? s.proveedor?.id;
+                const nomP = s.proveedor?.razon_social || s.proveedor?.nombre || (idP ? `Proveedor #${idP}` : null);
+                if (idP && nomP && !mapaProvs.has(String(idP))) {
+                    mapaProvs.set(String(idP), nomP);
+                }
+            });
+            let optsHtml = '<option value="">Todos los Proveedores</option>';
+            mapaProvs.forEach((nom, id) => {
+                optsHtml += `<option value="${id}">${nom}</option>`;
+            });
+            selProv.innerHTML = optsHtml;
+            if (provActual && mapaProvs.has(String(provActual))) {
+                selProv.value = String(provActual);
+            }
+        }
+
+        const idProvFiltro = selProv?.value || '';
+        const sugerenciasVisibles = idProvFiltro
+            ? sugerenciasCache.filter(s => String(s.id_proveedor ?? s.proveedor?.id) === String(idProvFiltro))
+            : sugerenciasCache;
+
+        const pendientes = sugerenciasVisibles.filter(s => s.estado === 'pendiente');
         if (badgeCount) badgeCount.textContent = `${pendientes.length} sugerencias pendientes`;
 
         // KPIs
@@ -3143,12 +3214,12 @@
         document.getElementById('kpiSugerenciasUnidades').textContent = totUnidades;
         document.getElementById('kpiSugerenciasCosto').textContent = `$${totCosto.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`;
 
-        if (sugerenciasCache.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="8" class="text-center py-6 text-slate-400 font-bold">No hay sugerencias de reposición pendientes. Haga clic en "Escanear y Generar Sugerencias".</td></tr>';
+        if (sugerenciasVisibles.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="8" class="text-center py-6 text-slate-400 font-bold">No hay sugerencias de reposición pendientes para el filtro seleccionado. Haga clic en "Escanear y Generar Sugerencias".</td></tr>';
             return;
         }
 
-        tbody.innerHTML = sugerenciasCache.map(s => {
+        tbody.innerHTML = sugerenciasVisibles.map(s => {
             const idSug = s.id_sugerencia ?? s.id;
             const stockAct = s.stock_actual ?? s.producto?.stock ?? 0;
             const stockMin = s.cantidad_minima ?? s.producto?.stock_minimo ?? 0;
@@ -3166,7 +3237,10 @@
                         <span class="${stockAct <= stockMin ? 'text-rose-600 font-black' : 'text-slate-700'}">${stockAct}</span>
                         <span class="text-slate-400 text-xs">/ ${stockMin}</span>
                     </td>
-                    <td class="text-center font-black text-indigo-700 text-sm">${s.cantidad_sugerida}</td>
+                    <td class="text-center">
+                        <span class="font-black text-indigo-700 text-sm">${s.cantidad_sugerida}</span>
+                        <div class="text-[10px] font-bold text-slate-400">p/ cubrir mín.</div>
+                    </td>
                     <td class="font-bold text-slate-700">${nombreProv}</td>
                     <td class="text-right font-black">$${Number(s.precio_unitario || 0).toFixed(2)}</td>
                     <td class="text-right font-black text-emerald-700">$${Number(s.costo_total || 0).toFixed(2)}</td>
@@ -3216,11 +3290,12 @@
 
     async function generarOrdenDesdeSugerencia(idSugerencia) {
         const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
+        const agruparProv = Boolean(document.getElementById('chkAgruparSugerenciasProveedor')?.checked);
         try {
             const res = await fetch(`${API_BASE}/sugerencias-reposicion/${idSugerencia}/generar-orden`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': csrf },
-                body: JSON.stringify({ agrupar_proveedor: true })
+                body: JSON.stringify({ agrupar_proveedor: agruparProv })
             });
             const data = await res.json();
             if (data.exito) {

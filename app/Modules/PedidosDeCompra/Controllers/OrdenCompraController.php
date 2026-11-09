@@ -477,7 +477,7 @@ class OrdenCompraController extends Controller
     }
 
     /**
-     * PC05 - Cancelar una orden pendiente.
+     * PC05 - Cancelar una orden pendiente o enviada sin compras activas.
      */
     public function cancelar(int $id): JsonResponse
     {
@@ -486,10 +486,25 @@ class OrdenCompraController extends Controller
             return response()->json(['status' => 'error', 'message' => 'La orden de compra no existe.'], 404);
         }
 
-        if ($orden->estado !== 'pendiente') {
+        if ($orden->estado === 'cancelada') {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Solo se pueden cancelar órdenes pendientes. Una orden enviada o completada no puede cancelarse. (PC05)',
+                'message' => 'La orden de compra ya se encuentra cancelada. (PC05)',
+            ], 400);
+        }
+
+        if ($orden->estado === 'completada') {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'No se puede cancelar una orden de compra ya completada. (PC05)',
+            ], 400);
+        }
+
+        $tieneComprasActivas = $orden->compras()->where('estado', '!=', 'cancelada')->exists();
+        if ($tieneComprasActivas) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'No se puede cancelar una orden con compras activas asociadas. Primero anule las compras vinculadas o cierre la orden como completada si ya recibió parte de la mercadería. (PC05)',
             ], 400);
         }
 

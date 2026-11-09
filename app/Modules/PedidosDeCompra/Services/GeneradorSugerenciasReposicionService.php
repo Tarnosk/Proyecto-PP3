@@ -40,9 +40,23 @@ class GeneradorSugerenciasReposicionService
 
         foreach (Producto::where('estado', 'activo')->get() as $producto) {
             try {
-                foreach ($this->analizarProducto($producto) as $datos) {
-                    // Idempotencia: no volver a crear lo que ya está pendiente.
-                    if ($this->sugerencias->existePendiente($producto->id_producto, $datos['motivo_generacion'])) {
+                $filas = $this->analizarProducto($producto);
+                $motivosActivos = array_column($filas, 'motivo_generacion');
+
+                // Si el producto recuperó su stock y ya no aplica el motivo, limpiar sugerencias pendientes obsoletas sin orden
+                $limpiezaQuery = SugerenciaCompra::pendientes()
+                    ->where('id_producto', $producto->id_producto)
+                    ->whereNull('id_orden_compra');
+                if ($motivosActivos !== []) {
+                    $limpiezaQuery->whereNotIn('motivo_generacion', $motivosActivos);
+                }
+                $limpiezaQuery->delete();
+
+                foreach ($filas as $datos) {
+                    $existente = $this->sugerencias->obtenerPendiente($producto->id_producto, $datos['motivo_generacion']);
+                    if ($existente) {
+                        $existente->update($datos);
+                        $generadas[] = $existente->fresh();
                         continue;
                     }
                     $generadas[] = $this->sugerencias->crear($datos);
@@ -65,9 +79,9 @@ class GeneradorSugerenciasReposicionService
     /** @return array<int, array<string, mixed>> filas listas para SUGERENCIA_COMPRA */
     private function analizarProducto(Producto $producto): array
     {
-        $stock = $producto->stock_disponible;
-        $minimo = $producto->stock_minimo;
-        $maximo = (int) config('reposicion.stock_maximo_default', 100);
+        $stock = (int) $producto->stock_disponible;
+        $minimo = (int) $producto->stock_minimo;
+        $maximo = max($minimo, 1);
         $velocidad = $this->calcularVelocidadVenta($producto);
 
         // Cada motivo -> [cantidad, observación]
@@ -96,7 +110,7 @@ class GeneradorSugerenciasReposicionService
 
         $filas = [];
         foreach ($motivos as $motivo => [$cantidadFija, $observacion]) {
-            $cantidad = $cantidadFija ?? $this->calcularCantidadOptima($stock, $maximo, $velocidad, $plazo);
+            $cantidad = $cantidadFija ?? $this->calcularCantidadOptima($stock, $minimo);
 
             $filas[] = [
                 'id_producto' => $producto->id_producto,
@@ -118,11 +132,13 @@ class GeneradorSugerenciasReposicionService
         return $filas;
     }
 
-    private function calcularCantidadOptima(int $stock, int $maximo, float $velocidad, int $plazo): int
+    /**
+     * Calcula exactamente las unidades necesarias para alcanzar el stock_minimo asignado al producto
+     * (stock_minimo - stock_actual, con mínimo 1 si el stock actual es igual al mínimo).
+     */
+    private function calcularCantidadOptima(int $stock, int $minimo): int
     {
-        $reposicion = ($maximo - $stock) + (int) ($velocidad * $plazo);
-
-        return max($reposicion, (int) ceil($maximo * 0.5));
+        return max(1, $minimo - $stock);
     }
 
     private function calcularVelocidadVenta(Producto $producto): float
@@ -148,7 +164,7 @@ class GeneradorSugerenciasReposicionService
         return (int) ($stock / $velocidadDiaria);
     }
 
-    /** Asociación activa más barata (sin precio al final; desempata el proveedor principal). */
+    /** Prioriza el proveedor principal activo; si no hay principal, el de menor precio acordado. */
     private function obtenerMejorProveedor(Producto $producto): ?ProductoProveedor
     {
         return ProductoProveedor::query()
@@ -156,9 +172,9 @@ class GeneradorSugerenciasReposicionService
             ->where('id_producto', $producto->id_producto)
             ->where('activo', true)
             ->whereHas('proveedor', fn ($q) => $q->where('estado', 'activo'))
+            ->orderByDesc('es_proveedor_principal')
             ->orderByRaw('precio_acordado IS NULL')
             ->orderBy('precio_acordado')
-            ->orderByDesc('es_proveedor_principal')
             ->first();
     }
 
@@ -214,7 +230,7 @@ class GeneradorSugerenciasReposicionService
      * Todo en una transacción: si falla el marcado de la sugerencia no debe quedar
      * una orden huérfana.
      */
-    public function generarOrdenDesdeSugerencia(int $id, int $idUsuario, bool $agruparProveedor = false): array
+    public function generarOrdenDesdeSugerencia(int $id, int $idUsuario, bool $agruparProveedor = false, ?int $cantidadOverride = null): array
     {
         $sugerencia = $this->sugerencias->obtenerPorId($id);
         if (!$sugerencia) {
@@ -248,7 +264,7 @@ class GeneradorSugerenciasReposicionService
             throw new RuntimeException("No se puede generar la orden: el producto {$producto->nombre} está inactivo. (PV05)");
         }
 
-        $cantidad = (int) $sugerencia->cantidad_sugerida;
+        $cantidad = $cantidadOverride !== null ? $cantidadOverride : (int) $sugerencia->cantidad_sugerida;
         if ($cantidad <= 0) {
             throw new RuntimeException('La cantidad sugerida debe ser mayor a cero.');
         }
@@ -263,7 +279,7 @@ class GeneradorSugerenciasReposicionService
 
         $sugerenciasProcesadas = 0;
 
-        $orden = DB::transaction(function () use ($id, $sugerencia, $proveedor, $producto, $cantidad, $precio, $subtotal, $idUnidad, $idUsuario, $agruparProveedor, &$sugerenciasProcesadas) {
+        $orden = DB::transaction(function () use ($id, $sugerencia, $proveedor, $producto, $cantidad, $cantidadOverride, $precio, $subtotal, $idUnidad, $idUsuario, $agruparProveedor, &$sugerenciasProcesadas) {
             $bloqueada = $this->sugerencias->obtenerPorIdBloqueado($id);
             if (!$bloqueada) {
                 throw new RuntimeException('Sugerencia no encontrada');
@@ -275,16 +291,24 @@ class GeneradorSugerenciasReposicionService
                 throw new RuntimeException('La sugerencia ya generó una orden de compra.');
             }
 
+            if ($cantidadOverride !== null && $cantidadOverride > 0) {
+                $bloqueada->cantidad_sugerida = $cantidadOverride;
+                $bloqueada->costo_total = round($cantidadOverride * (float) $bloqueada->precio_unitario, 2);
+                $bloqueada->save();
+            }
+
             $hoy = Carbon::now()->toDateString();
 
-            // Si ya existe una Orden de Compra en estado 'pendiente' del mismo proveedor (sin compras asociadas)
-            // emitida hoy, consolidamos los renglones en esa única Orden de Compra por proveedor.
-            $orden = OrdenCompra::where('id_proveedor', $proveedor->id_proveedor)
-                ->where('estado', 'pendiente')
-                ->whereDate('fecha_creacion', $hoy)
-                ->doesntHave('compras')
-                ->orderByDesc('id_orden')
-                ->first();
+            $orden = null;
+            if ($agruparProveedor) {
+                // Solo si el usuario eligió agrupar por proveedor reutilizamos una OC pendiente del mismo proveedor de hoy
+                $orden = OrdenCompra::where('id_proveedor', $proveedor->id_proveedor)
+                    ->where('estado', 'pendiente')
+                    ->whereDate('fecha_creacion', $hoy)
+                    ->doesntHave('compras')
+                    ->orderByDesc('id_orden')
+                    ->first();
+            }
 
             if (!$orden) {
                 $orden = OrdenCompra::create([
@@ -300,7 +324,7 @@ class GeneradorSugerenciasReposicionService
                 ]);
             }
 
-            // Lista de sugerencias a incluir en esta orden (la seleccionada + opcionalmente todas las pendientes del mismo proveedor)
+            // Lista de sugerencias a incluir en esta orden (solo la seleccionada, o todas las pendientes del proveedor si $agruparProveedor === true)
             $loteSugerencias = collect([$bloqueada]);
             if ($agruparProveedor) {
                 $otrasDelProveedor = SugerenciaCompra::with('producto')

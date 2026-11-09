@@ -30,7 +30,7 @@ class SugerenciasReposicionController extends Controller
     {
         return $this->responder(function () use ($request) {
             $r = $this->repository->obtenerConFiltros(
-                $request->only(['motivo', 'estado']),
+                $request->only(['motivo', 'estado', 'id_proveedor']),
                 max(1, (int) $request->input('pagina', 1))
             );
 
@@ -81,9 +81,10 @@ class SugerenciasReposicionController extends Controller
     public function generarOrden(Request $request, int $id): JsonResponse
     {
         $agruparProveedor = $request->boolean('agrupar_proveedor', false);
+        $cantidadOverride = $request->filled('cantidad') ? (int) $request->input('cantidad') : null;
 
         return $this->responder(
-            fn () => $this->service->generarOrdenDesdeSugerencia($id, UsuarioActual::id($request), $agruparProveedor),
+            fn () => $this->service->generarOrdenDesdeSugerencia($id, UsuarioActual::id($request), $agruparProveedor, $cantidadOverride),
             201,
             400
         );
