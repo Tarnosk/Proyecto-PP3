@@ -485,6 +485,20 @@ class Producto extends Model
     }
 
     /**
+     * Scope para filtrar por proveedor activo asociado al producto (PV05 / P07)
+     */
+    public function scopeFilterProveedor(Builder $query, ?int $proveedorId): Builder
+    {
+        if ($proveedorId && $proveedorId > 0) {
+            return $query->whereHas('proveedores', function (Builder $q) use ($proveedorId) {
+                $q->where('id_proveedor', $proveedorId)
+                  ->where('activo', true);
+            });
+        }
+        return $query;
+    }
+
+    /**
      * Scope para filtrar por estado (P05 / P06)
      */
     public function scopeFilterEstado(Builder $query, ?string $estado): Builder

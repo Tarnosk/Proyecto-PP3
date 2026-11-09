@@ -183,6 +183,8 @@ class CompraController extends Controller
                     ]);
 
                     // PV05: Asociar automáticamente el producto al proveedor al registrar una compra
+                    // y actualizar el precio_acordado con el costo facturado.
+                    $precioCompra = (float) $d['precio_unitario'];
                     $asocProv = ProductoProveedor::where('id_producto', $d['id_producto'])
                         ->where('id_proveedor', $proveedor->id_proveedor)
                         ->first();
@@ -196,25 +198,42 @@ class CompraController extends Controller
                             'id_producto' => $d['id_producto'],
                             'id_proveedor' => $proveedor->id_proveedor,
                             'es_proveedor_principal' => !$tieneOtroPrincipal,
-                            'precio_acordado' => (float) $d['precio_unitario'],
+                            'precio_acordado' => $precioCompra,
                             'activo' => true,
                             'fecha_asociacion' => $fecha,
                             'id_usuario' => $idUsuario,
                         ]);
-                    } elseif ($asocProv->precio_acordado === null) {
-                        $asocProv->update(['precio_acordado' => (float) $d['precio_unitario']]);
+                    } else {
+                        $updAsoc = [
+                            'activo' => true,
+                            'fecha_desasociacion' => null,
+                            'id_usuario' => $idUsuario,
+                        ];
+                        if ($precioCompra > 0) {
+                            $updAsoc['precio_acordado'] = $precioCompra;
+                        }
+                        $asocProv->update($updAsoc);
                     }
 
                     // PV06: Registrar snapshot de precio en el historial del proveedor vinculado a la compra
                     if ($asocProv) {
                         app(\App\Modules\Proveedores\Services\HistorialPrecioService::class)->registrarSnapshot(
                             $asocProv->id_producto_proveedor,
-                            (float) $d['precio_unitario'],
+                            $precioCompra,
                             $idUsuario,
                             $compra->id_compra,
                             $d['id_unidad'],
                             $fecha
                         );
+
+                        // Si el proveedor de la compra es el proveedor principal activo,
+                        // sincronizar costo de reposición y recalcular precio de venta automáticamente.
+                        if ($asocProv->es_proveedor_principal && $precioCompra > 0) {
+                            $prodCompra = Producto::find($d['id_producto']);
+                            if ($prodCompra) {
+                                $prodCompra->sincronizarCostoReposicion($idUsuario);
+                            }
+                        }
                     }
                 }
 

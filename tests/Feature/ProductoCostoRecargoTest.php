@@ -306,4 +306,147 @@ class ProductoCostoRecargoTest extends TestCase
         $this->assertSame(38.89, (float) $itemInterno['recargo']);
         $this->assertArrayHasKey('margen_ganancia', $itemInterno);
     }
+
+    /**
+     * Aumento masivo filtrando por proveedor y eligiendo impacto sobre Costo de Reposición
+     * (mantiene recargo %) vs impacto sobre Precio de Venta (sube recargo %).
+     */
+    public function test_aumento_masivo_por_proveedor_sobre_costo_y_sobre_precio(): void
+    {
+        $provTarget = $this->crearProveedor();
+        $provOtro = $this->crearProveedor();
+
+        $prodTarget = $this->crearProducto([
+            'costo' => 1000.00,
+            'recargo' => 50.00,
+            'precio_unitario' => 1500.00,
+        ]);
+
+        $prodOtro = $this->crearProducto([
+            'costo' => 1000.00,
+            'recargo' => 50.00,
+            'precio_unitario' => 1500.00,
+        ]);
+
+        $asocTarget = ProductoProveedor::create([
+            'id_producto' => $prodTarget->id_producto,
+            'id_proveedor' => $provTarget->id_proveedor,
+            'es_proveedor_principal' => true,
+            'precio_acordado' => 1000.00,
+            'activo' => true,
+            'fecha_asociacion' => Carbon::now()->toDateString(),
+            'id_usuario' => $this->admin->id,
+        ]);
+
+        ProductoProveedor::create([
+            'id_producto' => $prodOtro->id_producto,
+            'id_proveedor' => $provOtro->id_proveedor,
+            'es_proveedor_principal' => true,
+            'precio_acordado' => 1000.00,
+            'activo' => true,
+            'fecha_asociacion' => Carbon::now()->toDateString(),
+            'id_usuario' => $this->admin->id,
+        ]);
+
+        // 1. Aumento masivo del 20% por proveedor sobre COSTO:
+        // Costo pasa de 1000 a 1200, recargo se mantiene en 50%, precio pasa de 1500 a 1800.
+        $resCosto = $this->postJson('/api/productos/aumento-masivo', [
+            'id_proveedor' => $provTarget->id_proveedor,
+            'base_aumento' => 'costo',
+            'porcentaje' => 20.0,
+        ]);
+
+        $resCosto->assertOk()
+            ->assertJsonPath('status', 'success')
+            ->assertJsonPath('data.base_aumento', 'costo')
+            ->assertJsonPath('data.total_aplicados', 1);
+
+        $prodTarget->refresh();
+        $prodOtro->refresh();
+        $asocTarget->refresh();
+
+        $this->assertSame(1200.0, (float) $prodTarget->costo);
+        $this->assertSame(50.0, (float) $prodTarget->recargo);
+        $this->assertSame(1800.0, (float) $prodTarget->precio_unitario);
+        $this->assertSame(1200.0, (float) $asocTarget->precio_acordado);
+
+        // El producto de otro proveedor no fue afectado
+        $this->assertSame(1000.0, (float) $prodOtro->costo);
+        $this->assertSame(1500.0, (float) $prodOtro->precio_unitario);
+
+        // 2. Aumento masivo del 10% por proveedor sobre PRECIO:
+        // Precio pasa de 1800 a 1980, costo sigue en 1200, recargo sube de 50% a 65%.
+        $resPrecio = $this->postJson('/api/productos/aumento-masivo', [
+            'id_proveedor' => $provTarget->id_proveedor,
+            'base_aumento' => 'precio',
+            'porcentaje' => 10.0,
+        ]);
+
+        $resPrecio->assertOk()
+            ->assertJsonPath('status', 'success')
+            ->assertJsonPath('data.base_aumento', 'precio')
+            ->assertJsonPath('data.total_aplicados', 1);
+
+        $prodTarget->refresh();
+        $this->assertSame(1200.0, (float) $prodTarget->costo);
+        $this->assertSame(1980.0, (float) $prodTarget->precio_unitario);
+        $this->assertSame(65.0, (float) $prodTarget->recargo);
+    }
+
+    /**
+     * Al registrar una Compra en CompraController::store cuyo proveedor es el proveedor principal,
+     * se actualiza automáticamente ProductoProveedor.precio_acordado, se sincroniza Producto.costo
+     * y se recalcula Producto.precio_unitario aplicando el recargo.
+     */
+    public function test_registrar_compra_proveedor_principal_actualiza_costo_y_recalcula_precio_venta(): void
+    {
+        $prov = $this->crearProveedor();
+        $prod = $this->crearProducto([
+            'costo' => 1000.00,
+            'recargo' => 40.00,
+            'precio_unitario' => 1400.00,
+        ]);
+
+        $asoc = ProductoProveedor::create([
+            'id_producto' => $prod->id_producto,
+            'id_proveedor' => $prov->id_proveedor,
+            'es_proveedor_principal' => true,
+            'precio_acordado' => 1000.00,
+            'activo' => true,
+            'fecha_asociacion' => Carbon::now()->toDateString(),
+            'id_usuario' => $this->admin->id,
+        ]);
+
+        // Registrar factura de compra con nuevo costo unitario de $1250
+        $resCompra = $this->postJson('/api/compras', [
+            'id_proveedor' => $prov->id_proveedor,
+            'fecha_compra' => Carbon::now()->toDateString(),
+            'items' => [
+                [
+                    'id_producto' => $prod->id_producto,
+                    'cantidad' => 10,
+                    'precio_unitario' => 1250.00,
+                ],
+            ],
+        ]);
+
+        $resCompra->assertCreated();
+
+        $asoc->refresh();
+        $prod->refresh();
+
+        $this->assertSame(1250.0, (float) $asoc->precio_acordado);
+        $this->assertSame(1250.0, (float) $prod->costo);
+        $this->assertSame(40.0, (float) $prod->recargo);
+        // 1250 * 1.40 = 1750.00
+        $this->assertSame(1750.0, (float) $prod->precio_unitario);
+
+        $ultimoHistorial = HistorialPrecio::where('id_producto', $prod->id_producto)
+            ->orderByDesc('id_historial')
+            ->first();
+
+        $this->assertNotNull($ultimoHistorial);
+        $this->assertSame('costo_reposicion', $ultimoHistorial->origen);
+        $this->assertSame(1750.0, (float) $ultimoHistorial->precio);
+    }
 }
