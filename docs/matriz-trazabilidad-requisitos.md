@@ -13,14 +13,14 @@ Esta matriz vincula cada Historia de Usuario (HU) con su endpoint en la API REST
 
 | ID | Historia de Usuario | Endpoint(s) API | Controlador / Servicio | Test Automatizado | Vista / UI |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| **P01** | Alta de Producto | `POST /api/v1/productos` | `ProductoController@store` | `UserStoriesFrontendTest@test_p01_creacion_producto` | `inventario/index.blade.php` |
-| **P02** | Modificación de Producto | `PUT /api/v1/productos/{id}` | `ProductoController@update` | `UserStoriesFrontendTest@test_p02_edicion_producto` | `inventario/index.blade.php` |
+| **P01** | Alta de Producto (con Costo y Recargo) | `POST /api/v1/productos` | `ProductoController@store` | `UserStoriesFrontendTest@test_p01_creacion_producto`<br>`ProductoCostoRecargoTest@test_store_y_update_producto_con_costo_y_recargo` | `inventario/index.blade.php` |
+| **P02** | Modificación de Producto | `PUT /api/v1/productos/{id}` | `ProductoController@update` | `UserStoriesFrontendTest@test_p02_edicion_producto`<br>`ProductoCostoRecargoTest@test_store_y_update_producto_con_costo_y_recargo` | `inventario/index.blade.php` |
 | **P03** | Desactivación de Producto | `PATCH /api/v1/productos/{id}/desactivar` | `ProductoController@desactivar` | `UserStoriesFrontendTest@test_p03_desactivacion_producto` | `inventario/index.blade.php` |
 | **P04** | Reactivación de Producto | `PATCH /api/v1/productos/{id}/activar` | `ProductoController@activar` | `UserStoriesFrontendTest@test_p04_reactivacion_producto` | `inventario/index.blade.php` |
-| **P05** | Búsqueda y Filtros de Productos | `GET /api/v1/productos?search=&categoria_id=` | `ProductoController@index` | `UserStoriesFrontendTest@test_p05_busqueda_filtros` | `inventario/index.blade.php` |
-| **P06** | Detalle de Producto y Stock | `GET /api/v1/productos/{id}` | `ProductoController@show` | `UserStoriesFrontendTest@test_p06_detalle_producto` | `inventario/index.blade.php` |
-| **P07** | Aumento Masivo de Precios | `POST /api/v1/productos/aumento-masivo` | `ProductoController@aumentoMasivo` | `UserStoriesFrontendTest@test_p07_aumento_masivo_precios` | `inventario/index.blade.php` |
-| **P08** | Historial de Cambios de Precio | `GET /api/v1/productos/{id}/historial` | `ProductoController@historialPrecios` | `UserStoriesFrontendTest@test_p08_historial_precios` | `inventario/index.blade.php` |
+| **P05** | Búsqueda y Filtros de Productos | `GET /api/v1/productos?search=&categoria_id=&id_marca=&id_proveedor=` | `ProductoController@index` | `UserStoriesFrontendTest@test_p05_busqueda_filtros`<br>`G3IntegracionGruposApiTest@test_p05_filtrar_productos_por_texto_y_categoria` | `inventario/index.blade.php` |
+| **P06** | Detalle de Producto y Stock | `GET /api/v1/productos/{id}`<br>`GET /api/v1/productos/codigo/{codigo}` | `ProductoController@show`<br>`ProductoController@showByCodigo` | `UserStoriesFrontendTest@test_p06_detalle_producto`<br>`G3IntegracionGruposApiTest@test_p06_show_producto_por_id_y_codigo` | `inventario/index.blade.php` |
+| **P07** | Aumento Masivo de Precios (Filtro Proveedor / Base Costo o Precio) | `POST /api/v1/productos/aumento-masivo` | `ProductoController@aumentoMasivo` | `UserStoriesFrontendTest@test_p07_aumento_masivo_precios`<br>`ProductoCostoRecargoTest@test_aumento_masivo_por_proveedor_sobre_costo_y_sobre_precio` | `inventario/index.blade.php` |
+| **P08** | Historial de Cambios de Precio (Manual / Masivo / Costo Reposición) | `GET /api/v1/productos/{id}/historial` | `ProductoController@historialPrecios` | `UserStoriesFrontendTest@test_p08_historial_precios`<br>`ProductoCostoRecargoTest` | `inventario/index.blade.php` |
 
 ---
 
@@ -55,8 +55,8 @@ Esta matriz vincula cada Historia de Usuario (HU) con su endpoint en la API REST
 | **PV02** | Edición de Proveedor | `PATCH /api/v1/proveedores/{id}` | `ProveedorController@update` | `UserStoriesFrontendTest@test_pv02_edicion_proveedor` | `proveedores/index.blade.php` |
 | **PV03** | Desactivación de Proveedor | `PATCH /api/v1/proveedores/{id}/desactivar` | `ProveedorController@desactivar` | `UserStoriesFrontendTest@test_pv03_desactivacion` | `proveedores/index.blade.php` |
 | **PV04** | Reactivación de Proveedor | `PATCH /api/v1/proveedores/{id}/activar` | `ProveedorController@activar` | `UserStoriesFrontendTest@test_pv04_reactivacion` | `proveedores/index.blade.php` |
-| **PV05** | Asociación Catálogo / Precios | `POST /api/v1/proveedores/{id}/productos` | `ProveedorController@asociarProducto` | `UserStoriesFrontendTest@test_pv05_asociar_productos` | `proveedores/index.blade.php` |
-| **PV06** | Historial de Precios de Compra | `GET /api/v1/proveedores/{id}/productos/{idP}/historial-precios` | `HistorialPrecioController`<br>`HistorialPrecioService` | `HistorialPrecioProveedorTest` | `proveedores/index.blade.php` |
+| **PV05** | Asociación Catálogo / Precios (Proveedor Principal) | `POST /api/v1/proveedores/{id}/productos` | `ProveedorController@asociarProducto` | `UserStoriesFrontendTest@test_pv05_asociar_productos`<br>`ProductoCostoRecargoTest@test_definir_proveedor_principal_sincroniza_costo_reposicion` | `proveedores/index.blade.php` |
+| **PV06** | Historial de Precios de Compra | `GET /api/v1/proveedores/{id}/productos/{idP}/historial-precios` | `HistorialPrecioController`<br>`HistorialPrecioService` | `HistorialPrecioProveedorTest`<br>`ProductoCostoRecargoTest@test_actualizar_precio_proveedor_principal_sincroniza_costo_y_recalcula_precio_venta` | `proveedores/index.blade.php` |
 | **PV07** | Configuración de Plazo Entrega | `POST /api/v1/proveedores/{id}/plazo` | `PlazoEntregaController@store` | `UserStoriesFrontendTest@test_pv07_plazos_entrega` | `proveedores/index.blade.php` |
 | **PV08** | Auditoría y Métricas Proveedor | `GET /api/v1/proveedores/{id}/rendimiento` | `ProveedorController@rendimiento` | `UserStoriesFrontendTest@test_pv08_metricas_proveedor` | `proveedores/index.blade.php` |
 
@@ -66,7 +66,7 @@ Esta matriz vincula cada Historia de Usuario (HU) con su endpoint en la API REST
 
 | ID | Historia de Usuario | Endpoint(s) API | Controlador / Servicio | Test Automatizado | Vista / UI |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| **C01** | Registro de Compra Directa | `POST /api/v1/compras` | `CompraController@store` | `UserStoriesFrontendTest@test_c01_registro_compra` | `compras/index.blade.php` |
+| **C01** | Registro de Compra Directa (Sync Costo Principal) | `POST /api/v1/compras` | `CompraController@store` | `UserStoriesFrontendTest@test_c01_registro_compra`<br>`ProductoCostoRecargoTest@test_registrar_compra_proveedor_principal_actualiza_costo_y_recalcula_precio_venta` | `compras/index.blade.php` |
 | **C02** | Recepción Total e Impacto Stock | `POST /api/v1/compras/{id}/recepciones` | `RecepcionController@store` | `UserStoriesFrontendTest@test_c02_recepcion_total` | `compras/index.blade.php` |
 | **C03** | Recepción Parcial de Compra | `POST /api/v1/compras/{id}/recepciones` | `RecepcionController@store` | `UserStoriesFrontendTest@test_c03_recepcion_parcial` | `compras/index.blade.php` |
 | **C04** | Facturas de Compra (A, B, C) | `GET /api/v1/compras` | `CompraController@index` | `UserStoriesFrontendTest@test_c04_comprobantes_compra` | `compras/index.blade.php` |

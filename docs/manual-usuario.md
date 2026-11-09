@@ -19,28 +19,41 @@ El sistema cuenta con control de acceso basado en roles (**RBAC**). Cada perfil 
 
 ## 2. Circuito 1: Catálogo de Productos y Precios
 
-### 2.1. Alta de un Nuevo Producto (P01)
+### 2.1. Alta y Edición de Productos con Costo y Margen (P01 / P02)
 1. Ingrese al módulo **Inventario & Stock** desde la barra lateral.
 2. Haga clic en el botón **`+ Nuevo Producto`**.
 3. Complete el formulario modal:
    - **Código / SKU:** Debe ser único (ej. `BEB-AGUA-600`).
    - **Nombre y Descripción:** Detalle comercial del artículo.
    - **Categoría y Marca:** Seleccione de las listas desplegables.
-   - **Precios:** Ingrese el *Precio Unitario Base* y opcionalmente precios diferenciados (*Mayorista* y *Minorista*).
+   - **Estructura de Precios y Costos:**
+     - **Costo de Reposición (sin IVA):** Costo neto de adquisición pactado con el proveedor principal.
+     - **Recargo Comercial (% Markup):** Porcentaje de ganancia sobre el costo. Al ingresarlo, el sistema calcula automáticamente el *Precio de Venta* (`precio = costo * (1 + recargo / 100)`).
+     - **Precio Unitario (sin IVA):** Precio final de lista comercial. Si se modifica manualmente, el sistema recalcula dinámicamente el *Recargo* y el *Margen Bruto* (`(precio - costo) / precio * 100`).
+   - **Presentación en Bulto:** Indique si el artículo se comercializa en fardo/caja/pack y la cantidad de unidades por bulto.
    - **Parámetros de Stock:** Defina el *Stock Inicial* y el *Stock Mínimo* (umbral que dispara alertas amarillas/rojas).
 4. Presione **`Guardar Producto`**. El sistema validará la unicidad del código y creará el registro con auditoría de fecha y usuario.
 
-### 2.2. Aumentos Masivos de Precios con Redondeo (P07)
-Permite actualizar rápidamente listas de precios ante variaciones inflacionarias o cambios de cotización:
+### 2.2. Aumentos Masivos de Precios con Filtro por Proveedor y Base de Costo (P07)
+Permite actualizar rápidamente listas de precios ante variaciones inflacionarias, subas de proveedores o cambios de lista:
 1. En la vista de Inventario, presione **`Aumento Masivo`**.
-2. Indique el **Porcentaje de Aumento** (ej. `12.5%`).
-3. Filtre el alcance (puede aplicarse a *Todos*, a una *Categoría específica* o a una *Marca*).
-4. Seleccione la **Regla de Redondeo**:
-   - `Sin redondeo`: Mantiene decimales exactos.
-   - `Redondeo comercial estándar`: Al entero más próximo.
-   - `Hacia arriba (Ceil)`: Redondea siempre a favor del negocio.
-   - `Decenas / Centenas`: Útil para facilitar el cobro en efectivo.
-5. Confirme la operación. El sistema recalculará los precios y guardará una entrada en el **Historial de Precios** (`historial_precio`).
+2. Complete los parámetros del panel modal:
+   - **Criterio de Aplicación:**
+     - `Todos los Productos Activos`: Impacta sobre la totalidad del catálogo.
+     - `Por Proveedor`: Filtra exclusivamente los productos abastecidos por el proveedor seleccionado.
+     - `Por Categoría`: Filtra por familia de artículos.
+     - `Por Marca`: Filtra por fabricante.
+   - **Impacto del Aumento:**
+     - `Sobre Precio de Venta (sube margen)`: Incrementa directamente el precio de venta sin alterar el costo, expandiendo el margen de ganancia comercial.
+     - `Sobre Costo de Reposición (mantiene % recargo)`: Aplica el incremento sobre el costo base del producto y recalcula el precio de lista manteniendo inalterado el porcentaje de recargo pactado.
+   - **Porcentaje de Aumento:** Valor numérico porcentual (ej. `12.5%`).
+   - **Regla de Redondeo:**
+     - `Sin redondeo`: Conserva decimales exactos (`$4.523,45`).
+     - `Al peso más cercano`: Redondea al entero aritmético más próximo (`$4.523`).
+     - `Al peso superior (Ceil)`: Redondea siempre hacia arriba al siguiente entero.
+     - `Terminar en .90 / .99`: Precios psicológicos de góndola (`$4.590` / `$4.599`).
+3. **Vista Previa en Vivo:** Antes de aplicar el cambio, la tabla inferior muestra en tiempo real los artículos alcanzados, su precio actual, el nuevo precio resultante y la variación de costo/recargo calculada.
+4. Presione **`Aplicar Aumento`**. El sistema procesa la actualización de forma atómica y genera una entrada en el **Historial de Precios** (`historial_precio`) con trazabilidad del usuario y motivo.
 
 ---
 
@@ -89,10 +102,14 @@ Desde el módulo **Vencimientos**:
 4. Complete Razón Social, Teléfono, Email y Domicilio.
 5. Presione **`Guardar`**.
 
-### 4.2. Catálogo de Artículos por Proveedor y Cotizaciones (PV05 / PV06)
+### 4.2. Catálogo de Artículos por Proveedor, Proveedor Principal y Cotizaciones (PV05 / PV06)
 1. En la ficha del proveedor, presione **`Ver Catálogo`**.
 2. Asocie los productos que esta empresa nos provee, indicando el **Precio de Costo Pactado** y el código interno del proveedor.
-3. Puede consultar la pestaña **`Historial de Precios`** para ver el gráfico y tabla de cómo ha aumentado el costo de cada producto a lo largo del tiempo.
+3. **Designación de Proveedor Principal:** Puede marcar a un proveedor como *Proveedor Principal* para ese artículo. Esto activa el mecanismo de sincronización automática de costos.
+4. **Sincronización Automática de Costos y Precios:**
+   - Si se modifica el precio acordado del proveedor principal (o si se registra una nueva compra facturada), el sistema actualiza de inmediato el **Costo de Reposición** del producto en la tabla maestra.
+   - Si el producto tiene configurado un porcentaje de **Recargo (% Markup)**, el **Precio de Venta** se recalcula automáticamente y se registra la variación en el historial con origen `costo_reposicion`.
+5. Consulte la pestaña **`Historial de Precios`** para ver el gráfico comparativo y la tabla histórica de evolución de cotizaciones de compra.
 
 ---
 
@@ -110,4 +127,5 @@ Desde el módulo **Vencimientos**:
    - Puede recepcionarse el total o marcar una recepción parcial.
    - El sistema solicita el número de factura/remito del proveedor y el lote/vencimiento.
    - Al guardar, el stock físico se incrementa de inmediato en el Kardex y la orden pasa a `recibida_parcialmente` o `completada`.
+   - Si el proveedor es el proveedor principal del producto y el precio facturado difiere del anterior, el sistema actualiza de forma automática el costo de reposición y recalcula el precio unitario de venta.
 4. **Cancelación:** Si el proveedor no dispone de stock, la orden puede cancelarse ingresando el motivo de auditoría correspondiente.

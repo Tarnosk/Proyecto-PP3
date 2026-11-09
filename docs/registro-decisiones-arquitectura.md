@@ -128,3 +128,30 @@ En `routes/api.php`, se definió el conjunto de rutas en una clausura reutilizab
   - Transición sin fricciones: ningún cliente legacy ni prueba existente se rompió, mientras se cumplió al 100% el contrato de versionado.
 * **Negativas:**
   - Mantenimiento duplicado de dos puntos de entrada para la misma lógica (resuelto al compartir la misma clausura de código).
+
+---
+
+## ADR-007: Modelo de Costo de Reposición, Recargo (Markup) y Precios Netos sin IVA con Encapsulamiento de Confidencialidad Comercial
+
+### Estado
+**Aceptado**
+
+### Contexto
+En una distribuidora mayorista de consumo masivo, la lista de precios de venta no puede mantenerse estática ni desacoplada de la inflación o de las variaciones de precios de los proveedores. Asimismo:
+1. Se requería distinguir conceptual y matemáticamente entre el **costo de reposición** (precio neto facturado o pactado con el proveedor principal), el **recargo comercial o markup** (`%` sobre el costo: `(precio - costo) / costo * 100`) y el **margen de ganancia bruto** (`%` sobre el precio de venta: `(precio - costo) / precio * 100`).
+2. Se requería automatizar la actualización de precios: al registrarse una compra o una actualización de cotización del proveedor principal, el sistema debía actualizar el costo de reposición y recalcular automáticamente el precio de venta según el markup fijado.
+3. Se requería proteger la **confidencialidad comercial**: mientras los módulos internos de G3 (administración de inventario, compras y proveedores) gestionan costos y márgenes, los módulos consumidores externos (Catálogo público y Reportes de G1, Caja y Facturación de G2, y POS de Ventas de G4) deben acceder únicamente a los precios netos de venta y stock disponible, sin exponer jamás los costos de compra ni los márgenes brutos de la empresa.
+
+### Decisión
+1. **Esquema de Base de Datos:** Se agregaron las columnas `costo` (`DECIMAL(12,2) NULL`) y `recargo` (`DECIMAL(8,2) NULL`) a la tabla `producto` mediante la migración `2026_11_03_000001_add_costo_y_recargo_to_producto_table.php`, y se amplió la columna `origen` de `historial_precio` a `VARCHAR(50)` para soportar el disparador `'costo_reposicion'`.
+2. **Sincronización Automática:** En `CompraController@store`, `HistorialPrecioController@actualizarPrecio` y `ProveedorController@asociarProducto`, si el proveedor involucrado es el `es_proveedor_principal` activo, se invoca `Producto::sincronizarCostoReposicion($idUsuario)` para ajustar el costo y actualizar el `precio_unitario` según su recargo, registrando la variación en `historial_precio`.
+3. **Precios Netos sin IVA:** Todos los precios expuestos (`precio_unitario`, `precioMayorista`, `precioMinorista`) son netos sin IVA. La discriminación tributaria la realiza Facturación (G2) y la política de descuentos y promociones la calcula Ventas (G4).
+4. **Encapsulamiento en APIs de Integración:** En `ProductoController@formatearProducto`, los endpoints de integración inter-grupos (`/api/productos`, `/api/v1/productos`) configuran `$incluirInternos = false`, ocultando deliberadamente `costo`, `recargo`, `margen_ganancia`, `id_usuario_carga` y el historial interno de auditoría.
+
+### Consecuencias
+* **Positivas:**
+  - Sincronización transparente y en tiempo real de los márgenes comerciales ante compras o subas de insumos.
+  - Protección estricta de la confidencialidad de los costos de la distribuidora ante consultas públicas o módulos de ventas en mostrador.
+  - Compatibilidad total y desacople garantizado con los contratos de API previamente suscritos con G1, G2 y G4.
+* **Negativas:**
+  - Requiere mantener al menos un proveedor marcado como `es_proveedor_principal` por producto para habilitar la sincronización automática de costos.

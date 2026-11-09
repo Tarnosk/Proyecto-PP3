@@ -32,9 +32,11 @@ Esta carpeta reúne la documentación técnica y operativa del sistema ERP.
 
 ### Especificaciones de API y Contratos
 - [Contrato de APIs de Integración G3](./contrato-api-g3.md)
+- [Guía de Testeo en Postman para APIs G3](./postman/GUIA_TESTEO_RECARGOS_Y_APIS_G3.md)
 - [Colección Postman Oficial G3](./postman/G3.postman_collection.json)
+- [Colección Postman Unificada ERP (Todos los Módulos)](./postman/ERP-Juan23-APIs.postman_collection.json)
+- [Índice y Guías de Colecciones Postman](./postman/README.md)
 - [Especificación OpenAPI 3.0 (YAML)](./openapi.yaml)
-- [Colección Postman REST API (Completa)](./contracts/ERP_Juan23_API_Collection.postman_collection.json)
 - [Investigación: Precio Unitario, Costo y Margen](./investigacion-precio-costo-margen.md)
 - [Plan de Estandarización de Migraciones ERP](./plan-estandarizacion-migraciones-erp.md)
 - [Contrato API G1](./contrato-api-g1.md)

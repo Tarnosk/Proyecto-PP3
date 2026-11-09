@@ -262,7 +262,7 @@ La documentación técnica y operativa del proyecto está organizada en `docs/` 
 - [Índice de documentación](docs/README.md)
 - [Guía de instalación](docs/guia-instalacion.md)
 - [Arquitectura del sistema](docs/arquitectura.md)
-- [Registro de Decisiones de Arquitectura (ADR)](docs/registro-decisiones-arquitectura.md)
+- [Registro de Decisiones de Arquitectura (ADR-001 a ADR-007)](docs/registro-decisiones-arquitectura.md)
 - [Glosario de Términos del Dominio](docs/glosario-terminos.md)
 - [Estructura del proyecto](docs/estructura-proyecto.md)
 - [Módulos funcionales](docs/modulos.md)
@@ -275,9 +275,11 @@ La documentación técnica y operativa del proyecto está organizada en `docs/` 
 
 ### Especificaciones de API y Contratos de Integración
 - [Contrato de APIs de Integración G3](docs/contrato-api-g3.md)
+- [Guía de Testeo en Postman para APIs G3](docs/postman/GUIA_TESTEO_RECARGOS_Y_APIS_G3.md)
 - [Colección Postman Oficial G3](docs/postman/G3.postman_collection.json)
+- [Colección Postman Unificada ERP (Todos los Módulos)](docs/postman/ERP-Juan23-APIs.postman_collection.json)
+- [Índice y Guías de Colecciones Postman](docs/postman/README.md)
 - [Especificación OpenAPI 3.0 (YAML)](docs/openapi.yaml)
-- [Colección Postman REST API Completa](docs/contracts/ERP_Juan23_API_Collection.postman_collection.json)
 - [Investigación: Precio Unitario, Costo y Margen Comercial](docs/investigacion-precio-costo-margen.md)
 - [Plan de Estandarización de Migraciones ERP](docs/plan-estandarizacion-migraciones-erp.md)
 - [Contrato API G1](docs/contrato-api-g1.md)

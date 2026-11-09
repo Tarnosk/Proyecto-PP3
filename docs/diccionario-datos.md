@@ -12,7 +12,9 @@ Almacena el catálogo maestro de artículos comercializados.
 * **`codigo`** (VARCHAR(50), UNIQUE, NOT NULL): Código alfanumérico o SKU del producto.
 * **`nombre`** (VARCHAR(255), NULL): Nombre comercial del producto.
 * **`descripcion`** (VARCHAR(255), NOT NULL): Descripción técnica y detallada.
-* **`precio_unitario`** (DECIMAL(12,2), NOT NULL): Precio base o costo de lista.
+* **`precio_unitario`** (DECIMAL(12,2), NOT NULL): Precio base o costo de lista comercial (neto sin IVA).
+* **`costo`** (DECIMAL(12,2), NULL): Costo de reposición pactado o facturado del proveedor principal activo (neto sin IVA).
+* **`recargo`** (DECIMAL(8,2), NULL): Porcentaje de margen comercial (*markup*) aplicado sobre el costo para calcular el precio de lista (`precio = costo * (1 + recargo / 100)`).
 * **`precio_mayorista`** (DECIMAL(12,2), NULL): Precio de venta por volumen / mayorista.
 * **`precio_minorista`** (DECIMAL(12,2), NULL): Precio de venta a consumidor final.
 * **`stock`** (INT, NOT NULL, DEFAULT 0): Stock físico consolidado en sistema.
@@ -40,9 +42,10 @@ Trazabilidad de cambios de precios de venta (P08).
 * **`id_producto`** (INT, FK -> `producto.id_producto`): Producto afectado.
 * **`precio_anterior`** (DECIMAL(12,2), NOT NULL): Precio previo al ajuste.
 * **`precio_nuevo`** (DECIMAL(12,2), NOT NULL): Precio resultante del ajuste.
-* **`motivo`** (VARCHAR(255), NULL): Motivo (ej. "Aumento masivo 15% Categoría Bebidas").
+* **`motivo`** (VARCHAR(255), NULL): Motivo (ej. "Aumento masivo 15% Categoría Bebidas", "Sincronización por costo de reposición proveedor principal").
+* **`origen`** (VARCHAR(50), NOT NULL, DEFAULT 'manual'): Disparador del cambio (`'manual'`, `'aumento_masivo'`, `'costo_reposicion'`).
 * **`fecha_cambio`** (DATETIME, NOT NULL): Fecha y hora de aplicación.
-* **`id_usuario`** (INT, FK -> `usuario.id_usuario`): Usuario responsable.
+* **`id_usuario`** (INT, FK -> `usuario.id_usuario`): Usuario responsable o sistema.
 
 ### Tabla: `unidad_medida`
 Unidades de despacho y factores de conversión (S08).
@@ -127,8 +130,9 @@ Pactos de precios y códigos de artículos por proveedor (PV05).
 * **`id_proveedor`** (INT, FK -> `proveedor.id_proveedor`): Proveedor.
 * **`id_producto`** (INT, FK -> `producto.id_producto`): Producto provisto.
 * **`codigo_producto_proveedor`** (VARCHAR(50), NULL): Código interno del catálogo del proveedor.
-* **`precio_costo`** (DECIMAL(12,2), NOT NULL): Precio pactado de compra.
-* **`es_principal`** (TINYINT(1), DEFAULT 0): 1 si es el proveedor predilecto para reposición.
+* **`precio_costo`** / **`precio_acordado`** (DECIMAL(12,2), NOT NULL): Precio pactado de compra sin IVA.
+* **`es_principal`** / **`es_proveedor_principal`** (TINYINT(1), DEFAULT 0): 1 si es el proveedor predilecto para reposición. Al actualizarse su precio acordado o registrarse compras de este proveedor, se sincroniza automáticamente el `costo` del producto y se recalcula el `precio_unitario` según su `recargo`.
+* **`activo`** (TINYINT(1), DEFAULT 1): Estado de la relación comercial con el artículo.
 
 ### Tabla: `historial_precio_proveedor`
 Registro histórico de variaciones de cotizaciones de compra (PV06).
