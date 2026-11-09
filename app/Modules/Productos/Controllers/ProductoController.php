@@ -28,8 +28,15 @@ class ProductoController extends Controller
     {
         $search = $request->input('search') ?? $request->input('buscar') ?? $request->input('q');
         $codigo = $request->filled('codigo') ? trim((string) $request->input('codigo')) : null;
-        $categoriaId = $request->filled('categoria_id') ? (int) $request->input('categoria_id') : null;
-        $marcaId = $request->filled('marca_id') ? (int) $request->input('marca_id') : null;
+        $categoriaId = $request->filled('categoria_id')
+            ? (int) $request->input('categoria_id')
+            : ($request->filled('id_categoria') ? (int) $request->input('id_categoria') : null);
+        $marcaId = $request->filled('marca_id')
+            ? (int) $request->input('marca_id')
+            : ($request->filled('id_marca') ? (int) $request->input('id_marca') : null);
+        $proveedorId = $request->filled('proveedor_id')
+            ? (int) $request->input('proveedor_id')
+            : ($request->filled('id_proveedor') ? (int) $request->input('id_proveedor') : null);
         $esVistaInternaG3 = $request->boolean('interno');
         $estado = $request->input('estado');
         if ($estado === 'todos' || empty($estado)) {
@@ -38,13 +45,14 @@ class ProductoController extends Controller
 
         $relaciones = ['categoria', 'marca', 'unidades'];
         if ($esVistaInternaG3) {
-            $relaciones = array_merge($relaciones, ['usuarioCarga', 'usuarioModificacion', 'ubicaciones']);
+            $relaciones = array_merge($relaciones, ['usuarioCarga', 'usuarioModificacion', 'ubicaciones', 'proveedores']);
         }
 
         $query = Producto::with($relaciones)
             ->search($search)
             ->filterCategoria($categoriaId)
             ->filterMarca($marcaId)
+            ->filterProveedor($proveedorId)
             ->filterEstado($estado);
 
         if ($codigo !== null && $codigo !== '') {
@@ -100,9 +108,16 @@ class ProductoController extends Controller
         ];
 
         if ($incluirInternos) {
+            $provActivos = $p->relationLoaded('proveedores')
+                ? $p->proveedores->where('activo', true)
+                : collect();
+            $provPrincipal = $provActivos->firstWhere('es_proveedor_principal', true);
+
             $datos['costo'] = $p->costo !== null ? (float) $p->costo : null;
             $datos['recargo'] = $p->recargo !== null ? (float) $p->recargo : null;
             $datos['margen_ganancia'] = $p->margen_ganancia !== null ? (float) $p->margen_ganancia : null;
+            $datos['id_proveedor_principal'] = $provPrincipal ? (int) $provPrincipal->id_proveedor : null;
+            $datos['proveedores_ids'] = $provActivos->pluck('id_proveedor')->map(fn ($id) => (int) $id)->values()->all();
             $datos['fecha_alta'] = $p->fecha_alta ? ($p->fecha_alta instanceof \Carbon\CarbonInterface ? $p->fecha_alta->format('Y-m-d H:i:s') : (string) $p->fecha_alta) : null;
             $datos['fecha_modificacion'] = $p->fecha_modificacion ? ($p->fecha_modificacion instanceof \Carbon\CarbonInterface ? $p->fecha_modificacion->format('Y-m-d H:i:s') : (string) $p->fecha_modificacion) : null;
             $datos['fecha_desactivacion'] = $p->fecha_desactivacion ? ($p->fecha_desactivacion instanceof \Carbon\CarbonInterface ? $p->fecha_desactivacion->format('Y-m-d H:i:s') : (string) $p->fecha_desactivacion) : null;
@@ -862,27 +877,36 @@ class ProductoController extends Controller
     /**
      * Aplicar aumento porcentual masivo sobre productos activos (P07 / OB1)
      *
-     * Permite filtrar por ids explícitos, categoría o marca. Cuando no se
-     * especifica ningún filtro, aplica a todos los productos activos.
+     * Permite filtrar por ids explícitos, proveedor, categoría o marca, y elegir
+     * si el porcentaje impacta sobre el Precio de Venta ('precio', subiendo el recargo/margen)
+     * o sobre el Costo de Reposición ('costo', manteniendo el % de recargo y trasladándolo al precio).
      */
     public function aumentoMasivo(Request $request): JsonResponse
     {
-            $validator = Validator::make($request->all(), [
+        if (!$request->filled('id_proveedor') && $request->filled('proveedor_id')) {
+            $request->merge(['id_proveedor' => $request->input('proveedor_id')]);
+        }
+
+        $validator = Validator::make($request->all(), [
             'porcentaje' => 'required|numeric|gt:0',
+            'base_aumento' => 'nullable|string|in:precio,costo',
             'tipo_precio' => 'nullable|string|in:ambos,mayorista,minorista',
             'regla_redondeo' => 'nullable|string|in:sin_redondeo,peso_mas_cercano,peso_superior,terminar_90,terminar_99',
             'ids' => 'nullable|array',
             'ids.*' => 'integer|exists:PRODUCTO,id_producto',
             'id_categoria' => 'nullable|integer|exists:CATEGORIA,id_categoria',
             'id_marca' => 'nullable|integer|exists:MARCA,id_marca',
+            'id_proveedor' => 'nullable|integer|exists:PROVEEDOR,id_proveedor',
         ], [
             'porcentaje.required' => 'Debe indicar el porcentaje de aumento.',
             'porcentaje.numeric' => 'El porcentaje debe ser numérico.',
             'porcentaje.gt' => 'El porcentaje de aumento debe ser mayor a 0.',
+            'base_aumento.in' => 'La base de aumento debe ser: precio o costo.',
             'tipo_precio.in' => 'El tipo de precio debe ser: ambos, mayorista o minorista.',
             'ids.*.exists' => 'Alguno de los productos indicados no existe.',
             'id_categoria.exists' => 'La categoría seleccionada no existe.',
             'id_marca.exists' => 'La marca seleccionada no existe.',
+            'id_proveedor.exists' => 'El proveedor seleccionado no existe.',
         ]);
 
         if ($validator->fails()) {
@@ -892,47 +916,103 @@ class ProductoController extends Controller
             ], 400);
         }
 
-            $porcentaje = (float) $request->input('porcentaje');
-            $tipoPrecio = $request->input('tipo_precio', 'ambos');
-            $reglaRedondeo = $request->input('regla_redondeo', 'sin_redondeo');
-            $idUsuario = UsuarioActual::id($request);
-            $now = Carbon::now()->toDateTimeString();
+        $porcentaje = (float) $request->input('porcentaje');
+        $baseAumento = $request->input('base_aumento', 'precio');
+        $tipoPrecio = $request->input('tipo_precio', 'ambos');
+        $reglaRedondeo = $request->input('regla_redondeo', 'sin_redondeo');
+        $idProveedorFiltro = $request->filled('id_proveedor') ? (int) $request->input('id_proveedor') : null;
+        $idUsuario = UsuarioActual::id($request);
+        $now = Carbon::now()->toDateTimeString();
 
-            try {
-                $query = Producto::query()->where('estado', 'activo');
+        try {
+            $query = Producto::query()->where('estado', 'activo');
 
-                $ids = $request->input('ids');
-                if (is_array($ids) && count($ids) > 0) {
-                    $query->whereIn('id_producto', array_map('intval', $ids));
-                } else {
-                    $query->filterCategoria($request->filled('id_categoria') ? (int) $request->input('id_categoria') : null)
-                          ->filterMarca($request->filled('id_marca') ? (int) $request->input('id_marca') : null);
-                }
+            $ids = $request->input('ids');
+            if (is_array($ids) && count($ids) > 0) {
+                $query->whereIn('id_producto', array_map('intval', $ids));
+            } else {
+                $query->filterCategoria($request->filled('id_categoria') ? (int) $request->input('id_categoria') : null)
+                      ->filterMarca($request->filled('id_marca') ? (int) $request->input('id_marca') : null)
+                      ->filterProveedor($idProveedorFiltro);
+            }
 
-                $productos = $query->orderBy('id_producto', 'asc')->get();
+            $productos = $query->orderBy('id_producto', 'asc')->get();
 
-                $detalles = DB::transaction(function () use ($productos, $porcentaje, $tipoPrecio, $reglaRedondeo, $idUsuario, $now) {
-                    $detalles = [];
+            $detalles = DB::transaction(function () use ($productos, $porcentaje, $baseAumento, $tipoPrecio, $reglaRedondeo, $idProveedorFiltro, $idUsuario, $now) {
+                $detalles = [];
 
-                    foreach ($productos as $producto) {
-                        $cambio = false;
-                        $precioAnterior = (float) $producto->precio_unitario;
+                foreach ($productos as $producto) {
+                    $cambio = false;
+                    $precioAnterior = (float) $producto->precio_unitario;
+                    $costoAnterior = $producto->costo !== null ? (float) $producto->costo : null;
+                    $recargoAnterior = $producto->recargo !== null ? (float) $producto->recargo : null;
+
+                    $costoNuevo = $costoAnterior;
+                    $nuevoRecargo = $recargoAnterior;
+
+                    if ($baseAumento === 'costo' && $costoAnterior !== null && $costoAnterior > 0) {
+                        $costoNuevo = round($costoAnterior * (1 + $porcentaje / 100.0), 2);
+                        $recargoBase = $recargoAnterior !== null
+                            ? $recargoAnterior
+                            : ($precioAnterior > 0 ? round((($precioAnterior - $costoAnterior) / $costoAnterior) * 100, 2) : 0.0);
+
+                        $nuevoPrecio = $this->aplicarReglaRedondeo(
+                            $costoNuevo * (1 + $recargoBase / 100.0),
+                            $reglaRedondeo
+                        );
+
+                        $nuevoRecargo = $reglaRedondeo === 'sin_redondeo'
+                            ? round($recargoBase, 2)
+                            : round((($nuevoPrecio - $costoNuevo) / $costoNuevo) * 100, 2);
+
+                        // Sincronizar también el precio_acordado en ProductoProveedor e historial del proveedor
+                        $asocActualizar = $idProveedorFiltro
+                            ? $producto->proveedores()->where('id_proveedor', $idProveedorFiltro)->where('activo', true)->first()
+                            : $producto->proveedorPrincipal();
+
+                        if ($asocActualizar) {
+                            $asocActualizar->update([
+                                'precio_acordado' => $costoNuevo,
+                                'id_usuario' => $idUsuario,
+                            ]);
+                            app(\App\Modules\Proveedores\Services\HistorialPrecioService::class)->registrarSnapshot(
+                                (int) $asocActualizar->id_producto_proveedor,
+                                $costoNuevo,
+                                $idUsuario,
+                                null,
+                                null,
+                                $now,
+                                "Aumento masivo de costo (+{$porcentaje}%)"
+                            );
+                        }
+                    } else {
                         $nuevoPrecio = $this->aplicarReglaRedondeo(
                             $precioAnterior * (1 + $porcentaje / 100.0),
                             $reglaRedondeo
                         );
+                        if ($costoAnterior !== null && $costoAnterior > 0) {
+                            $nuevoRecargo = round((($nuevoPrecio - $costoAnterior) / $costoAnterior) * 100, 2);
+                        }
+                    }
 
-                        if (abs($nuevoPrecio - $precioAnterior) >= 0.001) {
-                            HistorialPrecio::create([
-                                'id_producto' => $producto->id_producto,
-                                'tipo_precio' => 'general',
-                                'precio' => $nuevoPrecio,
-                                'porcentaje_aumento' => $porcentaje,
-                                'regla_redondeo' => $reglaRedondeo,
-                                'origen' => 'aumento_masivo',
-                                'fecha_cambio' => $now,
-                                'id_usuario' => $idUsuario,
-                            ]);
+                    $cambioPrecio = abs($nuevoPrecio - $precioAnterior) >= 0.001;
+                    $cambioCosto = $costoNuevo !== null && $costoAnterior !== null && abs($costoNuevo - $costoAnterior) >= 0.001;
+
+                    if ($cambioPrecio || $cambioCosto) {
+                        $porcentajeRealPrecio = $precioAnterior > 0
+                            ? round((($nuevoPrecio - $precioAnterior) / $precioAnterior) * 100, 2)
+                            : $porcentaje;
+
+                        HistorialPrecio::create([
+                            'id_producto' => $producto->id_producto,
+                            'tipo_precio' => 'general',
+                            'precio' => $nuevoPrecio,
+                            'porcentaje_aumento' => $porcentajeRealPrecio,
+                            'regla_redondeo' => $reglaRedondeo,
+                            'origen' => $baseAumento === 'costo' ? 'costo_reposicion' : 'aumento_masivo',
+                            'fecha_cambio' => $now,
+                            'id_usuario' => $idUsuario,
+                        ]);
 
                         $updateData = [
                             'precio_unitario' => $nuevoPrecio,
@@ -940,8 +1020,11 @@ class ProductoController extends Controller
                             'id_usuario_modificacion' => $idUsuario,
                         ];
 
-                        if ($producto->costo !== null && (float) $producto->costo > 0) {
-                            $updateData['recargo'] = round((($nuevoPrecio - (float) $producto->costo) / (float) $producto->costo) * 100, 2);
+                        if ($costoNuevo !== null) {
+                            $updateData['costo'] = $costoNuevo;
+                        }
+                        if ($nuevoRecargo !== null) {
+                            $updateData['recargo'] = $nuevoRecargo;
                         }
 
                         $producto->update($updateData);
@@ -950,8 +1033,18 @@ class ProductoController extends Controller
                             'producto',
                             $producto->id_producto,
                             'UPDATE',
-                            ['precio_unitario' => $precioAnterior],
-                            ['precio_unitario' => $nuevoPrecio, 'aumento_masivo_porcentaje' => $porcentaje],
+                            [
+                                'precio_unitario' => $precioAnterior,
+                                'costo' => $costoAnterior,
+                                'recargo' => $recargoAnterior,
+                            ],
+                            [
+                                'precio_unitario' => $nuevoPrecio,
+                                'costo' => $costoNuevo,
+                                'recargo' => $nuevoRecargo,
+                                'aumento_masivo_porcentaje' => $porcentaje,
+                                'base_aumento' => $baseAumento,
+                            ],
                             $idUsuario
                         );
 
@@ -962,6 +1055,10 @@ class ProductoController extends Controller
                         'id_producto' => $producto->id_producto,
                         'codigo' => $producto->codigo,
                         'descripcion' => $producto->descripcion,
+                        'costo_anterior' => $costoAnterior,
+                        'costo_nuevo' => $costoNuevo,
+                        'recargo_anterior' => $recargoAnterior,
+                        'recargo_nuevo' => $nuevoRecargo,
                         'precio_anterior' => $precioAnterior,
                         'precio_nuevo' => $nuevoPrecio,
                         'precio_unitario_anterior' => $precioAnterior,
@@ -981,9 +1078,11 @@ class ProductoController extends Controller
 
             return response()->json([
                 'status' => 'success',
-                'message' => "Aumento del {$porcentaje}% aplicado a {$totalAplicados} producto(s) activo(s).",
+                'message' => "Aumento del {$porcentaje}% (base: {$baseAumento}) aplicado a {$totalAplicados} producto(s) activo(s).",
                 'data' => [
                     'porcentaje' => $porcentaje,
+                    'base_aumento' => $baseAumento,
+                    'id_proveedor' => $idProveedorFiltro,
                     'tipo_precio' => $tipoPrecio,
                     'regla_redondeo' => $reglaRedondeo,
                     'total_aplicados' => $totalAplicados,

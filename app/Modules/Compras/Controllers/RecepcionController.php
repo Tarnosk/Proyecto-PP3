@@ -169,7 +169,7 @@ class RecepcionController extends Controller
                             ->where('es_proveedor_principal', true)
                             ->exists();
 
-                        ProductoProveedor::create([
+                        $asocProv = ProductoProveedor::create([
                             'id_producto' => $idProducto,
                             'id_proveedor' => $compra->id_proveedor,
                             'es_proveedor_principal' => !$tieneOtroPrincipal,
@@ -180,10 +180,14 @@ class RecepcionController extends Controller
                         ]);
                     } else {
                         $upd = ['activo' => true, 'fecha_desasociacion' => null];
-                        if ($asocProv->precio_acordado === null) {
+                        if ($costoUnitario > 0) {
                             $upd['precio_acordado'] = $costoUnitario;
                         }
                         $asocProv->update($upd);
+                    }
+
+                    if ($asocProv && $asocProv->es_proveedor_principal && $costoUnitario > 0) {
+                        $producto->sincronizarCostoReposicion($idUsuario);
                     }
 
                     $recibidos[] = [

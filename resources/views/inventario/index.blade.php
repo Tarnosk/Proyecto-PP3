@@ -864,13 +864,29 @@
         </div>
 
         <form onsubmit="aplicarAumentoMasivo(event)" class="space-y-4">
-            <div>
-                <label class="block text-[11px] font-extrabold text-slate-600 uppercase mb-1">Criterio de Aplicación</label>
-                <select id="aumentoCriterio" class="clay-input w-full text-xs font-bold" onchange="actualizarCriterioAumento()">
-                    <option value="todos">Todos los Productos Activos</option>
-                    <option value="categoria">Por Categoría</option>
-                    <option value="marca">Por Marca</option>
-                </select>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-[11px] font-extrabold text-slate-600 uppercase mb-1">Criterio de Aplicación</label>
+                    <select id="aumentoCriterio" class="clay-input w-full text-xs font-bold" onchange="actualizarCriterioAumento()">
+                        <option value="todos">Todos los Productos Activos</option>
+                        <option value="proveedor">Por Proveedor</option>
+                        <option value="categoria">Por Categoría</option>
+                        <option value="marca">Por Marca</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-[11px] font-extrabold text-slate-600 uppercase mb-1">Impacto del Aumento</label>
+                    <select id="aumentoBase" class="clay-input w-full text-xs font-bold" onchange="actualizarVistaPreviaAumento()">
+                        <option value="precio">Sobre Precio de Venta (sube margen)</option>
+                        <option value="costo">Sobre Costo de Reposición (mantiene % recargo)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div id="aumentoProveedorGrupo" class="hidden">
+                <label class="block text-[11px] font-extrabold text-slate-600 uppercase mb-1">Proveedor</label>
+                <select id="aumentoProveedorSelect" class="clay-input w-full text-xs font-bold" onchange="actualizarVistaPreviaAumento()"></select>
             </div>
 
             <div id="aumentoCategoriaGrupo" class="hidden">
@@ -2862,8 +2878,10 @@
         document.getElementById('modalAumento').classList.remove('hidden');
         const selCat = document.getElementById('aumentoCategoriaSelect');
         const selMarca = document.getElementById('aumentoMarcaSelect');
+        const selProv = document.getElementById('aumentoProveedorSelect');
         if (selCat) selCat.innerHTML = categoriasCache.map(c => `<option value="${c.id_categoria}">${c.nombre}</option>`).join('');
         if (selMarca) selMarca.innerHTML = marcasCache.map(m => `<option value="${m.id_marca}">${m.nombre}</option>`).join('');
+        if (selProv) selProv.innerHTML = proveedoresCache.map(p => `<option value="${p.id_proveedor}">${p.razon_social}</option>`).join('');
         const inputPct = document.getElementById('aumentoPorcentaje');
         if (!inputPct.value) inputPct.value = '10.0';
         actualizarCriterioAumento();
@@ -2877,6 +2895,7 @@
 
     function actualizarCriterioAumento() {
         const crit = document.getElementById('aumentoCriterio').value;
+        document.getElementById('aumentoProveedorGrupo')?.classList.toggle('hidden', crit !== 'proveedor');
         document.getElementById('aumentoCategoriaGrupo').classList.toggle('hidden', crit !== 'categoria');
         document.getElementById('aumentoMarcaGrupo').classList.toggle('hidden', crit !== 'marca');
         actualizarVistaPreviaAumento();
@@ -2884,6 +2903,7 @@
 
     function actualizarVistaPreviaAumento() {
         const crit = document.getElementById('aumentoCriterio')?.value || 'todos';
+        const baseAumento = document.getElementById('aumentoBase')?.value || 'precio';
         const pctInput = document.getElementById('aumentoPorcentaje')?.value;
         const pct = Number(pctInput) || 0;
         const tbody = document.getElementById('aumentoPreviewBody');
@@ -2891,7 +2911,13 @@
         if (!tbody) return;
 
         let prods = (Array.isArray(productosCache) ? productosCache : []).filter(p => p.estado === 'activo');
-        if (crit === 'categoria') {
+        if (crit === 'proveedor') {
+            const provId = Number(document.getElementById('aumentoProveedorSelect')?.value || 0);
+            prods = prods.filter(p =>
+                (Array.isArray(p.proveedores_ids) && p.proveedores_ids.includes(provId)) ||
+                Number(p.id_proveedor_principal) === provId
+            );
+        } else if (crit === 'categoria') {
             const catId = document.getElementById('aumentoCategoriaSelect')?.value;
             prods = prods.filter(p => String(p.id_categoria) === String(catId));
         } else if (crit === 'marca') {
@@ -2908,13 +2934,34 @@
 
         tbody.innerHTML = prods.slice(0, 100).map(p => {
             const actual = Number(p.precio_unitario || 0);
-            const nuevo = pct > 0 ? (Math.round((actual * (1 + pct / 100)) * 100) / 100).toFixed(2) : actual.toFixed(2);
+            const costoActual = (p.costo !== null && p.costo !== undefined && Number(p.costo) > 0) ? Number(p.costo) : null;
+            const recargoActual = (p.recargo !== null && p.recargo !== undefined) ? Number(p.recargo) : null;
+
+            let nuevo = actual;
+            let detalleBase = '';
+            if (pct > 0) {
+                if (baseAumento === 'costo' && costoActual !== null) {
+                    const nuevoCosto = Math.round((costoActual * (1 + pct / 100)) * 100) / 100;
+                    const recBase = recargoActual !== null
+                        ? recargoActual
+                        : (actual > 0 ? ((actual - costoActual) / costoActual) * 100 : 0);
+                    nuevo = Math.round((nuevoCosto * (1 + recBase / 100)) * 100) / 100;
+                    detalleBase = `<div class="text-[10px] text-slate-400 font-semibold">Costo: $${costoActual.toFixed(2)} → $${nuevoCosto.toFixed(2)} (+${recBase.toFixed(1)}%)</div>`;
+                } else {
+                    nuevo = Math.round((actual * (1 + pct / 100)) * 100) / 100;
+                    if (costoActual !== null) {
+                        const nuevoRec = ((nuevo - costoActual) / costoActual) * 100;
+                        detalleBase = `<div class="text-[10px] text-slate-400 font-semibold">Recargo: ${recargoActual !== null ? recargoActual.toFixed(1) : '0.0'}% → ${nuevoRec.toFixed(1)}%</div>`;
+                    }
+                }
+            }
+
             return `
                 <tr>
                     <td class="font-extrabold text-slate-700 text-xs">${p.codigo}</td>
-                    <td class="font-bold text-slate-800 text-xs">${p.nombre}</td>
+                    <td class="font-bold text-slate-800 text-xs">${p.nombre}${detalleBase}</td>
                     <td class="text-right font-bold text-slate-500 text-xs">$${actual.toFixed(2)}</td>
-                    <td class="text-right font-black text-emerald-700 text-xs">$${nuevo}</td>
+                    <td class="text-right font-black text-emerald-700 text-xs">$${nuevo.toFixed(2)}</td>
                 </tr>
             `;
         }).join('');
@@ -2924,6 +2971,7 @@
         e.preventDefault();
         const csrf = document.querySelector('meta[name="csrf-token"]').content;
         const crit = document.getElementById('aumentoCriterio').value;
+        const baseAumento = document.getElementById('aumentoBase')?.value || 'precio';
         const porcentaje = Number(document.getElementById('aumentoPorcentaje').value);
 
         if (!porcentaje || porcentaje <= 0) {
@@ -2933,9 +2981,11 @@
 
         const payload = {
             tipo_criterio: crit,
+            base_aumento: baseAumento,
             porcentaje: porcentaje,
             confirmar: true
         };
+        if (crit === 'proveedor') payload.id_proveedor = document.getElementById('aumentoProveedorSelect').value;
         if (crit === 'categoria') payload.id_categoria = document.getElementById('aumentoCategoriaSelect').value;
         if (crit === 'marca') payload.id_marca = document.getElementById('aumentoMarcaSelect').value;
 
