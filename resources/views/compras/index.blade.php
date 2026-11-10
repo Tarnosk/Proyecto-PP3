@@ -1976,7 +1976,27 @@
 
                 // Pagos históricos
                 const divPagos = document.getElementById('detallePagosHistorial');
-                if (pagos.por_metodo && pagos.por_metodo.length > 0) {
+                const listaPagos = pagos.lista || [];
+                if (listaPagos.length > 0) {
+                    divPagos.innerHTML = listaPagos.map(p => `
+                        <div class="p-1.5 bg-slate-50 rounded-lg flex items-center justify-between gap-2 border border-slate-100">
+                            <div>
+                                <span class="capitalize font-bold text-slate-700">${(p.metodo_pago || '').replace('_', ' ')}</span>
+                                <span class="text-[10px] text-slate-400 block">${p.fecha_pago || ''}</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="font-black text-violet-600">$${Number(p.importe).toFixed(2)}</span>
+                                ${c.estado !== 'cancelada' ? `
+                                    <button type="button" onclick="anularPagoCompra(${c.id_compra}, ${p.id_pago}, ${p.importe})" 
+                                            class="p-1 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded transition-all" 
+                                            title="Anular / Revertir este pago">
+                                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                                    </button>
+                                ` : ''}
+                            </div>
+                        </div>
+                    `).join('');
+                } else if (pagos.por_metodo && pagos.por_metodo.length > 0) {
                     divPagos.innerHTML = pagos.por_metodo.map(p => `
                         <div class="p-1.5 bg-slate-50 rounded-lg flex items-center justify-between">
                             <span class="capitalize">${p.metodo_pago.replace('_', ' ')} (${p.cantidad_pagos} pago(s))</span>
@@ -2008,6 +2028,36 @@
         if (!idCompraDetalleActual) return;
         cerrarModalDetalleCompra();
         abrirModalPagoCompra(idCompraDetalleActual);
+    }
+
+    async function anularPagoCompra(idCompra, idPago, importe) {
+        if (!confirm(`¿Está seguro de que desea anular el pago de $${Number(importe).toFixed(2)}? Esta acción recalculará la deuda de la compra.`)) {
+            return;
+        }
+        try {
+            const res = await fetch(`${API_BASE}/compras/${idCompra}/pagos/${idPago}`, {
+                method: 'DELETE',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
+                }
+            });
+            const data = await res.json();
+            if (res.ok) {
+                mostrarNotificacion(data.message || 'Pago anulado exitosamente.', 'success');
+                if (idCompraDetalleActual === idCompra) {
+                    abrirModalDetalleCompra(idCompra);
+                }
+                cargarCompras();
+                cargarDeudas();
+            } else {
+                mostrarNotificacion(data.message || 'Error al anular el pago.', 'error');
+            }
+        } catch (e) {
+            console.error('Error al anular pago:', e);
+            mostrarNotificacion('Error de red al intentar anular el pago.', 'error');
+        }
     }
 
     async function imprimirFichaCompra(id = null) {

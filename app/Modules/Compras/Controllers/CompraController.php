@@ -733,6 +733,12 @@ class CompraController extends Controller
                     'cantidad_pagos' => (int) $r->cantidad_pagos,
                     'total' => round((float) $r->total, 2),
                 ]),
+            'lista' => $compra->pagos()
+                ->orderBy('fecha_pago', 'asc')
+                ->orderBy('id_pago', 'asc')
+                ->get()
+                ->map(fn ($p) => \App\Modules\Compras\Services\PagoCompraService::formatear($p))
+                ->toArray(),
         ];
     }
 
