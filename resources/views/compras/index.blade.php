@@ -760,15 +760,16 @@
                     <thead>
                         <tr>
                             <th>Producto</th>
-                            <th class="text-center w-24">Cantidad</th>
-                            <th class="text-right w-32">Precio Unit.</th>
-                            <th class="text-right w-32">Subtotal</th>
+                            <th class="text-center w-24">Cant. Facturada</th>
+                            <th id="thColRecibirAhora" class="text-center w-28 text-emerald-800 bg-emerald-50/60 font-black">Cant. a Recibir</th>
+                            <th class="text-right w-28">Precio Unit.</th>
+                            <th class="text-right w-28">Subtotal</th>
                             <th class="text-center w-12"></th>
                         </tr>
                     </thead>
                     <tbody id="detalleCompraItems">
                         <tr>
-                            <td colspan="5" class="text-center py-4 text-slate-400 font-bold text-xs">Sin productos agregados.</td>
+                            <td colspan="6" class="text-center py-4 text-slate-400 font-bold text-xs">Sin productos agregados.</td>
                         </tr>
                     </tbody>
                 </table>
@@ -776,10 +777,10 @@
 
             <!-- OPCIÓN: RECEPCIÓN INMEDIATA DE STOCK AL REGISTRAR FACTURA -->
             <div id="bloqueCompraRecibirAhora" class="p-3 bg-emerald-50/70 rounded-xl border border-emerald-200/80 flex items-start gap-2.5">
-                <input type="checkbox" id="compraRecibirAhora" checked class="mt-0.5 w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer">
+                <input type="checkbox" id="compraRecibirAhora" checked onchange="alCambiarRecibirAhora()" class="mt-0.5 w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer">
                 <label for="compraRecibirAhora" class="text-xs font-bold text-slate-700 cursor-pointer select-none">
                     <span class="font-black text-emerald-800 block">La mercadería ingresó junto con el comprobante (Impactar Stock ahora)</span>
-                    <span class="text-[11px] text-slate-500">Registra la recepción automáticamente en un solo paso. Destildalo solo si estás cargando una factura anticipada cuya mercadería todavía no llegó al depósito.</span>
+                    <span class="text-[11px] text-slate-500">Registra el ingreso a stock inmediatamente. Podés indicar la cantidad recibida exacta de cada producto si llegaron menos unidades que las facturadas. Destildalo si la mercadería todavía no llegó al depósito.</span>
                 </label>
             </div>
 
@@ -1060,6 +1061,10 @@
 
         <div class="flex justify-between items-center pt-3 border-t border-slate-100 flex-wrap gap-2">
             <div id="detalleOrdenAccionesBox" class="flex items-center gap-2">
+                <button type="button" onclick="imprimirFichaOrden()" class="clay-btn-secondary px-3 py-2 text-xs font-bold flex items-center gap-1.5" title="Imprimir Orden de Compra">
+                    <i data-lucide="printer" class="w-3.5 h-3.5"></i>
+                    <span>Imprimir Orden</span>
+                </button>
                 <button type="button" id="btnDetalleOrdenCerrarParcial" onclick="cerrarOrdenParcialDesdeDetalle()" class="clay-btn-secondary px-3 py-2 text-xs font-bold text-teal-700 hover:bg-teal-50 flex items-center gap-1.5 hidden" title="Cerrar y dar por completada con lo recibido">
                     <i data-lucide="check-circle-2" class="w-4 h-4"></i>
                     <span>Dar por completada con lo recibido</span>
@@ -1337,7 +1342,7 @@
             const ordenesProv = (ordenesCache || []).filter(o =>
                 String(o.id_proveedor) === String(idProv) &&
                 (
-                    ((o.estado === 'pendiente' || o.estado === 'enviada' || o.estado === 'recibida_parcialmente') && (o.total_pendiente === undefined || o.total_pendiente > 0)) ||
+                    ((o.estado === 'enviada' || o.estado === 'recibida_parcialmente') && (o.total_pendiente === undefined || o.total_pendiente > 0)) ||
                     String(o.id_orden) === String(ordenPrevia)
                 )
             );
@@ -1646,6 +1651,7 @@
         const idx = itemsNuevaCompra.findIndex(i => i.id_producto === idProd);
         if (idx >= 0) {
             itemsNuevaCompra[idx].cantidad += cant;
+            itemsNuevaCompra[idx].cantidad_recibida = itemsNuevaCompra[idx].cantidad;
             itemsNuevaCompra[idx].precio_unitario = precio;
             itemsNuevaCompra[idx].subtotal = itemsNuevaCompra[idx].cantidad * precio;
         } else {
@@ -1653,6 +1659,7 @@
                 id_producto: idProd,
                 nombre: nombre,
                 cantidad: cant,
+                cantidad_recibida: cant,
                 precio_unitario: precio,
                 subtotal: Math.round(cant * precio * 100) / 100
             });
@@ -1662,6 +1669,20 @@
         document.getElementById('compraItemCantidad').value = '1';
     }
 
+    function alCambiarRecibirAhora() {
+        renderItemsNuevaCompra();
+    }
+
+    function actualizarCantRecibidaItem(idx, val) {
+        if (!itemsNuevaCompra[idx]) return;
+        const max = Number(itemsNuevaCompra[idx].cantidad || 1);
+        let n = parseInt(val, 10);
+        if (isNaN(n) || n < 0) n = 0;
+        if (n > max) n = max;
+        itemsNuevaCompra[idx].cantidad_recibida = n;
+        renderItemsNuevaCompra();
+    }
+
     function quitarItemCompra(idx) {
         itemsNuevaCompra.splice(idx, 1);
         renderItemsNuevaCompra();
@@ -1669,19 +1690,43 @@
 
     function renderItemsNuevaCompra() {
         const tbody = document.getElementById('detalleCompraItems');
+        const recibirAhora = Boolean(document.getElementById('compraRecibirAhora')?.checked);
         let total = 0;
+
+        // Mostrar / ocultar el encabezado de "Cant. a Recibir"
+        const thRecibir = document.getElementById('thColRecibirAhora');
+        if (thRecibir) {
+            thRecibir.style.display = recibirAhora ? '' : 'none';
+        }
+
         if (itemsNuevaCompra.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-slate-400 font-bold text-xs">Sin productos agregados.</td></tr>';
+            tbody.innerHTML = `<tr><td colspan="${recibirAhora ? 6 : 5}" class="text-center py-4 text-slate-400 font-bold text-xs">Sin productos agregados.</td></tr>`;
             document.getElementById('compraTotalDisplay').textContent = '$0.00';
             return;
         }
 
         tbody.innerHTML = itemsNuevaCompra.map((it, idx) => {
             total += it.subtotal;
+            const cantFact = Number(it.cantidad || 0);
+            if (it.cantidad_recibida === undefined) it.cantidad_recibida = cantFact;
+            const cantRec = Number(it.cantidad_recibida);
+            const esParcial = recibirAhora && cantRec < cantFact;
+
             return `
                 <tr>
-                    <td class="font-bold text-slate-800">${it.nombre}</td>
-                    <td class="text-center font-black">${it.cantidad}</td>
+                    <td class="font-bold text-slate-800">
+                        <div>${it.nombre}</div>
+                        ${esParcial ? `<div class="text-[10px] text-amber-600 font-black">⚠️ Ingreso parcial a stock: quedarán ${cantFact - cantRec} u. pendientes</div>` : ''}
+                    </td>
+                    <td class="text-center font-black">${cantFact}</td>
+                    ${recibirAhora ? `
+                    <td class="text-center bg-emerald-50/40">
+                        <input type="number" min="0" max="${cantFact}" value="${cantRec}"
+                               onchange="actualizarCantRecibidaItem(${idx}, this.value)"
+                               class="clay-input w-20 py-1 text-center font-black text-xs text-emerald-800 bg-white border-emerald-400 focus:ring-emerald-500"
+                               title="Cantidad física recibida en depósito hoy (máx: ${cantFact})">
+                    </td>
+                    ` : ''}
                     <td class="text-right font-black">$${it.precio_unitario.toFixed(2)}</td>
                     <td class="text-right font-black text-blue-600">$${it.subtotal.toFixed(2)}</td>
                     <td class="text-center">
@@ -1717,6 +1762,7 @@
             items: itemsNuevaCompra.map(i => ({
                 id_producto: i.id_producto,
                 cantidad: i.cantidad,
+                cantidad_recibida: recibirAhora && i.cantidad_recibida !== undefined ? Number(i.cantidad_recibida) : Number(i.cantidad),
                 precio_unitario: i.precio_unitario
             }))
         };
@@ -1819,7 +1865,8 @@
                 compraDetalleDataCompleta = json.data;
                 document.getElementById('detalleCompraSubtitulo').textContent =
                     `Compra ${c.numero_compra || '#' + id}` +
-                    (c.id_orden ? ` • Vinculada a Orden ${c.numero_orden || ('#ORD-' + c.id_orden)}` : '');
+                    (c.id_orden ? ` • Vinculada a Orden ${c.numero_orden || ('#ORD-' + c.id_orden)}` : '') +
+                    (c.cierre_parcial ? ' • [CERRADA CON RECEPCIÓN PARCIAL DEFINITIVA]' : '');
                 const totComp = json.data.total_comprado || 1;
                 const totRec = json.data.total_recibido || 0;
                 const pctRec = Math.min(100, Math.round((totRec / totComp) * 100));
@@ -2019,7 +2066,8 @@
 
         const fmtMonto = (val) => '$ ' + Number(val || 0).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         const fmtFecha = (f) => f ? f.substring(0, 10).split('-').reverse().join('/') : '-';
-        const estadoLabel = (c.estado || 'pendiente').replace('_', ' ').toUpperCase();
+        const esCierreParcial = Boolean(c.cierre_parcial);
+        const estadoLabel = (c.estado || 'pendiente').replace('_', ' ').toUpperCase() + (esCierreParcial ? ' (CIERRE PARCIAL DEFINITIVO)' : '');
 
         const html = `<!DOCTYPE html>
 <html lang="es">
@@ -2306,6 +2354,7 @@
                     <strong>Fecha Emisión:</strong> ${fmtFecha(c.fecha_compra)}<br>
                     <strong>Fecha Vencimiento:</strong> ${fmtFecha(c.fecha_vencimiento)}<br>
                     <strong>Estado:</strong> ${estadoLabel}
+                    ${esCierreParcial ? `<br><span style="display:inline-block; margin-top: 3px; padding: 2px 6px; background: #fef2f2; border: 1px solid #ef4444; color: #b91c1c; border-radius: 3px; font-size: 8.5px; font-weight: 900;">CERRADA POR RECEPCIÓN PARCIAL</span>` : ''}
                 </div>
             </div>
         </div>
@@ -2325,6 +2374,24 @@
                 </div>
             </div>
         </div>
+
+        ${esCierreParcial ? `
+        <!-- AVISO DE AUDITORÍA Y NOTA DE CIERRE PARCIAL -->
+        <div style="margin: 8px 16px; padding: 8px 12px; background: #fffbeb; border: 1.5px dashed #f59e0b; border-radius: 4px; display: flex; align-items: center; justify-content: space-between;">
+            <div>
+                <div style="font-size: 10px; font-weight: 900; color: #b45309; text-transform: uppercase;">
+                    AVISO DE AUDITORÍA: COMPROBANTE AJUSTADO POR RECEPCIÓN PARCIAL DEFINITIVA
+                </div>
+                <div style="font-size: 9px; color: #78350f; margin-top: 2px; line-height: 1.35;">
+                    Este comprobante fue liquidado y cerrado conforme a la mercadería efectivamente recibida e ingresada a depósito.<br>
+                    El saldo no entregado por el proveedor fue cancelado de común acuerdo. Total liquidado recalculado únicamente sobre las unidades reales recibidas.
+                </div>
+            </div>
+            <div style="margin-left: 14px; border: 2px solid #b45309; color: #b45309; font-weight: 900; font-size: 10px; padding: 4px 8px; border-radius: 4px; text-transform: uppercase; white-space: nowrap; transform: rotate(-2deg); background: #fef3c7;">
+                RECEPCIÓN PARCIAL DEFINITIVA
+            </div>
+        </div>
+        ` : ''}
 
         <!-- ITEMS / DETALLE -->
         <table class="items-table">
@@ -2387,7 +2454,7 @@
                     <strong>${fmtMonto(impTot)}</strong>
                 </div>
                 <div class="totals-row main-total">
-                    <span>TOTAL FACTURA:</span>
+                    <span>${esCierreParcial ? 'TOTAL LIQUIDADO (RECIBIDO):' : 'TOTAL FACTURA:'}</span>
                     <span>${fmtMonto(impTot)}</span>
                 </div>
                 <div class="totals-row">
@@ -2403,6 +2470,225 @@
 
         <div class="doc-disclaimer">
             Documento de uso interno y control administrativo · Sistema ERP Distribuidora PyB · ${new Date().toLocaleDateString('es-AR')} ${new Date().toLocaleTimeString('es-AR')}
+        </div>
+    </div>
+</body>
+</html>`;
+
+        let printFrame = document.getElementById('comprasPrintFrame');
+        if (!printFrame) {
+            printFrame = document.createElement('iframe');
+            printFrame.id = 'comprasPrintFrame';
+            printFrame.style.position = 'fixed';
+            printFrame.style.top = '-9999px';
+            printFrame.style.left = '-9999px';
+            printFrame.style.width = '0px';
+            printFrame.style.height = '0px';
+            printFrame.style.border = 'none';
+            document.body.appendChild(printFrame);
+        }
+
+        const frameDoc = printFrame.contentWindow.document;
+        frameDoc.open();
+        frameDoc.write(html);
+        frameDoc.close();
+
+        setTimeout(() => {
+            printFrame.contentWindow.focus();
+            printFrame.contentWindow.print();
+        }, 250);
+    }
+
+    async function imprimirFichaOrden(id = null) {
+        let data = null;
+        const targetId = id || idOrdenDetalleActual;
+        if (!targetId) {
+            mostrarNotificacion('No se especificó la orden a imprimir.', 'error');
+            return;
+        }
+
+        try {
+            const res = await fetch(`${API_BASE}/ordenes-compra/${targetId}`);
+            const json = await res.json();
+            if (json.status === 'success' && json.data) {
+                data = json.data;
+            }
+        } catch (e) {
+            console.error('Error al obtener datos de la orden para imprimir:', e);
+        }
+
+        if (!data || !data.orden) {
+            mostrarNotificacion('No se pudo cargar la información para imprimir la orden.', 'error');
+            return;
+        }
+
+        const o = data.orden;
+        const detalles = data.detalles || [];
+        const fmtMonto = (val) => '$ ' + Number(val || 0).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        const fmtFecha = (f) => f ? f.substring(0, 10).split('-').reverse().join('/') : '-';
+        const esCierreParcial = Boolean(o.cierre_parcial);
+        const estadoLabel = (o.estado || 'pendiente').replace('_', ' ').toUpperCase() + (esCierreParcial ? ' (CIERRE PARCIAL DEFINITIVO)' : '');
+        const totSol = detalles.reduce((acc, d) => acc + Number(d.cantidad_solicitada || 0), 0);
+        const totRec = detalles.reduce((acc, d) => acc + Number(d.cantidad_recibida ?? d.cantidad_comprada ?? 0), 0);
+        const totEst = Number(o.total_estimado || detalles.reduce((acc, d) => acc + Number(d.subtotal || 0), 0));
+
+        const html = `<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Orden de Compra #${o.numero_orden || o.id_orden} - ${o.proveedor || 'Proveedor'}</title>
+    <style>
+        @page { size: A4 portrait; margin: 8mm 10mm; }
+        * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif; color: #000; }
+        body { margin: 0; padding: 0; background: #fff; font-size: 11.5px; width: 100%; }
+        .factura-box { width: 100%; border: 1.5px solid #000; margin: 0 auto; background: #fff; }
+        .factura-header { display: flex; position: relative; border-bottom: 1.5px solid #000; }
+        .header-col { flex: 1; padding: 12px 16px; }
+        .header-col-left { border-right: 1px solid #888; }
+        .header-letter-box { position: absolute; left: 50%; top: 0; transform: translateX(-50%); width: 68px; height: 58px; background: #fff; border: 1.5px solid #000; border-top: none; border-radius: 0 0 6px 6px; text-align: center; z-index: 10; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+        .header-letter-box .letter { font-size: 26px; font-weight: 900; line-height: 1; color: #000; }
+        .header-letter-box .subtext { font-size: 7.5px; font-weight: 800; color: #444; text-transform: uppercase; margin-top: 2px; }
+        .company-name { font-size: 17px; font-weight: 900; color: #000; margin-bottom: 3px; }
+        .company-subtitle { font-size: 10px; font-weight: 700; color: #555; text-transform: uppercase; margin-bottom: 6px; }
+        .company-info { font-size: 11px; color: #222; line-height: 1.4; }
+        .invoice-title { font-size: 16px; font-weight: 900; color: #000; text-align: right; margin-bottom: 3px; }
+        .invoice-number { font-size: 14px; font-weight: 800; color: #111; text-align: right; margin-bottom: 8px; }
+        .invoice-meta { font-size: 11px; text-align: right; line-height: 1.45; color: #222; }
+        .prov-section { padding: 10px 16px; border-bottom: 1.5px solid #000; background: #fafafa; }
+        .prov-grid { display: grid; grid-template-columns: 3fr 2fr; gap: 6px 20px; font-size: 11px; }
+        .items-table { width: 100%; border-collapse: collapse; }
+        .items-table th { background: #f0f0f0; color: #000; font-size: 10px; font-weight: 800; text-transform: uppercase; padding: 6px 8px; text-align: left; border: 1px solid #000; }
+        .items-table td { padding: 6px 8px; font-size: 11px; border: 1px solid #ccc; color: #111; }
+        .items-table tr:nth-child(even) td { background: #fafafa; }
+        .text-center { text-align: center; }
+        .text-right { text-align: right; }
+        .factura-bottom { display: flex; border-top: 1.5px solid #000; background: #fff; }
+        .bottom-left { flex: 1.3; padding: 12px 16px; border-right: 1.5px solid #000; display: flex; flex-direction: column; justify-content: space-between; }
+        .bottom-right { flex: 1; padding: 12px 16px; background: #fafafa; }
+        .totals-row { display: flex; justify-content: space-between; padding: 4px 0; font-size: 11.5px; color: #333; }
+        .totals-row.main-total { border-top: 1.5px solid #000; border-bottom: 1.5px solid #000; margin: 5px 0; padding: 6px 0; font-size: 14px; font-weight: 900; color: #000; }
+        .doc-disclaimer { font-size: 8.5px; color: #666; text-align: center; padding: 6px 12px; }
+    </style>
+</head>
+<body>
+    <div class="factura-box">
+        <div class="factura-header">
+            <div class="header-col header-col-left">
+                <div class="company-name">DISTRIBUIDORA PYB</div>
+                <div class="company-subtitle">Distribución Mayorista Integral</div>
+                <div class="company-info">
+                    <strong>Razón Social:</strong> DISTRIBUIDORA PYB S.A.<br>
+                    <strong>CUIT:</strong> 30-71458923-4
+                </div>
+            </div>
+            <div class="header-letter-box">
+                <span class="letter">X</span>
+                <span class="subtext">DOCUMENTO NO VÁLIDO COMO FACTURA</span>
+            </div>
+            <div class="header-col">
+                <div class="invoice-title">ORDEN DE COMPRA</div>
+                <div class="invoice-number">N° ${o.numero_orden || ('#ORD-' + o.id_orden)}</div>
+                <div class="invoice-meta">
+                    <strong>Fecha Emisión:</strong> ${fmtFecha(o.fecha_creacion)}<br>
+                    <strong>Entrega Estimada:</strong> ${fmtFecha(o.fecha_entrega_estimada)}<br>
+                    <strong>Estado:</strong> ${estadoLabel}
+                    ${esCierreParcial ? `<br><span style="display:inline-block; margin-top: 3px; padding: 2px 6px; background: #fef2f2; border: 1px solid #ef4444; color: #b91c1c; border-radius: 3px; font-size: 8.5px; font-weight: 900;">CERRADA POR RECEPCIÓN PARCIAL</span>` : ''}
+                </div>
+            </div>
+        </div>
+
+        <div class="prov-section">
+            <div class="prov-grid">
+                <div class="prov-item">
+                    <strong>Proveedor Solicitado:</strong> ${o.proveedor || '-'}<br>
+                    <strong>Fecha Envío:</strong> ${fmtFecha(o.fecha_envio)}
+                </div>
+                <div class="prov-item">
+                    <strong>Condición:</strong> Solicitud formal de aprovisionamiento<br>
+                    <strong>Comprobante Interno:</strong> ${o.numero_orden || ('#ORD-' + o.id_orden)}
+                </div>
+            </div>
+        </div>
+
+        ${esCierreParcial ? `
+        <div style="margin: 8px 16px; padding: 8px 12px; background: #fffbeb; border: 1.5px dashed #f59e0b; border-radius: 4px; display: flex; align-items: center; justify-content: space-between;">
+            <div>
+                <div style="font-size: 10px; font-weight: 900; color: #b45309; text-transform: uppercase;">
+                    AVISO DE AUDITORÍA: ORDEN CERRADA POR RECEPCIÓN PARCIAL DEFINITIVA
+                </div>
+                <div style="font-size: 9px; color: #78350f; margin-top: 2px; line-height: 1.35;">
+                    Esta orden fue dada por completada con lo efectivamente recibido. El saldo pendiente de entrega fue cancelado de común acuerdo con el proveedor.
+                </div>
+            </div>
+            <div style="margin-left: 14px; border: 2px solid #b45309; color: #b45309; font-weight: 900; font-size: 10px; padding: 4px 8px; border-radius: 4px; text-transform: uppercase; white-space: nowrap; transform: rotate(-2deg); background: #fef3c7;">
+                CERRADA CON RECEPCIÓN PARCIAL
+            </div>
+        </div>
+        ` : ''}
+
+        <table class="items-table">
+            <thead>
+                <tr>
+                    <th style="width: 30px;" class="text-center">#</th>
+                    <th style="width: 85px;">Código</th>
+                    <th>Descripción / Producto</th>
+                    <th style="width: 65px;" class="text-center">Solicitado</th>
+                    <th style="width: 65px;" class="text-center">Recibido</th>
+                    <th style="width: 65px;" class="text-center">Saldo</th>
+                    <th style="width: 90px;" class="text-right">Precio Est.</th>
+                    <th style="width: 100px;" class="text-right">Subtotal</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${detalles.map((d, idx) => {
+                    const sol = Number(d.cantidad_solicitada || 0);
+                    const rec = Number(d.cantidad_recibida ?? d.cantidad_comprada ?? 0);
+                    const pend = Math.max(0, sol - rec);
+                    const sub = Number(d.subtotal || (sol * Number(d.precio_estimado || 0)));
+                    return `
+                    <tr>
+                        <td class="text-center" style="font-weight: bold; color: #555;">${idx + 1}</td>
+                        <td style="font-weight: bold; font-family: monospace;">${d.codigo || '-'}</td>
+                        <td><strong style="color: #000;">${d.nombre || d.descripcion || ('Producto #' + d.id_producto)}</strong></td>
+                        <td class="text-center" style="font-weight: 800;">${sol}</td>
+                        <td class="text-center" style="font-weight: 800; color: #047857;">${rec}</td>
+                        <td class="text-center" style="font-weight: 800; color: ${pend > 0 && !esCierreParcial ? '#b91c1c' : '#555'};">${esCierreParcial ? 0 : pend}</td>
+                        <td class="text-right">${fmtMonto(d.precio_estimado)}</td>
+                        <td class="text-right" style="font-weight: 800;">${fmtMonto(sub)}</td>
+                    </tr>
+                    `;
+                }).join('')}
+            </tbody>
+        </table>
+
+        <div class="factura-bottom">
+            <div class="bottom-left">
+                <div style="font-size: 9.5px; color: #444; line-height: 1.4;">
+                    <strong>Condiciones de Recepción:</strong> Toda entrega debe acompañarse con remito oficial o factura que detalle número de orden de compra.<br><br>
+                    <div style="display: flex; justify-content: space-between; margin-top: 15px; border-top: 1px dashed #888; padding-top: 6px;">
+                        <span>Firma Autorizada: _____________________</span>
+                        <span>Recibido por Proveedor: _____________________</span>
+                    </div>
+                </div>
+            </div>
+            <div class="bottom-right">
+                <div class="totals-row">
+                    <span>Total Unidades Solicitadas:</span>
+                    <strong>${totSol} u.</strong>
+                </div>
+                <div class="totals-row">
+                    <span>Total Unidades Recibidas:</span>
+                    <strong>${totRec} u.</strong>
+                </div>
+                <div class="totals-row main-total">
+                    <span>TOTAL ESTIMADO:</span>
+                    <span>${fmtMonto(totEst)}</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="doc-disclaimer">
+            Documento de uso interno y control de compras · Sistema ERP Distribuidora PyB · ${new Date().toLocaleDateString('es-AR')} ${new Date().toLocaleTimeString('es-AR')}
         </div>
     </div>
 </body>
@@ -2770,6 +3056,9 @@
                             <button onclick="abrirModalDetalleOrden(${o.id_orden})" class="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-all" title="Ver Detalle">
                                 <i data-lucide="eye" class="w-4 h-4"></i>
                             </button>
+                            <button onclick="imprimirFichaOrden(${o.id_orden})" class="p-1.5 text-slate-600 hover:bg-slate-100 rounded-lg transition-all" title="Imprimir Orden de Compra">
+                                <i data-lucide="printer" class="w-4 h-4"></i>
+                            </button>
                             ${esPendiente ? `
                             <button onclick="enviarOrden(${o.id_orden})" class="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all" title="Enviar al Proveedor">
                                 <i data-lucide="send" class="w-4 h-4"></i>
@@ -3123,6 +3412,29 @@
             }
 
             const o = json.data.orden;
+
+            // Validación de lógica comercial: no registrar compra sobre una orden en borrador sin antes enviarla
+            if (o.estado === 'pendiente') {
+                const nro = o.numero_orden || `#ORD-${idOrden}`;
+                const conf = confirm(`La orden ${nro} se encuentra en estado Pendiente (Borrador interno) y aún no fue enviada al proveedor.\n\n¿Desea marcarla como ENVIADA al proveedor ahora y proceder a registrar la compra?`);
+                if (!conf) return;
+
+                const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
+                const resCambio = await fetch(`${API_BASE}/ordenes-compra/${idOrden}/estado`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': csrf },
+                    body: JSON.stringify({ estado: 'enviada' })
+                });
+                const jsonCambio = await resCambio.json();
+                if (jsonCambio.status !== 'success') {
+                    mostrarNotificacion(jsonCambio.message || 'Error al cambiar estado de la orden.', 'error');
+                    return;
+                }
+                o.estado = 'enviada';
+                mostrarNotificacion(`Orden ${nro} marcada como enviada. Abriendo registro de compra...`, 'success');
+                if (typeof cargarOrdenes === 'function') cargarOrdenes();
+            }
+
             abrirModalNuevaCompra();
             document.getElementById('modalCompraTitulo').textContent = `Registrar Compra desde Orden #${o.numero_orden || idOrden}`;
             actualizarInputsDesdeComprobante('');
@@ -3146,6 +3458,7 @@
                     id_producto: d.id_producto,
                     nombre: d.nombre || d.descripcion || d.codigo || `Prod #${d.id_producto}`,
                     cantidad: cant,
+                    cantidad_recibida: cant,
                     precio_unitario: precio,
                     subtotal: Math.round(cant * precio * 100) / 100
                 };
@@ -3179,7 +3492,8 @@
                     btnCerrarParcial.classList.remove('hidden');
                 }
                 document.getElementById('detalleOrdenSubtitulo').textContent =
-                    `Orden ${ord.numero_orden || '#' + id} • Estado: ${(ord.estado || '').replace('_', ' ').toUpperCase()}`;
+                    `Orden ${ord.numero_orden || '#' + id} • Estado: ${(ord.estado || '').replace('_', ' ').toUpperCase()}` +
+                    (ord.cierre_parcial ? ' • [CERRADA CON RECEPCIÓN PARCIAL DEFINITIVA]' : '');
                 tbody.innerHTML = (json.data.detalles || []).map(d => {
                     const sol = Number(d.cantidad_solicitada || 0);
                     const rec = Number(d.cantidad_recibida ?? d.cantidad_comprada ?? 0);
