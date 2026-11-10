@@ -795,5 +795,71 @@ class ProductoCostoRecargoTest extends TestCase
         $this->assertSame('completada', $resShowOrden->json('data.orden.estado'));
         $this->assertSame(0, (int) $resShowOrden->json('data.orden.total_pendiente'));
         $this->assertSame(0, (int) $resShowOrden->json('data.total_pendiente'));
+        $this->assertTrue((bool) $resCerrar->json('data.cierre_parcial'));
+        $this->assertTrue((bool) $resShowOrden->json('data.orden.cierre_parcial'));
+    }
+
+    public function test_recepcion_flexible_en_creacion_de_compra_y_auto_avance_de_orden_pendiente(): void
+    {
+        $prov = $this->crearProveedor();
+        $prod = $this->crearProducto([
+            'stock' => 10,
+            'costo' => 800.00,
+            'recargo' => 50.00,
+            'precio_unitario' => 1200.00,
+        ]);
+
+        // 1. Crear Orden en estado 'pendiente'
+        $resOrden = $this->postJson('/api/ordenes-compra', [
+            'id_proveedor' => $prov->id_proveedor,
+            'items' => [
+                [
+                    'id_producto' => $prod->id_producto,
+                    'cantidad_solicitada' => 100,
+                    'precio_estimado' => 800.00,
+                ],
+            ],
+        ]);
+        $resOrden->assertCreated();
+        $idOrden = (int) $resOrden->json('data.id_orden');
+        $this->assertSame('pendiente', $resOrden->json('data.estado'));
+
+        // 2. Registrar Compra vinculada con recepción flexible (facturadas 100, recibidas físicamente hoy 70)
+        $resCompra = $this->postJson('/api/compras', [
+            'id_proveedor' => $prov->id_proveedor,
+            'id_orden' => $idOrden,
+            'recibir_ahora' => true,
+            'numero_comprobante' => 'FC-0001-00008888',
+            'fecha_compra' => Carbon::now()->toDateString(),
+            'items' => [
+                [
+                    'id_producto' => $prod->id_producto,
+                    'cantidad' => 100,
+                    'cantidad_recibida' => 70,
+                    'precio_unitario' => 800.00,
+                ],
+            ],
+        ]);
+        $resCompra->assertCreated();
+        $idCompra = (int) $resCompra->json('data.id_compra');
+
+        // La compra nace como parcialmente_recibida
+        $this->assertSame('parcialmente_recibida', $resCompra->json('data.estado'));
+        $this->assertSame(80000.0, (float) $resCompra->json('data.importe_total'));
+        // Saldo pendiente de mercadería (30 u. * $800 = $24.000)
+        $this->assertSame(24000.0, (float) $resCompra->json('data.saldo_pendiente'));
+
+        // El stock físico del producto aumentó exactamente por 70 (10 inicial + 70 = 80)
+        $prod->refresh();
+        $this->assertSame(80, (int) $prod->stock_actual);
+
+        // La orden de compra asociada dejó de estar en 'pendiente' y avanzó a 'recibida_parcialmente'
+        $resOrdenShow = $this->getJson("/api/ordenes-compra/{$idOrden}");
+        $resOrdenShow->assertOk();
+        $this->assertSame('recibida_parcialmente', $resOrdenShow->json('data.orden.estado'));
+        $this->assertSame(70, (int) $resOrdenShow->json('data.total_recibido'));
+        $this->assertSame(0, (int) $resOrdenShow->json('data.total_pendiente'));
+        $this->assertSame(30, (int) $resOrdenShow->json('data.total_falta_recibir'));
+        $this->assertSame(30, (int) $resOrdenShow->json('data.detalles.0.falta_recibir'));
     }
 }

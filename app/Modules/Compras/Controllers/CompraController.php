@@ -72,6 +72,8 @@ class CompraController extends Controller
             'saldo_a_pagar' => $saldoAPagar,
             'estado_pago' => $estadoPago,
             'estado' => $c->estado,
+            'cierre_parcial' => (bool) ($c->cierre_parcial ?? false),
+            'observaciones' => $c->observaciones ?? null,
             'fecha_compra' => $c->fecha_compra ? $c->fecha_compra->format('Y-m-d') : null,
             'fecha_vencimiento' => $c->fecha_vencimiento ? $c->fecha_vencimiento->format('Y-m-d') : null,
             'fecha_cancelacion' => $c->fecha_cancelacion ? $c->fecha_cancelacion->format('Y-m-d') : null,
@@ -102,6 +104,15 @@ class CompraController extends Controller
             }
             if (!isset($item['precio_unitario']) || (float) $item['precio_unitario'] < 0) {
                 return ['status' => 'error', 'message' => 'Cada ítem debe indicar un precio unitario válido.', 'code' => 400];
+            }
+            if (isset($item['cantidad_recibida'])) {
+                $rec = (int) $item['cantidad_recibida'];
+                if ($rec < 0) {
+                    return ['status' => 'error', 'message' => 'La cantidad a recibir no puede ser negativa.', 'code' => 400];
+                }
+                if ($rec > (int) $item['cantidad']) {
+                    return ['status' => 'error', 'message' => 'La cantidad a recibir no puede superar la cantidad facturada.', 'code' => 400];
+                }
             }
         }
         return null;
@@ -166,16 +177,30 @@ class CompraController extends Controller
             $compra = DB::transaction(function () use ($request, $proveedor, $items, $idUsuario, $fecha, $idOrden, $recibirAhora) {
                 $importeTotal = 0;
                 $detalles = [];
+                $totalComprado = 0;
+                $totalRecibido = 0;
 
                 foreach ($items as $item) {
                     $cantidad = (int) $item['cantidad'];
                     $precio = (float) $item['precio_unitario'];
                     $subtotal = round($cantidad * $precio, 2);
                     $importeTotal += $subtotal;
+
+                    $cantRecibir = 0;
+                    if ($recibirAhora) {
+                        $cantRecibir = isset($item['cantidad_recibida'])
+                            ? min($cantidad, max(0, (int) $item['cantidad_recibida']))
+                            : $cantidad;
+                    }
+
+                    $totalComprado += $cantidad;
+                    $totalRecibido += $cantRecibir;
+
                     $detalles[] = [
                         'id_producto' => (int) $item['id_producto'],
                         'id_unidad' => $this->unidadDelItem($item),
                         'cantidad' => $cantidad,
+                        'cantidad_recibida' => $cantRecibir,
                         'precio_unitario' => $precio,
                         'subtotal' => $subtotal,
                     ];
@@ -184,22 +209,36 @@ class CompraController extends Controller
                 $importeTotal = round($importeTotal, 2);
                 $fechaVenc = $request->input('fecha_vencimiento') ?: Carbon::parse($fecha)->addDays(30)->toDateString();
 
+                if (!$recibirAhora || $totalRecibido === 0) {
+                    $estadoCompra = 'pendiente';
+                    $saldoPendiente = $importeTotal;
+                } elseif ($totalRecibido >= $totalComprado) {
+                    $estadoCompra = 'completada';
+                    $saldoPendiente = 0.0;
+                } else {
+                    $estadoCompra = 'parcialmente_recibida';
+                    $saldoPendiente = $totalComprado > 0
+                        ? round($importeTotal * ($totalComprado - $totalRecibido) / $totalComprado, 2)
+                        : 0.0;
+                }
+
                 $compra = Compra::create([
                     'numero_compra' => $this->generarComprobante(),
                     'numero_comprobante' => $request->input('numero_comprobante') ?: null,
                     'id_proveedor' => $proveedor->id_proveedor,
                     'id_orden' => $idOrden,
                     'importe_total' => $importeTotal,
-                    'saldo_pendiente' => $recibirAhora ? 0.0 : $importeTotal,
-                    'estado' => $recibirAhora ? 'completada' : 'pendiente',
+                    'saldo_pendiente' => $saldoPendiente,
+                    'estado' => $estadoCompra,
+                    'cierre_parcial' => false,
                     'fecha_compra' => $fecha,
                     'fecha_vencimiento' => $fechaVenc,
                     'id_usuario' => $idUsuario,
                 ]);
 
                 $recepcion = null;
-                $stockService = $recibirAhora ? app(StockService::class) : null;
-                if ($recibirAhora) {
+                $stockService = ($totalRecibido > 0) ? app(StockService::class) : null;
+                if ($totalRecibido > 0) {
                     $recepcion = Recepcion::create([
                         'id_compra' => $compra->id_compra,
                         'id_proveedor' => $proveedor->id_proveedor,
@@ -214,17 +253,17 @@ class CompraController extends Controller
                         'id_producto' => $d['id_producto'],
                         'id_unidad' => $d['id_unidad'],
                         'cantidad' => $d['cantidad'],
-                        'cantidad_recibida' => $recibirAhora ? $d['cantidad'] : 0,
+                        'cantidad_recibida' => $d['cantidad_recibida'],
                         'precio_unitario' => $d['precio_unitario'],
                         'subtotal' => $d['subtotal'],
                     ]);
 
-                    if ($recibirAhora && $recepcion && $stockService) {
+                    if ($d['cantidad_recibida'] > 0 && $recepcion && $stockService) {
                         DetalleRecepcion::create([
                             'id_recepcion' => $recepcion->id_recepcion,
                             'id_producto' => $d['id_producto'],
                             'id_unidad' => $d['id_unidad'],
-                            'cantidad_recibida' => $d['cantidad'],
+                            'cantidad_recibida' => $d['cantidad_recibida'],
                         ]);
 
                         $prodStock = Producto::find($d['id_producto']);
@@ -232,7 +271,7 @@ class CompraController extends Controller
                             $stockService->registrarMovimiento(
                                 $prodStock,
                                 'ingreso',
-                                (int) $d['cantidad'],
+                                (int) $d['cantidad_recibida'],
                                 'Ingreso directo por compra ' . $compra->numero_compra,
                                 $idUsuario,
                                 $d['id_unidad'],
@@ -302,6 +341,11 @@ class CompraController extends Controller
                 if ($idOrden) {
                     $ordenVinculada = \App\Modules\PedidosDeCompra\Models\OrdenCompra::find($idOrden);
                     if ($ordenVinculada) {
+                        if ($ordenVinculada->estado === 'pendiente') {
+                            $ordenVinculada->estado = 'enviada';
+                            $ordenVinculada->fecha_envio = Carbon::now()->toDateString();
+                            $ordenVinculada->save();
+                        }
                         $ordenVinculada->sincronizarEstadoRecepcion();
                     }
                 }
@@ -919,6 +963,8 @@ class CompraController extends Controller
             $compra->importe_total = $nuevoTotal;
             $compra->saldo_pendiente = max(0.0, round($nuevoTotal - $compra->totalPagado(), 2));
             $compra->estado = 'completada';
+            $compra->cierre_parcial = true;
+            $compra->observaciones = trim(($compra->observaciones ? $compra->observaciones . "\n" : '') . 'Comprobante cerrado por recepción parcial definitiva. Saldo no entregado cancelado.');
             $compra->fecha_modificacion = Carbon::now()->toDateString();
             $compra->save();
 
@@ -926,6 +972,8 @@ class CompraController extends Controller
                 $orden = \App\Modules\PedidosDeCompra\Models\OrdenCompra::find($compra->id_orden);
                 if ($orden) {
                     $orden->estado = 'completada';
+                    $orden->cierre_parcial = true;
+                    $orden->observaciones = trim(($orden->observaciones ? $orden->observaciones . "\n" : '') . 'Orden de compra cerrada por recepción parcial definitiva.');
                     $orden->fecha_modificacion = Carbon::now()->toDateString();
                     $orden->save();
                 }

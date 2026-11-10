@@ -19,6 +19,8 @@ class OrdenCompra extends Model
         'id_proveedor',
         'total_estimado',
         'estado',
+        'cierre_parcial',
+        'observaciones',
         'fecha_creacion',
         'fecha_modificacion',
         'fecha_envio',
@@ -29,6 +31,7 @@ class OrdenCompra extends Model
 
     protected $casts = [
         'id_orden' => 'integer',
+        'cierre_parcial' => 'boolean',
         'total_estimado' => 'float',
         'fecha_creacion' => 'date:Y-m-d',
         'fecha_modificacion' => 'date:Y-m-d',

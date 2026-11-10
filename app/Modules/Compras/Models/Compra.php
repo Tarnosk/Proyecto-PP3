@@ -22,6 +22,8 @@ class Compra extends Model
         'importe_total',
         'saldo_pendiente',
         'estado',
+        'cierre_parcial',
+        'observaciones',
         'fecha_compra',
         'fecha_vencimiento',
         'fecha_cancelacion',
@@ -32,6 +34,7 @@ class Compra extends Model
 
     protected $casts = [
         'id_compra' => 'integer',
+        'cierre_parcial' => 'boolean',
         'importe_total' => 'float',
         'saldo_pendiente' => 'float',
         'fecha_compra' => 'date:Y-m-d',
