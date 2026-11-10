@@ -108,10 +108,12 @@ class OrdenCompra extends Model
 
         if ($todosCumplidos && $totalRecibidoGeneral > 0) {
             $nuevoEstado = 'completada';
+        } elseif ($this->cierre_parcial && $totalRecibidoGeneral > 0) {
+            $nuevoEstado = 'completada';
         } elseif ($totalRecibidoGeneral > 0) {
             $nuevoEstado = 'recibida_parcialmente';
         } else {
-            $nuevoEstado = 'enviada';
+            $nuevoEstado = $this->fecha_envio ? 'enviada' : 'pendiente';
         }
 
         $this->estado = $nuevoEstado;
