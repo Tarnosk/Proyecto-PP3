@@ -57,6 +57,16 @@ class PagoProveedorRepository
         return $this->base($idCompra)->where('id_pago', $idPago)->exists();
     }
 
+    public function obtenerPorId(int $idPago): ?PagoProveedor
+    {
+        return PagoProveedor::find($idPago);
+    }
+
+    public function eliminar(int $idPago): bool
+    {
+        return (bool) PagoProveedor::where('id_pago', $idPago)->delete();
+    }
+
     private function base(int $idCompra): Builder
     {
         return PagoProveedor::where('id_compra', $idCompra);

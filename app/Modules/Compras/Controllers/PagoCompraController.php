@@ -100,6 +100,29 @@ class PagoCompraController extends Controller
     }
 
     /**
+     * Anular un pago registrado de la compra.
+     */
+    public function destroy(Request $request, int $compra, int $pago): JsonResponse
+    {
+        try {
+            $resultado = $this->service->anular($compra, $pago, UsuarioActual::id($request));
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Pago anulado exitosamente. La deuda ha sido recalculada.',
+                'data' => $resultado,
+            ], 200);
+        } catch (RuntimeException $e) {
+            return response()->json(['status' => 'error', 'message' => $e->getMessage()], 400);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Error al anular el pago: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
      * Resumen de la deuda de la compra (importe total, pagado y saldo a pagar).
      */
     public function resumen(int $compra): JsonResponse

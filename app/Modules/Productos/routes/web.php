@@ -150,6 +150,7 @@ $registrarRutasInternasG3 = function (): void {
     Route::get('compras/{compra}/estado', [CompraController::class, 'estado'])->whereNumber('compra');
     Route::post('compras/{compra}/pagos', [PagoCompraController::class, 'store'])->whereNumber('compra');
     Route::get('compras/{compra}/pagos', [PagoCompraController::class, 'index'])->whereNumber('compra');
+    Route::delete('compras/{compra}/pagos/{pago}', [PagoCompraController::class, 'destroy'])->whereNumber('compra')->whereNumber('pago');
     Route::get('compras/{compra}/pagos/resumen', [PagoCompraController::class, 'resumen'])->whereNumber('compra');
     Route::get('compras/deudas', [CompraController::class, 'deudas']);
     Route::get('proveedores/deudas', [CompraController::class, 'deudas']);

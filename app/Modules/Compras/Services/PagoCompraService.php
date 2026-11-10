@@ -78,6 +78,35 @@ class PagoCompraService
     }
 
     /**
+     * Anula o revierte un pago registrado contra la compra.
+     */
+    public function anular(int $idCompra, int $idPago, int $idUsuario): array
+    {
+        $compra = Compra::find($idCompra);
+        if (!$compra) {
+            throw new RuntimeException('La compra no existe.');
+        }
+
+        if ($compra->estado === 'cancelada') {
+            throw new RuntimeException('No se pueden modificar ni anular pagos en una compra cancelada.');
+        }
+
+        $pago = $this->pagos->obtenerPorId($idPago);
+        if (!$pago || (int) $pago->id_compra !== $idCompra) {
+            throw new RuntimeException('El pago no existe o no corresponde a esta compra.');
+        }
+
+        DB::transaction(function () use ($pago) {
+            $pago->delete();
+        });
+
+        return [
+            'mensaje' => 'Pago anulado exitosamente.',
+            'resumen' => $this->resumen($idCompra),
+        ];
+    }
+
+    /**
      * Detalle de los pagos de una compra y cómo queda su deuda.
      */
     public function resumen(int $idCompra): array

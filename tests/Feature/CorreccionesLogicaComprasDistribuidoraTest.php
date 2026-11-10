@@ -481,4 +481,80 @@ class CorreccionesLogicaComprasDistribuidoraTest extends TestCase
         $this->assertSame(2000.0, (float) $resOkCerrar->json('data.saldo_a_pagar'));
         $this->assertSame(0.0, (float) $resOkCerrar->json('data.saldo_pendiente'));
     }
+
+    /**
+     * 7. Anulación de Pagos: permite revertir un pago registrado, recalculando
+     * la deuda adeudada y destrabando el cierre parcial si había pago excedente.
+     */
+    public function test_anular_pago_de_compra_recalcula_saldo_a_pagar_y_permite_cierre_parcial(): void
+    {
+        $prov = $this->crearProveedor();
+        $prod = $this->crearProducto(['costo' => 1000.00]);
+
+        // Compra por 10 unidades a $1.000 = $10.000. Recibidas: 5 unidades ($5.000 valor recibido).
+        $resCompra = $this->postJson('/api/compras', [
+            'id_proveedor' => $prov->id_proveedor,
+            'recibir_ahora' => true,
+            'items' => [
+                [
+                    'id_producto' => $prod->id_producto,
+                    'cantidad' => 10,
+                    'cantidad_recibida' => 5,
+                    'precio_unitario' => 1000.00,
+                ],
+            ],
+        ]);
+        $resCompra->assertCreated();
+        $idCompra = (int) $resCompra->json('data.id_compra');
+
+        // Registrar pago 1: $6.000
+        $resPago1 = $this->postJson("/api/compras/{$idCompra}/pagos", [
+            'monto' => 6000.00,
+            'metodo_pago' => 'transferencia',
+            'fecha_pago' => Carbon::now()->toDateString(),
+        ]);
+        $resPago1->assertStatus(201);
+        $idPago1 = (int) $resPago1->json('data.pago.id_pago');
+
+        // Registrar pago 2: $4.000 (total pagado $10.000)
+        $resPago2 = $this->postJson("/api/compras/{$idCompra}/pagos", [
+            'monto' => 4000.00,
+            'metodo_pago' => 'efectivo',
+            'fecha_pago' => Carbon::now()->toDateString(),
+        ]);
+        $resPago2->assertStatus(201);
+        $idPago2 = (int) $resPago2->json('data.pago.id_pago');
+
+        // Intentar cierre parcial -> falla con 400 por pago excedente ($10.000 > $5.000)
+        $this->patchJson("/api/compras/{$idCompra}/cerrar-parcial")->assertStatus(400);
+
+        // Anular Pago 2 ($4.000) mediante DELETE
+        $resDeletePago2 = $this->deleteJson("/api/compras/{$idCompra}/pagos/{$idPago2}");
+        $resDeletePago2->assertOk();
+        $this->assertSame(6000.0, (float) $resDeletePago2->json('data.resumen.total_pagado'));
+        $this->assertSame(4000.0, (float) $resDeletePago2->json('data.resumen.saldo_a_pagar'));
+
+        // Todavía $6.000 > $5.000 -> sigue bloqueando
+        $this->patchJson("/api/compras/{$idCompra}/cerrar-parcial")->assertStatus(400);
+
+        // Anular Pago 1 ($6.000)
+        $resDeletePago1 = $this->deleteJson("/api/compras/{$idCompra}/pagos/{$idPago1}");
+        $resDeletePago1->assertOk();
+        $this->assertSame(0.0, (float) $resDeletePago1->json('data.resumen.total_pagado'));
+        $this->assertSame(10000.0, (float) $resDeletePago1->json('data.resumen.saldo_a_pagar'));
+
+        // Cargar un pago correcto de $3.000 (<= $5.000 recibido)
+        $this->postJson("/api/compras/{$idCompra}/pagos", [
+            'monto' => 3000.00,
+            'metodo_pago' => 'transferencia',
+            'fecha_pago' => Carbon::now()->toDateString(),
+        ])->assertStatus(201);
+
+        // Ahora sí se puede cerrar parcialmente!
+        $resCierre = $this->patchJson("/api/compras/{$idCompra}/cerrar-parcial");
+        $resCierre->assertOk();
+        $this->assertSame('completada', $resCierre->json('data.estado'));
+        $this->assertSame(5000.0, (float) $resCierre->json('data.importe_total'));
+        $this->assertSame(2000.0, (float) $resCierre->json('data.saldo_a_pagar'));
+    }
 }
