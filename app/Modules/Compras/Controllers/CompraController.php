@@ -1005,6 +1005,21 @@ class CompraController extends Controller
             ], 400);
         }
 
+        $valorRecibido = 0.0;
+        foreach ($compra->detalles as $d) {
+            $valorRecibido += (int) $d->cantidad_recibida * (float) $d->precio_unitario;
+        }
+        $valorRecibido = round($valorRecibido, 2);
+
+        $totalPagado = (float) $compra->totalPagado();
+        if ($totalPagado > $valorRecibido) {
+            $exceso = round($totalPagado - $valorRecibido, 2);
+            return response()->json([
+                'status' => 'error',
+                'message' => "No se puede dar por completada la compra: el importe ya pagado ($" . number_format($totalPagado, 2, ',', '.') . ") supera el valor de lo efectivamente recibido ($" . number_format($valorRecibido, 2, ',', '.') . ") en $" . number_format($exceso, 2, ',', '.') . ". Al no gestionarse notas de crédito en el sistema, debe regularizar o revertir el pago excedente antes de cerrar la compra.",
+            ], 400);
+        }
+
         DB::transaction(function () use ($compra) {
             foreach ($compra->detalles as $d) {
                 $rec = (int) $d->cantidad_recibida;
@@ -1015,7 +1030,7 @@ class CompraController extends Controller
 
             $nuevoTotal = round((float) $compra->detalles()->sum('subtotal'), 2);
             $compra->importe_total = $nuevoTotal;
-            $compra->saldo_pendiente = max(0.0, round($nuevoTotal - $compra->totalPagado(), 2));
+            $compra->saldo_pendiente = 0.0;
             $compra->estado = 'completada';
             $compra->cierre_parcial = true;
             $compra->observaciones = trim(($compra->observaciones ? $compra->observaciones . "\n" : '') . 'Comprobante cerrado por recepción parcial definitiva. Saldo no entregado cancelado.');
