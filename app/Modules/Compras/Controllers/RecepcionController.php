@@ -210,8 +210,15 @@ class RecepcionController extends Controller
                 $todasCompletas = $recibidoTotal >= $saldoTotal;
                 $compra->estado = $todasCompletas ? 'completada' : 'parcialmente_recibida';
 
-                if ($saldoTotal > 0) {
-                    $compra->saldo_pendiente = round($compra->importe_total * $pendienteTotal / $saldoTotal, 2);
+                if ($todasCompletas) {
+                    $compra->saldo_pendiente = 0.0;
+                } else {
+                    $saldoPendienteMonetario = 0.0;
+                    foreach ($compra->detalles as $d) {
+                        $pendItem = max(0, (int) $d->cantidad - (int) $d->cantidad_recibida);
+                        $saldoPendienteMonetario += $pendItem * (float) $d->precio_unitario;
+                    }
+                    $compra->saldo_pendiente = round($saldoPendienteMonetario, 2);
                 }
 
                 $compra->save();

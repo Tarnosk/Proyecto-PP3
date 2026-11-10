@@ -358,9 +358,9 @@ class GeneradorSugerenciasReposicionService
                     ->first();
 
                 if ($detalleExistente) {
-                    $nuevaCant = (int) $detalleExistente->cantidad_solicitada + $cantItem;
+                    $nuevaCant = max((int) $detalleExistente->cantidad_solicitada, $cantItem);
                     $detalleExistente->cantidad_solicitada = $nuevaCant;
-                    $detalleExistente->cantidad_sugerida = (int) $detalleExistente->cantidad_sugerida + $cantItem;
+                    $detalleExistente->cantidad_sugerida = max((int) $detalleExistente->cantidad_sugerida, $cantItem);
                     $detalleExistente->precio_estimado = $precioItem;
                     $detalleExistente->subtotal = round($nuevaCant * $precioItem, 2);
                     $detalleExistente->save();
