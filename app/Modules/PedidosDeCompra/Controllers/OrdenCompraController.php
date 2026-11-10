@@ -590,6 +590,25 @@ class OrdenCompraController extends Controller
 
         $nuevoEstado = $request->input('estado');
 
+        if ($nuevoEstado === 'completada') {
+            $orden->load('compras.detalles', 'compras.pagos');
+            foreach ($orden->compras->where('estado', 'parcialmente_recibida') as $compraParcial) {
+                $valorRecibido = 0.0;
+                foreach ($compraParcial->detalles as $d) {
+                    $valorRecibido += (int) $d->cantidad_recibida * (float) $d->precio_unitario;
+                }
+                $valorRecibido = round($valorRecibido, 2);
+                $totalPagado = (float) $compraParcial->totalPagado();
+                if ($totalPagado > $valorRecibido) {
+                    $exceso = round($totalPagado - $valorRecibido, 2);
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => "No se puede dar por completada la orden: la compra vinculada {$compraParcial->numero_compra} registra pagos ($" . number_format($totalPagado, 2, ',', '.') . ") que superan el valor de lo efectivamente recibido ($" . number_format($valorRecibido, 2, ',', '.') . ") en $" . number_format($exceso, 2, ',', '.') . ". Al no gestionarse notas de crédito en el sistema, debe regularizar o revertir el pago excedente antes de cerrar la orden.",
+                    ], 400);
+                }
+            }
+        }
+
         DB::transaction(function () use ($orden, $nuevoEstado) {
             $orden->estado = $nuevoEstado;
             $orden->fecha_modificacion = Carbon::now()->toDateString();
@@ -610,7 +629,7 @@ class OrdenCompraController extends Controller
                     }
                     $nuevoTotal = round((float) $compraParcial->detalles()->sum('subtotal'), 2);
                     $compraParcial->importe_total = $nuevoTotal;
-                    $compraParcial->saldo_pendiente = max(0.0, round($nuevoTotal - $compraParcial->totalPagado(), 2));
+                    $compraParcial->saldo_pendiente = 0.0;
                     $compraParcial->estado = 'completada';
                     $compraParcial->cierre_parcial = true;
                     $compraParcial->observaciones = trim(($compraParcial->observaciones ? $compraParcial->observaciones . "\n" : '') . 'Comprobante cerrado por recepción parcial definitiva. Saldo no entregado por el proveedor cancelado.');

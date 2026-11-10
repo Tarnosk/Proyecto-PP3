@@ -410,4 +410,75 @@ class CorreccionesLogicaComprasDistribuidoraTest extends TestCase
         $resCancelFailStock->assertStatus(400);
         $this->assertStringContainsString('stock', strtolower($resCancelFailStock->json('message') ?? ''));
     }
+
+    /**
+     * 6. Regla de Negocio: Bloqueo de Cierre Parcial si el pago registrado supera
+     * el valor de lo efectivamente recibido (evita desfasajes contables sin Nota de Crédito).
+     */
+    public function test_cerrar_parcial_bloquea_si_pago_supera_valor_recibido_y_permite_si_es_menor_o_igual(): void
+    {
+        $prov = $this->crearProveedor();
+        $prod = $this->crearProducto(['costo' => 1000.00]);
+
+        // Compra por 10 unidades a $1.000 = $10.000 total. Se reciben 5 unidades ($5.000 recibidos).
+        $resCompra = $this->postJson('/api/compras', [
+            'id_proveedor' => $prov->id_proveedor,
+            'recibir_ahora' => true,
+            'items' => [
+                [
+                    'id_producto' => $prod->id_producto,
+                    'cantidad' => 10,
+                    'cantidad_recibida' => 5,
+                    'precio_unitario' => 1000.00,
+                ],
+            ],
+        ]);
+        $resCompra->assertCreated();
+        $idCompra = (int) $resCompra->json('data.id_compra');
+
+        // Se registra el pago completo anticipado de $10.000
+        $resPago = $this->postJson("/api/compras/{$idCompra}/pagos", [
+            'monto' => 10000.00,
+            'metodo_pago' => 'transferencia',
+            'fecha_pago' => Carbon::now()->toDateString(),
+        ]);
+        $resPago->assertStatus(201);
+
+        // Se intenta cerrar parcialmente la compra recibida en 5 unidades ($5.000) habiendo pagado $10.000
+        // Debe ser RECHAZADO con código 400 y mensaje explicativo
+        $resFailCerrar = $this->patchJson("/api/compras/{$idCompra}/cerrar-parcial");
+        $resFailCerrar->assertStatus(400);
+        $this->assertStringContainsString('supera el valor de lo efectivamente recibido', $resFailCerrar->json('message') ?? '');
+
+        // Caso de éxito: Compra donde lo pagado ($3.000) es MENOR o IGUAL a lo recibido ($5.000)
+        $resCompra2 = $this->postJson('/api/compras', [
+            'id_proveedor' => $prov->id_proveedor,
+            'recibir_ahora' => true,
+            'items' => [
+                [
+                    'id_producto' => $prod->id_producto,
+                    'cantidad' => 10,
+                    'cantidad_recibida' => 5,
+                    'precio_unitario' => 1000.00,
+                ],
+            ],
+        ]);
+        $resCompra2->assertCreated();
+        $idCompra2 = (int) $resCompra2->json('data.id_compra');
+
+        $resPagoParcial = $this->postJson("/api/compras/{$idCompra2}/pagos", [
+            'monto' => 3000.00,
+            'metodo_pago' => 'efectivo',
+            'fecha_pago' => Carbon::now()->toDateString(),
+        ]);
+        $resPagoParcial->assertStatus(201);
+
+        // Al ser pago ($3.000) <= recibido ($5.000), el cierre parcial DEBE SER EXITOSO
+        $resOkCerrar = $this->patchJson("/api/compras/{$idCompra2}/cerrar-parcial");
+        $resOkCerrar->assertOk();
+        $this->assertSame('completada', $resOkCerrar->json('data.estado'));
+        $this->assertSame(5000.0, (float) $resOkCerrar->json('data.importe_total'));
+        $this->assertSame(2000.0, (float) $resOkCerrar->json('data.saldo_a_pagar'));
+        $this->assertSame(0.0, (float) $resOkCerrar->json('data.saldo_pendiente'));
+    }
 }
